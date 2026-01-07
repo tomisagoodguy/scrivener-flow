@@ -1,20 +1,35 @@
 @import "tailwindcss";
 
 :root {
+  /* Default Light Theme */
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #020617; /* Slate 950 */
+  
+  --primary: #4f46e5; /* Indigo 600 */
+  --primary-deep: #3730a3; /* Indigo 800 */
+  --secondary: #e2e8f0; /* Slate 200 */
+  --accent: #9333ea; /* Purple 600 */
+  
+  --surface: rgba(255, 255, 255, 0.8);
+  --surface-hover: rgba(241, 245, 249, 0.9);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --card-bg: #ffffff;
+}
+
+[data-theme='dark'] {
   /* Modern Dark Theme Palette */
   --background: #020617; /* Slate 950 */
   --foreground: #f8fafc; /* Slate 50 */
   
-  /* Brand Colors */
   --primary: #6366f1; /* Indigo 500 */
   --primary-deep: #4338ca; /* Indigo 700 */
   --secondary: #0f172a; /* Slate 900 */
   --accent: #a855f7; /* Purple 500 */
   
-  /* UI Elements */
   --surface: rgba(30, 41, 59, 0.5);
   --surface-hover: rgba(51, 65, 85, 0.6);
   --border-color: rgba(148, 163, 184, 0.1);
+  --card-bg: #1e293b;
 }
 
 @theme inline {
