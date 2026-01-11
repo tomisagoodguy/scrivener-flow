@@ -58,49 +58,66 @@ export default function NewCasePage() {
             console.log('Date validation passed. Preparing insert payload...');
 
             // 1. Insert Case
+            // Note: DB schema might not have 'cancellation_type' or 'district' in some versions.
+            // Based on recreate_full_schema.sql, we have city, but maybe not cancellation_type.
+            const casePayload = {
+                case_number: data.case_number,
+                buyer_name: data.buyer_name,
+                buyer_phone: data.buyer_phone || null,
+                seller_name: data.seller_name,
+                seller_phone: data.seller_phone || null,
+                status: data.status,
+                city: data.city || 'Taichung',
+                notes: data.notes || '',
+                tax_type: data.tax_type || '一般',
+                updated_at: new Date().toISOString()
+            };
+
             const { data: newCase, error: caseError } = await supabase
                 .from('cases')
-                .insert([{
-                    case_number: data.case_number,
-                    buyer_name: data.buyer,
-                    buyer_phone: data.buyer_phone || null,
-                    seller_name: data.seller,
-                    seller_phone: data.seller_phone || null,
-                    status: data.status,
-                    city: data.city || 'Taichung',
-                    district: '-', // Default value as per user request
-                    notes: data.notes,
-                    is_back_rent: data.is_back_rent === 'on',
-                    tax_type: data.tax_type,
-                    cancellation_type: data.cancellation_type,
-                    updated_at: new Date().toISOString()
-                }])
+                .insert([casePayload])
                 .select()
                 .single();
 
             if (caseError) {
-                const errorText = JSON.stringify(caseError, null, 2) + '\n\n' + (caseError.message || '') + '\nDetails: ' + (caseError.details || '');
-                console.error('Supabase Insert Error Object:', caseError);
-                setErrorMsg('資料庫錯誤:\n' + errorText);
+                console.error('Supabase Case Error:', caseError);
+                // Force extraction of properties even if not enumerable
+                let details = '';
+                for (const key in caseError) {
+                    details += `${key}: ${(caseError as any)[key]}\n`;
+                }
+                if (!details) details = JSON.stringify(caseError, Object.getOwnPropertyNames(caseError));
+
+                setErrorMsg(`資料庫錯誤 (Cases):\nCode: ${caseError.code}\nMessage: ${caseError.message}\nRaw:\n${details}`);
                 setLoading(false);
                 return;
             }
 
             if (!newCase) throw new Error('案件建立後無回傳資料');
-            console.log('Case created:', newCase);
 
             // 2. Insert Milestones Table
-            const milestonePayload = {
+            // Based on recreate_full_schema.sql, milestone table might miss many amount columns.
+            // We'll keep it safe by only inserting date columns first if we aren't sure.
+            const milestonePayload: any = {
                 case_id: newCase.id,
                 contract_date: formatDate(data.contract_date),
                 seal_date: formatDate(data.seal_date),
                 tax_payment_date: formatDate(data.tax_payment_date),
                 transfer_date: formatDate(data.transfer_date),
-                transfer_note: data.transfer_note || null,
-                handover_date: formatDate(data.handover_date),
+                balance_payment_date: formatDate(data.balance_payment_date),
                 redemption_date: formatDate(data.redemption_date),
+                handover_date: formatDate(data.handover_date),
             };
-            console.log('Inserting milestones...', milestonePayload);
+
+            // Only add amounts if they are expected (safeguard)
+            // If the insert fails here, we will catch it specifically.
+            const extraMilestoneFields = ['contract_amount', 'sign_diff_date', 'sign_diff_amount', 'seal_amount', 'tax_amount', 'balance_amount', 'transfer_note'];
+            extraMilestoneFields.forEach(field => {
+                if (data[field]) {
+                    if (field.includes('date')) milestonePayload[field] = formatDate(data[field]);
+                    else milestonePayload[field] = Number(data[field]);
+                }
+            });
 
             const { error: milestoneError } = await supabase
                 .from('milestones')
@@ -108,22 +125,31 @@ export default function NewCasePage() {
 
             if (milestoneError) {
                 console.error('Milestone Error:', milestoneError);
+                let mDetails = JSON.stringify(milestoneError, Object.getOwnPropertyNames(milestoneError));
+                setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails);
+                // We DON'T return here yet, we want to try financials too, or maybe we should return to avoid partial data.
+                // Given the user wants it to work, better block and fix.
+                setLoading(false);
+                return;
             }
 
             // 3. Insert Financials
-            if (data.total_price || data.buyer_loan_bank || data.seller_loan_bank) {
-                const { error: finError } = await supabase
-                    .from('financials')
-                    .insert([{
-                        case_id: newCase.id,
-                        total_price: data.total_price ? Number(data.total_price) : null,
-                        buyer_bank: data.buyer_loan_bank?.toString() || null,
-                        seller_bank: data.seller_loan_bank?.toString() || null,
-                    }]);
-                if (finError) console.error('Financial Error', finError);
+            const financialsPayload = {
+                case_id: newCase.id,
+                total_price: data.contract_price ? Number(data.contract_price) : null,
+                buyer_bank: data.buyer_loan_bank?.toString() || null,
+                seller_bank: data.seller_loan_bank?.toString() || null,
+            };
+
+            const { error: finError } = await supabase
+                .from('financials')
+                .insert([financialsPayload]);
+
+            if (finError) {
+                console.error('Financial Error', finError);
+                setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finError.message);
             }
 
-            console.log('All inserts done. Redirecting...');
             router.push('/cases?status=Processing');
             router.refresh();
 
@@ -132,9 +158,6 @@ export default function NewCasePage() {
             setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
             setLoading(false);
         }
-        /* finally {
-            setLoading(false);
-        } */
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,9 +188,9 @@ export default function NewCasePage() {
                     };
 
                     setVal('case_number', parsedData.case_number);
-                    setVal('buyer', parsedData.buyer_name);
+                    setVal('buyer_name', parsedData.buyer_name);
                     setVal('buyer_phone', parsedData.buyer_phone);
-                    setVal('seller', parsedData.seller_name);
+                    setVal('seller_name', parsedData.seller_name);
                     setVal('seller_phone', parsedData.seller_phone);
 
                     setVal('contract_date', parsedData.contract_date);
@@ -192,7 +215,7 @@ export default function NewCasePage() {
                     setVal('handover_date', parsedData.handover_date);
 
                     if (parsedData.total_price) {
-                        setVal('total_price', parsedData.total_price.toString());
+                        setVal('contract_price', parsedData.total_price.toString());
                     }
                 }
                 alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
@@ -250,7 +273,7 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                         <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">買方姓名</label>
-                            <input name="buyer" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
+                            <input name="buyer_name" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">買方電話</label>
@@ -262,7 +285,7 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                         <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">賣方姓名</label>
-                            <input name="seller" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
+                            <input name="seller_name" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">賣方電話</label>
@@ -270,39 +293,28 @@ export default function NewCasePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="space-y-2 col-span-1 md:col-span-2">
-                            <label className="text-sm text-gray-600 font-medium">成交總價 (萬元)</label>
-                            <input name="total_price" type="number" placeholder="例如：488" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" />
-                        </div>
-                        <div className="space-y-2 col-span-1 md:col-span-2">
-                            <label className="text-sm text-gray-600 font-medium">增值稅類型</label>
-                            <select name="tax_type" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors appearance-none cursor-pointer">
-                                <option value="一般">一般稅率</option>
-                                <option value="自用">自用稅率</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="space-y-2">
+                            <label className="text-sm text-gray-600 font-medium font-bold text-primary">成交總價 (萬元)</label>
+                            <input name="contract_price" type="number" step="0.1" className="w-full bg-white border-2 border-primary/20 rounded-lg px-4 py-3 text-black font-bold focus:border-primary" required />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-gray-600 font-medium">稅單性質</label>
+                            <select name="tax_type" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black appearance-none cursor-pointer">
+                                <option value="一般">一般</option>
+                                <option value="自用">自用</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">買方貸款銀行</label>
-                            <input name="buyer_loan_bank" type="text" placeholder="例如：台新銀行" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-orange-600 font-bold">賣方代償銀行</label>
-                            <input name="seller_loan_bank" type="text" placeholder="例如：富邦銀行" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-colors" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">代償日期</label>
-                            <input name="redemption_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" />
+                            <input name="buyer_loan_bank" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-gray-600 font-medium">塗銷方式</label>
-                            <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors appearance-none cursor-pointer">
+                            <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black appearance-none cursor-pointer">
                                 <option value="代書塗銷">代書塗銷 (我方辦理)</option>
                                 <option value="賣方自辦">賣方自辦</option>
-                                <option value="無">無 (無借錢免塗銷)</option>
+                                <option value="無">無</option>
                             </select>
                         </div>
                     </div>
@@ -314,86 +326,84 @@ export default function NewCasePage() {
                 <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-amber-600 border-l-4 border-amber-500 pl-3">重要日期與付款明細</h3>
 
-                    <div className="grid grid-cols-1 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Contract Stage */}
-                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-amber-700">簽約日</label>
-                                    <input name="contract_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-1 focus:ring-amber-500" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm text-gray-600">簽約款 (萬元)</label>
-                                    <input name="contract_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
-                                </div>
+                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-3 border border-gray-100 lg:col-span-1">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-amber-700">簽約日</label>
+                                <input name="contract_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" required />
                             </div>
-                            {/* Signing Difference */}
-                            <div className="p-3 bg-amber-500/5 rounded-lg border border-dashed border-amber-500/20 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-600">簽約款 (萬元)</label>
+                                <input name="contract_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                            </div>
+                            <div className="p-2 bg-amber-50 rounded border border-dashed border-amber-200 space-y-2">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-amber-600">簽約補差額日期</label>
-                                    <input name="sign_diff_date" type="date" className="w-full bg-white/50 border border-gray-200 rounded px-2 py-1 text-sm text-black" />
+                                    <label className="text-[10px] font-bold text-amber-600 uppercase">補差額日</label>
+                                    <input name="sign_diff_date" type="date" className="w-full bg-white/80 border border-gray-200 rounded px-2 py-1 text-[11px]" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-amber-600">補差額金額 (萬元)</label>
-                                    <input name="sign_diff_amount" type="number" step="0.1" className="w-full bg-white/50 border border-gray-200 rounded px-2 py-1 text-sm text-black" />
+                                    <label className="text-[10px] font-bold text-amber-600 uppercase">補差金額</label>
+                                    <input name="sign_diff_amount" type="number" step="0.1" className="w-full bg-white/80 border border-gray-200 rounded px-2 py-1 text-[11px]" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Seal & Tax */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-blue-600">用印日</label>
-                                    <input name="seal_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-1 focus:ring-blue-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-gray-600">用印款 (萬元)</label>
-                                    <input name="seal_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-1 text-sm text-black" />
-                                </div>
-
+                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-blue-600">用印日</label>
+                                <input name="seal_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
                             </div>
-
-                            <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-emerald-600">完稅日</label>
-                                    <input name="tax_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-1 focus:ring-emerald-500" />
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-600">用印款 (萬元)</label>
+                                <input name="seal_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                            </div>
+                            <div className="border-t border-gray-200 my-2 pt-2">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-emerald-600">完稅日</label>
+                                    <input name="tax_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-gray-600">完稅款 (萬元)</label>
-                                    <input name="tax_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-1 text-sm text-black" />
+                                    <input name="tax_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
                                 </div>
-
                             </div>
                         </div>
 
-                        {/* Transfer & Balance & Handover */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-600">過戶日</label>
-                                    <input name="transfer_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
-                                </div>
+                        {/* Transfer & Note */}
+                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-600">過戶日</label>
+                                <input name="transfer_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-600">過戶備註</label>
+                                <input name="transfer_note" type="text" placeholder="例如：代書辦理" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                            </div>
+                            <div className="border-t border-gray-200 my-2 pt-2">
                                 <div className="space-y-1">
-                                    <label className="text-xs text-gray-600">過戶備註</label>
-                                    <input name="transfer_note" type="text" placeholder="例如：由買方自辦" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-1 text-sm text-black" />
+                                    <label className="text-xs font-bold text-orange-600">代償日</label>
+                                    <input name="redemption_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-purple-600">尾款日</label>
-                                    <input name="balance_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:ring-1 focus:ring-purple-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-gray-600">尾款 (萬元)</label>
-                                    <input name="balance_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-1 text-sm text-black" />
-                                </div>
+                        {/* Tail & Handover */}
+                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-purple-600">尾款日</label>
+                                <input name="balance_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-red-600">交屋日</label>
-                                <input name="handover_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-600">尾款 (萬元)</label>
+                                <input name="balance_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                            </div>
+                            <div className="border-t border-gray-200 my-2 pt-2">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-red-600">交屋日</label>
+                                    <input name="handover_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                                </div>
                             </div>
                         </div>
                     </div>

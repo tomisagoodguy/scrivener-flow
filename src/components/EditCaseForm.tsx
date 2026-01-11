@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
 import { parseDocx } from '@/app/actions/parseDocx';
 import QuickNotes from '@/components/QuickNotes';
+import CaseTodos from '@/components/CaseTodos';
 
 interface EditCaseFormProps {
     initialData: DemoCase;
@@ -16,6 +17,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [notes, setNotes] = useState(initialData.notes || '');
+    const [transferNote, setTransferNote] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [debugInfo, setDebugInfo] = useState('');
 
@@ -27,7 +29,9 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
 
     useEffect(() => {
         console.log('EditCaseForm initialized with Case ID:', initialData.id);
-    }, [initialData.id]);
+        const m = Array.isArray(initialData.milestones) ? initialData.milestones[0] : initialData.milestones || {};
+        setTransferNote(m?.transfer_note || '');
+    }, [initialData.id, initialData.milestones]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -66,11 +70,17 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
             const milestoneData = {
                 case_id: initialData.id,
                 contract_date: formatDate(data.contract_date),
+                contract_amount: data.contract_amount ? Number(data.contract_amount) : null,
+                sign_diff_date: formatDate(data.sign_diff_date),
+                sign_diff_amount: data.sign_diff_amount ? Number(data.sign_diff_amount) : null,
                 seal_date: formatDate(data.seal_date),
+                seal_amount: data.seal_amount ? Number(data.seal_amount) : null,
                 tax_payment_date: formatDate(data.tax_payment_date),
+                tax_amount: data.tax_amount ? Number(data.tax_amount) : null,
                 transfer_date: formatDate(data.transfer_date),
                 transfer_note: data.transfer_note?.toString() || null,
                 balance_payment_date: formatDate(data.balance_payment_date),
+                balance_amount: data.balance_amount ? Number(data.balance_amount) : null,
                 handover_date: formatDate(data.handover_date),
                 redemption_date: formatDate(data.redemption_date),
             };
@@ -199,53 +209,80 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">案件編號</label>
-                        <input name="case_number" defaultValue={initialData.case_number} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2" required />
+                        <input name="case_number" defaultValue={initialData.case_number} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" required />
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
-                        <select name="city" defaultValue={initialData.city || '士林'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer">
+                        <select name="city" defaultValue={initialData.city || '士林'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all">
                             <option value="士林">士林</option>
                             <option value="內湖">內湖</option>
                         </select>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">買方</label>
-                        <input name="buyer" defaultValue={initialData.buyer_name} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2" required />
+                        <input name="buyer" defaultValue={initialData.buyer_name} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" required />
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">賣方</label>
-                        <input name="seller" defaultValue={initialData.seller_name} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2" required />
+                        <input name="seller" defaultValue={initialData.seller_name} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" required />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">成交總價 (萬)</label>
-                        <input name="total_price" defaultValue={financials?.total_price} type="number" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2" />
+                        <input name="total_price" defaultValue={financials?.total_price} type="number" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">買方貸款銀行</label>
-                        <input name="buyer_loan_bank" defaultValue={financials?.buyer_bank} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2" />
+                        <input name="buyer_loan_bank" defaultValue={financials?.buyer_bank} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-orange-600 uppercase">賣方代償銀行</label>
-                        <input name="seller_loan_bank" defaultValue={financials?.seller_bank} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200" />
+                        <input name="seller_loan_bank" defaultValue={financials?.seller_bank} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-foreground/50 uppercase">稅單性質</label>
+                        <select name="tax_type" defaultValue={initialData.tax_type || '一般'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all font-bold">
+                            <option value="一般">一般</option>
+                            <option value="自用 (一生一次)">一生一次</option>
+                            <option value="自用 (一生一屋)">一生一屋</option>
+                            <option value="道路用地">道路用地</option>
+                            <option value="一般 + 道路用地">一般 + 道路用地</option>
+                            <option value="一生一次 + 道路用地">一生一次 + 道路用地</option>
+                            <option value="一生一屋 + 道路用地">一生一屋 + 道路用地</option>
+                        </select>
                     </div>
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-foreground/50 uppercase">增值稅類型</label>
-                        <select name="tax_type" defaultValue={initialData.tax_type || '一般'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer">
-                            <option value="一般">一般</option>
-                            <option value="自用">自用</option>
-                        </select>
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-accent border-l-4 border-accent pl-3">辦事清單 (Checklist)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
+                        <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">簽約與用印階段</h4>
+                        <CaseTodos
+                            caseId={initialData.id}
+                            initialTodos={initialData.todos || {}}
+                            items={[
+                                '買方蓋印章', '賣方蓋印章', '用印款', '完稅款',
+                                '權狀印鑑', '授權', '解約排除', '規費',
+                                '設定', '稅單', '差額', '整過戶'
+                            ]}
+                            hideCompleted={false}
+                        />
+                    </div>
+                    <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
+                        <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">過戶與交屋階段</h4>
+                        <CaseTodos
+                            caseId={initialData.id}
+                            initialTodos={initialData.todos || {}}
+                            items={['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單']}
+                            hideCompleted={false}
+                        />
                     </div>
                 </div>
             </div>
@@ -254,38 +291,65 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
 
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-amber-600 border-l-4 border-amber-500 pl-3">進度日期</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40">簽約日</label>
-                        <input name="contract_date" defaultValue={milestones?.contract_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" required />
+                        <label className="text-[10px] font-bold text-amber-600">簽約日/款</label>
+                        <input name="contract_date" defaultValue={milestones?.contract_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/30 outline-none" required />
+                        <input name="contract_amount" defaultValue={milestones?.contract_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40">用印日</label>
-                        <input name="seal_date" defaultValue={milestones?.seal_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
+                        <label className="text-[10px] font-bold text-amber-600">補差額/款</label>
+                        <input name="sign_diff_date" defaultValue={milestones?.sign_diff_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
+                        <input name="sign_diff_amount" defaultValue={milestones?.sign_diff_amount} type="number" step="0.1" placeholder="補差額" className="w-full bg-white/50 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40">完稅日</label>
-                        <input name="tax_payment_date" defaultValue={milestones?.tax_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
+                        <label className="text-[10px] font-bold text-blue-600">用印日/款</label>
+                        <input name="seal_date" defaultValue={milestones?.seal_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <input name="seal_amount" defaultValue={milestones?.seal_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-emerald-600">完稅日/款</label>
+                        <input name="tax_payment_date" defaultValue={milestones?.tax_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <input name="tax_amount" defaultValue={milestones?.tax_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-blue-500">尾款日/款</label>
+                        <input name="balance_payment_date" defaultValue={milestones?.balance_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <input name="balance_amount" defaultValue={milestones?.balance_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-foreground/40 flex justify-between">
                             <span>過戶日</span>
                             <span className="text-[9px] text-purple-500">備註</span>
                         </label>
-                        <input name="transfer_date" defaultValue={milestones?.transfer_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
-                        <input name="transfer_note" defaultValue={milestones?.transfer_note} type="text" placeholder="備註..." className="w-full bg-secondary/20 border border-border-color rounded px-2 py-1 text-[10px] focus:bg-white/50 transition-all" />
+                        <input name="transfer_date" defaultValue={milestones?.transfer_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <div className="space-y-1">
+                            <input
+                                name="transfer_note"
+                                value={transferNote}
+                                onChange={(e) => setTransferNote(e.target.value)}
+                                type="text"
+                                placeholder="備註..."
+                                className="w-full bg-secondary/20 border border-border-color rounded px-2 py-1 text-[10px] focus:bg-white/50 transition-all outline-none"
+                            />
+                            <div className="flex flex-wrap gap-1">
+                                {['訴訟', '卡營業登記', '報拆延', '外案', '重要', '不重要'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => setTransferNote(p => p ? `${p} ${tag}` : tag)}
+                                        className="text-[9px] px-1 bg-purple-50 hover:bg-purple-500 hover:text-white text-purple-600 rounded border border-purple-100 transition-all"
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40 text-blue-500">尾款日</label>
-                        <input name="balance_payment_date" defaultValue={milestones?.balance_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40">代償日</label>
-                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40 text-red-500">交屋日</label>
-                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1.5 text-sm" />
+                        <label className="text-[10px] font-bold text-foreground/40">代償/交屋</label>
+                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
+                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
                     </div>
                 </div>
             </div>
@@ -364,6 +428,6 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </button>
                 </div>
             </div>
-        </form>
+        </form >
     );
 }
