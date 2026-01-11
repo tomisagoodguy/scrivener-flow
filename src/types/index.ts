@@ -3,18 +3,21 @@ export type CaseStatus = '辦理中' | '結案' | '解約' | 'Processing' | 'Clo
 export interface Case {
     id: string; // Using string for text-based ID or uuid
     case_number: string; // Primary Key according to README
-    buyer: string; // Legacy
-    seller: string; // Legacy
-    city_area: string; // Legacy
+    buyer_name: string; // Updated from buyer
+    buyer_phone?: string;
+    seller_name: string; // Updated from seller
+    seller_phone?: string;
+    city: string; // Updated from city_area
     tax_type?: '一般' | '自用';
-    buyer_loan_bank?: string; // Legacy
-    seller_loan_bank?: string; // Legacy
+    buyer_loan_bank?: string;
+    seller_loan_bank?: string;
 
     // Dates
     contract_date: string; // ISO date string
     seal_date?: string;
     tax_payment_date?: string;
     transfer_date?: string;
+    balance_payment_date?: string;
     handover_date?: string;
 
     status: CaseStatus;
@@ -59,7 +62,9 @@ export interface DemoCase {
 
     // 1.2 People
     buyer_name: string;
+    buyer_phone?: string;
     seller_name: string;
+    seller_phone?: string;
     agent_name?: string;
 
     // 1.3 Property
@@ -86,6 +91,10 @@ export interface DemoCase {
     pending_tasks?: string;
     bank_contact_notes?: string;
 
+    has_keyed_overtime: boolean; // 加班費申報狀態
+    todos?: Record<string, boolean>; // 固定代辦事項
+    cancellation_type?: '代書塗銷' | '賣方自辦' | '無'; // 塗銷方式
+
     // Joined Tables
     milestones?: Milestone;
     financials?: Financials;
@@ -99,12 +108,27 @@ export interface Milestone {
     seal_date?: string;      // 用印
     tax_payment_date?: string; // 完稅
     transfer_date?: string;    // 過戶
+    balance_payment_date?: string; // 尾款
     handover_date?: string;    // 交屋
     fee_precollect_date?: string; // 預收規費 (Excel shows as date in some columns)
+
+    // Custom note for Transfer Date (過戶日)
+    transfer_note?: string;
 
     sign_diff_days?: number;
     redemption_date?: string;
     tax_filing_date?: string;
+
+    // Payment Details
+    contract_method?: string;
+    contract_amount?: number;
+    sign_diff_amount?: number;
+    seal_method?: string;
+    seal_amount?: number;
+    tax_method?: string;
+    tax_amount?: number;
+    balance_method?: string;
+    balance_amount?: number;
 }
 
 export interface Financials {

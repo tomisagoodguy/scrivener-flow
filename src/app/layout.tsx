@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Real Estate Case Management System",
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,9 +27,11 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <body
-        className={`${inter.variable} ${outfit.variable} antialiased bg-slate-950 text-slate-50`}
+        className={`${inter.variable} ${outfit.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

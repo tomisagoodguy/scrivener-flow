@@ -13,7 +13,7 @@ export const RecentCases = async () => {
     if (error) {
         console.error('Error fetching recent cases:', error);
         return (
-            <div className="glass-card rounded-2xl p-6 md:p-8 text-red-400">
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 md:p-8 text-red-600">
                 無法載入案件資料
             </div>
         );
@@ -21,15 +21,16 @@ export const RecentCases = async () => {
 
     const recentCases = (cases || []) as Case[];
 
-    // Helper for status styles
+    // Helper for status styles - Optimized for Light Mode
     const getStatusStyle = (status: string) => {
         switch (status) {
             case '結案':
-                return 'bg-slate-700/50 text-slate-300 border-slate-600/30';
+                return 'bg-gray-100 text-gray-600 border-gray-200';
             case '解約':
-                return 'bg-red-500/10 text-red-300 border-red-500/20';
-            default: // 辦理中
-                return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                return 'bg-red-50 text-red-600 border-red-100';
+            case '辦理中':
+            default:
+                return 'bg-emerald-50 text-emerald-600 border-emerald-100';
         }
     };
 
@@ -45,40 +46,40 @@ export const RecentCases = async () => {
     };
 
     return (
-        <section className="glass-card rounded-2xl p-6 md:p-8 animate-slide-up" style={{ animationDelay: '0.4s' }}>
+        <section className="glass-card p-6 md:p-8 animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-slate-200">近期案件動態</h2>
-                <Link href="/cases" className="text-sm text-primary hover:text-primary-deep transition-colors">
+                <h2 className="text-xl font-bold text-gray-900">近期案件動態</h2>
+                <Link href="/cases" className="text-sm text-primary hover:text-primary-deep transition-colors font-medium">
                     查看全部 →
                 </Link>
             </div>
 
             <div className="space-y-3">
                 {recentCases.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8 text-gray-500">
                         目前沒有案件，點擊右上角新增
                     </div>
                 ) : (
                     recentCases.map((item) => (
-                        <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer border border-transparent hover:border-white/5">
+                        <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl hover:bg-primary-light/30 transition-colors group cursor-pointer border border-transparent hover:border-glass-border">
                             <div className="flex items-center gap-4 mb-3 md:mb-0">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-blue-400 font-bold text-lg border border-white/5">
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary font-bold text-lg border border-blue-100">
                                     {getAvatarInitial(item.case_number)}
                                 </div>
                                 <div>
-                                    <h4 className="font-medium text-slate-200 group-hover:text-primary transition-colors">
-                                        {item.case_number} - {item.city_area}
+                                    <h4 className="font-bold text-gray-900 group-hover:text-primary transition-colors">
+                                        {item.case_number} - {item.city}
                                     </h4>
-                                    <p className="text-sm text-slate-400 mt-1">
-                                        買方：{item.buyer} <span className="mx-2 opacity-30">|</span> 賣方：{item.seller}
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        買方：{item.buyer_name} <span className="mx-2 text-gray-300">|</span> 賣方：{item.seller_name}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto pl-16 md:pl-0">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium border min-w-[80px] text-center ${getStatusStyle(item.status)}`}>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border min-w-[80px] text-center ${getStatusStyle(item.status)}`}>
                                     {item.status}
                                 </span>
-                                <p className="text-xs text-slate-500 font-mono">
+                                <p className="text-xs text-gray-400 font-mono">
                                     {formatDate(item.created_at)}
                                 </p>
                             </div>

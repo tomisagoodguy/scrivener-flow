@@ -39,60 +39,60 @@ export const DashboardStats = async () => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Card 1: Active Cases */}
-            <div className="glass-card p-6 rounded-2xl animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="glass-card p-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
                 <div className="flex justify-between items-start">
                     <div>
-                        <h3 className="text-slate-400 font-medium text-sm uppercase tracking-wider">辦理中案件</h3>
-                        <p className="text-4xl font-bold mt-2 text-white">{activeCases.length}</p>
+                        <h3 className="text-gray-500 font-semibold text-sm uppercase tracking-wider">辦理中案件</h3>
+                        <p className="text-4xl font-bold mt-2 text-gray-900">{activeCases.length}</p>
                     </div>
-                    <div className="p-3 bg-primary/10 rounded-xl">
+                    <div className="p-3 bg-blue-50 rounded-xl">
                         <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
                 </div>
-                <div className="mt-6 flex items-center gap-2 text-emerald-400 text-sm">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold">
+                <div className="mt-6 flex items-center gap-2 text-emerald-600 text-sm">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-xs font-bold">
                         +{newThisWeek}
                     </span>
-                    <span className="text-slate-500">本週新增</span>
+                    <span className="text-gray-500">本週新增</span>
                 </div>
             </div>
 
             {/* Card 2: Urgent / Upcoming */}
-            <div className="glass-card p-6 rounded-2xl animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="glass-card p-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <div className="flex justify-between items-start">
                     <div>
-                        <h3 className="text-slate-400 font-medium text-sm uppercase tracking-wider">即將到期</h3>
-                        <p className="text-4xl font-bold mt-2 text-amber-400">{urgentCount}</p>
+                        <h3 className="text-gray-500 font-semibold text-sm uppercase tracking-wider">即將到期</h3>
+                        <p className="text-4xl font-bold mt-2 text-amber-500">{urgentCount}</p>
                     </div>
-                    <div className="p-3 bg-amber-500/10 rounded-xl">
-                        <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="p-3 bg-amber-50 rounded-xl">
+                        <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
-                <div className="mt-6 flex items-center gap-2 text-slate-500 text-sm">
-                    <span className="text-amber-400 font-medium">注意</span>
+                <div className="mt-6 flex items-center gap-2 text-gray-500 text-sm">
+                    <span className="text-amber-600 font-bold">注意</span>
                     <span>7 天內交屋/完稅</span>
                 </div>
             </div>
 
             {/* Card 3: Completed */}
-            <div className="glass-card p-6 rounded-2xl animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <div className="glass-card p-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
                 <div className="flex justify-between items-start">
                     <div>
-                        <h3 className="text-slate-400 font-medium text-sm uppercase tracking-wider">已結案</h3>
+                        <h3 className="text-gray-500 font-semibold text-sm uppercase tracking-wider">已結案</h3>
                         <p className="text-4xl font-bold mt-2 text-accent">{completedCases.length}</p>
                     </div>
-                    <div className="p-3 bg-accent/10 rounded-xl">
+                    <div className="p-3 bg-red-50 rounded-xl">
                         <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
-                <div className="mt-6 flex items-center gap-2 text-indigo-300 text-sm">
-                    <span className="text-slate-500">達成率 {completionRate}%</span>
+                <div className="mt-6 flex items-center gap-2 text-indigo-600 text-sm">
+                    <span className="text-gray-500">達成率 <span className="font-bold text-gray-900">{completionRate}%</span></span>
                 </div>
             </div>
         </div>
