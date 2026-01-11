@@ -226,7 +226,7 @@ function CaseCard({ caseData }: { caseData: DemoCase }) {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <LabelValue label="成交總價" value={formatPrice(financials?.total_price)} className="text-primary font-black text-base" />
-                                <LabelValue label="稅單性質" value={caseData.tax_type || financials?.vat_type} />
+                                <LabelValue label="稅單性質" value={caseData.tax_type || financials?.vat_type || '-'} />
                             </div>
                         </div>
                     </div>

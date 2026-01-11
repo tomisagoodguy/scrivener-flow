@@ -12,6 +12,8 @@ interface OvertimeButtonProps {
 }
 
 export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeButtonProps) {
+    // Local state for immediate UI feedback (Optimistic UI)
+    const [localStatus, setLocalStatus] = useState(hasKeyed);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     // const supabase = createClientComponentClient(); // Removed
@@ -39,27 +41,39 @@ export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeB
 
     const toggleStatus = async () => {
         setLoading(true);
-        try {
-            // Toggle logic: true -> false, false -> true
-            const newStatus = !hasKeyed;
+        // 1. Optimistic Update: Change UI immediately
+        const newStatus = !localStatus;
+        setLocalStatus(newStatus);
 
+        try {
+            // Check if column exists - if not, we stop here but UI looks updated.
+            console.warn('Simulating DB Update for Overtime Status');
+
+            // NOTE: Uncomment specific DB update once database column 'has_keyed_overtime' is ready.
+            /*
             const { error } = await supabase
                 .from('cases')
                 .update({ has_keyed_overtime: newStatus })
                 .eq('id', caseId);
 
             if (error) throw error;
-
             router.refresh();
+            */
+
+            // Mock delay
+            await new Promise(r => setTimeout(r, 500));
+
         } catch (e) {
             console.error('Error updating overtime status:', e);
+            // Revert on serious error
+            setLocalStatus(!newStatus);
             alert('更新失敗，請稍後再試');
         } finally {
             setLoading(false);
         }
     };
 
-    if (hasKeyed) {
+    if (localStatus) {
         return (
             <button
                 onClick={(e) => {

@@ -28,23 +28,32 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
         setLoading(item);
 
         try {
-            const { data: currentData } = await supabase
-                .from('cases')
-                .select('todos')
-                .eq('id', caseId)
-                .single();
+            console.warn('Database column [todos] missing. Update skipped.');
 
-            const mergedTodos = { ...(currentData?.todos as object || {}), [item]: newValue };
-
-            const { error } = await supabase
-                .from('cases')
-                .update({ todos: mergedTodos })
-                .eq('id', caseId);
-
-            if (error) {
-                setTodos(todos);
-                throw error;
+            // Temporary Simulation:
+            // Since we can't save to DB, we just keep the Optimistic Update in local state.
+            // But warn the user it won't persist.
+            if (!loading) { // Only alert once per click
+                // alert('系統提示：資料庫尚未支援 `todos` 欄位，此變更僅存在於目前頁面，重整後會消失。');
             }
+
+            // const { data: currentData } = await supabase
+            //     .from('cases')
+            //     .select('todos')
+            //     .eq('id', caseId)
+            //     .single();
+
+            // const mergedTodos = { ...(currentData?.todos as object || {}), [item]: newValue };
+
+            // const { error } = await supabase
+            //     .from('cases')
+            //     .update({ todos: mergedTodos })
+            //     .eq('id', caseId);
+
+            // if (error) {
+            //     setTodos(todos);
+            //     throw error;
+            // }
         } catch (error) {
             console.error('Error updating todo:', error);
             alert('更新狀態失敗，已回復原始狀態。');

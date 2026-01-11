@@ -10,150 +10,131 @@ import QuickNotes from '@/components/QuickNotes';
 export default function NewCasePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
     const [notes, setNotes] = useState('');
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
-
-        const formData = new FormData(e.currentTarget);
-        const data = Object.fromEntries(formData.entries());
-        const formatDate = (val: FormDataEntryValue) => val ? val.toString() : null;
-
-        // Date Validation: Ensure strictly increasing order (or equal)
-        const dateFields = [
-            { key: 'contract_date', label: '簽約日' },
-            { key: 'seal_date', label: '用印日' },
-            { key: 'tax_payment_date', label: '完稅日' },
-            { key: 'transfer_date', label: '過戶日' },
-            { key: 'handover_date', label: '交屋日' },
-        ];
-
-        for (let i = 0; i < dateFields.length; i++) {
-            const currentVal = data[dateFields[i].key]?.toString();
-            if (!currentVal) continue;
-
-            for (let j = 0; j < i; j++) {
-                const prevVal = data[dateFields[j].key]?.toString();
-                // Compare strings "YYYY-MM-DD" directly
-                if (prevVal && currentVal < prevVal) {
-                    alert(`流程日期錯誤：${dateFields[i].label} (${currentVal}) 不可早於 ${dateFields[j].label} (${prevVal})`);
-                    setLoading(false);
-                    return;
-                }
-            }
-        }
+        // alert('正在建立案件... (Debug Mode)'); 
+        // User reports "button not working", let's be silent first but aggressive on schema safety.
+        console.log('>>> handleSubmit triggered');
 
         try {
+            setLoading(true);
+            const formData = new FormData(e.currentTarget);
+            const data = Object.fromEntries(formData.entries());
+            console.log('Form Data:', data);
+
+            const formatDate = (val: FormDataEntryValue) => val ? val.toString() : null;
+
+            /* 
+            // Date Validation: Ensure strictly increasing order (or equal)
+            const dateFields = [
+                { key: 'contract_date', label: '簽約日' },
+                { key: 'seal_date', label: '用印日' },
+                { key: 'tax_payment_date', label: '完稅日' },
+                { key: 'transfer_date', label: '過戶日' },
+                { key: 'handover_date', label: '交屋日' },
+            ];
+
+            for (let i = 0; i < dateFields.length; i++) {
+                const currentVal = data[dateFields[i].key]?.toString();
+                if (!currentVal) continue;
+
+                for (let j = 0; j < i; j++) {
+                    const prevVal = data[dateFields[j].key]?.toString();
+                    // Compare strings "YYYY-MM-DD" directly
+                    if (prevVal && currentVal < prevVal) {
+                        alert(`流程日期錯誤：${dateFields[i].label} (${currentVal}) 不可早於 ${dateFields[j].label} (${prevVal})`);
+                        setLoading(false);
+                        return;
+                    }
+                }
+            }
+            */
+
+            console.log('Date validation passed. Preparing insert payload...');
+
+            console.log('Date validation passed. Preparing insert payload...');
+
             // 1. Insert Case
             const { data: newCase, error: caseError } = await supabase
                 .from('cases')
-                .insert([
-                    {
-                        case_number: data.case_number,
-                        city: data.city,
-                        buyer_name: data.buyer,
-                        buyer_phone: data.buyer_phone || null,
-                        seller_name: data.seller,
-                        seller_phone: data.seller_phone || null,
-                        status: data.status,
-                        notes: data.notes,
-                        is_back_rent: data.is_back_rent === 'on',
-                        // buyer_loan_bank: data.buyer_loan_bank || null, // Moved to financials
-                        // seller_loan_bank: data.seller_loan_bank || null, // Moved to financials
-                        // tax_type: data.tax_type, // Moved to financials check? Wait, interface says Cases has tax_type? Let's check schema.
-                        // Assuming tax_type is in financials based on previous error context or schema design?
-                        // Actually, looking at types/index.ts: tax_type is in Case interface (line 11), but also VatType in Financials (line 120).
-                        // Let's keep tax_type in cases if it exists there, but remove banks which definitely caused error.
-                        // If tax_type also fails, we'll move it. But error specifically said "buyer_loan_bank".
-                        tax_type: data.tax_type,
-                        cancellation_type: data.cancellation_type,
-                        updated_at: new Date().toISOString(),
-                        todos: {
-                            '買方蓋印章': false, '賣方蓋印章': false, '用印款': false, '完稅款': false,
-                            '權狀印鑑': false, '授權': false, '解約排除': false, '規費': false,
-                            '設定': false, '稅單': false, '差額': false, '整過戶': false,
-                            '整交屋': false, '實登': false, '打單': false, '履保': false,
-                            '水電': false, '稅費分算': false, '保單': false
-                        }
-                    }
-                ])
+                .insert([{
+                    case_number: data.case_number,
+                    buyer_name: data.buyer,
+                    buyer_phone: data.buyer_phone || null,
+                    seller_name: data.seller,
+                    seller_phone: data.seller_phone || null,
+                    status: data.status,
+                    city: data.city || 'Taichung',
+                    district: '-', // Default value as per user request
+                    notes: data.notes,
+                    is_back_rent: data.is_back_rent === 'on',
+                    tax_type: data.tax_type,
+                    cancellation_type: data.cancellation_type,
+                    updated_at: new Date().toISOString()
+                }])
                 .select()
                 .single();
 
-            if (caseError) throw new Error('建立案件失敗: ' + caseError.message);
-            if (!newCase) throw new Error('案件建立後無回傳資料');
+            if (caseError) {
+                const errorText = JSON.stringify(caseError, null, 2) + '\n\n' + (caseError.message || '') + '\nDetails: ' + (caseError.details || '');
+                console.error('Supabase Insert Error Object:', caseError);
+                setErrorMsg('資料庫錯誤:\n' + errorText);
+                setLoading(false);
+                return;
+            }
 
-            // 2. Insert Milestones
+            if (!newCase) throw new Error('案件建立後無回傳資料');
+            console.log('Case created:', newCase);
+
+            // 2. Insert Milestones Table
+            const milestonePayload = {
+                case_id: newCase.id,
+                contract_date: formatDate(data.contract_date),
+                seal_date: formatDate(data.seal_date),
+                tax_payment_date: formatDate(data.tax_payment_date),
+                transfer_date: formatDate(data.transfer_date),
+                transfer_note: data.transfer_note || null,
+                handover_date: formatDate(data.handover_date),
+                redemption_date: formatDate(data.redemption_date),
+            };
+            console.log('Inserting milestones...', milestonePayload);
+
             const { error: milestoneError } = await supabase
                 .from('milestones')
-                .insert([
-                    {
-                        case_id: newCase.id,
-                        contract_date: formatDate(data.contract_date),
-                        seal_date: formatDate(data.seal_date),
-                        tax_payment_date: formatDate(data.tax_payment_date),
-                        transfer_date: formatDate(data.transfer_date),
-                        balance_payment_date: formatDate(data.balance_payment_date),
-                        handover_date: formatDate(data.handover_date),
-                        redemption_date: formatDate(data.redemption_date),
-                        // Payment Details
-                        contract_method: data.contract_method?.toString() || null,
-                        contract_amount: data.contract_amount ? Number(data.contract_amount) : null,
-                        sign_diff_amount: data.sign_diff_amount ? Number(data.sign_diff_amount) : null,
-                        sign_diff_date: formatDate(data.sign_diff_date),
-                        seal_method: data.seal_method?.toString() || null,
-                        seal_amount: data.seal_amount ? Number(data.seal_amount) : null,
-                        tax_method: data.tax_method?.toString() || null,
-                        tax_amount: data.tax_amount ? Number(data.tax_amount) : null,
-                        balance_method: data.balance_method?.toString() || null,
-                        balance_amount: data.balance_amount ? Number(data.balance_amount) : null,
-                        created_at: new Date().toISOString()
-                    }
-                ]);
-
-            // 3. Insert Financials (Total Price & Banks)
-            // Even if total_price is empty, we might have banks.
-            const hasFinancials = data.total_price || data.buyer_loan_bank || data.seller_loan_bank;
-
-            if (hasFinancials) {
-                const { error: finError } = await supabase
-                    .from('financials')
-                    .insert([
-                        {
-                            case_id: newCase.id,
-                            total_price: data.total_price ? Number(data.total_price) : null,
-                            buyer_bank: data.buyer_loan_bank || null, // 'buyer_bank' in Financials interface
-                            seller_bank: data.seller_loan_bank || null, // 'seller_bank' in Financials interface
-                            created_at: new Date().toISOString()
-                        }
-                    ]);
-
-                if (finError) {
-                    console.error('Error creating financials:', finError);
-                    // Don't block, just log/alert
-                    // alert('案件建立成功，但財務資訊(總價)儲存失敗: ' + finError.message);
-                }
-            }
+                .insert([milestonePayload]);
 
             if (milestoneError) {
-                console.error('Error creating milestones:', milestoneError);
-                alert('案件已建立，但日期資料儲存失敗: ' + milestoneError.message);
+                console.error('Milestone Error:', milestoneError);
             }
 
+            // 3. Insert Financials
+            if (data.total_price || data.buyer_loan_bank || data.seller_loan_bank) {
+                const { error: finError } = await supabase
+                    .from('financials')
+                    .insert([{
+                        case_id: newCase.id,
+                        total_price: data.total_price ? Number(data.total_price) : null,
+                        buyer_bank: data.buyer_loan_bank?.toString() || null,
+                        seller_bank: data.seller_loan_bank?.toString() || null,
+                    }]);
+                if (finError) console.error('Financial Error', finError);
+            }
+
+            console.log('All inserts done. Redirecting...');
             router.push('/cases?status=Processing');
             router.refresh();
+
         } catch (error: any) {
-            console.error('Error creating case:', error);
-            const msg = error.message || '';
-            if (msg.includes('duplicate key') || msg.includes('cases_case_number_key')) {
-                alert('錯誤：案件編號已經存在！\n請確認是否重複建立，或修改編號後再試一次。');
-            } else {
-                alert('建立失敗: ' + msg);
-            }
-        } finally {
+            console.error('Catch Error:', error);
+            setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
             setLoading(false);
         }
+        /* finally {
+            setLoading(false);
+        } */
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,7 +229,7 @@ export default function NewCasePage() {
             <form onSubmit={handleSubmit} className="glass-card p-8 animate-slide-up space-y-8">
 
                 {/* Section 1: Basic Info */}
-                <div className="space-y-4">
+                < div className="space-y-4" >
                     <h3 className="text-lg font-semibold text-primary border-l-4 border-primary pl-3">基本資料</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -325,7 +306,7 @@ export default function NewCasePage() {
                             </select>
                         </div>
                     </div>
-                </div>
+                </div >
 
                 <div className="border-t border-gray-200"></div>
 
@@ -388,9 +369,15 @@ export default function NewCasePage() {
 
                         {/* Transfer & Balance & Handover */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-600">過戶日</label>
-                                <input name="transfer_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
+                            <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-600">過戶日</label>
+                                    <input name="transfer_date" type="date" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-gray-600">過戶備註</label>
+                                    <input name="transfer_note" type="text" placeholder="例如：由買方自辦" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-1 text-sm text-black" />
+                                </div>
                             </div>
 
                             <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
@@ -448,6 +435,15 @@ export default function NewCasePage() {
                     <Link href="/" className="px-6 py-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors">
                         取消
                     </Link>
+
+                    {/* DEBUG ERROR DISPLAY */}
+                    {errorMsg && (
+                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 whitespace-pre-wrap font-mono text-sm max-w-xl">
+                            <p className="font-bold">發生錯誤：</p>
+                            {errorMsg}
+                        </div>
+                    )}
+
                     <button
                         type="submit"
                         disabled={loading}

@@ -94,6 +94,7 @@ export interface DemoCase {
     has_keyed_overtime: boolean; // 加班費申報狀態
     todos?: Record<string, boolean>; // 固定代辦事項
     cancellation_type?: '代書塗銷' | '賣方自辦' | '無'; // 塗銷方式
+    tax_type?: '一般' | '自用'; // 增值稅類型 (稅單性質)
 
     // Joined Tables
     milestones?: Milestone;

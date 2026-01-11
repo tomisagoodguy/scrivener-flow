@@ -26,7 +26,7 @@ export default async function CaseDetailPage({ params }: PageProps) {
         .single();
 
     if (error || !caseData) {
-        console.error('Error fetching case:', error);
+        console.error('Error fetching case:', JSON.stringify(error, null, 2));
         notFound();
     }
 
