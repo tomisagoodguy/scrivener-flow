@@ -28,35 +28,32 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
         setLoading(item);
 
         try {
-            console.warn('Database column [todos] missing. Update skipped.');
+            const { data: currentData } = await supabase
+                .from('cases')
+                .select('todos')
+                .eq('id', caseId)
+                .single();
 
-            // Temporary Simulation:
-            // Since we can't save to DB, we just keep the Optimistic Update in local state.
-            // But warn the user it won't persist.
-            if (!loading) { // Only alert once per click
-                // alert('系統提示：資料庫尚未支援 `todos` 欄位，此變更僅存在於目前頁面，重整後會消失。');
+            const mergedTodos = { ...(currentData?.todos as Record<string, boolean> || {}), [item]: newValue };
+
+            const { error } = await supabase
+                .from('cases')
+                .update({ todos: mergedTodos })
+                .eq('id', caseId);
+
+            if (error) {
+                setTodos(todos);
+                throw error;
             }
-
-            // const { data: currentData } = await supabase
-            //     .from('cases')
-            //     .select('todos')
-            //     .eq('id', caseId)
-            //     .single();
-
-            // const mergedTodos = { ...(currentData?.todos as object || {}), [item]: newValue };
-
-            // const { error } = await supabase
-            //     .from('cases')
-            //     .update({ todos: mergedTodos })
-            //     .eq('id', caseId);
-
-            // if (error) {
-            //     setTodos(todos);
-            //     throw error;
-            // }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating todo:', error);
-            alert('更新狀態失敗，已回復原始狀態。');
+            // Log full error details for debugging
+            if (error?.message) console.error('Error Message:', error.message);
+            if (error?.details) console.error('Error Details:', error.details);
+            if (error?.hint) console.error('Error Hint:', error.hint);
+
+            alert(`更新狀態失敗: ${error.message || '未知錯誤 (Check Console)'}`);
+            setTodos(todos);
         } finally {
             setLoading(null);
         }
@@ -71,6 +68,7 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
                     return (
                         <button
                             key={item}
+                            type="button"
                             onClick={(e) => toggleTodo(e, item)}
                             disabled={loading === item}
                             className={`

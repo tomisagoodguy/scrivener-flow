@@ -1,0 +1,10 @@
+﻿--- Checking tables columns ---
+
+Checking "cases" table...
+Existing "cases" columns: id, created_at, updated_at, case_number, legacy_id, status, handler, buyer_name, seller_name, agent_name, city, district, address, property_type, build_type, is_back_rent, has_tenant, is_radiation_check, is_sea_sand_check, check_priority_purchase, check_second_mortgage, check_seal_certificate, notes, pending_tasks, bank_contact_notes, buyer_phone, seller_phone, cancellation_type, tax_type, city_area
+
+Checking "milestones" table...
+Existing "milestones" columns: id, case_id, contract_date, seal_date, tax_payment_date, transfer_date, handover_date, sign_diff_days, redemption_date, tax_filing_date, transfer_note, sign_diff_date, sign_diff_amount, contract_amount, seal_amount, tax_amount, balance_amount, balance_payment_date
+
+Checking "financials" table...
+Existing "financials" columns: id, case_id, total_price, pre_collected_fee, balance_payment, vat_type, tax_house_land, tax_repurchase, buyer_bank, buyer_loan_amount, seller_bank, seller_redemption_amount

@@ -28,6 +28,7 @@ export default function RootLayout({
     <html lang="zh-TW" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${outfit.variable} antialiased`}
+        suppressHydrationWarning
       >
         <ThemeProvider>
           {children}

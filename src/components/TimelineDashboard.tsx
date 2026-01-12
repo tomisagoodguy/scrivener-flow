@@ -32,8 +32,8 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
     const today = startOfDay(new Date());
     const sevenDaysLater = endOfDay(addDays(today, 7));
 
-    const upcomingTasks = useMemo(() => {
-        const tasks: TimelineItem[] = [];
+    const { upcomingTasks } = useMemo(() => {
+        const upcoming: TimelineItem[] = [];
 
         cases.forEach((c) => {
             const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
@@ -43,8 +43,10 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                 if (!dateStr) return;
                 try {
                     const date = parseISO(dateStr);
+                    // Standard Check: Is it within today (00:00) -> 7 days later
+                    // We intentionally IGNORE dates in the past (< today) as per user request "Past = Done"
                     if (isWithinInterval(date, { start: today, end: sevenDaysLater })) {
-                        tasks.push({
+                        upcoming.push({
                             date,
                             caseNumber: c.case_number,
                             buyer: c.buyer_name,
@@ -67,7 +69,9 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
             checkAndAdd(m.balance_payment_date, '尾款');
         });
 
-        return tasks.sort((a, b) => a.date.getTime() - b.date.getTime());
+        return {
+            upcomingTasks: upcoming.sort((a, b) => a.date.getTime() - b.date.getTime()),
+        };
     }, [cases, today, sevenDaysLater]);
 
     // Group by date
@@ -85,73 +89,56 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
         return result;
     }, [upcomingTasks, today]);
 
-    if (upcomingTasks.length === 0) {
-        return (
-            <div className="bg-secondary/20 border border-dashed border-border-color rounded-xl p-6 text-center mb-8">
-                <p className="text-foreground/40 text-sm">未來 7 天暫無重要排程</p>
-            </div>
-        );
-    }
-
     return (
         <div className="mb-8 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                    <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-                    7 日工作預警看板
+                <h3 className="text-xl font-black flex items-center gap-3">
+                    <span className="flex h-3 w-3 rounded-full bg-primary animate-pulse shadow-lg"></span>
+                    7 日工作預警看板 (Work Dashboard)
                 </h3>
-                <span className="text-xs text-foreground/40">
-                    {format(today, 'yyyy/MM/dd')} - {format(addDays(today, 7), 'yyyy/MM/dd')}
-                </span>
+                <div className="flex gap-4 text-xs font-bold text-foreground/50">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary"></span> 今日任務</span>
+                    <span>{format(today, 'yyyy/MM/dd')} - {format(addDays(today, 7), 'MM/dd')}</span>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-3 h-full">
+            <div className="flex gap-3 h-full overflow-x-hidden p-1 min-h-[300px]">
+                {/* 7 Days Columns - Flex Expandable */}
                 {days.map((day, idx) => (
                     <div
                         key={idx}
                         className={`
-                            flex flex-col rounded-xl border-2 transition-all h-full min-h-[160px]
-                            ${day.isToday ? 'bg-primary/20 dark:bg-primary/30 border-primary ring-2 ring-primary/20' : 'bg-card border-border-color'}
-                            ${day.tasks.length === 0 ? 'opacity-90' : 'opacity-100 shadow-md'}
+                            flex-1 min-w-[80px] flex flex-col rounded-xl border-2 transition-all duration-300 ease-in-out h-full
+                            hover:flex-[4] hover:min-w-[280px] hover:shadow-xl hover:z-10 hover:-translate-y-1
+                            group
+                            ${day.isToday ? 'bg-primary/5 border-primary/50 ring-4 ring-primary/5 z-0' : 'bg-card border-border-color'}
                         `}
                     >
                         {/* Day Header */}
                         <div className={`
-                            px-3 py-3 border-b-2 text-center
-                            ${day.isToday ? 'border-primary/30 bg-primary/20 dark:bg-primary/40' : 'border-border-color bg-secondary/50'}
+                            px-2 py-3 border-b-2 text-center shrink-0 transition-colors
+                            ${day.isToday ? 'border-primary/30 bg-primary/10' : 'border-border-color bg-secondary/30 group-hover:bg-white/80'}
                         `}>
-                            <div className={`text-[13px] uppercase font-black tracking-tighter mb-1 ${day.isToday ? 'text-primary' : 'text-foreground/80'}`}>
-                                {day.isToday ? '今日 TODAY' : format(day.date, 'EEEE', { locale: zhTW })}
+                            <div className={`text-[10px] uppercase font-black tracking-tighter mb-1 truncate ${day.isToday ? 'text-primary' : 'text-foreground/40'}`}>
+                                {day.isToday ? '今日 TODAY' : format(day.date, 'ccc', { locale: zhTW })}
                             </div>
-                            <div className={`text-2xl font-black leading-none ${day.isToday ? 'text-primary' : 'text-foreground'}`}>
+                            <div className={`text-xl font-black leading-none group-hover:text-3xl transition-all ${day.isToday ? 'text-primary' : 'text-foreground'}`}>
                                 {format(day.date, 'd')}
+                            </div>
+                            <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 overflow-hidden transition-all text-[10px] text-foreground/40 mt-1">
+                                {format(day.date, 'yyyy/MM')}
                             </div>
                         </div>
 
                         {/* Tasks List */}
-                        <div className="p-2 space-y-2 flex-grow overflow-y-auto max-h-[250px] custom-scrollbar bg-white/50">
+                        <div className="p-1.5 space-y-1.5 flex-grow overflow-y-auto custom-scrollbar bg-white/30 group-hover:p-3 group-hover:space-y-3 transition-all">
                             {day.tasks.length > 0 ? (
                                 day.tasks.map((task, tIdx) => (
-                                    <div
-                                        key={tIdx}
-                                        className={`${task.color} text-white p-2.5 rounded-lg text-[13px] shadow-sm hover:scale-[1.02] transition-transform cursor-pointer relative group overflow-hidden border border-black/10`}
-                                        title={`${task.caseNumber} - ${task.buyer} vs ${task.seller}`}
-                                    >
-                                        <div className="absolute top-0 right-0 p-1 opacity-20 pointer-events-none text-xl">
-                                            {TASK_CONFIG[task.type].icon}
-                                        </div>
-                                        <div className="font-black flex items-center justify-between mb-1.5 border-b border-white/20 pb-1">
-                                            <span>{task.type}</span>
-                                            <span className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded truncate ml-1">{task.caseNumber}</span>
-                                        </div>
-                                        <div className="truncate font-bold">
-                                            {task.buyer} <span className="mx-0.5">⇄</span> {task.seller}
-                                        </div>
-                                    </div>
+                                    <TaskCard key={tIdx} task={task} />
                                 ))
                             ) : (
-                                <div className="h-full flex items-center justify-center py-4 text-center">
-                                    <span className="text-[11px] text-foreground/30 font-bold italic underline decoration-foreground/10">無排程</span>
+                                <div className="h-full flex items-center justify-center text-center opacity-50 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] text-foreground/20 font-bold border-b-2 border-dotted border-foreground/10 pb-0.5 whitespace-nowrap group-hover:text-sm">無排程</span>
                                 </div>
                             )}
                         </div>
@@ -165,6 +152,48 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
                 .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
             `}</style>
+        </div>
+    );
+}
+
+function TaskCard({ task, isOverdue = false }: { task: TimelineItem, isOverdue?: boolean }) {
+    return (
+        <div
+            className={`
+                shrink-0
+                text-white p-2 rounded-md shadow-sm transition-all cursor-pointer relative overflow-hidden border border-white/20 select-none
+                group-hover:rounded-lg group-hover:p-3 group-hover:shadow-md
+                ${isOverdue ? 'bg-rose-500 hover:bg-rose-600' : `${task.color} hover:brightness-110`}
+            `}
+            title={`${task.caseNumber} - ${task.buyer} vs ${task.seller}`}
+        >
+            {/* Compact View (Default) */}
+            <div className="flex flex-col gap-0.5 group-hover:hidden">
+                <div className="flex justify-between items-center">
+                    <span className="font-black text-[11px] opacity-90">{task.type}</span>
+                    <span className="text-[9px] bg-black/20 px-1 rounded opacity-80">{task.caseNumber}</span>
+                </div>
+            </div>
+
+            {/* Expanded View (On Column Hover) */}
+            <div className="hidden group-hover:flex flex-col gap-1 animate-fade-in">
+                <div className="flex justify-between items-start border-b border-white/20 pb-1 mb-1">
+                    <span className="font-black text-sm flex items-center gap-1">
+                        {TASK_CONFIG[task.type]?.icon} {task.type}
+                    </span>
+                    <span className="text-[10px] font-mono bg-black/20 px-1.5 py-0.5 rounded text-white/90">{task.caseNumber}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-bold text-white/95">
+                    <span className="truncate max-w-[45%]">{task.buyer}</span>
+                    <span className="text-[10px] opacity-60">⇄</span>
+                    <span className="truncate max-w-[45%] text-right">{task.seller}</span>
+                </div>
+                {isOverdue && (
+                    <div className="mt-1 text-[10px] bg-white/20 text-center rounded py-0.5 text-white/90 font-bold">
+                        預定日期: {format(task.date, 'yyyy/MM/dd')}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

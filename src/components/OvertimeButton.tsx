@@ -49,8 +49,6 @@ export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeB
             // Check if column exists - if not, we stop here but UI looks updated.
             console.warn('Simulating DB Update for Overtime Status');
 
-            // NOTE: Uncomment specific DB update once database column 'has_keyed_overtime' is ready.
-            /*
             const { error } = await supabase
                 .from('cases')
                 .update({ has_keyed_overtime: newStatus })
@@ -58,7 +56,6 @@ export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeB
 
             if (error) throw error;
             router.refresh();
-            */
 
             // Mock delay
             await new Promise(r => setTimeout(r, 500));

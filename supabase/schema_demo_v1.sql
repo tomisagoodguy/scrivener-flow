@@ -43,11 +43,12 @@ CREATE TABLE cases (
     build_type TEXT CHECK (build_type IN ('New_System', 'Old_System', 'Old_System_No_Household')),
     
     -- 4. Logics & Checks (Boolean Flags & Notes)
-    -- 4.1 Flags
+    -- 4. Flags
     is_back_rent BOOLEAN DEFAULT FALSE,
     has_tenant BOOLEAN DEFAULT FALSE,
     is_radiation_check BOOLEAN DEFAULT FALSE,
     is_sea_sand_check BOOLEAN DEFAULT FALSE,
+    has_keyed_overtime BOOLEAN DEFAULT FALSE,
     
     -- 4.2 Legal Checks
     check_priority_purchase BOOLEAN DEFAULT FALSE,
@@ -57,7 +58,10 @@ CREATE TABLE cases (
     -- 4.3 Notes
     notes TEXT,
     pending_tasks TEXT,
-    bank_contact_notes TEXT
+    todos JSONB DEFAULT '{}'::jsonb,
+    bank_contact_notes TEXT,
+    buyer_phone TEXT,
+    seller_phone TEXT
 );
 
 -- 3. Milestones Table (1:1 with Cases)
@@ -67,15 +71,32 @@ CREATE TABLE milestones (
     
     -- 2.1 The Big 5
     contract_date DATE,
+    contract_amount NUMERIC,
+    contract_method TEXT,
+    
     seal_date DATE,
+    seal_amount NUMERIC,
+    seal_method TEXT,
+    
     tax_payment_date DATE,
+    tax_amount NUMERIC,
+    tax_method TEXT,
+    
     transfer_date DATE,
+    transfer_note TEXT,
+    
     handover_date DATE,
     
     -- 2.2 Operational Dates
-    sign_diff_days INTEGER,
+    sign_diff_date DATE,
+    sign_diff_amount NUMERIC,
+    sign_diff_days INTEGER, -- Kept for legacy if needed, or remove
+    
     redemption_date DATE,
-    tax_filing_date DATE
+    tax_filing_date DATE,
+    
+    balance_amount NUMERIC,
+    balance_method TEXT
 );
 
 -- 4. Financials Table (1:1 with Cases)

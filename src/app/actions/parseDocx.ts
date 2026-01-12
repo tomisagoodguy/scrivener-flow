@@ -100,20 +100,52 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
       sellerBlock = rawText.substring(splitIdx);
     }
 
+    // Generalized Phone Regex: Matches TEL, Tel, 電話, 手機, etc. + optional separator + number
+    // exclude ID/Identity which might be mixed in
+    const phonePattern = /(?:TEL|Tel|電話|手機|連絡電話|聯絡電話)\s*[：:﹕\.]?\s*([\d\-\(\)\s]{8,})/;
+
     // Buyer
-    parsedData.buyer_name = extract(/(?:買\s*方|買受人)\s*[：:﹕]?\s+(.*?)\s+(?:ID|TEL|身分證)/, buyerBlock);
-    parsedData.buyer_phone = extract(/TEL\s*[：:﹕]\s*([\d\-\(\)\s]+)/, buyerBlock);
-    if (parsedData.buyer_phone) parsedData.buyer_phone = parsedData.buyer_phone.replace(/[^\d-]/g, '');
+    parsedData.buyer_name = extract(/(?:買\s*方|買受人)\s*[：:﹕]?\s+(.*?)(?:\s+(?:ID|TEL|電話|身分證)|$)/, buyerBlock);
+    const buyerPhoneMatch = buyerBlock.match(phonePattern);
+    if (buyerPhoneMatch) {
+      parsedData.buyer_phone = buyerPhoneMatch[1].trim().replace(/[^\d-]/g, '');
+    }
 
     // Seller
-    parsedData.seller_name = extract(/(?:賣\s*方|出賣人)\s*[：:﹕]?\s+(.*?)\s+(?:ID|TEL|身分證)/, sellerBlock);
-    parsedData.seller_phone = extract(/TEL\s*[：:﹕]\s*([\d\-\(\)\s]+)/, sellerBlock);
-    if (parsedData.seller_phone) parsedData.seller_phone = parsedData.seller_phone.replace(/[^\d-]/g, '');
+    parsedData.seller_name = extract(/(?:賣\s*方|出賣人)\s*[：:﹕]?\s+(.*?)(?:\s+(?:ID|TEL|電話|身分證)|$)/, sellerBlock);
+    const sellerPhoneMatch = sellerBlock.match(phonePattern);
+    if (sellerPhoneMatch) {
+      parsedData.seller_phone = sellerPhoneMatch[1].trim().replace(/[^\d-]/g, '');
+    }
 
     // --- 3. Payment Details ---
     const extractStage = (stageName: string) => {
-      const pattern = new RegExp(`${stageName}\\s+([\\d,]+)([^\\(\\s]*)\\s*\\((\\d{4}[\\/.-]\\d{2}[\\/.-]\\d{2})\\)`);
+      // Logic: StageName (optional '款'/'日') -> Amount -> (Method) -> (Date)
+      // Example: "用印 100轉帳 (2024/01/01)" or "用印款: 100 (2024/01/01)"
+      // Date can be in (), [], （）
+
+      // Create a regex that is flexible about spaces and separators
+      // 1. Match Stage Name (e.g. "用印")
+      // 2. Optional "款"
+      // 3. Flexible separator (space, colon)
+      // 4. Capture Amount (digits + commas)
+      // 5. Capture Method (optional text before date)
+      // 6. Capture Date (YYYY/MM/DD inside brackets)
+
+      const safeStage = stageName.split('').join('\\s*'); // "用印" -> "用\s*印"
+
+      const patternStr =
+        `${safeStage}(?:款)?` +                   // Name + optional "款"
+        `\\s*[:：﹕]?\\s*` +                      // Separator
+        `([\\d,]+)` +                              // Group 1: Amount
+        `([^\\(\\)\\[\\]（）\\d]*)` +              // Group 2: Method (non-digit, non-bracket text)
+        `\\s*[\\(\\)\\[\\]（）]` +                 // Start Bracket
+        `\\s*(\\d{4}[\\/.-]\\d{1,2}[\\/.-]\\d{1,2})` + // Group 3: Date
+        `\\s*[\\(\\)\\[\\]（）]`;                  // End Bracket
+
+      const pattern = new RegExp(patternStr);
       const match = rawText.match(pattern);
+
       if (match) {
         return {
           amount: parseFloat(match[1].replace(/,/g, '')),
@@ -132,8 +164,10 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
       parsedData.contract_date = contract.date;
     }
 
-    // Sign Diff (補差額)
-    const signDiffMatch = rawText.match(/簽差\s*\$?([\d,]+)\s*萬?\s*\((\d{4}[\/.-]\d{2}[\/.-]\d{2})\)/);
+    // Sign Diff (補差額/簽差)
+    // Sometimes labeled as "簽差" or "補差額"
+    // Regex for specific Sign Diff pattern
+    const signDiffMatch = rawText.match(/(?:簽差|補差額)(?:款)?\s*[:：﹕]?\s*\$?([\d,]+)\s*萬?\s*[\\(\\（]\s*(\d{4}[\/.-]\d{1,2}[\\/.-]\d{1,2})\s*[\\)\\）]/);
     if (signDiffMatch) {
       parsedData.sign_diff_amount = parseFloat(signDiffMatch[1].replace(/,/g, ''));
       parsedData.sign_diff_date = formatDate(signDiffMatch[2]);
@@ -147,6 +181,12 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
       parsedData.seal_date = seal.date;
     }
 
+    // Fallback for Seal Date if not captured in stage
+    if (!parsedData.seal_date) {
+      const sealDateFallback = rawText.match(/(?:用印|用印日|用印時間)[^,]*?(\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})/);
+      if (sealDateFallback) parsedData.seal_date = formatDate(sealDateFallback[1]);
+    }
+
     // Tax (完稅)
     const tax = extractStage('完稅');
     if (tax) {
@@ -155,12 +195,21 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
       parsedData.tax_payment_date = tax.date;
     }
 
+    // Fallback for Tax Date
+    if (!parsedData.tax_payment_date) {
+      const taxDateFallback = rawText.match(/(?:完稅|完稅日|完稅時間)[^,]*?(\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2})/);
+      if (taxDateFallback) parsedData.tax_payment_date = formatDate(taxDateFallback[1]);
+    }
+
     // Balance/Tail (尾款)
     const balance = extractStage('尾款');
     if (balance) {
       parsedData.balance_amount = balance.amount;
       parsedData.balance_method = balance.method;
-      parsedData.balance_payment_date = balance.date;
+      // User requested: Balance payment date is actually the handover date
+      if (!parsedData.handover_date) {
+        parsedData.handover_date = balance.date;
+      }
     }
 
     // --- 4. Other Dates ---

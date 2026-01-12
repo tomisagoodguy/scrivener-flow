@@ -55,11 +55,7 @@ export default function NewCasePage() {
 
             console.log('Date validation passed. Preparing insert payload...');
 
-            console.log('Date validation passed. Preparing insert payload...');
-
             // 1. Insert Case
-            // Note: DB schema might not have 'cancellation_type' or 'district' in some versions.
-            // Based on recreate_full_schema.sql, we have city, but maybe not cancellation_type.
             const casePayload = {
                 case_number: data.case_number,
                 buyer_name: data.buyer_name,
@@ -67,11 +63,13 @@ export default function NewCasePage() {
                 seller_name: data.seller_name,
                 seller_phone: data.seller_phone || null,
                 status: data.status,
-                city: data.city || 'Taichung',
+                city: data.city || '台北市',
+                district: data.district || '',
                 notes: data.notes || '',
-                tax_type: data.tax_type || '一般',
-                updated_at: new Date().toISOString()
+                tax_type: data.tax_type || '一般'
             };
+
+            console.log('Inserting Case Payload:', casePayload);
 
             const { data: newCase, error: caseError } = await supabase
                 .from('cases')
@@ -80,24 +78,30 @@ export default function NewCasePage() {
                 .single();
 
             if (caseError) {
-                console.error('Supabase Case Error:', caseError);
-                // Force extraction of properties even if not enumerable
-                let details = '';
-                for (const key in caseError) {
-                    details += `${key}: ${(caseError as any)[key]}\n`;
-                }
-                if (!details) details = JSON.stringify(caseError, Object.getOwnPropertyNames(caseError));
+                console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
+                console.log('Failed Payload:', casePayload);
 
-                setErrorMsg(`資料庫錯誤 (Cases):\nCode: ${caseError.code}\nMessage: ${caseError.message}\nRaw:\n${details}`);
+                let errorTitle = '資料庫建立失敗';
+                let displayMsg = '';
+
+                if (caseError.code === '23505') {
+                    displayMsg = `❌ 案號 「${data.case_number}」 已經存在，請更換一個案號。`;
+                } else {
+                    // Force display of error details even if object seems empty
+                    const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
+                    const errHint = caseError.hint ? `\n提示: ${caseError.hint}` : '';
+                    const errDetail = caseError.details ? `\n細節: ${caseError.details}` : '';
+                    displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}${errDetail}${errHint}`;
+                }
+
+                setErrorMsg(displayMsg);
                 setLoading(false);
                 return;
             }
 
             if (!newCase) throw new Error('案件建立後無回傳資料');
 
-            // 2. Insert Milestones Table
-            // Based on recreate_full_schema.sql, milestone table might miss many amount columns.
-            // We'll keep it safe by only inserting date columns first if we aren't sure.
+            // 2. Insert Milestones
             const milestonePayload: any = {
                 case_id: newCase.id,
                 contract_date: formatDate(data.contract_date),
@@ -107,17 +111,28 @@ export default function NewCasePage() {
                 balance_payment_date: formatDate(data.balance_payment_date),
                 redemption_date: formatDate(data.redemption_date),
                 handover_date: formatDate(data.handover_date),
+                transfer_note: data.transfer_note || null
             };
 
-            // Only add amounts if they are expected (safeguard)
-            // If the insert fails here, we will catch it specifically.
-            const extraMilestoneFields = ['contract_amount', 'sign_diff_date', 'sign_diff_amount', 'seal_amount', 'tax_amount', 'balance_amount', 'transfer_note'];
-            extraMilestoneFields.forEach(field => {
-                if (data[field]) {
-                    if (field.includes('date')) milestonePayload[field] = formatDate(data[field]);
-                    else milestonePayload[field] = Number(data[field]);
+            // Add amount and other fields if present
+            const milestoneFields = [
+                'contract_amount',
+                'sign_diff_date',
+                'sign_diff_amount',
+                'seal_amount',
+                'tax_amount',
+                'balance_amount'
+            ];
+
+            milestoneFields.forEach(field => {
+                const val = data[field];
+                if (val) {
+                    if (field.includes('date')) milestonePayload[field] = formatDate(val);
+                    else milestonePayload[field] = Number(val);
                 }
             });
+
+            console.log('Inserting Milestone Payload:', milestonePayload);
 
             const { error: milestoneError } = await supabase
                 .from('milestones')
@@ -127,8 +142,6 @@ export default function NewCasePage() {
                 console.error('Milestone Error:', milestoneError);
                 let mDetails = JSON.stringify(milestoneError, Object.getOwnPropertyNames(milestoneError));
                 setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails);
-                // We DON'T return here yet, we want to try financials too, or maybe we should return to avoid partial data.
-                // Given the user wants it to work, better block and fix.
                 setLoading(false);
                 return;
             }
@@ -138,8 +151,10 @@ export default function NewCasePage() {
                 case_id: newCase.id,
                 total_price: data.contract_price ? Number(data.contract_price) : null,
                 buyer_bank: data.buyer_loan_bank?.toString() || null,
-                seller_bank: data.seller_loan_bank?.toString() || null,
+                seller_bank: data.seller_loan_bank?.toString() || null
             };
+
+            console.log('Inserting Financials Payload:', financialsPayload);
 
             const { error: finError } = await supabase
                 .from('financials')
@@ -148,6 +163,8 @@ export default function NewCasePage() {
             if (finError) {
                 console.error('Financial Error', finError);
                 setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finError.message);
+                setLoading(false);
+                return;
             }
 
             router.push('/cases?status=Processing');
@@ -208,7 +225,6 @@ export default function NewCasePage() {
                     setVal('tax_amount', parsedData.tax_amount?.toString());
                     setVal('tax_method', parsedData.tax_method);
 
-                    setVal('balance_payment_date', parsedData.balance_payment_date);
                     setVal('balance_amount', parsedData.balance_amount?.toString());
                     setVal('balance_method', parsedData.balance_method);
 
@@ -230,89 +246,107 @@ export default function NewCasePage() {
     };
 
     return (
-        <div className="min-h-screen p-6 md:p-12 max-w-4xl mx-auto font-sans">
+        <div className="min-h-screen p-6 md:p-8 max-w-7xl mx-auto font-sans">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                    <h1 className="text-3xl md:text-5xl font-black text-foreground tracking-tight">
                         新增案件
                     </h1>
-                    <p className="text-gray-600 mt-2">Create New Case</p>
+                    <p className="text-foreground/50 font-bold mt-2">Create New Case Process</p>
                 </div>
                 <div className="flex gap-4">
                     <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm">
                         <span>📄 上傳案件單 (.docx)</span>
                         <input type="file" accept=".docx" className="hidden" onChange={handleFileUpload} disabled={loading} />
                     </label>
-                    <Link href="/" className="bg-white border border-gray-300 px-6 py-2 rounded-full hover:bg-gray-50 transition-colors text-gray-700 text-sm flex items-center shadow-sm">
+                    <Link href="/" className="bg-card border border-border px-6 py-2 rounded-full hover:bg-secondary transition-colors text-foreground text-sm flex items-center shadow-sm font-bold">
                         ← 返回列表
                     </Link>
                 </div>
             </header>
 
-            <form onSubmit={handleSubmit} className="glass-card p-8 animate-slide-up space-y-8">
+            <form onSubmit={handleSubmit} className="glass-card p-6 md:p-10 animate-slide-up space-y-8 border border-card-border overflow-hidden">
 
-                {/* Section 1: Basic Info */}
-                < div className="space-y-4" >
-                    <h3 className="text-lg font-semibold text-primary border-l-4 border-primary pl-3">基本資料</h3>
+                <div className="bg-card glass-card p-6 md:p-8 space-y-8 animate-fade-in border border-card-border">
+                    <div className="border-b border-border pb-4">
+                        <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
+                            <span className="p-2 bg-primary/10 rounded-lg text-primary text-xl">📄</span>
+                            基本案件資訊
+                        </h2>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">案件編號 (Case ID)</label>
-                            <input name="case_number" type="text" placeholder="例如：AA123456" className="w-full bg-white/50 border border-gray-200 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all backdrop-blur-sm focus:bg-white" required />
+                            <label className="text-sm text-foreground/70 font-bold uppercase tracking-wider">案件編號 (Case ID)</label>
+                            <input name="case_number" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans" required />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">承辦地點 (簽約中心)</label>
-                            <select name="city" defaultValue="士林" className="w-full bg-white/50 border border-gray-200 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all backdrop-blur-sm focus:bg-white appearance-none cursor-pointer">
-                                <option value="士林">士林</option>
-                                <option value="內湖">內湖</option>
+                            <label className="text-sm text-foreground/70 font-bold">買方電話</label>
+                            <input name="buyer_phone" type="tel" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-sans focus:ring-2 focus:ring-primary/20 transition-all" placeholder="例如：0912-345-678" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
+                            <select
+                                name="city" // Keep mapping to 'city' for now to fit schema, but UI shows specific options
+                                defaultValue="台北(士)"
+                                className="w-full text-lg font-bold bg-secondary/30 border-2 border-primary/20 rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                            >
+                                <option value="台北(士)">台北(士)</option>
+                                <option value="台北(內)">台北(內)</option>
+                                <option value="新北(內)">新北(內)</option>
+                            </select>
+                            {/* Hidden district field to satisfy payload logic if needed, or we just ignore it */}
+                            <input type="hidden" name="district" value="" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-sm text-foreground/70 font-bold">買方姓名</label>
+                            <input name="buyer_name" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-foreground/70 font-bold">賣方姓名</label>
+                            <input name="seller_name" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-foreground/70 font-bold">賣方電話</label>
+                            <input name="seller_phone" type="tel" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-sans focus:ring-2 focus:ring-primary/20 transition-all" placeholder="例如：0912-345-678" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-foreground/70 font-bold">目前進度狀態</label>
+                            <select name="status" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
+                                <option value="Processing">辦理中</option>
+                                <option value="Closed">已結案</option>
+                                <option value="Cancelled">解約</option>
                             </select>
                         </div>
                     </div>
 
-                    {/* Buyer Group */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">買方姓名</label>
-                            <input name="buyer_name" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
+                            <label className="text-sm text-primary font-bold">成交總價 (萬元)</label>
+                            <input name="contract_price" type="number" step="0.1" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all" required />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">買方電話</label>
-                            <input name="buyer_phone" type="text" placeholder="09xx-xxx-xxx" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" />
-                        </div>
-                    </div>
-
-                    {/* Seller Group */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">賣方姓名</label>
-                            <input name="seller_name" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" required />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">賣方電話</label>
-                            <input name="seller_phone" type="text" placeholder="09xx-xxx-xxx" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium font-bold text-primary">成交總價 (萬元)</label>
-                            <input name="contract_price" type="number" step="0.1" className="w-full bg-white border-2 border-primary/20 rounded-lg px-4 py-3 text-black font-bold focus:border-primary" required />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">稅單性質</label>
-                            <select name="tax_type" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black appearance-none cursor-pointer">
+                            <label className="text-sm text-foreground/70 font-bold">稅單性質</label>
+                            <select name="tax_type" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
                                 <option value="一般">一般</option>
-                                <option value="自用">自用</option>
+                                <option value="一生一次">一生一次</option>
+                                <option value="一生一屋">一生一屋</option>
+                                <option value="道路用地">道路用地</option>
+                                <option value="一生一次+道路用地">一生一次+道路用地</option>
+                                <option value="一生一屋+道路用地">一生一屋+道路用地</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">買方貸款銀行</label>
-                            <input name="buyer_loan_bank" type="text" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black" />
+                            <label className="text-sm text-foreground/70 font-bold">買方貸款銀行</label>
+                            <input name="buyer_loan_bank" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">塗銷方式</label>
-                            <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-black appearance-none cursor-pointer">
-                                <option value="代書塗銷">代書塗銷 (我方辦理)</option>
+                            <label className="text-sm text-foreground/70 font-bold">塗銷方式</label>
+                            <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
+                                <option value="代書塗銷">代書塗銷</option>
                                 <option value="賣方自辦">賣方自辦</option>
                                 <option value="無">無</option>
                             </select>
@@ -324,86 +358,85 @@ export default function NewCasePage() {
 
                 {/* Section 2: Dates */}
                 <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-amber-600 border-l-4 border-amber-500 pl-3">重要日期與付款明細</h3>
+                    <h3 className="text-xl font-black text-amber-500 flex items-center gap-3">
+                        <span className="p-2 bg-amber-500/10 rounded-lg text-amber-500">📅</span>
+                        重要日期與付款明細
+                    </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Contract Stage */}
-                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-3 border border-gray-100 lg:col-span-1">
+                        <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-amber-700">簽約日</label>
-                                <input name="contract_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" required />
+                                <label className="text-xs font-bold text-amber-600">簽約日</label>
+                                <input name="contract_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-600">簽約款 (萬元)</label>
-                                <input name="contract_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                                <label className="text-xs text-foreground/60 font-medium">簽約款 (萬元)</label>
+                                <input name="contract_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
-                            <div className="p-2 bg-amber-50 rounded border border-dashed border-amber-200 space-y-2">
+                            <div className="p-3 bg-amber-500/5 rounded-xl border border-dashed border-amber-500/30 space-y-3">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-amber-600 uppercase">補差額日</label>
-                                    <input name="sign_diff_date" type="date" className="w-full bg-white/80 border border-gray-200 rounded px-2 py-1 text-[11px]" />
+                                    <input name="sign_diff_date" type="date" className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-amber-600 uppercase">補差金額</label>
-                                    <input name="sign_diff_amount" type="number" step="0.1" className="w-full bg-white/80 border border-gray-200 rounded px-2 py-1 text-[11px]" />
+                                    <input name="sign_diff_amount" type="number" step="0.1" className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Seal & Tax */}
-                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                        <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-blue-600">用印日</label>
-                                <input name="seal_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                                <label className="text-xs font-bold text-blue-500">用印日</label>
+                                <input name="seal_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-600">用印款 (萬元)</label>
-                                <input name="seal_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                                <label className="text-xs text-foreground/60 font-medium">用印款 (萬元)</label>
+                                <input name="seal_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
-                            <div className="border-t border-gray-200 my-2 pt-2">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-emerald-600">完稅日</label>
-                                    <input name="tax_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                            <div className="border-t border-border pt-2">
+                                <div className="space-y-1 pt-2">
+                                    <label className="text-xs font-bold text-emerald-500">完稅日</label>
+                                    <input name="tax_payment_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-gray-600">完稅款 (萬元)</label>
-                                    <input name="tax_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                                    <label className="text-xs text-foreground/60 font-medium">完稅款 (萬元)</label>
+                                    <input name="tax_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Transfer & Note */}
-                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                        <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-600">過戶日</label>
-                                <input name="transfer_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                                <label className="text-xs font-bold text-purple-500">過戶日</label>
+                                <input name="transfer_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-600">過戶備註</label>
-                                <input name="transfer_note" type="text" placeholder="例如：代書辦理" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
+                                <label className="text-xs text-foreground/60 font-medium">過戶備註</label>
+                                <input name="transfer_note" type="text" placeholder="例如：代書辦理" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
-                            <div className="border-t border-gray-200 my-2 pt-2">
-                                <div className="space-y-1">
+                            <div className="border-t border-border pt-2">
+                                <div className="space-y-1 pt-2">
                                     <label className="text-xs font-bold text-orange-600">代償日</label>
-                                    <input name="redemption_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                                    <input name="redemption_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Tail & Handover */}
-                        <div className="bg-gray-50/50 p-4 rounded-xl space-y-4 border border-gray-100">
+                        {/* Handover & Balance */}
+                        <div className="bg-primary/5 p-5 rounded-2xl space-y-4 border border-primary/20 ring-1 ring-primary/5">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-purple-600">尾款日</label>
-                                <input name="balance_payment_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                                <label className="text-xs font-black text-red-500 uppercase tracking-tighter flex items-center gap-2">
+                                    交屋日 <span className="text-[10px] bg-red-500 text-white px-1.5 rounded-full">必填</span>
+                                </label>
+                                <input name="handover_date" type="date" className="w-full bg-background border border-primary/30 rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-red-500/20 transition-all" required />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-600">尾款 (萬元)</label>
-                                <input name="balance_amount" type="number" step="0.1" className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm" />
-                            </div>
-                            <div className="border-t border-gray-200 my-2 pt-2">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-red-600">交屋日</label>
-                                    <input name="handover_date" type="date" className="w-full bg-white border border-gray-300 rounded px-2 py-1.5 text-sm" />
-                                </div>
+                                <label className="text-xs text-foreground/60 font-bold">尾款金額 (萬元)</label>
+                                <input name="balance_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
                             </div>
                         </div>
                     </div>
@@ -413,54 +446,48 @@ export default function NewCasePage() {
 
                 {/* Section 3: Status & Notes */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-accent border-l-4 border-accent pl-3">狀態與備註</h3>
+                    <h3 className="text-xl font-black text-foreground flex items-center gap-3">
+                        <span className="p-2 bg-foreground/5 rounded-lg text-foreground">📝</span>
+                        待辦與備註
+                    </h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600 font-medium">目前狀態</label>
-                            <select name="status" className="w-full bg-white/50 border border-gray-200 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all backdrop-blur-sm focus:bg-white appearance-none cursor-pointer">
-                                <option value="Processing">辦理中</option>
-                                <option value="Closed">結案</option>
-                            </select>
-                        </div>
-                    </div>
+                    {/* Status removed from here as it is redundant (already in basic info) */}
 
-                    <div className="space-y-2">
-                        <label className="text-sm text-gray-600 font-medium">待辦事項 / 備註</label>
+                    <div className="space-y-4">
                         <textarea
                             name="notes"
-                            rows={3}
-                            placeholder="例如：需做輻射檢測"
+                            rows={4}
+                            placeholder="例如：需做輻射檢測、約定交屋地點..."
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full bg-white/50 border border-gray-200 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all backdrop-blur-sm focus:bg-white"
+                            className="w-full bg-secondary/30 border border-border rounded-2xl px-6 py-4 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-sans"
                         />
                         <QuickNotes onSelect={(note) => setNotes(prev => prev ? `${prev}\n${note}` : note)} />
                     </div>
 
+                </div>
 
-                </div >
-
-                <div className="pt-6 flex justify-end gap-4">
-                    <Link href="/" className="px-6 py-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors">
-                        取消
-                    </Link>
-
+                <div className="pt-6 flex flex-col md:flex-row items-center justify-end gap-6">
                     {/* DEBUG ERROR DISPLAY */}
                     {errorMsg && (
-                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 whitespace-pre-wrap font-mono text-sm max-w-xl">
-                            <p className="font-bold">發生錯誤：</p>
+                        <div className="flex-1 bg-red-500/10 border-l-4 border-red-500 text-red-500 p-4 rounded font-mono text-sm">
+                            <p className="font-black mb-1">發生錯誤：</p>
                             {errorMsg}
                         </div>
                     )}
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="bg-primary hover:bg-primary-deep text-white px-8 py-3 rounded-xl font-medium transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md"
-                    >
-                        {loading ? '儲存中...' : '建立案件'}
-                    </button>
+                    <div className="flex gap-4 w-full md:w-auto">
+                        <Link href="/" className="px-8 py-4 bg-secondary/50 text-foreground font-bold rounded-2xl hover:bg-secondary transition-all border border-border flex items-center justify-center">
+                            取消
+                        </Link>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 md:flex-none md:min-w-[200px] bg-primary hover:bg-primary-deep text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-primary/30 disabled:opacity-50 transition-all transform hover:scale-[1.02] active:scale-100 flex items-center justify-center gap-2 text-lg"
+                        >
+                            {loading ? '儲存中...' : '🚀 建立案件 (Save Case)'}
+                        </button>
+                    </div>
                 </div>
 
             </form >

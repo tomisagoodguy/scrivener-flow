@@ -31,10 +31,10 @@ export default async function CaseDetailPage({ params }: PageProps) {
     }
 
     return (
-        <div className="min-h-screen p-6 md:p-12 max-w-4xl mx-auto font-sans">
+        <div className="min-h-screen p-6 md:p-12 max-w-[1600px] mx-auto font-sans">
             <Header />
 
-            <main className="mt-8">
+            <main className="mt-8 transition-all">
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold text-foreground">

@@ -52,6 +52,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 .update({
                     case_number: data.case_number,
                     city: data.city,
+                    district: data.district,
                     buyer_name: data.buyer,
                     seller_name: data.seller,
                     status: data.status,
@@ -79,7 +80,6 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 tax_amount: data.tax_amount ? Number(data.tax_amount) : null,
                 transfer_date: formatDate(data.transfer_date),
                 transfer_note: data.transfer_note?.toString() || null,
-                balance_payment_date: formatDate(data.balance_payment_date),
                 balance_amount: data.balance_amount ? Number(data.balance_amount) : null,
                 handover_date: formatDate(data.handover_date),
                 redemption_date: formatDate(data.redemption_date),
@@ -98,6 +98,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
             const financialData = {
                 case_id: initialData.id,
                 total_price: data.total_price ? Number(data.total_price) : null,
+                pre_collected_fee: data.pre_collected_fee ? Number(data.pre_collected_fee) : null,
                 buyer_bank: data.buyer_loan_bank?.toString() || null,
                 seller_bank: data.seller_loan_bank?.toString() || null,
             };
@@ -176,7 +177,6 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 if (parsedData.seal_date) setVal('seal_date', parsedData.seal_date);
                 if (parsedData.tax_payment_date) setVal('tax_payment_date', parsedData.tax_payment_date);
                 if (parsedData.transfer_date) setVal('transfer_date', parsedData.transfer_date);
-                if (parsedData.balance_payment_date) setVal('balance_payment_date', parsedData.balance_payment_date);
                 if (parsedData.handover_date) setVal('handover_date', parsedData.handover_date);
                 alert('✅ 資料讀取完成！');
             }
@@ -216,10 +216,22 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
-                        <select name="city" defaultValue={initialData.city || '士林'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all">
-                            <option value="士林">士林</option>
-                            <option value="內湖">內湖</option>
+                        <select
+                            name="city"
+                            defaultValue={initialData.city || '台北(士)'}
+                            className="w-full text-lg font-bold bg-secondary/30 border-2 border-primary/20 rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        >
+                            <option value="台北(士)">台北(士)</option>
+                            <option value="台北(內)">台北(內)</option>
+                            <option value="新北(內)">新北(內)</option>
                         </select>
+                        <input type="hidden" name="district" value="" />
+                        {/* Old UI for reference only, functionality replaced by single select above
+                         <div className="flex gap-2">
+                            <select ...> ... </select>
+                            <input ... />
+                         </div>
+                        */}
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">買方</label>
@@ -237,6 +249,23 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <input name="total_price" defaultValue={financials?.total_price} type="number" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" />
                     </div>
                     <div className="space-y-1">
+                        <label className="text-xs font-bold text-emerald-600 uppercase">預收規費</label>
+                        <input
+                            name="pre_collected_fee"
+                            defaultValue={financials?.pre_collected_fee}
+                            type="number"
+                            step="0.1"
+                            placeholder="輸入 5 代表 5萬"
+                            onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val > 0 && val < 100) {
+                                    e.target.value = (val * 10000).toString();
+                                }
+                            }}
+                            className="w-full bg-emerald-50/50 border border-emerald-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 font-bold"
+                        />
+                    </div>
+                    <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">買方貸款銀行</label>
                         <input name="buyer_loan_bank" defaultValue={financials?.buyer_bank} type="text" className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all" />
                     </div>
@@ -246,14 +275,13 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-foreground/50 uppercase">稅單性質</label>
-                        <select name="tax_type" defaultValue={initialData.tax_type || '一般'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all font-bold">
+                        <select name="tax_type" defaultValue={initialData.tax_type || '一般'} className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all font-bold text-sm">
                             <option value="一般">一般</option>
-                            <option value="自用 (一生一次)">一生一次</option>
-                            <option value="自用 (一生一屋)">一生一屋</option>
+                            <option value="一生一次">一生一次</option>
+                            <option value="一生一屋">一生一屋</option>
                             <option value="道路用地">道路用地</option>
-                            <option value="一般 + 道路用地">一般 + 道路用地</option>
-                            <option value="一生一次 + 道路用地">一生一次 + 道路用地</option>
-                            <option value="一生一屋 + 道路用地">一生一屋 + 道路用地</option>
+                            <option value="一生一次+道路用地">一生一次+道路用地</option>
+                            <option value="一生一屋+道路用地">一生一屋+道路用地</option>
                         </select>
                     </div>
                 </div>
@@ -280,7 +308,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <CaseTodos
                             caseId={initialData.id}
                             initialTodos={initialData.todos || {}}
-                            items={['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單']}
+                            items={['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥']}
                             hideCompleted={false}
                         />
                     </div>
@@ -313,11 +341,6 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <input name="tax_amount" defaultValue={milestones?.tax_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-blue-500">尾款日/款</label>
-                        <input name="balance_payment_date" defaultValue={milestones?.balance_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
-                        <input name="balance_amount" defaultValue={milestones?.balance_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
-                    </div>
-                    <div className="space-y-1">
                         <label className="text-[10px] font-bold text-foreground/40 flex justify-between">
                             <span>過戶日</span>
                             <span className="text-[9px] text-purple-500">備註</span>
@@ -347,9 +370,10 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40">代償/交屋</label>
-                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
-                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <label className="text-[10px] font-bold text-red-600">代償/交屋/尾款</label>
+                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" title="代償日" />
+                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" required title="交屋日 (尾款日)" />
+                        <input name="balance_amount" defaultValue={milestones?.balance_amount} type="number" step="0.1" placeholder="尾款金額" className="w-full bg-white/50 border border-secondary-color rounded px-2 py-1 text-[10px] outline-none" />
                     </div>
                 </div>
             </div>
@@ -360,7 +384,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
                         <h4 className="text-sm font-bold text-rose-500">⚠️ 應注意 (Attention)</h4>
-                        <textarea name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={6} className="w-full bg-secondary/40 border-2 border-rose-100 rounded-xl p-3 text-sm" />
+                        <textarea name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={10} className="w-full bg-secondary/40 border-2 border-rose-100 rounded-xl p-3 text-sm" />
                         <QuickNotes onSelect={(note) => setNotes(p => p ? `${p}\n${note}` : note)} />
                     </div>
                     <div className="space-y-2">
@@ -370,7 +394,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                             <option value="Closed">結案</option>
                         </select>
                         <h4 className="text-sm font-bold text-foreground/40">其他代辦事項</h4>
-                        <textarea name="pending_tasks" defaultValue={initialData.pending_tasks} rows={3} className="w-full bg-secondary/40 border border-border-color rounded-xl p-3 text-sm" />
+                        <textarea name="pending_tasks" defaultValue={initialData.pending_tasks} rows={10} className="w-full bg-secondary/40 border border-border-color rounded-xl p-3 text-sm" />
                     </div>
                 </div>
                 <div className="space-y-2">

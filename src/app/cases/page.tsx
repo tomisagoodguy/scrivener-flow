@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
 import { Button } from '@/components/ui/button'; // Assuming these exist or will use standard HTML elements if not found, but shadcn is mentioned.
-import { Input } from '@/components/ui/input'; // Check existence later, or use standard input
-// If shadcn components are not guaranteed, I'll use standard Tailwind HTML first to avoid unresolved imports.
-// README says "Tailwind CSS + shadcn/ui". I'll assume standard shadcn paths or check components folder first.
+import { Input } from '@/components/ui/input';
+import CaseCompactTodoList from '@/components/CaseCompactTodoList';
+import ExcelStep from '@/components/ExcelStep';
+import HighlightableValue from '@/components/HighlightableValue';
 
 // Checking components folder first is safer.
 import { Header } from '@/components/Header';
@@ -16,16 +17,19 @@ import GlobalPipelineChart from '@/components/GlobalPipelineChart';
 import TimelineGanttView from '@/components/TimelineGanttView';
 
 
+import { getCaseStage } from '@/lib/stageUtils';
+
 export const dynamic = 'force-dynamic';
 
 export default async function CasesPage({
     searchParams,
 }: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Next.js 15+ async searchParams
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const resolvedSearchParams = await searchParams;
     const statusParam = resolvedSearchParams?.status || 'Processing';
     const queryParam = resolvedSearchParams?.q || '';
+    const stageParam = resolvedSearchParams?.stage || '';
 
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
 
@@ -37,6 +41,7 @@ export default async function CasesPage({
       milestones (*),
       financials (*)
     `)
+        // Default sort by created_at desc (newest first)
         .order('created_at', { ascending: false });
 
     if (activeStatus === 'Closed') {
@@ -54,7 +59,32 @@ export default async function CasesPage({
 
     const { data, error } = await query;
 
-    const cases = (data || []) as unknown as DemoCase[];
+    const rawCases = (data || []) as unknown as DemoCase[];
+
+    // Dashboard Data: STRICTLY processing cases only (No Closed, No Cancelled)
+    const monitoringCases = rawCases.filter(c => c.status !== 'Closed' && c.status !== 'Cancelled');
+
+    let cases = rawCases;
+
+    // client-side sort helper
+    const getNextActionDate = (c: DemoCase) => {
+        const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
+        if (!m) return 9999999999999;
+        const now = new Date().getTime();
+        const dates = [m.contract_date, m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]
+            .filter(d => d) // filter undefined/null
+            .map(d => new Date(d!).getTime())
+            .filter(t => t >= now) // future only
+            .sort((a, b) => a - b); // earliest future first
+        return dates[0] || 9999999999999; // if no future date, push to end
+    };
+
+    // Filter by Stage (Client-side logic) AND Sort by Urgency
+    if (stageParam && typeof stageParam === 'string') {
+        cases = cases.filter(c => getCaseStage(c) === stageParam);
+        // Sort filtered results by the earliest UPCOMING date (Urgency)
+        cases.sort((a, b) => getNextActionDate(a) - getNextActionDate(b));
+    }
 
     return (
         <div className="min-h-screen p-4 md:p-8 max-w-[1600px] mx-auto font-sans">
@@ -105,42 +135,45 @@ export default async function CasesPage({
                     </form>
                 </div>
 
-                {/* High Level Monitoring */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-                    <GlobalPipelineChart cases={cases} />
-                    <TimelineDashboard cases={cases} />
-                </div>
-
-                {/* Vertical Timeline Monitoring */}
-                <TimelineGanttView cases={cases} />
+                {/* High Level Monitoring - Only Show if we have monitoring cases (Active) or forcing display for layout consistency, but usually hiding relevant info */}
+                {statusParam !== 'Closed' && (
+                    <>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                            <GlobalPipelineChart cases={monitoringCases} currentStage={typeof stageParam === 'string' ? stageParam : undefined} />
+                            <TimelineDashboard cases={monitoringCases} />
+                        </div>
+                        {/* Vertical Timeline Monitoring */}
+                        <TimelineGanttView cases={cases} />
+                    </>
+                )}
 
                 {/* Case List */}
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                    <h2 className="text-xl font-black text-foreground flex items-center gap-2">
                         <span className="text-2xl">📋</span> 詳細清單 (Case Spreadsheet)
                     </h2>
-                    <span className="text-xs font-bold text-slate-400">總計 {cases.length} 案</span>
+                    <span className="text-xs font-bold text-foreground/40">總計 {cases.length} 案</span>
                 </div>
                 {/* Case Grid (Excel Style) */}
-                <div className="bg-white border border-slate-300 overflow-hidden shadow-sm shadow-slate-200">
+                <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
                     <div className="overflow-x-auto overflow-y-auto max-h-[75vh]">
                         <table className="w-full text-left border-collapse table-fixed">
                             <thead>
-                                <tr className="bg-slate-100 sticky top-0 z-10">
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-32 bg-slate-200/50">案號</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-24 bg-slate-200/50">地區</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-32 bg-slate-200/50">買方</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-32 bg-slate-200/50">賣方</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-40 bg-slate-200/50 text-center">稅單性質</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-[550px] text-center bg-slate-200/50">簽 &gt; 印 &gt; 稅 &gt; 尾 &gt; 過 &gt; 交</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 min-w-[300px] bg-slate-200/50">未完成事項</th>
-                                    <th className="px-3 py-2 text-[14px] font-black border border-slate-300 text-slate-800 w-28 text-center bg-slate-200/50">狀態</th>
+                                <tr className="bg-secondary sticky top-0 z-10">
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[85px] text-center">案號</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[50px] text-center">地區</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[65px] text-center">買方</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[65px] text-center">賣方</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[110px] text-center">價格/銀行/塗銷</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[60px] text-center">稅單</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground w-[260px] text-center">簽 &gt; 印 &gt; 稅 &gt; 過 &gt; 交</th>
+                                    <th className="px-1 py-2 text-[13px] font-black border border-border text-foreground min-w-[200px]">未完成事項</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200">
+                            <tbody className="divide-y divide-border/20">
                                 {cases.length === 0 && !error ? (
                                     <tr>
-                                        <td colSpan={8} className="text-center py-20 text-slate-500 bg-slate-50">
+                                        <td colSpan={9} className="text-center py-20 text-foreground/40 bg-secondary/10">
                                             目前沒有{statusParam === 'All' ? '' : (activeStatus === 'Closed' ? '結案' : '承辦中')}的案件
                                         </td>
                                     </tr>
@@ -158,6 +191,7 @@ export default async function CasesPage({
     );
 }
 
+
 import OvertimeButton from '@/components/OvertimeButton';
 
 // Helper for display
@@ -173,84 +207,104 @@ const LabelValue = ({ label, value, subValue, className = '', horizontal = false
 
 function CaseRow({ caseData }: { caseData: DemoCase }) {
     const milestones = Array.isArray(caseData.milestones) ? caseData.milestones[0] : caseData.milestones;
+    const financials = Array.isArray(caseData.financials) ? caseData.financials[0] : caseData.financials;
 
     const SIGNING_TODOS = ['買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀印鑑', '授權', '解約排除', '規費', '設定', '稅單', '差額', '整過戶'];
-    const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單'];
+    const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥'];
 
-    const pendingTasks = [
-        ...SIGNING_TODOS, ...TRANSFER_TODOS
-    ].filter(item => !(caseData.todos?.[item]));
+    const allTasks = [...SIGNING_TODOS, ...TRANSFER_TODOS];
 
     return (
-        <tr className="hover:bg-blue-50/70 transition-colors group cursor-pointer border-b border-slate-300">
-            <td className="px-3 py-2.5 border-x border-slate-300">
-                <Link href={`/cases/${caseData.id}`} className="block font-black text-[16px] text-blue-800 group-hover:text-blue-600 truncate">
+        <tr className="hover:bg-primary/5 transition-colors group border-b border-border">
+            <td className="px-0.5 py-1.5 border-x border-border md:w-[85px]">
+                <Link href={`/cases/${caseData.id}`} className="block font-black text-[13px] text-primary hover:text-primary-deep text-center">
                     {caseData.case_number}
                 </Link>
             </td>
-            <td className="px-3 py-2.5 border-x border-slate-300">
-                <div className="text-[14px] text-slate-600 font-bold bg-slate-100 rounded px-1.5 py-0.5 text-center">{caseData.city}</div>
+            <td className="px-0.5 py-1.5 border-x border-border md:w-[50px]">
+                <div className="text-[12px] text-foreground font-bold text-center whitespace-normal leading-tight">{caseData.district || caseData.city}</div>
             </td>
-            <td className="px-3 py-2.5 border-x border-slate-300">
-                <div className="text-[16px] font-black text-slate-900 truncate">{caseData.buyer_name}</div>
+            <td className="px-0.5 py-1.5 border-x border-border md:w-[65px]">
+                <div className="text-[12px] font-black text-foreground text-center whitespace-normal leading-tight" title={caseData.buyer_name || ''}>{caseData.buyer_name}</div>
             </td>
-            <td className="px-3 py-2.5 border-x border-slate-300">
-                <div className="text-[16px] font-black text-slate-800 truncate">{caseData.seller_name}</div>
+            <td className="px-0.5 py-1.5 border-x border-border md:w-[65px]">
+                <div className="text-[12px] font-black text-foreground text-center whitespace-normal leading-tight" title={caseData.seller_name || ''}>{caseData.seller_name}</div>
             </td>
-            <td className="px-3 py-2.5 border-x border-slate-300 text-center">
-                <div className="text-[13px] font-black text-slate-700 border-2 border-slate-400 rounded bg-white px-2 py-1 shadow-sm">
-                    {caseData.tax_type || '一般'}
-                </div>
-            </td>
-            <td className="px-1 py-1 border-x border-slate-300">
-                <div className="flex items-center justify-between gap-0 h-full min-h-[50px]">
-                    <ExcelStep label="簽" date={milestones?.contract_date} />
-                    <ExcelStep label="印" date={milestones?.seal_date} />
-                    <ExcelStep label="稅" date={milestones?.tax_payment_date} />
-                    <ExcelStep label="尾" date={milestones?.balance_payment_date} />
-                    <ExcelStep label="過" date={milestones?.transfer_date} note={milestones?.transfer_note} />
-                    <ExcelStep label="交" date={milestones?.handover_date} />
-                </div>
-            </td>
-            <td className="px-3 py-2.5 border-x border-slate-300">
-                <div className="flex flex-wrap gap-1">
-                    {pendingTasks.slice(0, 10).map(task => (
-                        <span key={task} className="text-[12px] font-bold bg-red-50 text-red-600 px-2 py-0.5 border border-red-200 rounded whitespace-nowrap">
-                            {task}
-                        </span>
-                    ))}
-                    {pendingTasks.length > 10 && (
-                        <span className="text-[12px] text-slate-400 font-black">+{pendingTasks.length - 10}</span>
+            <td className="px-1 py-1 border-x border-border md:w-[110px]">
+                <div className="flex flex-col gap-0.5">
+                    {financials?.total_price && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-foreground/50 scale-90 origin-left">總價</span>
+                            <span className="text-[11px] font-black text-emerald-600">{financials.total_price} 萬</span>
+                        </div>
                     )}
-                    {caseData.notes && (
-                        <div className="text-[13px] text-red-700 font-black mt-2 w-full flex items-center gap-2 border-t-2 border-red-100 pt-1.5 bg-red-50/30 p-1">
-                            <span className="bg-red-600 text-white px-1.5 rounded-sm text-[11px]">⚠️ 警示</span>
-                            <span>{caseData.notes}</span>
+                    {financials?.buyer_bank && (
+                        <div className="flex items-center justify-between border-t border-dashed border-border/50 pt-0.5">
+                            <span className="text-[10px] text-foreground/50 scale-90 origin-left">貸</span>
+                            <span className="text-[10px] font-bold text-blue-600 truncate max-w-[60px]" title={financials.buyer_bank}>{financials.buyer_bank}</span>
+                        </div>
+                    )}
+                    {financials?.seller_bank && (
+                        <div className="flex items-center justify-between border-t border-dashed border-border/50 pt-0.5">
+                            <span className="text-[10px] text-foreground/50 scale-90 origin-left">償</span>
+                            <span className="text-[10px] font-bold text-orange-600 truncate max-w-[60px]" title={financials.seller_bank}>{financials.seller_bank}</span>
+                        </div>
+                    )}
+                    {caseData.cancellation_type && caseData.cancellation_type !== '無' && (
+                        <div className="flex items-center justify-between border-t border-dashed border-border/50 pt-0.5">
+                            <span className="text-[10px] text-foreground/50 scale-90 origin-left">塗</span>
+                            <span className="text-[10px] font-bold text-purple-600 truncate max-w-[60px]" title={caseData.cancellation_type}>{caseData.cancellation_type}</span>
                         </div>
                     )}
                 </div>
             </td>
-            <td className="px-3 py-2.5 border-x border-slate-300 text-center">
-                <span className={`text-[13px] font-black px-2.5 py-1 rounded border-2 ${caseData.status === 'Processing' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
-                    {caseData.status === 'Processing' ? '辦理中' : caseData.status}
-                </span>
+            <td className="px-0.5 py-1.5 border-x border-border text-center md:w-[60px]">
+                <div className="flex flex-col gap-1 items-center">
+                    <div className="text-[11px] font-black text-foreground/80 border border-border rounded bg-background/50 px-0.5 py-0.5 shadow-sm truncate w-full">
+                        {caseData.tax_type || '一般'}
+                    </div>
+                    {financials?.pre_collected_fee && (
+                        <HighlightableValue
+                            caseId={caseData.id}
+                            fieldKey="pre_collected_fee"
+                            value={`${financials.pre_collected_fee / 10000} 萬`}
+                            defaultClassName="text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded px-1 py-0.5 w-full border border-emerald-100"
+                        />
+                    )}
+                </div>
             </td>
-        </tr>
+            <td className="px-0 py-0 border-x border-border w-[260px]">
+                <div className="flex items-center justify-between gap-0 h-full min-h-[45px]">
+                    <ExcelStep label="簽" date={milestones?.contract_date} caseId={caseData.id} />
+                    <ExcelStep label="印" date={milestones?.seal_date} caseId={caseData.id} />
+                    <ExcelStep label="稅" date={milestones?.tax_payment_date} caseId={caseData.id} />
+                    <ExcelStep label="過" date={milestones?.transfer_date} note={milestones?.transfer_note} caseId={caseData.id} />
+                    <ExcelStep label="交" date={milestones?.handover_date} caseId={caseData.id} />
+                </div>
+            </td>
+            <td className="px-2 py-1.5 border-x border-border min-w-[500px]">
+                <CaseCompactTodoList
+                    caseId={caseData.id}
+                    todos={caseData.todos as Record<string, boolean>}
+                    allTasks={allTasks}
+                    hideCompleted={true}
+                />
+                {caseData.pending_tasks && (
+                    <div className="text-[11px] text-zinc-500 font-bold mt-1.5 w-full flex items-start gap-2 border-t border-zinc-200 pt-1">
+                        <span className="bg-zinc-200 text-zinc-600 px-1 rounded-sm text-[10px] whitespace-nowrap mt-0.5">📝 備忘</span>
+                        <span className="whitespace-pre-line leading-tight">{caseData.pending_tasks}</span>
+                    </div>
+                )}
+                {caseData.notes && (
+                    <div className="text-[11px] text-red-500 font-bold mt-1.5 w-full flex items-center gap-2 border-t border-red-500/10 pt-1 bg-red-500/5 p-1 rounded-sm">
+                        <span className="bg-red-600 text-white px-1 rounded-sm text-[10px] whitespace-nowrap">⚠️ 警示</span>
+                        <span className="truncate">{caseData.notes}</span>
+                    </div>
+                )}
+            </td>
+        </tr >
     );
 }
-
-const ExcelStep = ({ label, date, note }: { label: string; date?: string; note?: string }) => {
-    const isCompleted = !!date;
-    const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
-
-    return (
-        <div className={`flex flex-col items-center justify-center flex-1 border-r border-slate-200 last:border-r-0 py-1 min-w-[75px] h-full ${isCompleted ? 'bg-blue-100/50' : 'bg-slate-50/30'}`}>
-            <span className={`text-[12px] font-black mb-0.5 ${isCompleted ? 'text-blue-800' : 'text-slate-400'}`}>{label}</span>
-            <span className={`text-[13px] font-black leading-tight ${isCompleted ? 'text-slate-900' : 'text-slate-200'}`}>{isCompleted ? formatDate(date) : '--'}</span>
-            {note && <div className="text-[11px] font-black bg-red-600 text-white px-1 relative mt-1 z-20 shadow-md animate-pulse">{note}</div>}
-        </div>
-    );
-};
 
 const TimelineStep = ({ label, date, note }: { label: string; date?: string; note?: string }) => {
     const isCompleted = !!date;
