@@ -113,7 +113,7 @@ export default function NewCasePage() {
                 city: data.city || '台北市',
                 district: data.district || '',
                 notes: data.notes || '',
-                notes: data.notes || '',
+
                 tax_type: data.tax_type || '一般',
                 user_id: (await supabase.auth.getUser()).data.user?.id
             };
