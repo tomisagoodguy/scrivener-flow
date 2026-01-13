@@ -37,7 +37,7 @@ export default function Home() {
 
           {/* Recent Cases - Spans Full Width */}
           <div className="lg:col-span-12 min-h-[400px]">
-            {/* @ts-expect-error Server Component */}
+
             <RecentCases />
           </div>
         </div>
