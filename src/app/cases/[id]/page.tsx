@@ -45,14 +45,14 @@ export default async function CaseDetailPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <GoogleCalendarSyncButton caseData={caseData as Case} />
+                        <GoogleCalendarSyncButton caseData={caseData as any} />
                         <Link href="/cases" className="bg-secondary px-4 py-2 rounded text-sm text-foreground hover:bg-surface-hover transition-colors">
                             ← 返回列表
                         </Link>
                     </div>
                 </header>
 
-                <EditCaseForm initialData={caseData as Case} />
+                <EditCaseForm initialData={caseData as any} />
             </main>
         </div>
     );

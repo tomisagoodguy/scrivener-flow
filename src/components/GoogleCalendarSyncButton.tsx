@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/auth/client';
 import { GoogleCalendarService, GoogleCalendarEvent } from '@/lib/googleCalendar';
-import { Case, Milestone } from '@/types';
+import { DemoCase, Milestone } from '@/types';
 import { Calendar, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 interface Props {
-    caseData: Case;
+    caseData: DemoCase;
 }
 
 export function GoogleCalendarSyncButton({ caseData }: Props) {
