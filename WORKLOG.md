@@ -253,7 +253,43 @@
   - Added to Case List view with "Wan" (萬) unit display.
   - Made the cell clickable/highlightable for status tracking (Yellow highlight).
 
+### 2026-01-13 (Auth & User Separation)
+
+1. **Google Login Integration**:
+   - Created `src/app/login/page.tsx` with a modern Glass UI login page.
+   - Implemented `src/middleware.ts` to protect routes and manage Auth Sessions via Cookies (`@supabase/ssr`).
+   - Added OAuth Callback at `src/app/auth/callback/route.ts` to handle Google Sign-In redirect.
+   - Refactored `supabaseClient.ts` to use SSR-compatible pattern.
+
+2. **User Data Separation (RLS)**:
+    - Added logic to `NewCasePage.tsx` to automatically attach `user_id` to new cases.
+    - **Migration Required**: Created `supabase/migrations/20260113_add_auth.sql` to:
+      - Add `user_id` column to `cases` table.
+      - Enable Row Level Security (RLS) on all core tables.
+      - Add Policies to restrict access to "Own Data Only" (Insert/Select/Update/Delete).
+
 ### Next Steps
 
-- [ ] **Google Authentication**: Implement Google Login to secure the app and separate user data (Goal for next session).
-- [ ] **RLS Policies**: Restrict data access so users only see their own cases.
+- [ ] **Run Migration**: Execute `supabase/migrations/20260113_add_auth.sql` in Supabase Dashboard SQL Editor.
+- [ ] **Enable Google Auth**: Go to Supabase Dashboard -> Authentication -> Providers -> Google -> Enable and paste Client ID/Secret.
+- [ ] **Verification**: Login with Google and create a case to verify ownership.
+
+### Upcoming Features (Night Session Plan)
+
+1. **銀行資訊專區 (Bank Resources)**
+   - 建立專門介面保留銀行窗口、利率、方案等資訊。
+2. **銀行代償資訊 (Redemption Info)**
+   - 獨立介面或區塊，管理代償相關細節。
+3. **法規資料庫 (Regulations DB)**
+   - 建立法規查詢與儲存介面，方便隨時調閱。
+4. **隨手筆記區 (Scratchpad)**
+   - **設計風格**: Modern Notion-like (Tiptap Editor)。
+   - **核心功能**:
+     - 支援 Markdown 快捷鍵 (`#`, `-`, `[]`)。
+     - 斜線指令 (`/`) 呼叫選單 (圖片、待辦、表格)。
+     - 拖曳上傳圖片 (Drag & Drop) 與 複製貼上 (Paste)。
+     - 側邊滑出面板 (Slide-over) 隨時叫用。
+   - **資料結構**: JSONB 儲存 Rich Text 內容。
+
+5. **流程時間自動計算機 (Auto-Date Calculator)**
+   - 實作小工具：輸入基準日後，自動推算「用印」、「完稅」、「交屋」的預計日期。

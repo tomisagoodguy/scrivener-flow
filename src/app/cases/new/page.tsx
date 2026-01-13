@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { parseDocx } from '@/app/actions/parseDocx';
 import QuickNotes from '@/components/QuickNotes';
 
+
 export default function NewCasePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -66,8 +67,17 @@ export default function NewCasePage() {
                 city: data.city || '台北市',
                 district: data.district || '',
                 notes: data.notes || '',
-                tax_type: data.tax_type || '一般'
+                notes: data.notes || '',
+                tax_type: data.tax_type || '一般',
+                user_id: (await supabase.auth.getUser()).data.user?.id
             };
+
+            if (!casePayload.user_id) {
+                // Optional: Force login if strict mode
+                // alert('請先登入'); return;
+                console.warn('⚠️ Creating case without user_id (Not logged in)');
+            }
+
 
             console.log('Inserting Case Payload:', casePayload);
 
