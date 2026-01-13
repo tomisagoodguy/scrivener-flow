@@ -3,8 +3,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
-import { Button } from '@/components/ui/button'; // Assuming these exist or will use standard HTML elements if not found, but shadcn is mentioned.
-import { Input } from '@/components/ui/input';
+
 import CaseCompactTodoList from '@/components/CaseCompactTodoList';
 import ExcelStep from '@/components/ExcelStep';
 import HighlightableValue from '@/components/HighlightableValue';
