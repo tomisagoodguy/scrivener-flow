@@ -14,6 +14,52 @@ export default function NewCasePage() {
     const [errorMsg, setErrorMsg] = useState('');
     const [notes, setNotes] = useState('');
 
+    const handleAutoCalculate = () => {
+        const form = document.querySelector('form') as HTMLFormElement;
+        const data = new FormData(form);
+        const contractDate = data.get('contract_date')?.toString();
+        const taxType = data.get('tax_type')?.toString() as '一般' | '自用' | undefined; // Fallback handled in util if varied
+
+        // Map UI values to strictly '一般' or '自用' for calculator
+        // UI options: "一般", "一生一次", "一生一屋" -> all imply Self-use maybe? 
+        // Usually "一般" is General, others are preferential (Self-use).
+        // Let's assume anything other than "一般" might benefit from the longer 3-week period?
+        // User said: "一般增值稅抓2週", "自用增值稅抓3週". 
+        // "一生一次/一生一屋" are types of 自用 (Self-use) tax rates.
+        const isGeneral = taxType === '一般' || !taxType;
+        const mapTaxType = isGeneral ? '一般' : '自用';
+
+        if (!contractDate) {
+            alert('請先選擇「簽約日」！');
+            return;
+        }
+
+        import('@/utils/dateCalculator').then(({ calculateMilestoneDates }) => {
+            const results = calculateMilestoneDates(contractDate, mapTaxType);
+            if (!results) return;
+
+            const setVal = (name: string, val: string) => {
+                const el = form.elements.namedItem(name) as HTMLInputElement;
+                if (el) el.value = val;
+            };
+
+            setVal('sign_diff_date', results.sign_diff_date);
+            setVal('seal_date', results.seal_date);
+            setVal('tax_payment_date', results.tax_payment_date);
+            // Transfer date usually same day as Tax Payment or shortly after? User didn't specify.
+            // Let's assume Transfer Date ~ Tax Payment Date for now, or leave blank.
+            // Actually, Transfer (過戶) happens after Tax Payment (完稅).
+            // Logic: "過戶日" can be same as Tax Payment Date (完稅後送件).
+            setVal('transfer_date', results.tax_payment_date);
+            setVal('handover_date', results.handover_date);
+            setVal('redemption_date', results.handover_date); // Guessing redemption near handover
+
+            // Also auto-fill amounts if Total Price is set?
+            // User didn't ask for amount calc yet, only date.
+            alert(`✅ 日期已自動推算完成！\n\n因為稅單性質為「${mapTaxType}」，完稅期抓 ${isGeneral ? '2' : '3'} 週。`);
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         // alert('正在建立案件... (Debug Mode)'); 
@@ -377,7 +423,17 @@ export default function NewCasePage() {
                         {/* Contract Stage */}
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-amber-600">簽約日</label>
+                                <div className="flex justify-between items-center">
+                                    <label className="text-xs font-bold text-amber-600">簽約日</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleAutoCalculate}
+                                        className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary hover:text-white transition-colors font-bold flex items-center gap-1"
+                                        title="根據簽約日自動推算後續流程日期"
+                                    >
+                                        ⚡ 自動推算
+                                    </button>
+                                </div>
                                 <input name="contract_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
                             </div>
                             <div className="space-y-1">

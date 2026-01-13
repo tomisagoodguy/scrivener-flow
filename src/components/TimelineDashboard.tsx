@@ -14,7 +14,7 @@ interface TimelineItem {
     caseNumber: string;
     buyer: string;
     seller: string;
-    type: '代償' | '用印' | '完稅' | '過戶' | '交屋' | '尾款';
+    type: string;
     color: string;
     caseId: string;
 }
@@ -26,6 +26,59 @@ const TASK_CONFIG = {
     '過戶': { color: 'bg-purple-500', icon: '🏢' },
     '交屋': { color: 'bg-indigo-600', icon: '🔑' },
     '尾款': { color: 'bg-amber-500', icon: '💰' },
+    '簽約': { color: 'bg-slate-500', icon: '📝' }, // Added Contract phase
+};
+
+const TODO_DATE_MAP: Record<string, keyof import('@/types').Milestone> = {
+    '買方蓋印章': 'seal_date',
+    '賣方蓋印章': 'seal_date',
+    '用印款': 'seal_date',
+    '權狀印鑑': 'seal_date',
+    '完稅款': 'tax_payment_date',
+    '稅單': 'tax_payment_date',
+    '打單': 'tax_payment_date',
+    '稅費分算': 'handover_date', // Adjusted to Handover based on typical flow
+    '過戶': 'transfer_date',
+    '整過戶': 'transfer_date',
+    '實登': 'transfer_date',
+    '規費': 'transfer_date',
+    '設定': 'transfer_date',
+    '保單': 'transfer_date',
+    '塗銷': 'transfer_date',
+    '代償': 'redemption_date',
+    '二撥': 'balance_payment_date',
+    '差額': 'balance_payment_date',
+    '履保': 'contract_date',
+    '授權': 'contract_date',
+    '解約排除': 'contract_date',
+    '水電': 'handover_date',
+    '整交屋': 'handover_date',
+};
+
+// Map specific todos to their "Parent Phase" for color/icon inheritance
+const TODO_PHASE_MAP: Record<string, string> = {
+    '買方蓋印章': '用印',
+    '賣方蓋印章': '用印',
+    '用印款': '用印',
+    '權狀印鑑': '用印',
+    '完稅款': '完稅',
+    '稅單': '完稅',
+    '打單': '完稅',
+    '稅費分算': '交屋',
+    '整過戶': '過戶',
+    '實登': '過戶',
+    '規費': '過戶',
+    '設定': '過戶',
+    '保單': '過戶',
+    '塗銷': '過戶',
+    '代償': '代償',
+    '二撥': '尾款',
+    '差額': '尾款',
+    '履保': '簽約',
+    '授權': '簽約',
+    '解約排除': '簽約',
+    '水電': '交屋',
+    '整交屋': '交屋',
 };
 
 export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
@@ -39,20 +92,26 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
             const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
             if (!m) return;
 
-            const checkAndAdd = (dateStr: string | undefined, type: TimelineItem['type']) => {
+            const checkAndAdd = (dateStr: string | undefined, type: string) => {
                 if (!dateStr) return;
                 try {
                     const date = parseISO(dateStr);
                     // Standard Check: Is it within today (00:00) -> 7 days later
-                    // We intentionally IGNORE dates in the past (< today) as per user request "Past = Done"
                     if (isWithinInterval(date, { start: today, end: sevenDaysLater })) {
+                        // Determine Phase (either it IS a phase, or it maps to one)
+                        const phase = TODO_PHASE_MAP[type] || type;
+                        const config = TASK_CONFIG[phase as keyof typeof TASK_CONFIG];
+
+                        // Default to Yellow if really unknown, but now most should map.
+                        const color = config ? config.color : 'bg-yellow-500 border border-yellow-600';
+
                         upcoming.push({
                             date,
                             caseNumber: c.case_number,
                             buyer: c.buyer_name,
                             seller: c.seller_name,
                             type,
-                            color: TASK_CONFIG[type].color,
+                            color,
                             caseId: c.id
                         });
                     }
@@ -67,6 +126,17 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
             checkAndAdd(m.transfer_date, '過戶');
             checkAndAdd(m.handover_date, '交屋');
             checkAndAdd(m.balance_payment_date, '尾款');
+
+            // Check Todos (Uncompleted)
+            if (c.todos) {
+                Object.entries(c.todos).forEach(([todoName, isDone]) => {
+                    if (isDone) return;
+                    const mapKey = TODO_DATE_MAP[todoName];
+                    if (mapKey && m[mapKey]) {
+                        checkAndAdd(m[mapKey] as string, todoName);
+                    }
+                });
+            }
         });
 
         return {
@@ -179,7 +249,9 @@ function TaskCard({ task, isOverdue = false }: { task: TimelineItem, isOverdue?:
             <div className="hidden group-hover:flex flex-col gap-1 animate-fade-in">
                 <div className="flex justify-between items-start border-b border-white/20 pb-1 mb-1">
                     <span className="font-black text-sm flex items-center gap-1">
-                        {TASK_CONFIG[task.type]?.icon} {task.type}
+                        {
+                            TASK_CONFIG[(TODO_PHASE_MAP[task.type] || task.type) as keyof typeof TASK_CONFIG]?.icon || '⚠️'
+                        } {task.type}
                     </span>
                     <span className="text-[10px] font-mono bg-black/20 px-1.5 py-0.5 rounded text-white/90">{task.caseNumber}</span>
                 </div>

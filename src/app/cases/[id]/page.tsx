@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Case } from '@/types';
 import EditCaseForm from '@/components/EditCaseForm';
 import { Header } from '@/components/Header';
+import { GoogleCalendarSyncButton } from '@/components/GoogleCalendarSyncButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,9 +43,13 @@ export default async function CaseDetailPage({ params }: PageProps) {
                         </h1>
                         <p className="text-foreground/60 mt-2">{caseData.case_number}</p>
                     </div>
-                    <Link href="/cases" className="bg-secondary px-4 py-2 rounded text-sm text-foreground hover:bg-surface-hover transition-colors">
-                        ← 返回列表
-                    </Link>
+
+                    <div className="flex items-center gap-3">
+                        <GoogleCalendarSyncButton caseData={caseData as Case} />
+                        <Link href="/cases" className="bg-secondary px-4 py-2 rounded text-sm text-foreground hover:bg-surface-hover transition-colors">
+                            ← 返回列表
+                        </Link>
+                    </div>
                 </header>
 
                 <EditCaseForm initialData={caseData as Case} />

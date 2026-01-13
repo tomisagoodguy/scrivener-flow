@@ -15,6 +15,7 @@ import CaseTodos from '@/components/CaseTodos';
 import TimelineDashboard from '@/components/TimelineDashboard';
 import GlobalPipelineChart from '@/components/GlobalPipelineChart';
 import TimelineGanttView from '@/components/TimelineGanttView';
+import ExportExcelButton from '@/components/ExportExcelButton';
 
 
 import { getCaseStage } from '@/lib/stageUtils';
@@ -143,7 +144,7 @@ export default async function CasesPage({
                             <TimelineDashboard cases={monitoringCases} />
                         </div>
                         {/* Vertical Timeline Monitoring */}
-                        <TimelineGanttView cases={cases} />
+                        <TimelineGanttView cases={monitoringCases} />
                     </>
                 )}
 
@@ -152,7 +153,10 @@ export default async function CasesPage({
                     <h2 className="text-xl font-black text-foreground flex items-center gap-2">
                         <span className="text-2xl">📋</span> 詳細清單 (Case Spreadsheet)
                     </h2>
-                    <span className="text-xs font-bold text-foreground/40">總計 {cases.length} 案</span>
+                    <div className="flex items-center gap-3">
+                        <ExportExcelButton cases={cases} />
+                        <span className="text-xs font-bold text-foreground/40">總計 {cases.length} 案</span>
+                    </div>
                 </div>
                 {/* Case Grid (Excel Style) */}
                 <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">

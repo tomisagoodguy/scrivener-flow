@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 const DEFAULT_NOTES = [
     "報稅前檢查是否要退稅",
@@ -30,22 +31,71 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
     const [isAdding, setIsAdding] = React.useState(false);
     const [newNote, setNewNote] = React.useState('');
 
+    // Load from Supabase on mount
     React.useEffect(() => {
-        const saved = localStorage.getItem('user_quick_notes');
-        if (saved) {
+        const loadNotes = async () => {
             try {
-                setCustomNotes(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to parse user_quick_notes', e);
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    // Fallback to local storage for guests
+                    const saved = localStorage.getItem('user_quick_notes');
+                    if (saved) setCustomNotes(JSON.parse(saved));
+                    return;
+                }
+
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('custom_quick_notes')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (data && data.custom_quick_notes) {
+                    setCustomNotes(data.custom_quick_notes as string[]);
+                }
+            } catch (err) {
+                console.error('Failed to load custom quick notes', err);
             }
-        }
+        };
+        loadNotes();
     }, []);
+
+    const saveNotesToCloud = async (notes: string[]) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                localStorage.setItem('user_quick_notes', JSON.stringify(notes));
+                return;
+            }
+
+            // Sync with Supabase
+            // Note: We use upsert to create the row if it doesn't exist.
+            // Be careful to preserve scratchpad_content if it exists? 
+            // supabase.upsert will create new or update. If we only pass custom_quick_notes, 
+            // checking if it handles partial update or not.
+            // Supabase upsert requires unique key.
+
+            // To be safe, let's just use upsert with onConflict update of specific column?
+            // Actually, the simplest way is to upsert just the fields we want, assuming Supabase handles the rest.
+            // But standard SQL UPSERT replaces or updates. "DO UPDATE SET ..."
+
+            await supabase
+                .from('user_settings')
+                .upsert({
+                    user_id: user.id,
+                    custom_quick_notes: notes,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+
+        } catch (e) {
+            console.error('Failed to save notes to cloud', e);
+        }
+    };
 
     const handleAddNote = () => {
         if (!newNote.trim()) return;
         const updated = [...customNotes, newNote.trim()];
         setCustomNotes(updated);
-        localStorage.setItem('user_quick_notes', JSON.stringify(updated));
+        saveNotesToCloud(updated); // Sync
         setNewNote('');
         setIsAdding(false);
     };
@@ -54,7 +104,7 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
         if (window.confirm('確定要刪除這個自訂項目嗎？')) {
             const updated = customNotes.filter((_, i) => i !== index);
             setCustomNotes(updated);
-            localStorage.setItem('user_quick_notes', JSON.stringify(updated));
+            saveNotesToCloud(updated); // Sync
         }
     };
 
@@ -86,13 +136,7 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-
-                                if (window.confirm('確定要刪除這個常用語嗎？')) {
-                                    const updated = [...customNotes];
-                                    updated.splice(index, 1);
-                                    setCustomNotes(updated);
-                                    localStorage.setItem('user_quick_notes', JSON.stringify(updated));
-                                }
+                                handleDeleteNote(index); // Use simplified handler
                             }}
                             className="px-3 py-2 text-sm font-bold bg-white border border-amber-200 border-l-0 shadow-sm rounded-r-lg text-amber-900/40 hover:text-white hover:bg-red-500 hover:border-red-500 transition-colors z-10 cursor-pointer"
                             title="刪除"

@@ -14,6 +14,11 @@ export function LoginContent() {
                 provider: 'google',
                 options: {
                     redirectTo: `${location.origin}/auth/callback`,
+                    scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
                 },
             })
         } catch (error) {

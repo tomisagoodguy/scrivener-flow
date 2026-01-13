@@ -4,6 +4,8 @@ import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { DemoCase } from '@/types';
 import { format, addDays, isSameDay, parseISO, startOfDay, eachDayOfInterval } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
+import { createClient } from '@/lib/auth/client';
+import { GoogleCalendarService, GoogleCalendarEvent } from '@/lib/googleCalendar';
 
 interface TimelineGanttViewProps {
     cases: DemoCase[];
@@ -19,12 +21,47 @@ const MILESTONES = [
 
 export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const today = startOfDay(new Date());
+    const today = useMemo(() => startOfDay(new Date()), []);
     const days = useMemo(() => {
         return eachDayOfInterval({
             start: today,
             end: addDays(today, 30)
         });
+    }, [today]);
+
+    // Google Calendar State
+    const [gCalEvents, setGCalEvents] = useState<GoogleCalendarEvent[]>([]);
+    const [hasGCalAccess, setHasGCalAccess] = useState(false);
+    const [isLoadingGCal, setIsLoadingGCal] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        async function loadGCal() {
+            try {
+                const supabase = createClient();
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = (session as any)?.provider_token;
+
+                if (token) {
+                    if (isMounted) setHasGCalAccess(true);
+                    const service = new GoogleCalendarService(token);
+                    // Fetch range: today to +30 days
+                    const rangeStart = today.toISOString();
+                    const rangeEnd = addDays(today, 30).toISOString();
+
+                    const events = await service.listEvents('primary', rangeStart, rangeEnd);
+                    if (isMounted) setGCalEvents(events || []);
+                } else {
+                    if (isMounted) setHasGCalAccess(false);
+                }
+            } catch (e) {
+                console.error('Failed to load Google Calendar events:', e);
+            } finally {
+                if (isMounted) setIsLoadingGCal(false);
+            }
+        }
+        loadGCal();
+        return () => { isMounted = false; };
     }, [today]);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +105,17 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
     }, [cases]);
 
     if (caseActivity.length === 0) return null;
+
+    const handleLogin = async () => {
+        const supabase = createClient();
+        await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+                scopes: 'https://www.googleapis.com/auth/calendar.events'
+            }
+        });
+    };
 
     return (
         <div className="bg-card border border-border/50 shadow-sm mb-8 overflow-hidden rounded-xl">
@@ -119,6 +167,79 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                 ))}
                             </div>
 
+                            {/* Google Calendar Row (Always Visible) */}
+                            <div className="flex border-b border-border/30 bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group">
+                                <div className="w-48 sticky left-0 z-10 bg-card border-r border-border/50 p-2 flex flex-col justify-center shadow-sm">
+                                    <div className="text-[11px] font-black text-blue-600 dark:text-blue-400 group-hover:text-blue-500 truncate">
+                                        📅 我的行事曆
+                                    </div>
+                                    <div className="text-[10px] font-bold text-muted-foreground truncate">
+                                        Google Calendar
+                                    </div>
+                                </div>
+
+                                <div className="flex relative items-center h-12 w-full">
+                                    {/* Grid Lines */}
+                                    <div className="absolute inset-0 flex h-full pointer-events-none">
+                                        {days.map((day, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`
+                                            w-10 h-full flex-shrink-0 border-r border-border/20 
+                                            ${idx % 7 === 0 || idx % 7 === 6 ? 'bg-muted/10' : ''}
+                                            ${isSameDay(day, today) ? 'bg-primary/5' : ''}
+                                        `}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* State Handling: Loading, Error, or Events */}
+                                    {isLoadingGCal ? (
+                                        <div className="flex items-center px-4 text-xs text-gray-400 font-bold">
+                                            <span className="animate-pulse">載入行事曆中...</span>
+                                        </div>
+                                    ) : !hasGCalAccess ? (
+                                        <div className="flex items-center px-4 z-40">
+                                            <button
+                                                onClick={handleLogin}
+                                                className="text-[10px] bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded font-bold shadow-sm transition-all"
+                                            >
+                                                連結/重新登入 Google 帳號
+                                            </button>
+                                            <span className="ml-2 text-[10px] text-gray-400">無法讀取行事曆 (Token 過期)</span>
+                                        </div>
+                                    ) : (
+                                        // Render Events
+                                        gCalEvents.map((evt, eIdx) => {
+                                            const start = evt.start.dateTime ? parseISO(evt.start.dateTime) : (evt.start.date ? parseISO(evt.start.date) : null);
+                                            if (!start) return null;
+
+                                            const dayOffset = Math.floor((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                            if (dayOffset < 0 || dayOffset > 30) return null;
+
+                                            return (
+                                                <div
+                                                    key={eIdx}
+                                                    className={`
+                                                        absolute rounded shadow-sm flex items-center justify-start px-1 text-[10px] font-medium transition-all cursor-help border border-blue-200 dark:border-blue-800
+                                                        bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 overflow-hidden hover:overflow-visible w-[36px] hover:w-auto z-30 hover:z-[100] hover:max-w-none hover:whitespace-nowrap hover:shadow-xl
+                                                    `}
+                                                    style={{
+                                                        left: `${dayOffset * 40 + 2}px`,
+                                                        height: '28px',
+                                                    }}
+                                                    title={`[行事曆] ${evt.summary}\n${start.toLocaleTimeString()}`}
+                                                >
+                                                    <span className="truncate w-full block">
+                                                        {evt.summary}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Rows: Cases */}
                             {caseActivity.map((c, cIdx) => (
                                 <div key={c.id} className="flex border-b border-border/30 hover:bg-muted/20 transition-colors group">
@@ -162,6 +283,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                     </div>
                                 </div>
                             ))}
+
                         </div>
                     </div>
 
@@ -179,8 +301,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                         </div>
                     </div>
                 </>
-            )
-            }
-        </div >
+            )}
+        </div>
     );
 }

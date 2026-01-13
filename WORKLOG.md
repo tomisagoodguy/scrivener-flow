@@ -177,64 +177,67 @@
 ### UI/UX Refinements (Night Session: Phase 2)
 
 1. **資料庫欄位補全 (Schema Fix)**
-    - 解決了「代辦事項 (Todos)」無法儲存的問題。
-    - 新增 SQL 腳本補齊了 `cases` 與 `milestones` 表格中缺失的欄位：`todos` (JSONB), `buyer_phone`, `seller_phone`, `district`, `contract_amount` 等。
 
+   - 解決了「代辦事項 (Todos)」無法儲存的問題。
+   - 新增 SQL 腳本補齊了 `cases` 與 `milestones` 表格中缺失的欄位：`todos` (JSONB), `buyer_phone`, `seller_phone`, `district`, `contract_amount` 等。
 2. **待辦事項清單優化 (Case List Todos)**
-    - **Auto-Hide**: 首頁列表的待辦事項現在只會顯示「未完成 (紅色)」的項目。
-    - **Optimistic UI**: 點擊紅色項目後立即變綠 (已完成)，重新整理後自動隱藏，保持版面乾淨。
-    - **Pending Tasks**: 在清單卡片下方新增了「📝 備忘」區域，顯示文字型的備註事項。
 
+   - **Auto-Hide**: 首頁列表的待辦事項現在只會顯示「未完成 (紅色)」的項目。
+   - **Optimistic UI**: 點擊紅色項目後立即變綠 (已完成)，重新整理後自動隱藏，保持版面乾淨。
+   - **Pending Tasks**: 在清單卡片下方新增了「📝 備忘」區域，顯示文字型的備註事項。
 3. **列表版面與空間重組**
-    - 縮減了案號、地區、人名等非核心資訊的欄位寬度與字級 (12-13px)。
-    - 釋放大量水平空間給「待辦事項」與「流程進度」，讓操作更順手。
 
+   - 縮減了案號、地區、人名等非核心資訊的欄位寬度與字級 (12-13px)。
+   - 釋放大量水平空間給「待辦事項」與「流程進度」，讓操作更順手。
 4. **表單一致性優化 (Form Synchronization)**
-    - **承辦地點**：`EditCaseForm` (編輯頁) 的地點選項已「完全同步」新增頁邏輯。
-    - 選項統一為：`台北(士)`、`台北(內)`、`新北(內)`，並移除不必要的縣市/區域切分輸入框，確保前後台體驗一致。
 
+   - **承辦地點**：`EditCaseForm` (編輯頁) 的地點選項已「完全同步」新增頁邏輯。
+   - 選項統一為：`台北(士)`、`台北(內)`、`新北(內)`，並移除不必要的縣市/區域切分輸入框，確保前後台體驗一致。
 5. **視覺監控與甘特圖優化**
-    - **Pipeline Chart (上方圓餅流程)**：
-      - 縮小了步驟間距，確保在單一螢幕畫面中能完整顯示 5 大步驟 (簽→交)，無需左右滑動。
-      - 修正了圓圈特效被邊框裁切的問題，增加了垂直呼吸空間。
-    - **30 日甘特圖 (Gantt View)**：
-      - **Semantic Theming**：全面改用 `bg-card`, `bg-muted` 等語意化變數。
-      - **視覺修正**：確實解決了「白天模式下黑底黑字顯示不清」的嚴重 Bug，現在具備正確的亮色對比度 (深色標題 + 亮色卡片 + 黑色文字)。
+
+   - **Pipeline Chart (上方圓餅流程)**：
+     - 縮小了步驟間距，確保在單一螢幕畫面中能完整顯示 5 大步驟 (簽→交)，無需左右滑動。
+     - 修正了圓圈特效被邊框裁切的問題，增加了垂直呼吸空間。
+   - **30 日甘特圖 (Gantt View)**：
+     - **Semantic Theming**：全面改用 `bg-card`, `bg-muted` 等語意化變數。
+     - **視覺修正**：確實解決了「白天模式下黑底黑字顯示不清」的嚴重 Bug，現在具備正確的亮色對比度 (深色標題 + 亮色卡片 + 黑色文字)。
 
 ### User Interaction & Feature Expansion (Late Night Session)
 
 1. **Timeline Gantt View Refinements**
-    - Implemented **Collapse/Expand** functionality for the Gantt chart to reduce visual clutter.
-    - Reduced the maximum height of the expanded Gantt chart to **300px**.
-    - Resolved a build error caused by duplicated JSX tags during the refactor.
 
+   - Implemented **Collapse/Expand** functionality for the Gantt chart to reduce visual clutter.
+   - Reduced the maximum height of the expanded Gantt chart to **300px**.
+   - Resolved a build error caused by duplicated JSX tags during the refactor.
 2. **Case List & Todos Enhancements**
-    - **Visual Upgrade**: Increased the font size and padding of Todo/Task buttons for better readability (`text-[12px]`, `px-3`).
-    - **Attention Section**: Introduced a dedicated **"⚠️ 應注意" (Attention)** section in the Case List (Edit Page) and Gantt View.
-        - Items in this section (e.g., "報稅檢查", "戶籍遷入") are **always visible**, ensuring critical checks are never hidden.
-        - Other tasks are grouped under "其他代辦" and can be hidden when completed.
-    - **Task Expansion**: Added **"代償", "塗銷", "二撥"** to the core workflow tasks (Transfer/Handover stage).
-    - **Text Wrap Support**: Enabled `whitespace-normal` for task buttons to allow long text (e.g., "提醒銀行立契日") to wrap naturally without breaking layout.
 
+   - **Visual Upgrade**: Increased the font size and padding of Todo/Task buttons for better readability (`text-[12px]`, `px-3`).
+   - **Attention Section**: Introduced a dedicated **"⚠️ 應注意" (Attention)** section in the Case List (Edit Page) and Gantt View.
+     - Items in this section (e.g., "報稅檢查", "戶籍遷入") are **always visible**, ensuring critical checks are never hidden.
+     - Other tasks are grouped under "其他代辦" and can be hidden when completed.
+   - **Task Expansion**: Added **"代償", "塗銷", "二撥"** to the core workflow tasks (Transfer/Handover stage).
+   - **Text Wrap Support**: Enabled `whitespace-normal` for task buttons to allow long text (e.g., "提醒銀行立契日") to wrap naturally without breaking layout.
 3. **Quick Notes (懶人包) Upgrade**
-    - **Customizable Notes**: Transformed `QuickNotes` into a dynamic component.
-    - **Persistence**: Users can now **add custom notes** which are saved to `localStorage`, verifying persistence across sessions.
-    - **UI Polish**: Added a clear "+ 新增常用" button and updated the tag styling to be larger and cleaner (`text-sm`, `px-4`).
 
+   - **Customizable Notes**: Transformed `QuickNotes` into a dynamic component.
+   - **Persistence**: Users can now **add custom notes** which are saved to `localStorage`, verifying persistence across sessions.
+   - **UI Polish**: Added a clear "+ 新增常用" button and updated the tag styling to be larger and cleaner (`text-sm`, `px-4`).
 4. **Form Usability Improvements**
-    - **Textarea Expansion**: Significantly increased the size of `pending_tasks` (to 10 rows) and `notes` (to 10 rows) in the Edit Form to accommodate detailed logs.
-    - **Clean Layout**: Reverted the split-view in the main *Case List* table to keep the dashboard compact, while retaining the detailed split-view in the *Edit Page*.
+
+   - **Textarea Expansion**: Significantly increased the size of `pending_tasks` (to 10 rows) and `notes` (to 10 rows) in the Edit Form to accommodate detailed logs.
+   - **Clean Layout**: Reverted the split-view in the main *Case List* table to keep the dashboard compact, while retaining the detailed split-view in the *Edit Page*.
 
 ### Highlighting & Refinements (Late Night Session - Part 2)
 
 1. **Color-Coded Milestone Steps**
-    - **Feature**: Enabled click-to-highlight functionality for the 5 key milestone steps (簽, 印, 稅, 過, 交) in the Case List view.
-    - **Visuals**: Toggling a step turns its background to **Amber (暖黃色)**, providing a high-contrast visual cue against the default Blue/Gray.
-    - **Persistence**: Highlight state is saved locally (`localStorage`) per case and step, ensuring personal markers remain after refresh.
 
+   - **Feature**: Enabled click-to-highlight functionality for the 5 key milestone steps (簽, 印, 稅, 過, 交) in the Case List view.
+   - **Visuals**: Toggling a step turns its background to **Amber (暖黃色)**, providing a high-contrast visual cue against the default Blue/Gray.
+   - **Persistence**: Highlight state is saved locally (`localStorage`) per case and step, ensuring personal markers remain after refresh.
 2. **Fixes**
-    - Resolved a build error caused by a missing `<td>` tag in the Case List table structure.
-    - Fixed a duplicate import error for `CaseCompactTodoList` in `src/app/cases/page.tsx`.
+
+   - Resolved a build error caused by a missing `<td>` tag in the Case List table structure.
+   - Fixed a duplicate import error for `CaseCompactTodoList` in `src/app/cases/page.tsx`.
 
 ### Next Actions: Google Authentication
 
@@ -256,17 +259,18 @@
 ### 2026-01-13 (Auth & User Separation)
 
 1. **Google Login Integration**:
+
    - Created `src/app/login/page.tsx` with a modern Glass UI login page.
    - Implemented `src/middleware.ts` to protect routes and manage Auth Sessions via Cookies (`@supabase/ssr`).
    - Added OAuth Callback at `src/app/auth/callback/route.ts` to handle Google Sign-In redirect.
    - Refactored `supabaseClient.ts` to use SSR-compatible pattern.
-
 2. **User Data Separation (RLS)**:
-    - Added logic to `NewCasePage.tsx` to automatically attach `user_id` to new cases.
-    - **Migration Required**: Created `supabase/migrations/20260113_add_auth.sql` to:
-      - Add `user_id` column to `cases` table.
-      - Enable Row Level Security (RLS) on all core tables.
-      - Add Policies to restrict access to "Own Data Only" (Insert/Select/Update/Delete).
+
+   - Added logic to `NewCasePage.tsx` to automatically attach `user_id` to new cases.
+   - **Migration Required**: Created `supabase/migrations/20260113_add_auth.sql` to:
+     - Add `user_id` column to `cases` table.
+     - Enable Row Level Security (RLS) on all core tables.
+     - Add Policies to restrict access to "Own Data Only" (Insert/Select/Update/Delete).
 
 ### Next Steps
 
@@ -274,22 +278,29 @@
 - [ ] **Enable Google Auth**: Go to Supabase Dashboard -> Authentication -> Providers -> Google -> Enable and paste Client ID/Secret.
 - [ ] **Verification**: Login with Google and create a case to verify ownership.
 
-### Upcoming Features (Night Session Plan)
+### 2026-01-13 Late Night Update: Professional Dashboard & Calendar Sync
 
-1. **銀行資訊專區 (Bank Resources)**
-   - 建立專門介面保留銀行窗口、利率、方案等資訊。
-2. **銀行代償資訊 (Redemption Info)**
-   - 獨立介面或區塊，管理代償相關細節。
-3. **法規資料庫 (Regulations DB)**
-   - 建立法規查詢與儲存介面，方便隨時調閱。
-4. **隨手筆記區 (Scratchpad)**
-   - **設計風格**: Modern Notion-like (Tiptap Editor)。
-   - **核心功能**:
-     - 支援 Markdown 快捷鍵 (`#`, `-`, `[]`)。
-     - 斜線指令 (`/`) 呼叫選單 (圖片、待辦、表格)。
-     - 拖曳上傳圖片 (Drag & Drop) 與 複製貼上 (Paste)。
-     - 側邊滑出面板 (Slide-over) 隨時叫用。
-   - **資料結構**: JSONB 儲存 Rich Text 內容。
+1. **Homepage Redesign (Pro Dashboard)**
+    - **Bento Grid Layout**: Transformed the homepage into a modular "Pro Dashboard".
+        - **Left (Workspace)**: Quick Notes & Resource Links (Banks, Clauses, Redemptions).
+        - **Right (Tools)**: Date Calculator for quick scheduling.
+        - **Bottom (Activity)**: Full-width "Recent Cases" feed.
+    - **Modern Aesthetic (Slate/White)**:
+        - Removed "Glassmorphism" for a cleaner, high-performance **Slate/White** theme.
+        - Improved readability with sharp contrast and subtle gray backgrounds (`#F0F2F5`).
+        - Added dynamic "Good Morning/Afternoon" greeting.
 
-5. **流程時間自動計算機 (Auto-Date Calculator)**
-   - 實作小工具：輸入基準日後，自動推算「用印」、「完稅」、「交屋」的預計日期。
+2. **Google Calendar Integration (Deep Sync)**
+    - **Dashboard Gantt View**:
+        - **Two-Way Visibility**: The 30-day Gantt chart now pulls events from your **Google Calendar** (first row).
+        - **Collision Detection**: Instantly spot conflicts between personal events and case milestones.
+        - **Global Monitoring**: The Gantt chart is now **decoupled** from the case list filters, meaning it always shows *all active cases* + *calendar events*, even when you are filtering for specific tasks below.
+    - **Sync Button**: Added a feature in the Case Edit page to **one-click push** case milestones (Sign, Seal, Tax, Transfer, Handover) to Google Calendar.
+
+3. **UI/UX Refinements**
+    - **Bank/Redemption/Clauses Pages**: Unified all resource libraries into **High-Density Tables** for rapid scanning.
+    - **Consistent Styling**: Standardized buttons, inputs, and card styles across the entire app.
+
+### Next Steps
+
+- [ ] **Cloud Deployment**: Prepare for production deployment (Vercel/Railway + Supabase).
