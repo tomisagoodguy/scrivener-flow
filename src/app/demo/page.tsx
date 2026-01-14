@@ -169,19 +169,22 @@ export default function DemoPage() {
                                 <div className="p-4 md:col-span-2">
                                     <div className="text-[9px] font-bold opacity-40 uppercase tracking-tighter mb-3">進度時程記錄</div>
                                     <div className="grid grid-cols-3 gap-3">
-                                        {[
-                                            { label: '簽約', date: currentCase.milestones?.contract_date, color: 'border-blue-500/30 bg-blue-500/5' },
-                                            { label: '簽差', date: currentCase.milestones?.sign_diff_date, color: 'border-slate-500/30' },
-                                            { label: '用印', date: currentCase.milestones?.seal_date, color: 'border-purple-500/30' },
-                                            { label: '預收', date: currentCase.milestones?.fee_precollect_date, color: 'border-slate-500/30' },
-                                            { label: '完稅', date: currentCase.milestones?.tax_payment_date, color: 'border-amber-500/30 bg-amber-500/5' },
-                                            { label: '交屋', date: currentCase.milestones?.handover_date, color: 'border-emerald-500/30 bg-emerald-500/5' },
-                                        ].map((d, i) => (
-                                            <div key={i} className={`p-2 border rounded-sm ${d.color}`}>
-                                                <div className="text-[9px] font-bold opacity-50 mb-1">{d.label}</div>
-                                                <div className="font-mono text-xs font-bold tracking-tighter">{formatDate(d.date)}</div>
-                                            </div>
-                                        ))}
+                                        {(() => {
+                                            const m = (currentCase.milestones?.[0] || {}) as any;
+                                            return [
+                                                { label: '簽約', date: m.contract_date, color: 'border-blue-500/30 bg-blue-500/5' },
+                                                { label: '簽差', date: m.sign_diff_date, color: 'border-slate-500/30' },
+                                                { label: '用印', date: m.seal_date, color: 'border-purple-500/30' },
+                                                { label: '預收', date: m.fee_precollect_date, color: 'border-slate-500/30' },
+                                                { label: '完稅', date: m.tax_payment_date, color: 'border-amber-500/30 bg-amber-500/5' },
+                                                { label: '交屋', date: m.handover_date, color: 'border-emerald-500/30 bg-emerald-500/5' },
+                                            ].map((d, i) => (
+                                                <div key={i} className={`p-2 border rounded-sm ${d.color}`}>
+                                                    <div className="text-[9px] font-bold opacity-50 mb-1">{d.label}</div>
+                                                    <div className="font-mono text-xs font-bold tracking-tighter">{formatDate(d.date)}</div>
+                                                </div>
+                                            ));
+                                        })()}
                                     </div>
                                 </div>
 
@@ -190,18 +193,25 @@ export default function DemoPage() {
                                     <div>
                                         <div className="text-[9px] font-bold opacity-40 uppercase tracking-tighter mb-1">貸款與類型</div>
                                         <div className="space-y-3">
-                                            <div>
-                                                <div className="text-[10px] font-bold text-sky-500">B貸款 (買方)</div>
-                                                <div className="text-xs font-medium truncate">{currentCase.financials?.buyer_bank || '尚未核貸'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] font-bold text-rose-500">S貸款 (賣方)</div>
-                                                <div className="text-xs font-medium truncate">{currentCase.financials?.seller_bank || '無貸款'}</div>
-                                            </div>
-                                            <div className="pt-2 border-t border-[var(--border-color)] flex justify-between">
-                                                <span className="text-[10px] opacity-40">稅費類型</span>
-                                                <span className="text-[10px] font-bold">{currentCase.financials?.vat_type || '一般'}</span>
-                                            </div>
+                                            {(() => {
+                                                const f = (currentCase.financials?.[0] || {}) as any;
+                                                return (
+                                                    <>
+                                                        <div>
+                                                            <div className="text-[10px] font-bold text-sky-500">B貸款 (買方)</div>
+                                                            <div className="text-xs font-medium truncate">{f.buyer_bank || '尚未核貸'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[10px] font-bold text-rose-500">S貸款 (賣方)</div>
+                                                            <div className="text-xs font-medium truncate">{f.seller_bank || '無貸款'}</div>
+                                                        </div>
+                                                        <div className="pt-2 border-t border-[var(--border-color)] flex justify-between">
+                                                            <span className="text-[10px] opacity-40">稅費類型</span>
+                                                            <span className="text-[10px] font-bold">{f.vat_type || '一般'}</span>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -224,7 +234,7 @@ export default function DemoPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="p-4 bg-[var(--surface)] border border-[var(--border-color)] rounded-sm">
                                 <div className="text-[9px] font-bold opacity-40 uppercase">總成交金額估算</div>
-                                <div className="text-xl font-black text-emerald-500 mt-1">${(currentCase.financials?.total_price || 0).toLocaleString()}</div>
+                                <div className="text-xl font-black text-emerald-500 mt-1">${((currentCase.financials?.[0] as any)?.total_price || 0).toLocaleString()}</div>
                             </div>
                             {/* Add more metrics if needed */}
                         </div>
@@ -244,8 +254,8 @@ export default function DemoPage() {
                             key={c.id}
                             onClick={() => setSelectedIndex(i)}
                             className={`flex items-center px-6 min-w-[140px] max-w-[240px] border-r border-[#ccc] dark:border-[#333] text-[11px] font-bold transition-all relative ${selectedIndex === i
-                                    ? 'bg-white dark:bg-[#1e293b] text-primary shadow-[inset_0_-3px_0_var(--primary)]'
-                                    : 'text-[var(--foreground)] opacity-50 hover:bg-white/50 dark:hover:bg-white/5'
+                                ? 'bg-white dark:bg-[#1e293b] text-primary shadow-[inset_0_-3px_0_var(--primary)]'
+                                : 'text-[var(--foreground)] opacity-50 hover:bg-white/50 dark:hover:bg-white/5'
                                 }`}
                         >
                             <span className="truncate">{c.case_number} - {c.buyer_name}</span>
