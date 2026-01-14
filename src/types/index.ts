@@ -97,8 +97,8 @@ export interface DemoCase {
     tax_type?: '一般' | '自用'; // 增值稅類型 (稅單性質)
 
     // Joined Tables
-    milestones?: Milestone;
-    financials?: Financials;
+    milestones?: Milestone[];
+    financials?: Financials[];
 }
 
 export interface Milestone {
