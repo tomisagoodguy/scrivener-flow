@@ -328,3 +328,17 @@ Successfully pushed to Vercel and resolved series of production build errors:
 
 1. **Google Console Config**: Log in to Google Cloud Console, add `https://your-app-url.vercel.app/auth/callback` to Redirect URIs.
 2. **Final Verification**: Check mobile responsiveness of the new dashboard.
+
+## 2026-01-14
+
+### Vercel Deployment & Production Fixes
+
+- **Context**: Resolving Vercel build errors to achieve a stable production deployment.
+- **Key Issues Resolved**:
+    1.  **TypeScript Array Mismatches**: Fixed Type error where milestones and financials were treated as objects in code but defined as arrays. Updated EditCaseForm, TimelineDashboard, TimelineGanttView, GoogleCalendarSyncButton, ExportExcelButton, and stageUtils to use safe array access pattern: (c.milestones?.[0] || {}) as any.
+    2.  **Next.js Static Build Error**: Resolved useSearchParams() should be wrapped in a suspense boundary by wrapping the global Header in a Suspense boundary within RootLayout.
+    3.  **Supabase Auth Redirects**: Configured Redirect URLs in Supabase Dashboard to whitelist the production domain (https://scrivener-flow.vercel.app/**), ensuring sucessful Google OAuth login flow.
+- **Outcome**:
+    - **Vercel Deployment**: **Successful (Ready )**.
+    - **Production URL**: https://scrivener-flow.vercel.app.
+    - **Features Validated**: Google Login, Dashboard Rendering, Case Creation, Excel Export, Deployment Pipeline.
