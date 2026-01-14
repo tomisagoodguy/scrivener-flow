@@ -3,7 +3,7 @@ import { DemoCase, Milestone } from '@/types';
 export type PipelineStage = 'contract' | 'seal' | 'tax' | 'transfer' | 'handover' | 'closed';
 
 export function getCaseStage(c: DemoCase): PipelineStage {
-    const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones as Milestone | undefined;
+    const m = (c.milestones?.[0] || {}) as any;
 
     // If no milestones record, it's at the beginning (Contract state)
     if (!m) return 'contract';

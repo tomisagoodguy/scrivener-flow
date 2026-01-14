@@ -14,8 +14,8 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
     const handleExport = () => {
         // 1. Transform Data for Excel
         const data = cases.map(c => {
-            const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
-            const f = Array.isArray(c.financials) ? c.financials[0] : c.financials;
+            const m = (c.milestones?.[0] || {}) as any;
+            const f = (c.financials?.[0] || {}) as any;
 
             // Helper to format date
             const d = (dateStr?: string) => dateStr ? format(new Date(dateStr), 'yyyy/MM/dd') : '';

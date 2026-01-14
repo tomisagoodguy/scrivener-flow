@@ -24,13 +24,13 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     // 替代 window.confirm 的二次確認狀態
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const milestones = Array.isArray(initialData.milestones) ? initialData.milestones[0] : initialData.milestones || {};
-    const financials = Array.isArray(initialData.financials) ? initialData.financials[0] : initialData.financials || {};
+    const milestones = (initialData.milestones?.[0] || {}) as any;
+    const financials = (initialData.financials?.[0] || {}) as any;
 
     useEffect(() => {
         console.log('EditCaseForm initialized with Case ID:', initialData.id);
-        const m = Array.isArray(initialData.milestones) ? initialData.milestones[0] : initialData.milestones || {};
-        setTransferNote(m?.transfer_note || '');
+        const m = (initialData.milestones?.[0] || {}) as any;
+        setTransferNote(m.transfer_note || '');
     }, [initialData.id, initialData.milestones]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

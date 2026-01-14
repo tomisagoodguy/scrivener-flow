@@ -89,7 +89,7 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
         const upcoming: TimelineItem[] = [];
 
         cases.forEach((c) => {
-            const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
+            const m = (c.milestones?.[0] || {}) as any;
             if (!m) return;
 
             const checkAndAdd = (dateStr: string | undefined, type: string) => {

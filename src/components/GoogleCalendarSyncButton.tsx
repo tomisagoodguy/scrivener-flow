@@ -104,7 +104,7 @@ function generateEvents(caseData: DemoCase): GoogleCalendarEvent[] {
     const events: GoogleCalendarEvent[] = [];
     // Handle potential array or single object structure from Supabase join
     const mRaw = caseData.milestones;
-    const m = Array.isArray(mRaw) ? mRaw[0] : mRaw;
+    const m = (caseData.milestones?.[0] || {}) as any;
 
     if (!m) {
         console.warn('GoogleCalendarSync: No milestones found', caseData);

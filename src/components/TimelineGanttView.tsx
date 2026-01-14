@@ -75,7 +75,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
 
     const caseActivity = useMemo(() => {
         return cases.filter(c => c.status === 'Processing').map(c => {
-            const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
+            const m = (c.milestones?.[0] || {}) as any;
             const activities: { date: Date, type: string, color: string, label: string }[] = [];
 
             if (m) {
