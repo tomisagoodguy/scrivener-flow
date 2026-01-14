@@ -301,6 +301,30 @@
     - **Bank/Redemption/Clauses Pages**: Unified all resource libraries into **High-Density Tables** for rapid scanning.
     - **Consistent Styling**: Standardized buttons, inputs, and card styles across the entire app.
 
-### Next Steps
+- [x] **Cloud Deployment (Vercel)**: Successful build and deployment process (Troubleshot 6 build errors).
+- [ ] **Google OAuth Post-Setup**: Update Authorized Redirect URIs in Google Cloud Console.
 
-- [ ] **Cloud Deployment**: Prepare for production deployment (Vercel/Railway + Supabase).
+## 2026-01-13 (Late Night)
+
+### Vercel Deployment & Build Error Troubleshooting
+
+Successfully pushed to Vercel and resolved series of production build errors:
+
+1. **Type Mismatch**: Fixed `Case` vs `DemoCase` type conflicts in `GoogleCalendarSyncButton.tsx` and `CaseDetailPage`.
+2. **Syntax Error**: Removed duplicate `return` statement in `DashboardDateCalculator.tsx`.
+3. **Object Literal Property Collision**: Removed duplicate `notes` property in `NewCasePage.tsx`.
+4. **Missing Components**: Removed non-existent Shadcn UI (`Button`, `Input`) imports in `CasesPage.tsx`.
+5. **Redundant Linting**: Removed unused `@ts-expect-error` in `page.tsx` that caused CI failure.
+6. **Missing Server Action**: Implemented missing `generateDoc.ts` to satisfy `DocumentGenerator.tsx` dependencies.
+
+### Status
+
+- **Homepage**: Fully redesigned with neutral professional theme.
+- **Gantt Chart**: Persistence fixed, Google Calendar row always visible.
+- **Data Tables**: All resource pages (Banks, Redemptions, Clauses) converted to high-density grids.
+- **Vercel**: Deployment successful (Build #6).
+
+### Pending for Tomorrow
+
+1. **Google Console Config**: Log in to Google Cloud Console, add `https://your-app-url.vercel.app/auth/callback` to Redirect URIs.
+2. **Final Verification**: Check mobile responsiveness of the new dashboard.

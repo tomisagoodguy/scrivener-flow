@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { Header } from '@/components/Header';
+
+import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
 interface Clause {
     id: string;
@@ -23,6 +24,13 @@ export default function ClausesPage() {
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
     const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const clauseColumns = [
+        { header: '類別', key: 'category', width: 15 },
+        { header: '情境/標題', key: 'title', width: 30 },
+        { header: '條文內容', key: 'content', width: 80 },
+        { header: '使用次數', key: 'usage_count', width: 10 },
+    ];
 
     useEffect(() => {
         fetchClauses();
@@ -116,7 +124,7 @@ export default function ClausesPage() {
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-            <Header />
+
 
             <main className="mt-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -134,7 +142,7 @@ export default function ClausesPage() {
                         </div>
                     </div>
 
-                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-start">
+                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
                         <div className="relative flex-1 md:w-80 group z-20">
                             <div className="relative">
                                 <input
@@ -181,6 +189,13 @@ export default function ClausesPage() {
                                 </div>
                             )}
                         </div>
+                        <GenericExportExcelButton
+                            data={filteredClauses}
+                            columns={clauseColumns}
+                            filename="代書系統_法律法規條文"
+                            sheetName="合約條文"
+                            buttonText="打包 Excel"
+                        />
                         <button
                             onClick={() => { setCurrentClause({ category: '一般' }); setIsEditing(true); }}
                             className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 whitespace-nowrap h-[46px]"
@@ -244,8 +259,8 @@ export default function ClausesPage() {
                                                         {clause.content}
                                                     </pre>
                                                     <span className={`absolute top-2 right-2 text-xs px-2 py-1 rounded transition-opacity pointer-events-none ${copyFeedback === clause.id
-                                                            ? 'bg-green-600 text-white opacity-100'
-                                                            : 'bg-black/75 text-white opacity-0 group-hover/copy:opacity-100'
+                                                        ? 'bg-green-600 text-white opacity-100'
+                                                        : 'bg-black/75 text-white opacity-0 group-hover/copy:opacity-100'
                                                         }`}>
                                                         {copyFeedback === clause.id ? '已複製！' : '複製'}
                                                     </span>

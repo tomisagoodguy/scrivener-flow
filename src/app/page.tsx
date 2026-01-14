@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import DashboardQuickNotes from "@/components/DashboardQuickNotes";
 import DashboardDateCalculator from "@/components/DashboardDateCalculator";
 import { RecentCases } from "@/components/RecentCases";
@@ -8,19 +7,16 @@ export default function Home() {
   const greeting = hours < 12 ? '早安' : hours < 18 ? '午安' : '晚安';
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] font-sans text-gray-900 pb-12">
-      <Header />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+    <div className="pb-12 animate-fade-in">
+      <main className="max-w-7xl mx-auto pt-4 sm:pt-8 bg-transparent">
         {/* Welcome Section */}
         <div className="mb-8 pl-1">
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
-            <span className="text-3xl">👋</span>
-            {greeting}，準備好處理今天的案件了嗎？
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <span>{greeting}，</span>
+            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">Administrator</span>
+            <span className="animate-bounce">👋</span>
           </h1>
-          <p className="text-gray-500 font-medium mt-1 ml-11">
-            這是您的個人代書工作台，所有工具已準備就緒。
-          </p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">這是您的個人代書工作台，所有工具已準備就緒。</p>
         </div>
 
         {/* Dashboard Grid */}

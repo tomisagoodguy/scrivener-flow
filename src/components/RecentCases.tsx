@@ -25,12 +25,12 @@ export const RecentCases = async () => {
     const getStatusStyle = (status: string) => {
         switch (status) {
             case '結案':
-                return 'bg-gray-100 text-gray-600 border-gray-200';
+                return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700';
             case '解約':
-                return 'bg-red-50 text-red-600 border-red-100';
+                return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30';
             case '辦理中':
             default:
-                return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+                return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30';
         }
     };
 
@@ -46,42 +46,46 @@ export const RecentCases = async () => {
     };
 
     return (
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-0 overflow-hidden h-full flex flex-col">
-            <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+        <section className="bg-card dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 p-0 overflow-hidden h-full flex flex-col transition-all">
+            <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-950/20 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 border border-blue-100 rounded-xl text-blue-600">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">近期案件動態</h2>
+                    <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">最近案件進度</h3>
                 </div>
-                <Link href="/cases" className="text-sm text-blue-600 hover:text-blue-800 transition-colors font-bold bg-blue-50 px-3 py-1.5 rounded-lg">
-                    查看全部 →
+                <Link href="/cases" className="text-xs font-black text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 uppercase tracking-widest flex items-center gap-1 group">
+                    查看全部 <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800 flex-1 bg-white dark:bg-slate-900">
                 {recentCases.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500 bg-gray-50/50 m-2 rounded-xl border border-dashed border-gray-200">
-                        目前沒有案件，點擊右上角新增
+                    <div className="p-12 text-center">
+                        <div className="text-gray-400 dark:text-slate-600 text-sm font-medium">尚無任何案件記錄</div>
                     </div>
                 ) : (
                     recentCases.map((item) => (
-                        <Link href={`/cases/${item.id}`} key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl hover:bg-gray-50 transition-all group border border-transparent hover:border-gray-200 mb-1 last:mb-0">
-                            <div className="flex items-center gap-4 mb-3 md:mb-0">
-                                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-lg border border-gray-200 shadow-sm group-hover:bg-white group-hover:text-blue-600 group-hover:scale-105 transition-all">
+                        <Link
+                            key={item.id}
+                            href={`/cases/${item.id}`}
+                            className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all group gap-4"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-600 dark:text-slate-400 font-bold text-lg border border-gray-200 dark:border-slate-700 shadow-sm group-hover:bg-white dark:group-hover:bg-slate-700 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-105 transition-all">
                                     {getAvatarInitial(item.case_number)}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-base">
+                                    <h4 className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-base">
                                         {item.case_number}
-                                        {item.city && <span className="ml-2 text-gray-500 font-normal text-sm">{item.city}</span>}
+                                        {item.city && <span className="ml-2 text-gray-500 dark:text-slate-500 font-normal text-sm">{item.city}</span>}
                                     </h4>
-                                    <p className="text-xs text-gray-500 mt-1 font-medium flex items-center gap-2">
-                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">買</span> {item.buyer_name}
-                                        <span className="text-gray-300">|</span>
-                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">賣</span> {item.seller_name}
+                                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 font-medium flex items-center gap-2">
+                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">買</span> {item.buyer_name}
+                                        <span className="text-gray-300 dark:text-slate-700">|</span>
+                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">賣</span> {item.seller_name}
                                     </p>
                                 </div>
                             </div>
@@ -89,7 +93,7 @@ export const RecentCases = async () => {
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold border min-w-[80px] text-center shadow-sm ${getStatusStyle(item.status)}`}>
                                     {item.status}
                                 </span>
-                                <p className="text-xs text-gray-400 font-mono font-medium">
+                                <p className="text-xs text-gray-400 dark:text-slate-500 font-mono font-medium">
                                     {formatDate(item.created_at)}
                                 </p>
                             </div>

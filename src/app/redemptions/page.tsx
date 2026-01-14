@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { Header } from '@/components/Header';
+
+import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
 interface RedemptionInfo {
     id: string;
@@ -22,6 +23,14 @@ export default function RedemptionsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentData, setCurrentData] = useState<Partial<RedemptionInfo>>({});
     const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const redemptionColumns = [
+        { header: '銀行名稱', key: 'bank_name', width: 20 },
+        { header: '服務電話', key: 'service_phone', width: 15 },
+        { header: '匯款/帳號資訊', key: 'account_info', width: 40 },
+        { header: '所需作業天數', key: 'lead_time', width: 20 },
+        { header: '備註', key: 'notes', width: 30 },
+    ];
 
     useEffect(() => {
         fetchRedemptions();
@@ -109,7 +118,7 @@ export default function RedemptionsPage() {
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-            <Header />
+
 
             <main className="mt-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -127,7 +136,7 @@ export default function RedemptionsPage() {
                         </div>
                     </div>
 
-                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-start">
+                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
                         <div className="relative flex-1 md:w-80 group z-20">
                             <div className="relative">
                                 <input
@@ -170,6 +179,13 @@ export default function RedemptionsPage() {
                                 </div>
                             )}
                         </div>
+                        <GenericExportExcelButton
+                            data={filteredData}
+                            columns={redemptionColumns}
+                            filename="代書系統_代償塗銷資訊"
+                            sheetName="代償資訊"
+                            buttonText="打包 Excel"
+                        />
                         <button
                             onClick={() => { setCurrentData({}); setIsEditing(true); }}
                             className="bg-amber-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-600/20 hover:bg-amber-700 transition-all active:scale-95 whitespace-nowrap h-[46px]"

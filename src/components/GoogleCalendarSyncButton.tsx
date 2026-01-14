@@ -100,7 +100,7 @@ export function GoogleCalendarSyncButton({ caseData }: Props) {
     );
 }
 
-function generateEvents(caseData: Case): GoogleCalendarEvent[] {
+function generateEvents(caseData: DemoCase): GoogleCalendarEvent[] {
     const events: GoogleCalendarEvent[] = [];
     // Handle potential array or single object structure from Supabase join
     const mRaw = caseData.milestones;

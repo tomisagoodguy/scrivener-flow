@@ -1,0 +1,25 @@
+yarn run v1.22.22
+$ next build
+▲ Next.js 16.1.1 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.1s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/cases/page.tsx:198:24
+Type error: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'Milestone'.
+  Property '0' does not exist on type 'Milestone'.
+
+[0m [90m 196 |[39m
+ [90m 197 |[39m [36mfunction[39m [33mCaseTableRow[39m({ caseData }[33m:[39m { caseData[33m:[39m [33mDemoCase[39m }) {
+[31m[1m>[22m[39m[90m 198 |[39m     [36mconst[39m milestones [33m=[39m caseData[33m.[39mmilestones[33m?[39m[33m.[39m[[35m0[39m] [33m||[39m {}[33m;[39m
+ [90m     |[39m                        [31m[1m^[22m[39m
+ [90m 199 |[39m     [36mconst[39m financials [33m=[39m caseData[33m.[39mfinancials[33m?[39m[33m.[39m[[35m0[39m] [33m||[39m {}[33m;[39m
+ [90m 200 |[39m
+ [90m 201 |[39m     [36mconst[39m [33mSIGNING_TODOS[39m [33m=[39m [[32m'買方蓋印章'[39m[33m,[39m [32m'賣方蓋印章'[39m[33m,[39m [32m'用印款'[39m[33m,[39m [32m'完稅款'[39m[33m,[39m [32m'權狀印鑑'[39m[33m,[39m [32m'授權'[39m[33m,[39m [32m'解約排除'[39m[33m,[39m [32m'規費'[39m[33m,[39m [32m'設定'[39m[33m,[39m [32m'稅單'[39m[33m,[39m [32m'差額'[39m[33m,[39m [32m'整過戶'[39m][33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

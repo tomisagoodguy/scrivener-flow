@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Header } from '@/components/Header';
+
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
 interface BankContact {
     id: string;
@@ -23,6 +24,16 @@ export default function BanksPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [currentBank, setCurrentBank] = useState<Partial<BankContact>>({});
+
+    const bankColumns = [
+        { header: '銀行名稱', key: 'bank_name', width: 20 },
+        { header: '分行名稱', key: 'branch_name', width: 20 },
+        { header: '聯絡人', key: 'contact_person', width: 15 },
+        { header: '電話', key: 'phone', width: 15 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: '放款條件', key: 'loan_conditions', width: 40 },
+        { header: '備註', key: 'notes', width: 30 },
+    ];
 
     useEffect(() => {
         fetchBanks();
@@ -99,7 +110,7 @@ export default function BanksPage() {
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-            <Header />
+
 
             <main className="mt-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -107,12 +118,18 @@ export default function BanksPage() {
                         <Link href="/" className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                             ← 返回首頁
                         </Link>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                            🏦 銀行資訊庫
-                        </h1>
+                        <div className="flex flex-col">
+                            <h1 className="text-2xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                                🏦 銀行資訊庫
+                            </h1>
+                            <p className="text-[11px] font-bold text-emerald-600/60 tracking-wider flex items-center gap-1 mt-0.5">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                全團隊共用資料庫・即時同步
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="flex gap-4 w-full md:w-auto">
+                    <div className="flex gap-4 w-full md:w-auto items-center">
                         <div className="relative flex-1 md:w-64">
                             <input
                                 type="text"
@@ -125,6 +142,13 @@ export default function BanksPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
+                        <GenericExportExcelButton
+                            data={filteredBanks}
+                            columns={bankColumns}
+                            filename="代書系統_銀行資訊"
+                            sheetName="銀行連絡人"
+                            buttonText="打包 Excel"
+                        />
                         <button
                             onClick={() => { setCurrentBank({}); setIsEditing(true); }}
                             className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95 whitespace-nowrap"

@@ -1,9 +1,9 @@
-import { DemoCase, CaseMilestone } from '@/types';
+import { DemoCase, Milestone } from '@/types';
 
 export type PipelineStage = 'contract' | 'seal' | 'tax' | 'transfer' | 'handover' | 'closed';
 
 export function getCaseStage(c: DemoCase): PipelineStage {
-    const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones as CaseMilestone | undefined;
+    const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones as Milestone | undefined;
 
     // If no milestones record, it's at the beginning (Contract state)
     if (!m) return 'contract';

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { Case } from '@/types';
 import EditCaseForm from '@/components/EditCaseForm';
-import { Header } from '@/components/Header';
+
 import { GoogleCalendarSyncButton } from '@/components/GoogleCalendarSyncButton';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,7 @@ export default async function CaseDetailPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-[1600px] mx-auto font-sans">
-            <Header />
+
 
             <main className="mt-8 transition-all">
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
