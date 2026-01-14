@@ -1,10 +1,12 @@
 'use client';
 
+import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export const SideNav = () => {
     const pathname = usePathname();
+    const router = useRouter();
     const navItems = [
         { name: '儀表板', href: '/', icon: '📊' },
         { name: '案件管理', href: '/cases', icon: '📁' },
@@ -13,6 +15,11 @@ export const SideNav = () => {
         { name: '法規條文', href: '/clauses', icon: '⚖️' },
         { name: '工作筆記', href: '/notes', icon: '📝' },
     ];
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.refresh(); // Refresh to update auth state
+    };
 
     return (
         <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-8 gap-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-[999] transition-all hover:w-64 group">
@@ -43,10 +50,16 @@ export const SideNav = () => {
                 })}
             </nav>
 
-            {/* Bottom Avatar */}
-            <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-slate-800 p-0.5 hover:rotate-12 transition-transform cursor-pointer">
-                <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">登出</div>
-            </div>
+            {/* Bottom Avatar / Logout */}
+            <button
+                onClick={handleLogout}
+                className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-slate-800 p-0.5 hover:rotate-12 transition-transform cursor-pointer"
+                title="登出"
+            >
+                <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                    登出
+                </div>
+            </button>
         </aside>
     );
 };
