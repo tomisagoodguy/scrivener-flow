@@ -99,16 +99,28 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('確定刪除此行程？')) return;
+        // Optimistic UI update: Remove immediately from view
+        setScheduleItems(prev => prev.filter(item => item.id !== id));
 
-        // Soft delete
+        // Soft delete first
         const { error } = await supabase.from('todos').update({ is_deleted: true }).eq('id', id);
+
         if (error) {
-            // Hard delete fallback
-            await supabase.from('todos').delete().eq('id', id);
+            console.error('Soft delete error:', error);
+            // Fallback to Hard delete if soft delete fails (e.g. column missing)
+            const { error: hardError } = await supabase.from('todos').delete().eq('id', id);
+
+            if (hardError) {
+                console.error('Delete failed:', hardError);
+                alert('刪除失敗，請檢查網路連線');
+                // Revert UI change if really failed
+                fetchSchedule();
+            } else {
+                router.refresh(); // Sync server components
+            }
+        } else {
+            router.refresh(); // Sync server components
         }
-        fetchSchedule();
-        router.refresh();
     };
 
     const startEdit = (item: ScheduleItem) => {
