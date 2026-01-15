@@ -125,6 +125,101 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 if (fe) throw fe;
             }
 
+            setDebugInfo('正在同步行事曆與備忘 (todos)...');
+            // --- Sync System Todos ---
+            const user = (await supabase.auth.getUser()).data.user;
+            if (user) {
+                const todosToUpsert: any[] = [];
+                const caseTitle = data.buyer ? `${data.buyer} 案` : '案件';
+
+                const addSystemTodo = (key: string, dateVal: string | null, titleSuffix: string, type: 'appointment' | 'tax' | 'legal', daysBefore: number) => {
+                    if (!dateVal) return;
+                    // Check if it's already an ISO string or just date
+                    // Appointments are sent as ISO strings from earlier logic, Dates as YYYY-MM-DD
+                    // We use the raw form data if possible, but formatted above as milestoneData/financialData
+
+                    // Helper to check if string is ISO or Date
+                    const isDateTime = dateVal.includes('T');
+                    const d = new Date(dateVal);
+
+                    // Formatted display
+                    const dateDisplay = isDateTime
+                        ? d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : d.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+
+                    const content = `${caseTitle} - ${titleSuffix} (${dateDisplay})`;
+
+                    // Calculate urgency (optional logic, defaults to urgent if close)
+                    // const remindDate = new Date(d);
+                    // remindDate.setDate(d.getDate() - daysBefore);
+
+                    todosToUpsert.push({
+                        user_id: user.id,
+                        case_id: initialData.id,
+                        content: content,
+                        due_date: dateVal, // Use the exact value stored in DB
+                        priority: 'urgent-important', // Default system tasks to important
+                        source_type: 'system',
+                        source_key: key,
+                        is_completed: false, // Reset completion if date changes? Maybe yes for simplicity
+                        is_deleted: false
+                    });
+                };
+
+                // Appointments
+                addSystemTodo('sign_appt', milestoneData.sign_appointment, '簽約約定', 'appointment', 3);
+                addSystemTodo('seal_appt', milestoneData.seal_appointment, '用印約定', 'appointment', 3);
+                addSystemTodo('tax_appt', milestoneData.tax_appointment, '完稅約定', 'appointment', 3);
+                addSystemTodo('handover_appt', milestoneData.handover_appointment, '交屋約定', 'appointment', 3);
+
+                // Tax Deadlines
+                addSystemTodo('land_val_tax', financialData.land_value_tax_deadline, '土增稅限繳', 'tax', 5);
+                addSystemTodo('deed_tax', financialData.deed_tax_deadline, '契稅限繳', 'tax', 5);
+                addSystemTodo('land_tax', financialData.land_tax_deadline, '地價稅限繳', 'tax', 5);
+                addSystemTodo('house_tax', financialData.house_tax_deadline, '房屋稅限繳', 'tax', 5);
+
+                // Legal Dates (Optional, sync these too to match Dashboard logic)
+                addSystemTodo('contract_date', milestoneData.contract_date, '簽約日', 'legal', 3);
+                addSystemTodo('seal_date', milestoneData.seal_date, '用印日', 'legal', 3);
+                addSystemTodo('tax_payment_date', milestoneData.tax_payment_date, '完稅日', 'legal', 3);
+                addSystemTodo('handover_date', milestoneData.handover_date, '交屋日', 'legal', 3);
+
+                if (todosToUpsert.length > 0) {
+                    // We need to upsert. The constraint for upsert typically needs a unique index.
+                    // IMPORTANT: 'todos' table may NOT have a unique constraint on (case_id, source_key).
+                    // So specific upsert might fail or create duplicates if we rely on implicit ID.
+                    // Strategy: 
+                    // 1. Fetch existing system todos for this case
+                    // 2. Map existing IDs to keys
+                    // 3. Attach IDs to payload to force Update instead of Insert
+
+                    const { data: existingTodos } = await supabase
+                        .from('todos')
+                        .select('id, source_key')
+                        .eq('case_id', initialData.id)
+                        .eq('source_type', 'system');
+
+                    const keyMap = new Map();
+                    (existingTodos || []).forEach((t: any) => {
+                        if (t.source_key) keyMap.set(t.source_key, t.id);
+                    });
+
+                    const finalPayload = todosToUpsert.map(t => {
+                        const existingId = keyMap.get(t.source_key);
+                        if (existingId) {
+                            return { ...t, id: existingId };
+                        }
+                        return t;
+                    });
+
+                    const { error: todoError } = await supabase.from('todos').upsert(finalPayload);
+                    if (todoError) {
+                        console.error('Todo Sync Error:', todoError);
+                        // Don't block save success but warn
+                    }
+                }
+            }
+
             setDebugInfo('儲存成功，正跳轉中...');
             router.push('/cases');
             router.refresh();

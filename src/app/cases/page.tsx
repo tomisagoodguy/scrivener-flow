@@ -1,7 +1,8 @@
 
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+// Use the Server Client for authenticated requests in Server Components
+import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
 
 import CaseCompactTodoList from '@/components/CaseCompactTodoList';
@@ -30,6 +31,9 @@ export default async function CasesPage({
     const statusParam = resolvedSearchParams?.status || 'Processing';
     const queryParam = resolvedSearchParams?.q || '';
     const stageParam = resolvedSearchParams?.stage || '';
+
+    // Initialize authenticated Supabase client
+    const supabase = await createClient();
 
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
 

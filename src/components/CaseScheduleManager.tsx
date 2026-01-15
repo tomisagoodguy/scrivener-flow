@@ -41,9 +41,6 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
             .from('todos')
             .select('*')
             .eq('case_id', caseId)
-            // Filter to only show MANUAL items in this view to avoid duplicating system reminders derived from the form inputs above.
-            // System tasks (legal dates, appointments) are visible in the Dashboard and effectively "managed" via the form inputs.
-            .eq('source_type', 'manual')
             .eq('is_deleted', false)
             .order('due_date', { ascending: true });
 

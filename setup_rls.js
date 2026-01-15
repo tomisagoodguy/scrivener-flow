@@ -1,6 +1,19 @@
+require('dotenv').config({ path: '.env.local' });
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
+const dbPass = process.env.SUPABASE_DB_PASSWORD;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+if (!dbPass || !supabaseUrl) {
+    console.error('❌ Missing SUPABASE_DB_PASSWORD or NEXT_PUBLIC_SUPABASE_URL in .env.local');
+    process.exit(1);
+}
+
+// Extract project ref from URL (e.g. https://xyz.supabase.co -> xyz)
+const projectRef = supabaseUrl.split('//')[1].split('.')[0];
+const connectionString = `postgresql://postgres:${dbPass}@db.${projectRef}.supabase.co:5432/postgres`;
+
+console.log(`🔌 Connecting to ${projectRef} with provided password...`);
 
 const sql = `
 -- 1. Add user_id column
@@ -68,6 +81,23 @@ DROP POLICY IF EXISTS "Users can delete own financials" ON financials;
 CREATE POLICY "Users can delete own financials" ON financials FOR DELETE USING (
     exists (select 1 from cases where cases.id = financials.case_id and cases.user_id = auth.uid())
 );
+
+-- 8. Create Policies for TODOS
+ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid();
+CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
+ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own todos" ON todos;
+CREATE POLICY "Users can view own todos" ON todos FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own todos" ON todos;
+CREATE POLICY "Users can insert own todos" ON todos FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own todos" ON todos;
+CREATE POLICY "Users can update own todos" ON todos FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own todos" ON todos;
+CREATE POLICY "Users can delete own todos" ON todos FOR DELETE USING (auth.uid() = user_id);
 
 -- 7. NOTIFY
 NOTIFY pgrst, 'reload schema';

@@ -49,13 +49,38 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
     const buffer = Buffer.from(await (file as File).arrayBuffer());
     // Use raw text but try to preserve line structure if possible. 
     // Mammoth extractRawText usually puts paragraphs on newlines.
-    const result = await mammoth.extractRawText({ buffer });
-    const rawText = result.value; // Keep newlines for line-by-line processing
+    // Use convertToHtml to preserve Table structure
+    // Python script: Iterates rows, commas between cells.
+    // Mammoth extractRawText destroys table structure (just paragraphs).
+    // converting to HTML allows us to see <tr> and <td>.
+    const result = await mammoth.convertToHtml({ buffer });
+    let html = result.value;
 
-    // Also create a "flat" version for global regexes
+    // Simulate "formatted text" by converting HTML table markers to separators
+    // 1. Replace cell endings with commas
+    html = html.replace(/<\/td>|<\/th>/gi, ',');
+    // 2. Replace row endings with newlines
+    html = html.replace(/<\/tr>/gi, '\n');
+    // 3. Replace <p> endings with spaces (start of p usually implies new line in text, but inside cell we want space)
+    html = html.replace(/<\/p>/gi, ' ');
+    // 4. Replace <br> with spaces
+    html = html.replace(/<br\s*\/?>/gi, ' ');
+
+    // 5. Strip all other tags
+    let rawText = html.replace(/<[^>]+>/g, '');
+
+    // Decode HTML entities (basic ones)
+    rawText = rawText
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+
+    // "Flat Text" for global regexes (still useful, but now rawText has structure)
+    // We update flatText to be consistent with the structured rawText but single-lined
     const flatText = rawText.replace(/\s+/g, ' ').trim();
 
-    console.log('Raw Text Preview (First 200 chars):', rawText.substring(0, 200));
+    console.log('Processed Structured Text (First 300 chars):', rawText.substring(0, 300));
 
     const parsedData: ParsedCaseData = {
       debug_text: rawText.substring(0, 800)
@@ -239,20 +264,25 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
     // Pattern: f"{stage}.*?([\d,]+)([^\(\s,]*)\s*\((\d{{4}}/\d{{2}}/\d{{2}})\)"
 
     const extractStagePythonStyle = (stageName: string) => {
-      // Construct regex matching Python's pattern
-      // Note: Python's (.*?) is non-greedy match.
-      // TS Regex: 
-      // Group 1: Amount ([\d,]+)
-      // Group 2: Method ([^\(\s,]*)  <- non-bracket, non-space, non-comma
-      // Group 3: Date (\d{4}/\d{2}/\d{2})
-      const pattern = new RegExp(`${stageName}.*?([\\d,]+)([^\\(\\s,]*)\\s*\\((\\d{4}/\\d{2}/\\d{2})\\)`);
+      // Construct regex matching Python's pattern but with stricter boundaries.
+      // We use a "Tempered Greedy Token" (?:(?!(?:...)).)*? to ensure we don't cross over other stage keywords.
+      // This prevents "用印" (Seal) mentioned in a preamble from greedily matching the "簽約" (Contract) date.
 
-      // We search in flatText because the Python script's "raw_text" finding handles newlines via DOTALL usually, 
-      // but here our flatText has removed newlines.
-      // Actually Python: re.search(..., re.DOTALL) used for Price, but for stages it used default mode?
-      // Wait, the python snippet for stages: `main_pattern = f"{stage}.*?..."` 
-      // default re.search is NOT DOTALL. So it matches within a line (or text if it's all one string).
-      // Let's try flatText first.
+      const otherStages = ['簽約', '用印', '完稅', '尾款', '總價'].filter(s => s !== stageName).join('|');
+      // Note: We also exclude the current stageName to avoid skipping from a "Label" to a "Note" if the Note repeats the label? 
+      // Actually, excluding ALL stage keywords is safest to enforce "Local Match".
+
+      const boundaryKeywords = '簽約|用印|完稅|尾款|總價';
+
+      // Regex Explanation:
+      // ${stageName}          : Start with the target stage (e.g., '用印')
+      // (?:(?!(?:...)).)*?    : Match any character, BUT stop if we see a boundary keyword (Tempered Greedy)
+      // ([\\d,]+)             : Group 1: Amount
+      // ([^\\(\\s,]*)         : Group 2: Method (non-space, non-paren)
+      // \\s*                  : Optional space
+      // \\((\\d{4}/\\d{2}/\\d{2})\\) : Group 3: Date in parens
+
+      const pattern = new RegExp(`${stageName}(?:(?!(?:${boundaryKeywords})).)*?([\\d,]+)([^\\(\\s,]*)\\s*\\((\\d{4}/\\d{2}/\\d{2})\\)`);
 
       const match = flatText.match(pattern);
       if (match) {

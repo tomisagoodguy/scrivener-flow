@@ -7,6 +7,7 @@ import { TodoTask, TaskType, Priority } from './types';
 import { TodoListView } from './TodoListView';
 import { TodoMatrixView } from './TodoMatrixView';
 import { TodoCalendarView } from './TodoCalendarView';
+import { TodoWeekView } from './TodoWeekView';
 import {
     List,
     LayoutGrid,
@@ -76,7 +77,7 @@ const generateMockTasks = (): TodoTask[] => [
 ];
 
 const TodoContainer = () => {
-    const [viewMode, setViewMode] = useState<'list' | 'matrix' | 'calendar'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'matrix' | 'calendar' | 'week'>('list');
     const [tasks, setTasks] = useState<TodoTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
@@ -423,9 +424,10 @@ id, case_number, buyer_name,
                 </div>
 
                 <div className="flex bg-slate-200 dark:bg-slate-700 p-1 rounded-lg">
-                    <button onClick={() => setViewMode('list')} className={`p - 1.5 rounded - md transition - all ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><List className="w-5 h-5" /></button>
-                    <button onClick={() => setViewMode('matrix')} className={`p - 1.5 rounded - md transition - all ${viewMode === 'matrix' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><LayoutGrid className="w-5 h-5" /></button>
-                    <button onClick={() => setViewMode('calendar')} className={`p - 1.5 rounded - md transition - all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><Calendar className="w-5 h-5" /></button>
+                    <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><List className="w-5 h-5" /></button>
+                    <button onClick={() => setViewMode('matrix')} className={`p-1.5 rounded-md transition-all ${viewMode === 'matrix' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><LayoutGrid className="w-5 h-5" /></button>
+                    <button onClick={() => setViewMode('week')} className={`p-1.5 rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `} title="未來七天"><CalendarDays className="w-5 h-5" /></button>
+                    <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><Calendar className="w-5 h-5" /></button>
                 </div>
             </div>
 
@@ -438,6 +440,7 @@ id, case_number, buyer_name,
                         <>
                             {viewMode === 'list' && <TodoListView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
                             {viewMode === 'matrix' && <TodoMatrixView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
+                            {viewMode === 'week' && <TodoWeekView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
                             {viewMode === 'calendar' && <TodoCalendarView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
                         </>
                     )}
