@@ -21,7 +21,8 @@ export default async function CaseDetailPage({ params }: PageProps) {
         .select(`
             *,
             milestones (*),
-            financials (*)
+            financials (*),
+            case_date_logs (*)
         `)
         .eq('id', id)
         .single();

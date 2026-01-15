@@ -39,7 +39,8 @@ export default async function CasesPage({
         .select(`
       *,
       milestones (*),
-      financials (*)
+      financials (*),
+      todos_list:todos(*)
     `)
         // Default sort by created_at desc (newest first)
         .order('created_at', { ascending: false });

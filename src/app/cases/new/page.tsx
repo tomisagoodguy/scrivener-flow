@@ -69,7 +69,7 @@ export default function NewCasePage() {
         try {
             setLoading(true);
             const formData = new FormData(e.currentTarget);
-            const data = Object.fromEntries(formData.entries());
+            const data: any = Object.fromEntries(formData.entries());
             console.log('Form Data:', data);
 
             const formatDate = (val: FormDataEntryValue) => val ? val.toString() : null;
@@ -104,17 +104,23 @@ export default function NewCasePage() {
 
             // 1. Insert Case
             const casePayload = {
-                case_number: data.case_number,
-                buyer_name: data.buyer_name,
-                buyer_phone: data.buyer_phone || null,
-                seller_name: data.seller_name,
-                seller_phone: data.seller_phone || null,
-                status: data.status,
-                city: data.city || '台北市',
-                district: data.district || '',
-                notes: data.notes || '',
+                case_number: data.case_number?.toString() || '', // Ensure string
+                buyer_name: data.buyer_name?.toString() || '',
+                buyer_phone: data.buyer_phone?.toString() || null,
+                seller_name: data.seller_name?.toString() || '',
+                seller_phone: data.seller_phone?.toString() || null,
+                escrow_account: formData.get('escrow_account') as string,
+                registrant_name: formData.get('registrant_name') as string,
+                registrant_phone: formData.get('registrant_phone') as string,
+                agent_name: formData.get('agent_name') as string,
+                agent_phone: formData.get('agent_phone') as string,
 
-                tax_type: data.tax_type || '一般',
+                status: 'Processing', // Default status
+                city: data.city?.toString() || '台北市',
+                district: data.district?.toString() || '',
+                notes: data.notes?.toString() || '',
+
+                tax_type: data.tax_type?.toString() || '一般',
                 user_id: (await supabase.auth.getUser()).data.user?.id
             };
 
@@ -205,7 +211,7 @@ export default function NewCasePage() {
             // 3. Insert Financials
             const financialsPayload = {
                 case_id: newCase.id,
-                total_price: data.contract_price ? Number(data.contract_price) : null,
+                total_price: data.total_price ? Number(data.total_price) : null, // Changed from contract_price
                 buyer_bank: data.buyer_loan_bank?.toString() || null,
                 seller_bank: data.seller_loan_bank?.toString() || null
             };
@@ -256,9 +262,16 @@ export default function NewCasePage() {
                         const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
                         if (el && val) {
                             el.value = val;
+                            el.value = val;
                             if (name === 'notes') setNotes(val);
                         }
                     };
+
+                    if (parsedData.escrow_account) setVal('escrow_account', parsedData.escrow_account);
+                    if (parsedData.registrant_name) setVal('registrant_name', parsedData.registrant_name);
+                    if (parsedData.registrant_phone) setVal('registrant_phone', parsedData.registrant_phone);
+                    if (parsedData.agent_name) setVal('agent_name', parsedData.agent_name);
+                    if (parsedData.agent_phone) setVal('agent_phone', parsedData.agent_phone);
 
                     setVal('case_number', parsedData.case_number);
                     setVal('buyer_name', parsedData.buyer_name);
@@ -283,11 +296,12 @@ export default function NewCasePage() {
 
                     setVal('balance_amount', parsedData.balance_amount?.toString());
                     setVal('balance_method', parsedData.balance_method);
+                    setVal('balance_payment_date', parsedData.balance_payment_date);
 
                     setVal('handover_date', parsedData.handover_date);
 
                     if (parsedData.total_price) {
-                        setVal('contract_price', parsedData.total_price.toString());
+                        setVal('total_price', parsedData.total_price.toString()); // Changed from contract_price
                     }
                 }
                 alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
@@ -336,10 +350,6 @@ export default function NewCasePage() {
                             <label className="text-sm text-foreground/70 font-bold uppercase tracking-wider">案件編號 (Case ID)</label>
                             <input name="case_number" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans" required />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">買方電話</label>
-                            <input name="buyer_phone" type="tel" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-sans focus:ring-2 focus:ring-primary/20 transition-all" placeholder="例如：0912-345-678" />
-                        </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
                             <select
@@ -358,18 +368,6 @@ export default function NewCasePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">買方姓名</label>
-                            <input name="buyer_name" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">賣方姓名</label>
-                            <input name="seller_name" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">賣方電話</label>
-                            <input name="seller_phone" type="tel" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-sans focus:ring-2 focus:ring-primary/20 transition-all" placeholder="例如：0912-345-678" />
-                        </div>
-                        <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">目前進度狀態</label>
                             <select name="status" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
                                 <option value="Processing">辦理中</option>
@@ -382,7 +380,7 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm text-primary font-bold">成交總價 (萬元)</label>
-                            <input name="contract_price" type="number" step="0.1" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all" required />
+                            <input name="total_price" type="number" step="0.1" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all" required />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">稅單性質</label>
@@ -400,12 +398,80 @@ export default function NewCasePage() {
                             <input name="buyer_loan_bank" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold" />
                         </div>
                         <div className="space-y-2">
+                            <label className="text-sm text-foreground/70 font-bold">賣方代償銀行</label>
+                            <input name="seller_loan_bank" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold" />
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">塗銷方式</label>
                             <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
                                 <option value="代書塗銷">代書塗銷</option>
                                 <option value="賣方自辦">賣方自辦</option>
                                 <option value="無">無</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
+                            <input name="escrow_account" type="text" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-wider" placeholder="968282..." />
+                        </div>
+                    </div>
+
+                    {/* Involved Parties */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+                        {/* Buyer Side */}
+                        <div className="bg-secondary/30 p-4 rounded-xl space-y-3 border border-border">
+                            <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-500"></span> 買方
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-foreground/50">姓名</label>
+                                    <input name="buyer_name" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-foreground/50">電話</label>
+                                    <input name="buyer_phone" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">登記名義人</label>
+                                    <input name="registrant_name" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold" placeholder="同買方" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">登記人電話</label>
+                                    <input name="registrant_phone" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Seller Side */}
+                        <div className="bg-secondary/30 p-4 rounded-xl space-y-3 border border-border">
+                            <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span> 賣方
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-foreground/50">姓名</label>
+                                    <input name="seller_name" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-foreground/50">電話</label>
+                                    <input name="seller_phone" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人</label>
+                                    <input name="agent_name" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人電話</label>
+                                    <input name="agent_phone" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div >
@@ -423,17 +489,7 @@ export default function NewCasePage() {
                         {/* Contract Stage */}
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-xs font-bold text-amber-600">簽約日</label>
-                                    <button
-                                        type="button"
-                                        onClick={handleAutoCalculate}
-                                        className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary hover:text-white transition-colors font-bold flex items-center gap-1"
-                                        title="根據簽約日自動推算後續流程日期"
-                                    >
-                                        ⚡ 自動推算
-                                    </button>
-                                </div>
+                                <label className="text-xs font-bold text-amber-600">簽約日</label>
                                 <input name="contract_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
                             </div>
                             <div className="space-y-1">

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
 import { parseDocx } from '@/app/actions/parseDocx';
+import CaseScheduleManager from '@/components/CaseScheduleManager';
 import QuickNotes from '@/components/QuickNotes';
 import CaseTodos from '@/components/CaseTodos';
 
@@ -83,6 +84,12 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 balance_amount: data.balance_amount ? Number(data.balance_amount) : null,
                 handover_date: formatDate(data.handover_date),
                 redemption_date: formatDate(data.redemption_date),
+
+                // Appointments
+                sign_appointment: data.sign_appointment ? new Date(data.sign_appointment as string).toISOString() : null,
+                seal_appointment: data.seal_appointment ? new Date(data.seal_appointment as string).toISOString() : null,
+                tax_appointment: data.tax_appointment ? new Date(data.tax_appointment as string).toISOString() : null,
+                handover_appointment: data.handover_appointment ? new Date(data.handover_appointment as string).toISOString() : null,
             };
 
             const { data: mCheck } = await supabase.from('milestones').select('id').eq('case_id', initialData.id).maybeSingle();
@@ -101,6 +108,12 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 pre_collected_fee: data.pre_collected_fee ? Number(data.pre_collected_fee) : null,
                 buyer_bank: data.buyer_loan_bank?.toString() || null,
                 seller_bank: data.seller_loan_bank?.toString() || null,
+
+                // Tax Deadlines
+                land_value_tax_deadline: formatDate(data.land_value_tax_deadline),
+                deed_tax_deadline: formatDate(data.deed_tax_deadline),
+                land_tax_deadline: formatDate(data.land_tax_deadline),
+                house_tax_deadline: formatDate(data.house_tax_deadline),
             };
 
             const { data: fCheck } = await supabase.from('financials').select('id').eq('case_id', initialData.id).maybeSingle();
@@ -321,31 +334,31 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 <h3 className="text-lg font-bold text-amber-600 border-l-4 border-amber-500 pl-3">進度日期</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-amber-600">簽約日/款</label>
-                        <input name="contract_date" defaultValue={milestones?.contract_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/30 outline-none" required />
-                        <input name="contract_amount" defaultValue={milestones?.contract_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
+                        <label className="text-xs font-bold text-amber-600">簽約日/款</label>
+                        <input name="contract_date" defaultValue={milestones?.contract_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs focus:ring-1 focus:ring-primary/30 outline-none" required />
+                        <input name="contract_amount" defaultValue={milestones?.contract_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-2 text-xs outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-amber-600">補差額/款</label>
-                        <input name="sign_diff_date" defaultValue={milestones?.sign_diff_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
-                        <input name="sign_diff_amount" defaultValue={milestones?.sign_diff_amount} type="number" step="0.1" placeholder="補差額" className="w-full bg-white/50 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" />
+                        <label className="text-xs font-bold text-amber-600">補差額/款</label>
+                        <input name="sign_diff_date" defaultValue={milestones?.sign_diff_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-2 text-xs outline-none" />
+                        <input name="sign_diff_amount" defaultValue={milestones?.sign_diff_amount} type="number" step="0.1" placeholder="補差額" className="w-full bg-white/50 border border-border-color rounded px-2 py-2 text-xs outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-blue-600">用印日/款</label>
-                        <input name="seal_date" defaultValue={milestones?.seal_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
-                        <input name="seal_amount" defaultValue={milestones?.seal_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
+                        <label className="text-xs font-bold text-blue-600">用印日/款</label>
+                        <input name="seal_date" defaultValue={milestones?.seal_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none" />
+                        <input name="seal_amount" defaultValue={milestones?.seal_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-2 text-xs outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-emerald-600">完稅日/款</label>
-                        <input name="tax_payment_date" defaultValue={milestones?.tax_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
-                        <input name="tax_amount" defaultValue={milestones?.tax_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-1 text-[10px] outline-none" />
+                        <label className="text-xs font-bold text-emerald-600">完稅日/款</label>
+                        <input name="tax_payment_date" defaultValue={milestones?.tax_payment_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none" />
+                        <input name="tax_amount" defaultValue={milestones?.tax_amount} type="number" step="0.1" placeholder="金額" className="w-full bg-white/50 border border-border-color rounded px-2 py-2 text-xs outline-none" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground/40 flex justify-between">
+                        <label className="text-xs font-bold text-foreground/40 flex justify-between">
                             <span>過戶日</span>
                             <span className="text-[9px] text-purple-500">備註</span>
                         </label>
-                        <input name="transfer_date" defaultValue={milestones?.transfer_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" />
+                        <input name="transfer_date" defaultValue={milestones?.transfer_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none" />
                         <div className="space-y-1">
                             <input
                                 name="transfer_note"
@@ -353,7 +366,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                                 onChange={(e) => setTransferNote(e.target.value)}
                                 type="text"
                                 placeholder="備註..."
-                                className="w-full bg-secondary/20 border border-border-color rounded px-2 py-1 text-[10px] focus:bg-white/50 transition-all outline-none"
+                                className="w-full bg-secondary/20 border border-border-color rounded px-2 py-2 text-xs focus:bg-white/50 transition-all outline-none"
                             />
                             <div className="flex flex-wrap gap-1">
                                 {['訴訟', '卡營業登記', '報拆延', '外案', '重要', '不重要'].map(tag => (
@@ -361,7 +374,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                                         key={tag}
                                         type="button"
                                         onClick={() => setTransferNote(p => p ? `${p} ${tag}` : tag)}
-                                        className="text-[9px] px-1 bg-purple-50 hover:bg-purple-500 hover:text-white text-purple-600 rounded border border-purple-100 transition-all"
+                                        className="text-[10px] px-1.5 py-0.5 bg-purple-50 hover:bg-purple-500 hover:text-white text-purple-600 rounded border border-purple-100 transition-all"
                                     >
                                         {tag}
                                     </button>
@@ -370,12 +383,62 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-red-600">代償/交屋/尾款</label>
-                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-0.5 text-[10px] outline-none" title="代償日" />
-                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-1 text-xs outline-none" required title="交屋日 (尾款日)" />
-                        <input name="balance_amount" defaultValue={milestones?.balance_amount} type="number" step="0.1" placeholder="尾款金額" className="w-full bg-white/50 border border-secondary-color rounded px-2 py-1 text-[10px] outline-none" />
+                        <label className="text-xs font-bold text-red-600">代償/交屋/尾款</label>
+                        <input name="redemption_date" defaultValue={milestones?.redemption_date} type="date" className="w-full bg-secondary/20 border border-border-color rounded px-2 py-2 text-xs outline-none" title="代償日" />
+                        <input name="handover_date" defaultValue={milestones?.handover_date} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none" required title="交屋日 (尾款日)" />
+                        <input name="balance_amount" defaultValue={milestones?.balance_amount} type="number" step="0.1" placeholder="尾款金額" className="w-full bg-white/50 border border-secondary-color rounded px-2 py-2 text-xs outline-none" />
                     </div>
                 </div>
+            </div>
+
+            {/* 與客戶約定時間 (Appointments) */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-indigo-600 border-l-4 border-indigo-500 pl-3">與客戶約定時間 (Appointments)</h3>
+                <p className="text-xs text-foreground/50">請設定與客戶見面的具體時間 (精確到分)，系統將於前 3 天提醒。</p>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-indigo-600">用印約定</label>
+                        <input name="seal_appointment" defaultValue={milestones?.seal_appointment ? new Date(milestones.seal_appointment).toISOString().slice(0, 16) : ''} type="datetime-local" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-indigo-600">完稅約定</label>
+                        <input name="tax_appointment" defaultValue={milestones?.tax_appointment ? new Date(milestones.tax_appointment).toISOString().slice(0, 16) : ''} type="datetime-local" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-indigo-600">交屋約定</label>
+                        <input name="handover_appointment" defaultValue={milestones?.handover_appointment ? new Date(milestones.handover_appointment).toISOString().slice(0, 16) : ''} type="datetime-local" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none" />
+                    </div>
+                </div>
+            </div>
+
+            {/* 稅單限繳日期 (Tax Deadlines) */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-rose-600 border-l-4 border-rose-500 pl-3">稅單限繳日期 (Tax Deadlines)</h3>
+                <p className="text-xs text-foreground/50">設定限繳日後，系統將於前 5 天開始提醒。</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-rose-600">土增稅限繳日 (常用)</label>
+                        <input name="land_value_tax_deadline" defaultValue={financials?.land_value_tax_deadline} type="date" className="w-full bg-rose-50/50 border border-rose-200 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-rose-300 outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-rose-600">契稅限繳日 (常用)</label>
+                        <input name="deed_tax_deadline" defaultValue={financials?.deed_tax_deadline} type="date" className="w-full bg-rose-50/50 border border-rose-200 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-rose-300 outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500">地價稅限繳日</label>
+                        <input name="land_tax_deadline" defaultValue={financials?.land_tax_deadline} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-gray-300 outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500">房屋稅限繳日</label>
+                        <input name="house_tax_deadline" defaultValue={financials?.house_tax_deadline} type="date" className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-gray-300 outline-none" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="border-t border-border-color"></div>
+
+            <div className="py-4">
+                <CaseScheduleManager caseId={initialData.id} />
             </div>
 
             <div className="border-t border-border-color"></div>
@@ -406,6 +469,26 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </select>
                 </div>
             </div>
+
+            {/* 日期更動紀錄 (Audit Log) */}
+            {
+                (initialData as any).case_date_logs && (initialData as any).case_date_logs.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-gray-500 border-l-4 border-gray-400 pl-3">日期更動紀錄 (Change Log)</h3>
+                        <div className="bg-secondary/20 rounded-xl p-4 max-h-48 overflow-y-auto space-y-2">
+                            {(initialData as any).case_date_logs.map((log: any) => (
+                                <div key={log.id} className="text-xs text-foreground/70 border-b border-border/50 pb-1">
+                                    <span className="font-bold text-primary">{log.field_name}</span>:
+                                    <span className="line-through mx-2 text-red-400">{log.old_value || '(空)'}</span>
+                                    ➔
+                                    <span className="font-bold text-green-600 mx-2">{log.new_value}</span>
+                                    <span className="text-[10px] text-gray-400">({new Date(log.changed_at).toLocaleString('zh-TW')})</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            }
 
             <div className="pt-8 flex justify-between gap-4">
                 <div className="flex flex-col gap-2">

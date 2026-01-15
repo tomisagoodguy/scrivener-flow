@@ -11,6 +11,11 @@ export interface Case {
     tax_type?: '一般' | '自用';
     buyer_loan_bank?: string;
     seller_loan_bank?: string;
+    escrow_account?: string;
+    registrant_name?: string;
+    registrant_phone?: string;
+    agent_name?: string;
+    agent_phone?: string;
 
     // Dates
     contract_date: string; // ISO date string
@@ -99,6 +104,22 @@ export interface DemoCase {
     // Joined Tables
     milestones?: Milestone[];
     financials?: Financials[];
+    todos_list?: TodoRecord[];
+}
+
+export interface TodoRecord {
+    id: string;
+    user_id: string;
+    case_id?: string;
+    content: string;
+    is_completed: boolean;
+    priority: string;
+    due_date?: string;
+    created_at: string;
+    source_type?: string;
+    source_key?: string;
+    type?: string;
+    is_deleted?: boolean;
 }
 
 export interface Milestone {
@@ -119,6 +140,12 @@ export interface Milestone {
     sign_diff_days?: number;
     redemption_date?: string;
     tax_filing_date?: string;
+
+    // Appointments (Client Meetings)
+    sign_appointment?: string;
+    seal_appointment?: string;
+    tax_appointment?: string;
+    handover_appointment?: string;
 
     // Payment Details
     contract_method?: string;
@@ -146,6 +173,34 @@ export interface Financials {
     buyer_loan_amount?: number;
     seller_bank?: string; // S貸款
     seller_redemption_amount?: number;
+
+    // Tax Deadlines
+    land_value_tax_deadline?: string;
+    deed_tax_deadline?: string;
+    land_tax_deadline?: string;
+    house_tax_deadline?: string;
+}
+
+export type TodoPriority = 'urgent_important' | 'urgent_not_important' | 'not_urgent_important' | 'not_urgent_not_important';
+
+export interface PersonalTodo {
+    id: string;
+    user_id: string;
+    content: string;
+    is_completed: boolean;
+    priority: TodoPriority;
+    due_date?: string;
+    created_at: string;
+}
+
+export interface DateLog {
+    id: string;
+    case_id: string;
+    field_name: string;
+    old_value: string;
+    new_value: string;
+    changed_at: string;
+    user_id?: string;
 }
 
 export interface DashboardStats {

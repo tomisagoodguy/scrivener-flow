@@ -66,17 +66,10 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Initial scroll to center today (though today is start)
-    useEffect(() => {
-        if (scrollContainerRef.current) {
-            // No scroll needed as start is today, but for long views it would be useful
-        }
-    }, []);
-
     const caseActivity = useMemo(() => {
         return cases.filter(c => c.status === 'Processing').map(c => {
             const m = (c.milestones?.[0] || {}) as any;
-            const activities: { date: Date, type: string, color: string, label: string }[] = [];
+            const activities: { date: Date, type: string, color: string, label: string, content?: string }[] = [];
 
             if (m) {
                 MILESTONES.forEach(milestone => {
@@ -88,10 +81,30 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                 date,
                                 type: milestone.key,
                                 color: milestone.color,
-                                label: milestone.label
+                                label: milestone.label,
+                                content: milestone.key
                             });
                         } catch (e) { }
                     }
+                });
+            }
+
+            // ADD: Todos List (Manual Items)
+            if (c.todos_list) {
+                c.todos_list.forEach(todo => {
+                    if (todo.is_deleted || todo.is_completed || !todo.due_date) return;
+                    if (todo.source_type === 'system') return; // Skip system reminders
+
+                    try {
+                        const date = parseISO(todo.due_date);
+                        activities.push({
+                            date,
+                            type: 'memo',
+                            color: 'bg-pink-500 border-pink-600',
+                            label: '📝',
+                            content: todo.content
+                        });
+                    } catch (e) { }
                 });
             }
 
@@ -274,7 +287,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                                 ${act.color}
                                             `}
                                                     style={{ left: `${dayOffset * 40 + 0.5}px` }}
-                                                    title={`${c.caseNumber} - ${act.label} (${format(act.date, 'MM/dd')})`}
+                                                    title={`${c.caseNumber} - ${act.content || act.label} (${format(act.date, 'MM/dd')})`}
                                                 >
                                                     {act.label}
                                                 </div>
