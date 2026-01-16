@@ -146,6 +146,7 @@ id, case_number, buyer_name,
         land_value_tax_deadline, deed_tax_deadline, land_tax_deadline, house_tax_deadline
     )
         `)
+                .eq('user_id', user.id) // Filter by user to respect isolation
                 .neq('status', 'Closed'); // Only active cases
 
             if (caseError) throw caseError;

@@ -273,7 +273,7 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                                         <p className="font-bold text-slate-700">{item.content}</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => startEdit(item)} className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-500 rounded-full transition-colors">
                                         <Edit2 size={16} />
                                     </button>

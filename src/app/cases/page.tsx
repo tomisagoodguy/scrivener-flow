@@ -37,6 +37,10 @@ export default async function CasesPage({
 
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
 
+
+    // Get current user for data isolation
+    const { data: { user } } = await supabase.auth.getUser();
+
     // Build Query
     let query = supabase
         .from('cases')
@@ -48,6 +52,11 @@ export default async function CasesPage({
     `)
         // Default sort by created_at desc (newest first)
         .order('created_at', { ascending: false });
+
+    // Force isolation: Only show cases belonging to current user
+    if (user) {
+        query = query.eq('user_id', user.id);
+    }
 
     if (activeStatus === 'Closed') {
         query = query.eq('status', 'Closed');

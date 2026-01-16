@@ -27,6 +27,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "docx-templates": "^4.15.0",
+    "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.562.0",
     "mammoth": "^1.11.0",
