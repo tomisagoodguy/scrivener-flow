@@ -56,7 +56,9 @@ export default function ClausesPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
             if (!user) {
                 alert('請先登入');
                 return;
@@ -107,29 +109,28 @@ export default function ClausesPage() {
         }
     };
 
-    const filteredClauses = clauses.filter(clause => {
+    const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
-        const matchesSearch =
-            clause.title.toLowerCase().includes(term) ||
-            clause.content.toLowerCase().includes(term);
+        const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
         const matchesCategory = selectedCategory === 'All' || clause.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });
 
     const suggestions = clauses
-        .filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
+        .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
         .slice(0, 5);
 
-    const categories = ['All', ...Array.from(new Set(clauses.map(c => c.category || '一般')))];
+    const categories = ['All', ...Array.from(new Set(clauses.map((c) => c.category || '一般')))];
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-
-
             <main className="mt-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div className="flex items-center gap-4 w-full md:w-auto">
-                        <Link href="/" className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                        <Link
+                            href="/"
+                            className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                        >
                             ← 返回首頁
                         </Link>
                         <div>
@@ -149,7 +150,7 @@ export default function ClausesPage() {
                                     type="text"
                                     placeholder="🔍 搜尋情境關鍵字 (如: 違約、漏水)..."
                                     value={searchTerm}
-                                    onChange={e => {
+                                    onChange={(e) => {
                                         setSearchTerm(e.target.value);
                                         setShowSuggestions(true);
                                     }}
@@ -158,8 +159,18 @@ export default function ClausesPage() {
                                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
                                 />
-                                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                <svg
+                                    className="w-5 h-5 text-gray-400 absolute left-3 top-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
                                 </svg>
                             </div>
 
@@ -169,7 +180,7 @@ export default function ClausesPage() {
                                     <div className="text-xs font-bold text-gray-400 px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                                         快速選擇
                                     </div>
-                                    {suggestions.map(s => (
+                                    {suggestions.map((s) => (
                                         <button
                                             key={s.id}
                                             onClick={() => {
@@ -197,7 +208,10 @@ export default function ClausesPage() {
                             buttonText="打包 Excel"
                         />
                         <button
-                            onClick={() => { setCurrentClause({ category: '一般' }); setIsEditing(true); }}
+                            onClick={() => {
+                                setCurrentClause({ category: '一般' });
+                                setIsEditing(true);
+                            }}
                             className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 whitespace-nowrap h-[46px]"
                         >
                             + 新增
@@ -206,14 +220,15 @@ export default function ClausesPage() {
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
-                    {categories.map(cat => (
+                    {categories.map((cat) => (
                         <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === cat
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                                }`}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                                selectedCategory === cat
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                            }`}
                         >
                             {cat || '未分類'}
                         </button>
@@ -228,16 +243,24 @@ export default function ClausesPage() {
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100 border-b-2 border-gray-300">
                                     <tr>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[200px] border-r border-gray-300">情境 / 分類</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[400px] border-r border-gray-300">條文內容 (點擊複製)</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-24 text-center">操作</th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[200px] border-r border-gray-300">
+                                            情境 / 分類
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[400px] border-r border-gray-300">
+                                            條文內容 (點擊複製)
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-24 text-center">
+                                            操作
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-300">
-                                    {filteredClauses.map(clause => (
+                                    {filteredClauses.map((clause) => (
                                         <tr key={clause.id} className="hover:bg-blue-50/50 transition-colors group">
                                             <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div className="font-bold text-lg text-gray-900 mb-2">{clause.title}</div>
+                                                <div className="font-bold text-lg text-gray-900 mb-2">
+                                                    {clause.title}
+                                                </div>
                                                 <div className="flex flex-wrap gap-2 items-center">
                                                     <span className="bg-blue-100 text-blue-800 border border-blue-200 text-xs px-2 py-1 rounded font-medium">
                                                         {clause.category || '一般'}
@@ -258,10 +281,13 @@ export default function ClausesPage() {
                                                     <pre className="whitespace-pre-wrap font-medium text-gray-900 font-sans leading-relaxed text-base">
                                                         {clause.content}
                                                     </pre>
-                                                    <span className={`absolute top-2 right-2 text-xs px-2 py-1 rounded transition-opacity pointer-events-none ${copyFeedback === clause.id
-                                                        ? 'bg-green-600 text-white opacity-100'
-                                                        : 'bg-black/75 text-white opacity-0 group-hover/copy:opacity-100'
-                                                        }`}>
+                                                    <span
+                                                        className={`absolute top-2 right-2 text-xs px-2 py-1 rounded transition-opacity pointer-events-none ${
+                                                            copyFeedback === clause.id
+                                                                ? 'bg-green-600 text-white opacity-100'
+                                                                : 'bg-black/75 text-white opacity-0 group-hover/copy:opacity-100'
+                                                        }`}
+                                                    >
                                                         {copyFeedback === clause.id ? '已複製！' : '複製'}
                                                     </span>
                                                 </div>
@@ -269,7 +295,10 @@ export default function ClausesPage() {
                                             <td className="px-4 py-4 align-top text-center">
                                                 <div className="flex flex-col gap-2 items-center justify-start opacity-50 group-hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => { setCurrentClause(clause); setIsEditing(true); }}
+                                                        onClick={() => {
+                                                            setCurrentClause(clause);
+                                                            setIsEditing(true);
+                                                        }}
                                                         className="p-1.5 text-blue-800 hover:bg-blue-100 rounded bg-white border border-blue-300"
                                                         title="編輯"
                                                     >
@@ -306,17 +335,24 @@ export default function ClausesPage() {
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 {currentClause.id ? '編輯條文' : '新增常用條文'}
                             </h2>
-                            <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">×</button>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl"
+                            >
+                                ×
+                            </button>
                         </div>
 
                         <form onSubmit={handleSave} className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">使用情境 (標題) *</label>
+                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        使用情境 (標題) *
+                                    </label>
                                     <input
                                         required
                                         value={currentClause.title || ''}
-                                        onChange={e => setCurrentClause({ ...currentClause, title: e.target.value })}
+                                        onChange={(e) => setCurrentClause({ ...currentClause, title: e.target.value })}
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                         placeholder="例如：現況交屋"
                                     />
@@ -325,7 +361,9 @@ export default function ClausesPage() {
                                     <label className="text-sm font-bold text-gray-700 dark:text-gray-300">分類</label>
                                     <input
                                         value={currentClause.category || ''}
-                                        onChange={e => setCurrentClause({ ...currentClause, category: e.target.value })}
+                                        onChange={(e) =>
+                                            setCurrentClause({ ...currentClause, category: e.target.value })
+                                        }
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                         placeholder="例如：交屋、違約、稅費"
                                     />
@@ -337,7 +375,7 @@ export default function ClausesPage() {
                                 <textarea
                                     required
                                     value={currentClause.content || ''}
-                                    onChange={e => setCurrentClause({ ...currentClause, content: e.target.value })}
+                                    onChange={(e) => setCurrentClause({ ...currentClause, content: e.target.value })}
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none min-h-[200px] font-mono text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     placeholder="輸入完整的合約條文..."
                                 />
@@ -352,7 +390,9 @@ export default function ClausesPage() {
                                     >
                                         刪除條文
                                     </button>
-                                ) : <div></div>}
+                                ) : (
+                                    <div></div>
+                                )}
 
                                 <div className="flex gap-4">
                                     <button

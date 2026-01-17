@@ -55,7 +55,7 @@ INSERT INTO bank_redemptions (bank_name, service_phone, account_info, lead_time,
 
     const values = [];
 
-    data.forEach(item => {
+    data.forEach((item) => {
         // Skip empty rows if any
         if (!item['銀行'] && !item['專戶'] && !item['客服']) return;
 
@@ -81,7 +81,6 @@ INSERT INTO bank_redemptions (bank_name, service_phone, account_info, lead_time,
 
     fs.writeFileSync(outputPath, sql);
     console.log(`Generated SQL with ${values.length} rows at ${outputPath}`);
-
 } catch (err) {
     console.error('Error:', err);
 }

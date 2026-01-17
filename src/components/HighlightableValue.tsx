@@ -9,7 +9,12 @@ interface HighlightableValueProps {
     defaultClassName?: string;
 }
 
-export default function HighlightableValue({ value, caseId, fieldKey, defaultClassName = '' }: HighlightableValueProps) {
+export default function HighlightableValue({
+    value,
+    caseId,
+    fieldKey,
+    defaultClassName = '',
+}: HighlightableValueProps) {
     const [isHighlighted, setIsHighlighted] = useState(false);
 
     useEffect(() => {
@@ -34,10 +39,7 @@ export default function HighlightableValue({ value, caseId, fieldKey, defaultCla
             onClick={toggleHighlight}
             className={`
                 cursor-pointer transition-colors select-none truncate
-                ${isHighlighted
-                    ? 'bg-amber-200 text-amber-900 border border-amber-300'
-                    : defaultClassName
-                }
+                ${isHighlighted ? 'bg-amber-200 text-amber-900 border border-amber-300' : defaultClassName}
             `}
         >
             {value}

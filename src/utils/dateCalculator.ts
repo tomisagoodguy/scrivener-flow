@@ -1,4 +1,18 @@
-import { addDays, addMonths, addWeeks, isWeekend, isFriday, isWednesday, endOfMonth, subDays, getDay, nextWednesday, nextFriday, isSameDay, format } from 'date-fns';
+import {
+    addDays,
+    addMonths,
+    addWeeks,
+    isWeekend,
+    isFriday,
+    isWednesday,
+    endOfMonth,
+    subDays,
+    getDay,
+    nextWednesday,
+    nextFriday,
+    isSameDay,
+    format,
+} from 'date-fns';
 
 // 判斷是否為工作日 (目前簡單過濾六日，國定假日需額外維護清單)
 const isWorkDay = (date: Date) => !isWeekend(date);
@@ -59,7 +73,7 @@ const calculateHandoverDate = (taxDate: Date): Date => {
     // 如果有候選日期，選最早的，或者選週五優先
     if (candidates.length > 0) {
         // 排序候選：優先選週五
-        const best = candidates.find(d => isFriday(d)) || candidates[0];
+        const best = candidates.find((d) => isFriday(d)) || candidates[0];
         return best;
     }
 
@@ -84,7 +98,7 @@ export const calculateMilestoneDates = (contractDateStr: string, taxType: '一�
     let sealDate = addMonths(contractDate, 2);
     sealDate = adjustToWedOrFri(sealDate);
 
-    // 3. 完稅 (Tax): 
+    // 3. 完稅 (Tax):
     // 一般 -> 用印 + 2週
     // 自用 -> 用印 + 3週
     // 調整至週三/週五
@@ -94,12 +108,12 @@ export const calculateMilestoneDates = (contractDateStr: string, taxType: '一�
     // 4. 交屋 (Handover): 完稅 + 1~2週 -> 特殊規則
     const handoverDate = calculateHandoverDate(taxDate);
 
-    // 5. 代償 (Redemption): 通常在交屋前，或者與交屋同日? 
-    // 邏輯沒特別指定，暫定同交屋日或交屋前3天? 
+    // 5. 代償 (Redemption): 通常在交屋前，或者與交屋同日?
+    // 邏輯沒特別指定，暫定同交屋日或交屋前3天?
     // User request didn't specify Redemption logic explicitly, but usually it's before handover.
-    // Let's leave redemption empty or set to Handover - 3 days as a placeholder if needed, 
-    // strictly following prompt: user didn't give logic for Redemption (代償). 
-    // However, usually Redemption happens before Handover. 
+    // Let's leave redemption empty or set to Handover - 3 days as a placeholder if needed,
+    // strictly following prompt: user didn't give logic for Redemption (代償).
+    // However, usually Redemption happens before Handover.
     // I will return the calculated dates formatted as YYYY-MM-DD
 
     const fmt = (d: Date) => format(d, 'yyyy-MM-dd');

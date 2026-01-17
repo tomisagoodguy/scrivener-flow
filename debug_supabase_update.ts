@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -21,11 +20,7 @@ async function testUpdate() {
     console.log(`Testing update on case: ${caseId}`);
 
     // 1. Fetch
-    const { data, error: fetchError } = await supabase
-        .from('cases')
-        .select('todos')
-        .eq('id', caseId)
-        .single();
+    const { data, error: fetchError } = await supabase.from('cases').select('todos').eq('id', caseId).single();
 
     if (fetchError) {
         console.error('Fetch Error:', fetchError);
@@ -35,7 +30,7 @@ async function testUpdate() {
 
     // 2. Update
     // Let's try to add a dummy todo or toggle one
-    const newTodos = { ...(data?.todos || {}), 'DEBUG_TEST_ITEM': true };
+    const newTodos = { ...(data?.todos || {}), DEBUG_TEST_ITEM: true };
 
     const { data: updateData, error: updateError } = await supabase
         .from('cases')

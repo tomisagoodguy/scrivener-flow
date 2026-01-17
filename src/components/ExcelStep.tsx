@@ -28,25 +28,31 @@ export default function ExcelStep({ label, date, note, caseId }: ExcelStepProps)
         localStorage.setItem(key, String(newState));
     };
 
-    const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
+    const formatDate = (d?: string) =>
+        d ? new Date(d).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
 
     return (
         <div
             onClick={toggleHighlight}
             className={`
                 flex flex-col items-center justify-center flex-1 border-r border-border last:border-r-0 py-0.5 min-w-[40px] h-full cursor-pointer transition-colors select-none
-                ${isHighlighted
-                    ? 'bg-amber-200 text-amber-900 border-amber-300'
-                    : isCompleted
-                        ? 'bg-primary/10 text-foreground'
-                        : 'bg-secondary/50 text-foreground/40'
+                ${
+                    isHighlighted
+                        ? 'bg-amber-200 text-amber-900 border-amber-300'
+                        : isCompleted
+                          ? 'bg-primary/10 text-foreground'
+                          : 'bg-secondary/50 text-foreground/40'
                 }
             `}
         >
-            <span className={`text-[10px] font-black mb-0.5 ${isHighlighted ? 'text-amber-900' : isCompleted ? 'text-primary' : 'text-foreground/40'}`}>
+            <span
+                className={`text-[10px] font-black mb-0.5 ${isHighlighted ? 'text-amber-900' : isCompleted ? 'text-primary' : 'text-foreground/40'}`}
+            >
                 {label}
             </span>
-            <span className={`text-[11px] font-black leading-tight ${isHighlighted ? 'text-amber-950' : isCompleted ? 'text-foreground' : 'text-foreground/20'}`}>
+            <span
+                className={`text-[11px] font-black leading-tight ${isHighlighted ? 'text-amber-950' : isCompleted ? 'text-foreground' : 'text-foreground/20'}`}
+            >
                 {isCompleted ? formatDate(date) : '--'}
             </span>
             {note && (

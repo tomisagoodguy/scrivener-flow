@@ -1,12 +1,12 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
-    let response = NextResponse.next({
+    const response = NextResponse.next({
         request: {
             headers: request.headers,
         },
-    })
+    });
 
     // 1. Create Supabase Client
     const supabase = createServerClient(
@@ -15,25 +15,25 @@ export async function proxy(request: NextRequest) {
         {
             cookies: {
                 getAll() {
-                    return request.cookies.getAll()
+                    return request.cookies.getAll();
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) => {
-                        request.cookies.set(name, value)
-                        response.cookies.set(name, value, options)
-                    })
+                        request.cookies.set(name, value);
+                        response.cookies.set(name, value, options);
+                    });
                 },
             },
         }
-    )
+    );
 
     // 2. Refresh Session
     // This will refresh the session if needed and update the cookie
     const {
         data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
-    const { pathname } = request.nextUrl
+    const { pathname } = request.nextUrl;
 
     // 3. Define Protected Routes
     // Allow assets, auth routes, and public APIs if any
@@ -44,23 +44,23 @@ export async function proxy(request: NextRequest) {
         pathname.startsWith('/static') ||
         pathname === '/favicon.ico'
     ) {
-        return response
+        return response;
     }
 
     // 4. Redirect Logic
     // If NO user and NOT on login page -> Redirect to Login
     if (!user && !pathname.startsWith('/login')) {
-        const loginUrl = new URL('/login', request.url)
+        const loginUrl = new URL('/login', request.url);
         // loginUrl.searchParams.set('redirect_to', pathname) // Optional: preserve redirect
-        return NextResponse.redirect(loginUrl)
+        return NextResponse.redirect(loginUrl);
     }
 
     // If HAS user and IS on login page -> Redirect to Home
     if (user && pathname.startsWith('/login')) {
-        return NextResponse.redirect(new URL('/', request.url))
+        return NextResponse.redirect(new URL('/', request.url));
     }
 
-    return response
+    return response;
 }
 
 export const config = {
@@ -74,4 +74,4 @@ export const config = {
          */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
-}
+};

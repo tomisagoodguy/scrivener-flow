@@ -2,9 +2,9 @@ const { Client } = require('pg');
 const fs = require('fs');
 
 async function fixSchema() {
-    // Attempt to read connection string from environment if possible, 
+    // Attempt to read connection string from environment if possible,
     // but based on previous logs, it's hardcoded or user needs to fill it.
-    // I will use the one I saw in the previous session if I can find it, 
+    // I will use the one I saw in the previous session if I can find it,
     // or provide a script the user can run.
 
     // Based on common Supabase patterns:
@@ -34,7 +34,6 @@ async function fixSchema() {
         // RELOAD POSTGREST CACHE
         await client.query(`NOTIFY pgrst, 'reload schema';`);
         console.log('Reloaded PostgREST schema cache.');
-
     } catch (err) {
         console.error('Error:', err.message);
     } finally {

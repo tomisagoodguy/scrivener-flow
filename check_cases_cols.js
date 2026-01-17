@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -17,7 +16,9 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 async function checkCases() {
     const { data } = await supabase.from('cases').select('*').limit(1);
     if (data && data.length > 0) {
-        Object.keys(data[0]).sort().forEach(k => console.log(`CASE_COL: ${k}`));
+        Object.keys(data[0])
+            .sort()
+            .forEach((k) => console.log(`CASE_COL: ${k}`));
     }
 }
 

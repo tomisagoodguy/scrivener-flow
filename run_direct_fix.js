@@ -1,9 +1,9 @@
-
 const { createClient } = require('@supabase/supabase-js');
 
 // 直接使用從 .env.local 讀取到的資訊 (雖然只有 Anon Key，但我們先試試看，如果之前你有權限的話)
 const supabaseUrl = 'https://zvomerdcsxvuymnpuvxk.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2b21lcmRjc3h2dXltbnB1dnhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2OTk4OTYsImV4cCI6MjA4MzI3NTg5Nn0.uQbfGdGkPgGs8ae8-5MuQxbFFRPBjL8h74QK5DSi8Uc';
+const supabaseKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2b21lcmRjc3h2dXltbnB1dnhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2OTk4OTYsImV4cCI6MjA4MzI3NTg5Nn0.uQbfGdGkPgGs8ae8-5MuQxbFFRPBjL8h74QK5DSi8Uc';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

@@ -28,18 +28,11 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
         setLoading(item);
 
         try {
-            const { data: currentData } = await supabase
-                .from('cases')
-                .select('todos')
-                .eq('id', caseId)
-                .single();
+            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
 
-            const mergedTodos = { ...(currentData?.todos as Record<string, boolean> || {}), [item]: newValue };
+            const mergedTodos = { ...((currentData?.todos as Record<string, boolean>) || {}), [item]: newValue };
 
-            const { error } = await supabase
-                .from('cases')
-                .update({ todos: mergedTodos })
-                .eq('id', caseId);
+            const { error } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
 
             if (error) {
                 setTodos(todos);
@@ -62,7 +55,7 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
     return (
         <div className="flex flex-wrap gap-2 py-2">
             {items
-                .filter(item => !hideCompleted || !todos[item])
+                .filter((item) => !hideCompleted || !todos[item])
                 .map((item) => {
                     const isCompleted = !!todos[item];
                     return (
@@ -74,15 +67,24 @@ export default function CaseTodos({ caseId, initialTodos, items, hideCompleted =
                             className={`
                             px-3 py-1.5 rounded-full text-[12px] font-bold transition-all
                             border-2 flex items-center gap-1.5
-                            ${isCompleted
+                            ${
+                                isCompleted
                                     ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
                                     : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
-                                }
+                            }
                             ${loading === item ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
                         `}
                         >
                             {isCompleted ? (
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                <svg
+                                    className="w-3.5 h-3.5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
                                     <polyline points="20 6 9 17 4 12" />
                                 </svg>
                             ) : (

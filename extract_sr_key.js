@@ -1,4 +1,3 @@
-
 const https = require('https');
 const fs = require('fs');
 
@@ -11,17 +10,19 @@ const options = {
     path: `/v1/projects/${projectRef}/api-keys`,
     method: 'GET',
     headers: {
-        'Authorization': `Bearer ${token}`
-    }
+        Authorization: `Bearer ${token}`,
+    },
 };
 
 const req = https.request(options, (res) => {
     let responseData = '';
-    res.on('data', (d) => { responseData += d; });
+    res.on('data', (d) => {
+        responseData += d;
+    });
     res.on('end', () => {
         try {
             const keys = JSON.parse(responseData);
-            const serviceRoleKey = keys.find(k => k.name === 'service_role')?.api_key;
+            const serviceRoleKey = keys.find((k) => k.name === 'service_role')?.api_key;
             if (serviceRoleKey) {
                 console.log('FOUND_KEY:', serviceRoleKey);
                 fs.writeFileSync('sr_key.txt', serviceRoleKey);

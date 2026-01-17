@@ -46,7 +46,7 @@ export function getCaseStage(c: DemoCase): PipelineStage {
     ];
 
     const upcomingStages = stages
-        .filter(s => isFutureOrToday(s.date))
+        .filter((s) => isFutureOrToday(s.date))
         .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
 
     // If we have upcoming scheduled dates, the earliest one is our "Current Stage"
@@ -58,10 +58,10 @@ export function getCaseStage(c: DemoCase): PipelineStage {
     // Logic: If a step is COMPLETED, the case is currently at the *NEXT* step.
 
     if (isCompleted(m.handover_date)) return 'closed';
-    if (isCompleted(m.transfer_date)) return 'handover';    // Transfer done -> Case is at Handover stage
+    if (isCompleted(m.transfer_date)) return 'handover'; // Transfer done -> Case is at Handover stage
     if (isCompleted(m.tax_payment_date)) return 'transfer'; // Tax done -> Case is at Transfer stage
-    if (isCompleted(m.seal_date)) return 'tax';             // Seal done -> Case is at Tax stage
-    if (isCompleted(m.contract_date)) return 'seal';        // Contract done -> Case is at Seal stage
+    if (isCompleted(m.seal_date)) return 'tax'; // Seal done -> Case is at Tax stage
+    if (isCompleted(m.contract_date)) return 'seal'; // Contract done -> Case is at Seal stage
 
     // Default: Nothing started -> At Contract stage
     return 'contract';

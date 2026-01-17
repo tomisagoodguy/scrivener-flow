@@ -15,7 +15,7 @@ NOTIFY pgrst, 'reload schema';
 `;
 
 const body = JSON.stringify({
-    query: sql
+    query: sql,
 });
 
 const options = {
@@ -23,24 +23,26 @@ const options = {
     path: `/v1/projects/${projectRef}/sql`,
     method: 'POST',
     headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Content-Length': body.length
-    }
+        'Content-Length': body.length,
+    },
 };
 
 console.log('Running Auto-Migration to fix Todos table...');
 
 const req = https.request(options, (res) => {
     let responseBody = '';
-    res.on('data', (chunk) => { responseBody += chunk; });
+    res.on('data', (chunk) => {
+        responseBody += chunk;
+    });
     res.on('end', () => {
         console.log(`Status Code: ${res.statusCode}`);
         console.log('Response:', responseBody);
         if (res.statusCode === 200 || res.statusCode === 201) {
             console.log("Migration Success! The 'is_deleted' column should now exist.");
         } else {
-            console.log("Migration Failed.");
+            console.log('Migration Failed.');
         }
     });
 });

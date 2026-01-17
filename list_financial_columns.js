@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -23,7 +22,7 @@ async function listColumns() {
         console.error('Error:', error);
     } else if (data && data.length > 0) {
         const keys = Object.keys(data[0]).sort();
-        keys.forEach(k => console.log(`COLUMN: ${k}`));
+        keys.forEach((k) => console.log(`COLUMN: ${k}`));
     } else {
         console.log('No data in financials.');
     }

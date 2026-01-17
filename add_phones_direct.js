@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
+const connectionString =
+    'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
 
 const sql = `
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS buyer_phone TEXT;
@@ -8,11 +9,11 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS seller_phone TEXT;
 `;
 
 async function run() {
-    const client = new Client({ 
+    const client = new Client({
         connectionString,
-        ssl: { rejectUnauthorized: false }
+        ssl: { rejectUnauthorized: false },
     });
-    
+
     try {
         await client.connect();
         console.log('✅ 已連接到資料庫');

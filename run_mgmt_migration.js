@@ -1,4 +1,3 @@
-
 const https = require('https');
 
 const token = 'sbp_042b3193398e99132d553da47ac798d3d17c6664';
@@ -35,15 +34,17 @@ const options = {
     path: `/v1/projects/${projectRef}/queries`,
     method: 'POST',
     headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Content-Length': data.length
-    }
+        'Content-Length': data.length,
+    },
 };
 
 const req = https.request(options, (res) => {
     let responseData = '';
-    res.on('data', (d) => { responseData += d; });
+    res.on('data', (d) => {
+        responseData += d;
+    });
     res.on('end', () => {
         console.log('Status Code:', res.statusCode);
         console.log('Response:', responseData);

@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -24,8 +23,8 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
-        persistSession: false
-    }
+        persistSession: false,
+    },
 });
 
 async function debugPermissions() {
@@ -68,15 +67,17 @@ async function debugPermissions() {
             console.log('\n[3] Creating Dummy Case for DELETE test...');
             const { data: newCase, error: insertError } = await supabase
                 .from('cases')
-                .insert([{
-                    case_number: 'DEBUG-DEL-TEST',
-                    buyer_name: 'Test',
-                    seller_name: 'Test',
-                    status: 'Processing',
-                    city: 'Test',
-                    district: '-',
-                    updated_at: new Date().toISOString()
-                }])
+                .insert([
+                    {
+                        case_number: 'DEBUG-DEL-TEST',
+                        buyer_name: 'Test',
+                        seller_name: 'Test',
+                        status: 'Processing',
+                        city: 'Test',
+                        district: '-',
+                        updated_at: new Date().toISOString(),
+                    },
+                ])
                 .select()
                 .single();
 
@@ -87,10 +88,7 @@ async function debugPermissions() {
 
                 // Now Try DELETE
                 console.log('\n[4] Testing DELETE on id:', newCase.id);
-                const { error: deleteError } = await supabase
-                    .from('cases')
-                    .delete()
-                    .eq('id', newCase.id);
+                const { error: deleteError } = await supabase.from('cases').delete().eq('id', newCase.id);
 
                 if (deleteError) {
                     console.error('DELETE Failed:', deleteError);
@@ -98,7 +96,6 @@ async function debugPermissions() {
                     console.log('DELETE Success.');
                 }
             }
-
         } else {
             console.log('No cases found to test update.');
         }

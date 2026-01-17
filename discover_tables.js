@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -26,7 +25,8 @@ async function findAllTables() {
         const { error } = await supabase.from(t).select('case_id').limit(1);
         if (!error) {
             console.log(`FOUND table with case_id: ${t}`);
-        } else if (error.code !== '42P01') { // 42P01 is "relation does not exist"
+        } else if (error.code !== '42P01') {
+            // 42P01 is "relation does not exist"
             // Table exists but maybe no case_id?
             const { error: e2 } = await supabase.from(t).select('*').limit(1);
             if (!e2) console.log(`FOUND table (other schema): ${t}`);

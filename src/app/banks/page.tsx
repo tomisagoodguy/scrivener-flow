@@ -62,7 +62,9 @@ export default function BanksPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
             if (!user) {
                 alert('請先登入');
                 return;
@@ -102,20 +104,22 @@ export default function BanksPage() {
         }
     };
 
-    const filteredBanks = banks.filter(b =>
-        (b.bank_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (b.branch_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (b.contact_person?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    const filteredBanks = banks.filter(
+        (b) =>
+            (b.bank_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (b.branch_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (b.contact_person?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-
-
             <main className="mt-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div className="flex items-center gap-4 w-full md:w-auto">
-                        <Link href="/" className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                        <Link
+                            href="/"
+                            className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                        >
                             ← 返回首頁
                         </Link>
                         <div className="flex flex-col">
@@ -135,11 +139,21 @@ export default function BanksPage() {
                                 type="text"
                                 placeholder="搜尋銀行、分行、人員..."
                                 value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
                             />
-                            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            <svg
+                                className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
                             </svg>
                         </div>
                         <GenericExportExcelButton
@@ -150,7 +164,10 @@ export default function BanksPage() {
                             buttonText="打包 Excel"
                         />
                         <button
-                            onClick={() => { setCurrentBank({}); setIsEditing(true); }}
+                            onClick={() => {
+                                setCurrentBank({});
+                                setIsEditing(true);
+                            }}
                             className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95 whitespace-nowrap"
                         >
                             + 新增銀行
@@ -166,18 +183,30 @@ export default function BanksPage() {
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100 border-b-2 border-gray-300">
                                     <tr>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[180px] border-r border-gray-300">銀行 / 分行</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[220px] border-r border-gray-300">聯絡窗口</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[300px] border-r border-gray-300">貸款條件 / 方案</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[200px] border-r border-gray-300">備註</th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-20 text-center">操作</th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[180px] border-r border-gray-300">
+                                            銀行 / 分行
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[220px] border-r border-gray-300">
+                                            聯絡窗口
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[300px] border-r border-gray-300">
+                                            貸款條件 / 方案
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[200px] border-r border-gray-300">
+                                            備註
+                                        </th>
+                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-20 text-center">
+                                            操作
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-300">
-                                    {filteredBanks.map(bank => (
+                                    {filteredBanks.map((bank) => (
                                         <tr key={bank.id} className="hover:bg-emerald-50/50 transition-colors group">
                                             <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div className="font-bold text-lg text-gray-900 mb-1">{bank.bank_name}</div>
+                                                <div className="font-bold text-lg text-gray-900 mb-1">
+                                                    {bank.bank_name}
+                                                </div>
                                                 {bank.branch_name && (
                                                     <div className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded inline-block text-xs border border-emerald-200">
                                                         {bank.branch_name}
@@ -187,28 +216,44 @@ export default function BanksPage() {
                                             <td className="px-4 py-4 align-top border-r border-gray-300 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-gray-500 font-bold w-4">👤</span>
-                                                    <span className="font-bold text-gray-900 text-base">{bank.contact_person || '-'}</span>
+                                                    <span className="font-bold text-gray-900 text-base">
+                                                        {bank.contact_person || '-'}
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-gray-500 font-bold w-4">📞</span>
                                                     {bank.phone ? (
-                                                        <a href={`tel:${bank.phone}`} className="text-gray-900 hover:text-emerald-700 hover:underline font-medium decoration-emerald-500 decoration-2 underline-offset-2">
+                                                        <a
+                                                            href={`tel:${bank.phone}`}
+                                                            className="text-gray-900 hover:text-emerald-700 hover:underline font-medium decoration-emerald-500 decoration-2 underline-offset-2"
+                                                        >
                                                             {bank.phone}
                                                         </a>
-                                                    ) : <span className="text-gray-400">-</span>}
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-gray-500 font-bold w-4">✉️</span>
                                                     {bank.email ? (
-                                                        <a href={`mailto:${bank.email}`} className="text-gray-800 hover:text-emerald-700 hover:underline break-all">
+                                                        <a
+                                                            href={`mailto:${bank.email}`}
+                                                            className="text-gray-800 hover:text-emerald-700 hover:underline break-all"
+                                                        >
                                                             {bank.email}
                                                         </a>
-                                                    ) : <span className="text-gray-400">-</span>}
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 align-top border-r border-gray-300">
                                                 <pre className="whitespace-pre-wrap font-medium text-gray-900 font-sans leading-relaxed text-sm">
-                                                    {bank.loan_conditions || <span className="text-gray-400 italic font-normal">尚無方案資料</span>}
+                                                    {bank.loan_conditions || (
+                                                        <span className="text-gray-400 italic font-normal">
+                                                            尚無方案資料
+                                                        </span>
+                                                    )}
                                                 </pre>
                                             </td>
                                             <td className="px-4 py-4 align-top border-r border-gray-300">
@@ -219,7 +264,10 @@ export default function BanksPage() {
                                             <td className="px-4 py-4 align-top text-center">
                                                 <div className="flex flex-col gap-2 items-center justify-start opacity-50 group-hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => { setCurrentBank(bank); setIsEditing(true); }}
+                                                        onClick={() => {
+                                                            setCurrentBank(bank);
+                                                            setIsEditing(true);
+                                                        }}
                                                         className="p-1.5 text-blue-800 hover:bg-blue-100 rounded bg-white border border-blue-300"
                                                         title="編輯"
                                                     >
@@ -256,35 +304,50 @@ export default function BanksPage() {
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 {currentBank.id ? '編輯銀行資訊' : '新增銀行資訊'}
                             </h2>
-                            <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">×</button>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl"
+                            >
+                                ×
+                            </button>
                         </div>
 
                         <form onSubmit={handleSave} className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">銀行名稱 *</label>
+                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        銀行名稱 *
+                                    </label>
                                     <input
                                         required
                                         value={currentBank.bank_name || ''}
-                                        onChange={e => setCurrentBank({ ...currentBank, bank_name: e.target.value })}
+                                        onChange={(e) => setCurrentBank({ ...currentBank, bank_name: e.target.value })}
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                         placeholder="例如：中國信託"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">分行名稱</label>
+                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        分行名稱
+                                    </label>
                                     <input
                                         value={currentBank.branch_name || ''}
-                                        onChange={e => setCurrentBank({ ...currentBank, branch_name: e.target.value })}
+                                        onChange={(e) =>
+                                            setCurrentBank({ ...currentBank, branch_name: e.target.value })
+                                        }
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                         placeholder="例如：營業部"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">聯絡窗口 (行員)</label>
+                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                        聯絡窗口 (行員)
+                                    </label>
                                     <input
                                         value={currentBank.contact_person || ''}
-                                        onChange={e => setCurrentBank({ ...currentBank, contact_person: e.target.value })}
+                                        onChange={(e) =>
+                                            setCurrentBank({ ...currentBank, contact_person: e.target.value })
+                                        }
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
                                 </div>
@@ -292,7 +355,7 @@ export default function BanksPage() {
                                     <label className="text-sm font-bold text-gray-700 dark:text-gray-300">電話</label>
                                     <input
                                         value={currentBank.phone || ''}
-                                        onChange={e => setCurrentBank({ ...currentBank, phone: e.target.value })}
+                                        onChange={(e) => setCurrentBank({ ...currentBank, phone: e.target.value })}
                                         className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
                                 </div>
@@ -303,16 +366,20 @@ export default function BanksPage() {
                                 <input
                                     type="email"
                                     value={currentBank.email || ''}
-                                    onChange={e => setCurrentBank({ ...currentBank, email: e.target.value })}
+                                    onChange={(e) => setCurrentBank({ ...currentBank, email: e.target.value })}
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 />
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">貸款條件 / 方案細節</label>
+                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    貸款條件 / 方案細節
+                                </label>
                                 <textarea
                                     value={currentBank.loan_conditions || ''}
-                                    onChange={e => setCurrentBank({ ...currentBank, loan_conditions: e.target.value })}
+                                    onChange={(e) =>
+                                        setCurrentBank({ ...currentBank, loan_conditions: e.target.value })
+                                    }
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none min-h-[120px] dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     placeholder="利率、成數、綁約期間、特殊限制..."
                                 />
@@ -322,7 +389,7 @@ export default function BanksPage() {
                                 <label className="text-sm font-bold text-gray-700 dark:text-gray-300">其他備註</label>
                                 <textarea
                                     value={currentBank.notes || ''}
-                                    onChange={e => setCurrentBank({ ...currentBank, notes: e.target.value })}
+                                    onChange={(e) => setCurrentBank({ ...currentBank, notes: e.target.value })}
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none min-h-[80px] dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 />
                             </div>

@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
+const connectionString =
+    'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
 
 const sql = `
 -- 1. 在案件表增加「稅單性質」欄位

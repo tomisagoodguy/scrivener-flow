@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -40,18 +39,20 @@ async function inspectTodos() {
 
     // Group by case_id to see duplicates
     const grouped = {};
-    todos.forEach(t => {
+    todos.forEach((t) => {
         const cid = t.case_id || 'no-case';
         if (!grouped[cid]) grouped[cid] = [];
         grouped[cid].push(t);
     });
 
-    Object.keys(grouped).forEach(cid => {
+    Object.keys(grouped).forEach((cid) => {
         const tasks = grouped[cid];
         if (tasks.length > 0) {
             console.log(`\nCase: ${cid} (${tasks.length} tasks)`);
-            tasks.forEach(t => {
-                console.log(`  [${t.id}] ${t.content} | Key: ${t.source_key} | Type: ${t.source_type} | Date: ${t.due_date}`);
+            tasks.forEach((t) => {
+                console.log(
+                    `  [${t.id}] ${t.content} | Key: ${t.source_key} | Type: ${t.source_type} | Date: ${t.due_date}`
+                );
             });
         }
     });

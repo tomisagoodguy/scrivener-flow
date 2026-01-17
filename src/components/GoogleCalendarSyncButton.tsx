@@ -20,7 +20,9 @@ export function GoogleCalendarSyncButton({ caseData }: Props) {
 
         try {
             const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
 
             // Note: provider_token is often only available immediately after login in the session object
             // If it's missing, the user might need to re-login.
@@ -56,7 +58,6 @@ export function GoogleCalendarSyncButton({ caseData }: Props) {
                 setStatus('idle');
                 setMessage('');
             }, 3000);
-
         } catch (error: any) {
             console.error('Calendar Sync Error:', error);
             setStatus('error');
@@ -80,9 +81,10 @@ export function GoogleCalendarSyncButton({ caseData }: Props) {
                 disabled={status === 'loading'}
                 className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                    ${status === 'success'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-white/50 hover:bg-white dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                    ${
+                        status === 'success'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-white/50 hover:bg-white dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                     }
                 `}
                 title="同步至 Google 行事曆"
@@ -120,7 +122,7 @@ function generateEvents(caseData: DemoCase): GoogleCalendarEvent[] {
                 summary: `${caseTitle} ${title}`,
                 description: `案號: ${caseData.case_number}\n買方: ${caseData.buyer_name}\n賣方: ${caseData.seller_name}`,
                 start: { date: date }, // All day event
-                end: { date: date },   // Google All-Day is inclusive? Actually Google Calendar API "end" is exclusive for all-day events. I should parse and add 1 day.
+                end: { date: date }, // Google All-Day is inclusive? Actually Google Calendar API "end" is exclusive for all-day events. I should parse and add 1 day.
             });
         }
     };
@@ -147,7 +149,7 @@ function generateEvents(caseData: DemoCase): GoogleCalendarEvent[] {
             start: { date: dateStr },
             end: { date: toIsoDate(endDate) },
         });
-    }
+    };
 
     addFullDay(m.contract_date, '簽約');
     addFullDay(m.seal_date, '用印');

@@ -4,7 +4,8 @@ import { TodoTask } from '@/components/todo/types';
 export async function fetchSystemTasks(): Promise<TodoTask[]> {
     const { data: cases, error } = await supabase
         .from('cases')
-        .select(`
+        .select(
+            `
             id, case_number, buyer_name, seller_name, status,
             milestones (
                 contract_date, seal_date, tax_payment_date, transfer_date, redemption_date, handover_date,
@@ -14,7 +15,8 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
             financials (
                 land_value_tax_deadline, deed_tax_deadline, land_tax_deadline, house_tax_deadline
             )
-        `)
+        `
+        )
         .neq('status', 'Closed');
 
     if (error) {
@@ -35,7 +37,12 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
         // The display logic in TodoContainer or ListViews should handle "Reminder Window" if needed,
         // OR we can add a 'visual' flag.
         // However, for standard calendar integration, the 'date' should be the Due Date/Event Date.
-        const add = (dateStr: string | null, title: string, type: 'legal' | 'tax' | 'appointment', remindDays: number) => {
+        const add = (
+            dateStr: string | null,
+            title: string,
+            type: 'legal' | 'tax' | 'appointment',
+            remindDays: number
+        ) => {
             if (!dateStr) return;
             const targetDate = new Date(dateStr);
             const now = new Date();
@@ -61,7 +68,7 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
                 priority: 'urgent-important', // High priority by default for system vents
                 caseId: c.id,
                 caseName: c.case_number,
-                notes: `提醒: ${remindDays} 天前開始通知 (期限: ${dateStr})`
+                notes: `提醒: ${remindDays} 天前開始通知 (期限: ${dateStr})`,
             });
         };
 

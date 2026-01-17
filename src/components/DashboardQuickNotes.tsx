@@ -20,7 +20,9 @@ export default function DashboardQuickNotes() {
     useEffect(() => {
         const loadNotes = async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
                 if (!user) return;
 
                 const { data, error } = await supabase
@@ -66,7 +68,9 @@ export default function DashboardQuickNotes() {
         const saveNotes = async () => {
             setStatus('saving');
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
                 // Serialize whole notes array to string for storage
                 const contentToSave = JSON.stringify(notes);
 
@@ -78,13 +82,14 @@ export default function DashboardQuickNotes() {
                     return;
                 }
 
-                const { error } = await supabase
-                    .from('user_settings')
-                    .upsert({
+                const { error } = await supabase.from('user_settings').upsert(
+                    {
                         user_id: user.id,
                         scratchpad_content: contentToSave,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id' });
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'user_id' }
+                );
 
                 if (error) throw error;
 
@@ -103,10 +108,10 @@ export default function DashboardQuickNotes() {
         return () => clearTimeout(timer);
     }, [notes]);
 
-    const activeNote = notes.find(n => n.id === activeNoteId) || notes[0];
+    const activeNote = notes.find((n) => n.id === activeNoteId) || notes[0];
 
     const updateActiveNoteContent = (newContent: string) => {
-        setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, content: newContent } : n));
+        setNotes((prev) => prev.map((n) => (n.id === activeNoteId ? { ...n, content: newContent } : n)));
     };
 
     const handlePhraseSelect = (phrase: string) => {
@@ -126,7 +131,7 @@ export default function DashboardQuickNotes() {
             return;
         }
         if (window.confirm('確定要刪除此筆記嗎？')) {
-            const newNotes = notes.filter(n => n.id !== id);
+            const newNotes = notes.filter((n) => n.id !== id);
             setNotes(newNotes);
             if (activeNoteId === id) {
                 setActiveNoteId(newNotes[0].id);
@@ -135,7 +140,7 @@ export default function DashboardQuickNotes() {
     };
 
     const handleRenameNote = (id: string, newTitle: string) => {
-        setNotes(prev => prev.map(n => n.id === id ? { ...n, title: newTitle } : n));
+        setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, title: newTitle } : n)));
     };
 
     return (
@@ -145,45 +150,79 @@ export default function DashboardQuickNotes() {
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center">
                         <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
                         </svg>
                     </div>
                     <div>
-                        <h2 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">個人工作筆記</h2>
+                        <h2 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                            個人工作筆記
+                        </h2>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <div className={`w-1.5 h-1.5 rounded-full ${status === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
+                            <div
+                                className={`w-1.5 h-1.5 rounded-full ${status === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`}
+                            />
                             <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                                {status === 'saving' ? '儲存中...' : `已同步 ${lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                {status === 'saving'
+                                    ? '儲存中...'
+                                    : `已同步 ${lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex gap-2 text-xl">
-                    <a href="/banks" className="quick-link-btn text-[#4B5E65] dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#4B5E65]">🏦 銀行庫</a>
-                    <a href="/clauses" className="quick-link-btn text-[#D49E6A] dark:text-amber-200 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#D49E6A]">📜 條文庫</a>
-                    <a href="/redemptions" className="quick-link-btn text-[#9C7A5F] dark:text-orange-200 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#9C7A5F]">💰 代償庫</a>
-                    <a href="/cases" className="quick-link-btn text-[#6B8E61] dark:text-emerald-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#6B8E61]">📁 案件表</a>
+                    <a
+                        href="/banks"
+                        className="quick-link-btn text-[#4B5E65] dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#4B5E65]"
+                    >
+                        🏦 銀行庫
+                    </a>
+                    <a
+                        href="/clauses"
+                        className="quick-link-btn text-[#D49E6A] dark:text-amber-200 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#D49E6A]"
+                    >
+                        📜 條文庫
+                    </a>
+                    <a
+                        href="/redemptions"
+                        className="quick-link-btn text-[#9C7A5F] dark:text-orange-200 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#9C7A5F]"
+                    >
+                        💰 代償庫
+                    </a>
+                    <a
+                        href="/cases"
+                        className="quick-link-btn text-[#6B8E61] dark:text-emerald-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-[#6B8E61]"
+                    >
+                        📁 案件表
+                    </a>
                 </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
                 {/* Tabs Sidebar */}
                 <div className="w-full md:w-48 bg-gray-50/50 dark:bg-slate-950/20 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-800 p-2 overflow-x-auto md:overflow-y-auto flex md:flex-col gap-1 items-start no-scrollbar">
-                    {notes.map(note => (
+                    {notes.map((note) => (
                         <div
                             key={note.id}
                             onClick={() => setActiveNoteId(note.id)}
-                            className={`group flex items-center w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all ${activeNoteId === note.id
+                            className={`group flex items-center w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
+                                activeNoteId === note.id
                                     ? 'bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white'
                                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 hover:text-gray-700 dark:hover:text-gray-200'
-                                }`}
+                            }`}
                         >
                             <input
                                 className="bg-transparent border-none outline-none font-bold text-sm flex-1 cursor-pointer"
                                 value={note.id === 'default' ? '主要筆記' : note.title}
                                 onChange={(e) => {
-                                    const newNotes = notes.map(n => n.id === note.id ? { ...n, title: e.target.value } : n);
+                                    const newNotes = notes.map((n) =>
+                                        n.id === note.id ? { ...n, title: e.target.value } : n
+                                    );
                                     setNotes(newNotes);
                                 }}
                                 onClick={(e) => {

@@ -24,11 +24,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // No-op: Dark mode disabled
     };
 
-    return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
-            {children}
-        </ThemeContext.Provider>
-    );
+    return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

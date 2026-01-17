@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -8,14 +7,7 @@ import { TodoListView } from './TodoListView';
 import { TodoMatrixView } from './TodoMatrixView';
 import { TodoCalendarView } from './TodoCalendarView';
 import { TodoWeekView } from './TodoWeekView';
-import {
-    List,
-    LayoutGrid,
-    Calendar,
-    Plus,
-    Trash2,
-    CalendarDays
-} from 'lucide-react';
+import { List, LayoutGrid, Calendar, Plus, Trash2, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Mock Data Generator
@@ -28,7 +20,7 @@ const generateMockTasks = (): TodoTask[] => [
         isCompleted: false,
         priority: 'urgent-important',
         caseName: '林小美案',
-        caseId: 'case-001'
+        caseId: 'case-001',
     },
     {
         id: '2',
@@ -38,7 +30,7 @@ const generateMockTasks = (): TodoTask[] => [
         isCompleted: false,
         priority: 'urgent-important',
         caseName: '陳大文案',
-        caseId: 'case-002'
+        caseId: 'case-002',
     },
     {
         id: '3',
@@ -47,7 +39,7 @@ const generateMockTasks = (): TodoTask[] => [
         date: new Date(new Date().setHours(14, 30, 0, 0)),
         isCompleted: false,
         priority: 'not-urgent-important',
-        notes: '記得帶印鑑證明'
+        notes: '記得帶印鑑證明',
     },
     {
         id: '4',
@@ -55,7 +47,7 @@ const generateMockTasks = (): TodoTask[] => [
         type: 'personal',
         date: new Date(new Date().setDate(new Date().getDate() + 1)),
         isCompleted: true,
-        priority: 'not-urgent-not-important'
+        priority: 'not-urgent-not-important',
     },
     {
         id: '5',
@@ -64,7 +56,7 @@ const generateMockTasks = (): TodoTask[] => [
         date: new Date(new Date().setDate(new Date().getDate() + 5)),
         isCompleted: false,
         priority: 'not-urgent-important',
-        caseName: '王小明案'
+        caseName: '王小明案',
     },
     {
         id: '6',
@@ -72,8 +64,8 @@ const generateMockTasks = (): TodoTask[] => [
         type: 'personal',
         date: new Date(new Date().setDate(new Date().getDate() + 3)),
         isCompleted: false,
-        priority: 'not-urgent-not-important'
-    }
+        priority: 'not-urgent-not-important',
+    },
 ];
 
 const TodoContainer = () => {
@@ -136,7 +128,8 @@ const TodoContainer = () => {
             // 2. Fetch Active Cases
             const { data: activeCases, error: caseError } = await supabase
                 .from('cases')
-                .select(`
+                .select(
+                    `
 id, case_number, buyer_name,
     milestones(
         contract_date, seal_date, tax_payment_date, handover_date,
@@ -145,7 +138,8 @@ id, case_number, buyer_name,
     financials(
         land_value_tax_deadline, deed_tax_deadline, land_tax_deadline, house_tax_deadline
     )
-        `)
+        `
+                )
                 .eq('user_id', user.id) // Filter by user to respect isolation
                 .neq('status', 'Closed'); // Only active cases
 
@@ -156,7 +150,14 @@ id, case_number, buyer_name,
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            const addSystemTask = (c: any, key: string, dateStr: string | null, daysBefore: number, type: TaskType, titlePrefix: string) => {
+            const addSystemTask = (
+                c: any,
+                key: string,
+                dateStr: string | null,
+                daysBefore: number,
+                type: TaskType,
+                titlePrefix: string
+            ) => {
                 if (!dateStr) return;
                 const date = new Date(dateStr);
                 const remindDate = new Date(date);
@@ -171,7 +172,12 @@ id, case_number, buyer_name,
 
                 const isAppointment = type === 'appointment';
                 const dateDisplay = isAppointment
-                    ? new Date(dateStr).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    ? new Date(dateStr).toLocaleString('zh-TW', {
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                      })
                     : new Date(dateStr).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
 
                 const newTitle = `${c.buyer_name} 案 - ${titlePrefix} (${dateDisplay})`;
@@ -195,7 +201,7 @@ id, case_number, buyer_name,
                             source_type: 'system',
                             source_key: key,
                             is_completed: false, // Reset completion on date change
-                            created_at: exists.created_at
+                            created_at: exists.created_at,
                         });
                     }
                 } else {
@@ -208,7 +214,7 @@ id, case_number, buyer_name,
                         case_id: c.id,
                         source_type: 'system',
                         source_key: key,
-                        is_completed: false
+                        is_completed: false,
                     });
                 }
             };
@@ -238,7 +244,6 @@ id, case_number, buyer_name,
                 addSystemTask(c, 'house_tax', f.house_tax_deadline, 5, 'tax', '房屋稅限繳');
             });
 
-
             // Perform Updates
             if (todosToUpdate.length > 0) {
                 console.log('Updating todos:', todosToUpdate);
@@ -260,7 +265,6 @@ id, case_number, buyer_name,
             } else {
                 mapTodosToState(cleanExistingTodos, activeCases || []);
             }
-
         } catch (err) {
             console.error('Todo Fetch Error:', err);
         } finally {
@@ -272,8 +276,8 @@ id, case_number, buyer_name,
         const todayStr = new Date().toISOString().split('T')[0];
 
         const mapped: TodoTask[] = todos
-            .filter(t => !t.is_deleted) // Filter out soft-deleted items
-            .filter(t => {
+            .filter((t) => !t.is_deleted) // Filter out soft-deleted items
+            .filter((t) => {
                 // Logic: Show all incomplete tasks.
                 // For completed tasks: Only show if due date is Today or Future.
                 // This achieves "Disappear next day" effect (Past completed tasks are hidden).
@@ -284,7 +288,7 @@ id, case_number, buyer_name,
                 const tDate = d.toISOString().split('T')[0];
                 return tDate >= todayStr;
             })
-            .map(t => {
+            .map((t) => {
                 // Determine type based on source or content content heuristics if manual
                 let type: TaskType = 'personal';
                 if (t.source_type === 'system') {
@@ -293,7 +297,7 @@ id, case_number, buyer_name,
                     else if (t.source_key?.includes('date')) type = 'legal';
                 }
 
-                const relatedCase = cases.find(c => c.id === t.case_id);
+                const relatedCase = cases.find((c) => c.id === t.case_id);
 
                 return {
                     id: t.id,
@@ -304,7 +308,7 @@ id, case_number, buyer_name,
                     priority: t.priority || 'not-urgent-important',
                     caseName: relatedCase ? relatedCase.buyer_name : undefined,
                     caseId: t.case_id,
-                    notes: t.source_type === 'system' ? '系統自動提醒' : undefined
+                    notes: t.source_type === 'system' ? '系統自動提醒' : undefined,
                 };
             });
         setTasks(mapped);
@@ -315,13 +319,13 @@ id, case_number, buyer_name,
     }, []);
 
     const toggleTask = async (id: string) => {
-        const task = tasks.find(t => t.id === id);
+        const task = tasks.find((t) => t.id === id);
         if (!task) return;
         const newVal = !task.isCompleted;
 
         console.log('Toggling task:', id, 'to', newVal);
 
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, isCompleted: newVal } : t));
+        setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, isCompleted: newVal } : t)));
 
         const { error } = await supabase.from('todos').update({ is_completed: newVal }).eq('id', id);
         if (error) console.error('Toggle Error:', error);
@@ -331,7 +335,7 @@ id, case_number, buyer_name,
         console.log('Deleting task:', id);
 
         // Optimistic UI
-        setTasks(prev => prev.filter(t => t.id !== id));
+        setTasks((prev) => prev.filter((t) => t.id !== id));
 
         // 1. Try Soft Delete (Preferred)
         const { error: softError } = await supabase.from('todos').update({ is_deleted: true }).eq('id', id);
@@ -368,19 +372,22 @@ id, case_number, buyer_name,
             is_completed: false,
             priority: 'not-urgent-important', // Default
             due_date: targetDate.toISOString(),
-            source_type: 'manual'
+            source_type: 'manual',
         };
 
         const { data, error } = await supabase.from('todos').insert([newTodo]).select().single();
         if (data && !error) {
-            setTasks(prev => [{
-                id: data.id,
-                title: data.content,
-                date: new Date(data.due_date || data.created_at),
-                type: 'personal',
-                isCompleted: false,
-                priority: 'not-urgent-important'
-            }, ...prev]);
+            setTasks((prev) => [
+                {
+                    id: data.id,
+                    title: data.content,
+                    date: new Date(data.due_date || data.created_at),
+                    type: 'personal',
+                    isCompleted: false,
+                    priority: 'not-urgent-important',
+                },
+                ...prev,
+            ]);
 
             // Re-fetch to ensure proper sorting/data integrity
             fetchAndSyncTodos();
@@ -402,7 +409,7 @@ id, case_number, buyer_name,
                         ✅ 智慧代辦中心
                     </h2>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-medium">
-                        {loading ? '...' : `${tasks.filter(t => !t.isCompleted).length} 待辦`}
+                        {loading ? '...' : `${tasks.filter((t) => !t.isCompleted).length} 待辦`}
                     </span>
 
                     {/* Future Stats */}
@@ -410,25 +417,70 @@ id, case_number, buyer_name,
                         <div className="hidden md:flex gap-1 ml-2 text-[10px] text-slate-500 font-medium border-l border-slate-200 pl-2">
                             <div className="flex items-center gap-1" title="未來 24 小時">
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                                1天: {tasks.filter(t => !t.isCompleted && new Date(t.date) <= new Date(Date.now() + 86400000) && new Date(t.date) >= new Date()).length}
+                                1天:{' '}
+                                {
+                                    tasks.filter(
+                                        (t) =>
+                                            !t.isCompleted &&
+                                            new Date(t.date) <= new Date(Date.now() + 86400000) &&
+                                            new Date(t.date) >= new Date()
+                                    ).length
+                                }
                             </div>
                             <div className="flex items-center gap-1" title="未來 3 天">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                                3天: {tasks.filter(t => !t.isCompleted && new Date(t.date) <= new Date(Date.now() + 3 * 86400000) && new Date(t.date) >= new Date()).length}
+                                3天:{' '}
+                                {
+                                    tasks.filter(
+                                        (t) =>
+                                            !t.isCompleted &&
+                                            new Date(t.date) <= new Date(Date.now() + 3 * 86400000) &&
+                                            new Date(t.date) >= new Date()
+                                    ).length
+                                }
                             </div>
                             <div className="flex items-center gap-1" title="未來 7 天">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                                7天: {tasks.filter(t => !t.isCompleted && new Date(t.date) <= new Date(Date.now() + 7 * 86400000) && new Date(t.date) >= new Date()).length}
+                                7天:{' '}
+                                {
+                                    tasks.filter(
+                                        (t) =>
+                                            !t.isCompleted &&
+                                            new Date(t.date) <= new Date(Date.now() + 7 * 86400000) &&
+                                            new Date(t.date) >= new Date()
+                                    ).length
+                                }
                             </div>
                         </div>
                     )}
                 </div>
 
                 <div className="flex bg-slate-200 dark:bg-slate-700 p-1 rounded-lg">
-                    <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><List className="w-5 h-5" /></button>
-                    <button onClick={() => setViewMode('matrix')} className={`p-1.5 rounded-md transition-all ${viewMode === 'matrix' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><LayoutGrid className="w-5 h-5" /></button>
-                    <button onClick={() => setViewMode('week')} className={`p-1.5 rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `} title="未來七天"><CalendarDays className="w-5 h-5" /></button>
-                    <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}><Calendar className="w-5 h-5" /></button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}
+                    >
+                        <List className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('matrix')}
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'matrix' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}
+                    >
+                        <LayoutGrid className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('week')}
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}
+                        title="未來七天"
+                    >
+                        <CalendarDays className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('calendar')}
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' : 'text-slate-500'} `}
+                    >
+                        <Calendar className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 
@@ -439,10 +491,18 @@ id, case_number, buyer_name,
                         <div className="flex items-center justify-center h-full text-slate-400">載入中...</div>
                     ) : (
                         <>
-                            {viewMode === 'list' && <TodoListView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
-                            {viewMode === 'matrix' && <TodoMatrixView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
-                            {viewMode === 'week' && <TodoWeekView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
-                            {viewMode === 'calendar' && <TodoCalendarView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />}
+                            {viewMode === 'list' && (
+                                <TodoListView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />
+                            )}
+                            {viewMode === 'matrix' && (
+                                <TodoMatrixView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />
+                            )}
+                            {viewMode === 'week' && (
+                                <TodoWeekView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />
+                            )}
+                            {viewMode === 'calendar' && (
+                                <TodoCalendarView tasks={tasks} onToggle={toggleTask} onDelete={deleteTodo} />
+                            )}
                         </>
                     )}
                 </div>
@@ -471,8 +531,15 @@ id, case_number, buyer_name,
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowAdd(false)} className="text-slate-500 px-3 py-1.5 text-xs">取消</button>
-                            <button onClick={addManualTodo} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">新增事項</button>
+                            <button onClick={() => setShowAdd(false)} className="text-slate-500 px-3 py-1.5 text-xs">
+                                取消
+                            </button>
+                            <button
+                                onClick={addManualTodo}
+                                className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm"
+                            >
+                                新增事項
+                            </button>
                         </div>
                     </div>
                 ) : (

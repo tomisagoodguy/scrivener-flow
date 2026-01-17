@@ -45,7 +45,7 @@ async function run() {
 
         const client = new Client({
             connectionString,
-            ssl: { rejectUnauthorized: false }
+            ssl: { rejectUnauthorized: false },
         });
 
         await client.connect();
@@ -59,7 +59,6 @@ async function run() {
 
         await client.end();
         console.log('Migration successful!');
-
     } catch (e) {
         console.error('Migration failed:', e);
     }

@@ -5,14 +5,12 @@ import Link from 'next/link';
 export const RecentCases = async () => {
     // 1. Initialize Server Client
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
     // 2. Fetch data with Isolation
-    let query = supabase
-        .from('cases')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+    let query = supabase.from('cases').select('*').order('created_at', { ascending: false }).limit(5);
 
     if (user) {
         query = query.eq('user_id', user.id);
@@ -23,9 +21,7 @@ export const RecentCases = async () => {
     if (error) {
         console.error('Error fetching recent cases:', error);
         return (
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 md:p-8 text-red-600">
-                無法載入案件資料
-            </div>
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 md:p-8 text-red-600">無法載入案件資料</div>
         );
     }
 
@@ -61,12 +57,22 @@ export const RecentCases = async () => {
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center">
                         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
                         </svg>
                     </div>
-                    <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">最近案件進度</h3>
+                    <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                        最近案件進度
+                    </h3>
                 </div>
-                <Link href="/cases" className="text-xs font-black text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 uppercase tracking-widest flex items-center gap-1 group">
+                <Link
+                    href="/cases"
+                    className="text-xs font-black text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 uppercase tracking-widest flex items-center gap-1 group"
+                >
                     查看全部 <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
             </div>
@@ -90,17 +96,29 @@ export const RecentCases = async () => {
                                 <div>
                                     <h4 className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-base">
                                         {item.case_number}
-                                        {item.city && <span className="ml-2 text-gray-500 dark:text-slate-500 font-normal text-sm">{item.city}</span>}
+                                        {item.city && (
+                                            <span className="ml-2 text-gray-500 dark:text-slate-500 font-normal text-sm">
+                                                {item.city}
+                                            </span>
+                                        )}
                                     </h4>
                                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 font-medium flex items-center gap-2">
-                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">買</span> {item.buyer_name}
+                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">
+                                            買
+                                        </span>{' '}
+                                        {item.buyer_name}
                                         <span className="text-gray-300 dark:text-slate-700">|</span>
-                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">賣</span> {item.seller_name}
+                                        <span className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-slate-300">
+                                            賣
+                                        </span>{' '}
+                                        {item.seller_name}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto pl-16 md:pl-0">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold border min-w-[80px] text-center shadow-sm ${getStatusStyle(item.status)}`}>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-xs font-bold border min-w-[80px] text-center shadow-sm ${getStatusStyle(item.status)}`}
+                                >
                                     {item.status}
                                 </span>
                                 <p className="text-xs text-gray-400 dark:text-slate-500 font-mono font-medium">

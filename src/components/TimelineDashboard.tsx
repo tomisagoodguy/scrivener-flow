@@ -20,68 +20,68 @@ interface TimelineItem {
 }
 
 const TASK_CONFIG = {
-    '代償': { color: 'bg-orange-500', icon: '🏦' },
-    '用印': { color: 'bg-blue-500', icon: '✍️' },
-    '完稅': { color: 'bg-emerald-500', icon: '🧾' },
-    '過戶': { color: 'bg-purple-500', icon: '🏢' },
-    '交屋': { color: 'bg-indigo-600', icon: '🔑' },
-    '尾款': { color: 'bg-amber-500', icon: '💰' },
-    '簽約': { color: 'bg-slate-500', icon: '📝' }, // Added Contract phase
-    '備忘': { color: 'bg-pink-500', icon: '📌' },
+    代償: { color: 'bg-orange-500', icon: '🏦' },
+    用印: { color: 'bg-blue-500', icon: '✍️' },
+    完稅: { color: 'bg-emerald-500', icon: '🧾' },
+    過戶: { color: 'bg-purple-500', icon: '🏢' },
+    交屋: { color: 'bg-indigo-600', icon: '🔑' },
+    尾款: { color: 'bg-amber-500', icon: '💰' },
+    簽約: { color: 'bg-slate-500', icon: '📝' }, // Added Contract phase
+    備忘: { color: 'bg-pink-500', icon: '📌' },
 };
 
 const TODO_DATE_MAP: Record<string, keyof import('@/types').Milestone> = {
     // ... (Keep existing maps)
-    '買方蓋印章': 'seal_date',
-    '賣方蓋印章': 'seal_date',
-    '用印款': 'seal_date',
-    '權狀印鑑': 'seal_date',
-    '完稅款': 'tax_payment_date',
-    '稅單': 'tax_payment_date',
-    '打單': 'tax_payment_date',
-    '稅費分算': 'handover_date', // Adjusted to Handover based on typical flow
-    '過戶': 'transfer_date',
-    '整過戶': 'transfer_date',
-    '實登': 'transfer_date',
-    '規費': 'transfer_date',
-    '設定': 'transfer_date',
-    '保單': 'transfer_date',
-    '塗銷': 'transfer_date',
-    '代償': 'redemption_date',
-    '二撥': 'balance_payment_date',
-    '差額': 'balance_payment_date',
-    '履保': 'contract_date',
-    '授權': 'contract_date',
-    '解約排除': 'contract_date',
-    '水電': 'handover_date',
-    '整交屋': 'handover_date',
+    買方蓋印章: 'seal_date',
+    賣方蓋印章: 'seal_date',
+    用印款: 'seal_date',
+    權狀印鑑: 'seal_date',
+    完稅款: 'tax_payment_date',
+    稅單: 'tax_payment_date',
+    打單: 'tax_payment_date',
+    稅費分算: 'handover_date', // Adjusted to Handover based on typical flow
+    過戶: 'transfer_date',
+    整過戶: 'transfer_date',
+    實登: 'transfer_date',
+    規費: 'transfer_date',
+    設定: 'transfer_date',
+    保單: 'transfer_date',
+    塗銷: 'transfer_date',
+    代償: 'redemption_date',
+    二撥: 'balance_payment_date',
+    差額: 'balance_payment_date',
+    履保: 'contract_date',
+    授權: 'contract_date',
+    解約排除: 'contract_date',
+    水電: 'handover_date',
+    整交屋: 'handover_date',
 };
 
 const TODO_PHASE_MAP: Record<string, string> = {
-    '買方蓋印章': '用印',
-    '賣方蓋印章': '用印',
-    '用印款': '用印',
-    '權狀印鑑': '用印',
-    '完稅款': '完稅',
-    '稅單': '完稅',
-    '打線': '完稅',
-    '打單': '完稅',
-    '稅費分算': '交屋',
-    '過戶': '過戶',
-    '整過戶': '過戶',
-    '實登': '過戶',
-    '規費': '過戶',
-    '設定': '過戶',
-    '保單': '過戶',
-    '塗銷': '過戶',
-    '代償': '代償',
-    '二撥': '尾款',
-    '差額': '尾款',
-    '履保': '簽約',
-    '授權': '簽約',
-    '解約排除': '簽約',
-    '水電': '交屋',
-    '整交屋': '交屋'
+    買方蓋印章: '用印',
+    賣方蓋印章: '用印',
+    用印款: '用印',
+    權狀印鑑: '用印',
+    完稅款: '完稅',
+    稅單: '完稅',
+    打線: '完稅',
+    打單: '完稅',
+    稅費分算: '交屋',
+    過戶: '過戶',
+    整過戶: '過戶',
+    實登: '過戶',
+    規費: '過戶',
+    設定: '過戶',
+    保單: '過戶',
+    塗銷: '過戶',
+    代償: '代償',
+    二撥: '尾款',
+    差額: '尾款',
+    履保: '簽約',
+    授權: '簽約',
+    解約排除: '簽約',
+    水電: '交屋',
+    整交屋: '交屋',
 };
 
 // ...
@@ -118,7 +118,7 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                                 seller: c.seller_name,
                                 type,
                                 color,
-                                caseId: c.id
+                                caseId: c.id,
                             });
                         }
                     } catch (e) {
@@ -151,7 +151,7 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                 c.todos_list.forEach((todo) => {
                     const t = todo as any;
                     if (t.is_deleted || t.is_completed || !t.due_date) return;
-                    // Filter: Only 'manual' or explicit 'appointment' 
+                    // Filter: Only 'manual' or explicit 'appointment'
                     // (Assuming system tasks have source_type='system')
                     if (todo.source_type === 'system') return;
 
@@ -165,7 +165,7 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                                 seller: '', // No seller implies pure note
                                 type: '備忘',
                                 color: 'bg-pink-500 border-pink-600',
-                                caseId: c.id
+                                caseId: c.id,
                             });
                         }
                     } catch (e) {
@@ -185,11 +185,11 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
         const result = [];
         for (let i = 0; i <= 7; i++) {
             const date = addDays(today, i);
-            const dayTasks = upcomingTasks.filter(t => isSameDay(t.date, date));
+            const dayTasks = upcomingTasks.filter((t) => isSameDay(t.date, date));
             result.push({
                 date,
                 tasks: dayTasks,
-                isToday: i === 0
+                isToday: i === 0,
             });
         }
         return result;
@@ -200,12 +200,16 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
             {/* Header Rendering */}
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-black flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-primary animate-pulse shadow-lg"></span>
-                    7 日工作預警看板 (Work Dashboard)
+                    <span className="flex h-3 w-3 rounded-full bg-primary animate-pulse shadow-lg"></span>7
+                    日工作預警看板 (Work Dashboard)
                 </h3>
                 <div className="flex gap-4 text-xs font-bold text-foreground/50">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary"></span> 今日任務</span>
-                    <span>{format(today, 'yyyy/MM/dd')} - {format(addDays(today, 7), 'MM/dd')}</span>
+                    <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-primary"></span> 今日任務
+                    </span>
+                    <span>
+                        {format(today, 'yyyy/MM/dd')} - {format(addDays(today, 7), 'MM/dd')}
+                    </span>
                 </div>
             </div>
 
@@ -221,14 +225,20 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                         `}
                     >
                         {/* Day Header - Keep existing */}
-                        <div className={`
+                        <div
+                            className={`
                             px-2 py-3 border-b-2 text-center shrink-0 transition-colors
                             ${day.isToday ? 'border-primary/30 bg-primary/10' : 'border-border-color bg-secondary/30 group-hover:bg-white/80'}
-                        `}>
-                            <div className={`text-[10px] uppercase font-black tracking-tighter mb-1 truncate ${day.isToday ? 'text-primary' : 'text-foreground/40'}`}>
+                        `}
+                        >
+                            <div
+                                className={`text-[10px] uppercase font-black tracking-tighter mb-1 truncate ${day.isToday ? 'text-primary' : 'text-foreground/40'}`}
+                            >
                                 {day.isToday ? '今日 TODAY' : format(day.date, 'ccc', { locale: zhTW })}
                             </div>
-                            <div className={`text-xl font-black leading-none group-hover:text-3xl transition-all ${day.isToday ? 'text-primary' : 'text-foreground'}`}>
+                            <div
+                                className={`text-xl font-black leading-none group-hover:text-3xl transition-all ${day.isToday ? 'text-primary' : 'text-foreground'}`}
+                            >
                                 {format(day.date, 'd')}
                             </div>
                             <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 overflow-hidden transition-all text-[10px] text-foreground/40 mt-1">
@@ -239,12 +249,12 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                         {/* Tasks List */}
                         <div className="p-1.5 space-y-1.5 flex-grow overflow-y-auto custom-scrollbar bg-white/30 group-hover:p-3 group-hover:space-y-3 transition-all">
                             {day.tasks.length > 0 ? (
-                                day.tasks.map((task, tIdx) => (
-                                    <TaskCard key={tIdx} task={task} />
-                                ))
+                                day.tasks.map((task, tIdx) => <TaskCard key={tIdx} task={task} />)
                             ) : (
                                 <div className="h-full flex items-center justify-center text-center opacity-50 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-[10px] text-foreground/20 font-bold border-b-2 border-dotted border-foreground/10 pb-0.5 whitespace-nowrap group-hover:text-sm">無排程</span>
+                                    <span className="text-[10px] text-foreground/20 font-bold border-b-2 border-dotted border-foreground/10 pb-0.5 whitespace-nowrap group-hover:text-sm">
+                                        無排程
+                                    </span>
                                 </div>
                             )}
                         </div>
@@ -252,16 +262,25 @@ export default function TimelineDashboard({ cases }: TimelineDashboardProps) {
                 ))}
             </div>
             <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-                .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+                    background: rgba(0, 0, 0, 0.2);
+                }
             `}</style>
         </div>
     );
 }
 
-function TaskCard({ task, isOverdue = false }: { task: TimelineItem, isOverdue?: boolean }) {
+function TaskCard({ task, isOverdue = false }: { task: TimelineItem; isOverdue?: boolean }) {
     return (
         <div
             className={`
@@ -284,11 +303,14 @@ function TaskCard({ task, isOverdue = false }: { task: TimelineItem, isOverdue?:
             <div className="hidden group-hover:flex flex-col gap-1 animate-fade-in">
                 <div className="flex justify-between items-start border-b border-white/20 pb-1 mb-1">
                     <span className="font-black text-sm flex items-center gap-1">
-                        {
-                            TASK_CONFIG[(TODO_PHASE_MAP[task.type] || task.type.replace(/\(.+\)/, '')) as keyof typeof TASK_CONFIG]?.icon || '⚠️'
-                        } {task.type}
+                        {TASK_CONFIG[
+                            (TODO_PHASE_MAP[task.type] || task.type.replace(/\(.+\)/, '')) as keyof typeof TASK_CONFIG
+                        ]?.icon || '⚠️'}{' '}
+                        {task.type}
                     </span>
-                    <span className="text-[10px] font-mono bg-black/20 px-1.5 py-0.5 rounded text-white/90">{task.caseNumber}</span>
+                    <span className="text-[10px] font-mono bg-black/20 px-1.5 py-0.5 rounded text-white/90">
+                        {task.caseNumber}
+                    </span>
                 </div>
                 {task.seller ? (
                     // Standard Case Pair
@@ -299,9 +321,7 @@ function TaskCard({ task, isOverdue = false }: { task: TimelineItem, isOverdue?:
                     </div>
                 ) : (
                     // Memo Note (Full Width)
-                    <div className="text-xs font-bold text-white/95 whitespace-pre-wrap">
-                        {task.buyer}
-                    </div>
+                    <div className="text-xs font-bold text-white/95 whitespace-pre-wrap">{task.buyer}</div>
                 )}
 
                 {isOverdue && (

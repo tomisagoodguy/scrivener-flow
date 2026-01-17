@@ -10,7 +10,7 @@ export default function ImportPage() {
     const [loading, setLoading] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs(prev => [...prev, msg]);
+    const addLog = (msg: string) => setLogs((prev) => [...prev, msg]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -30,7 +30,7 @@ export default function ImportPage() {
             const rows: any[] = [];
 
             // Get Headers and handle potential empty first rows or whitespace
-            let headerRowIndex = 1;
+            const headerRowIndex = 1;
             // Simple heuristic: First row in Excel often headers.
             const headerRow = worksheet.getRow(headerRowIndex);
 
@@ -40,7 +40,7 @@ export default function ImportPage() {
                 headers[colNumber] = val;
             });
 
-            addLog(`偵測到的標題列 (${headers.filter(h => h).length}欄): ${headers.filter(h => h).join(', ')}`);
+            addLog(`偵測到的標題列 (${headers.filter((h) => h).length}欄): ${headers.filter((h) => h).join(', ')}`);
 
             // Parse Rows
             worksheet.eachRow((row, rowNumber) => {
@@ -53,8 +53,10 @@ export default function ImportPage() {
                         // Robust value handling
                         let value = cell.value;
                         if (value && typeof value === 'object') {
-                            if ('text' in value) value = (value as any).text; // Rich Text
-                            else if ('result' in value) value = (value as any).result; // Formula
+                            if ('text' in value)
+                                value = (value as any).text; // Rich Text
+                            else if ('result' in value)
+                                value = (value as any).result; // Formula
                             else if ('hyperlink' in value) value = (value as any).text || (value as any).hyperlink;
                         }
                         // Trim strings
@@ -73,7 +75,6 @@ export default function ImportPage() {
                 console.log('First Row Data:', JSON.stringify(rows[0], null, 2));
                 addLog(`第一筆資料範例 Keys: ${Object.keys(rows[0]).join(', ')}`);
             }
-
 
             addLog(`解析完成，共 ${rows.length} 筆資料。開始匯入...`);
 
@@ -96,7 +97,7 @@ export default function ImportPage() {
                         try {
                             const d = new Date(val);
                             if (!isNaN(d.getTime())) return d.toISOString();
-                        } catch { }
+                        } catch {}
                         return null;
                     };
 
@@ -131,7 +132,7 @@ export default function ImportPage() {
                         district: '-',
                         status: 'Processing',
                         notes: notesParts.join('\n\n'),
-                        updated_at: new Date().toISOString()
+                        updated_at: new Date().toISOString(),
                     };
 
                     const { data: caseData, error: caseError } = await supabase
@@ -161,9 +162,7 @@ export default function ImportPage() {
                     };
                     if (existingMilestone) milestonePayload.id = existingMilestone.id;
 
-                    const { error: mileError } = await supabase
-                        .from('milestones')
-                        .upsert(milestonePayload);
+                    const { error: mileError } = await supabase.from('milestones').upsert(milestonePayload);
 
                     if (mileError) console.warn('Milestone Upsert Error (Non-fatal)', mileError);
 
@@ -181,9 +180,7 @@ export default function ImportPage() {
                     };
                     if (existingFinancial) financialPayload.id = existingFinancial.id;
 
-                    const { error: finError } = await supabase
-                        .from('financials')
-                        .upsert(financialPayload);
+                    const { error: finError } = await supabase.from('financials').upsert(financialPayload);
 
                     if (finError) console.warn('Financial Upsert Error (Non-fatal)', finError);
 
@@ -200,7 +197,6 @@ export default function ImportPage() {
                 addLog('即將重新整理頁面...');
                 setTimeout(() => window.location.reload(), 2000);
             }
-
         } catch (err: any) {
             console.error(err);
             addLog(`[FATAL ERROR] ${err.message}`);
@@ -218,14 +214,20 @@ export default function ImportPage() {
                     </h1>
                     <p className="text-slate-500 mt-2 font-medium">舊 Excel 資料無痛轉移</p>
                 </div>
-                <Link href="/" className="glass px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/80 transition-all text-slate-700 hover:text-primary flex items-center gap-2 group">
+                <Link
+                    href="/"
+                    className="glass px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/80 transition-all text-slate-700 hover:text-primary flex items-center gap-2 group"
+                >
                     <span>←</span> 回首頁
                 </Link>
             </header>
 
             <main className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Upload Area */}
-                <div className="glass-card p-12 flex flex-col items-center justify-center border-dashed border-2 border-white/40 hover:border-primary/50 transition-colors relative overflow-hidden group animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                <div
+                    className="glass-card p-12 flex flex-col items-center justify-center border-dashed border-2 border-white/40 hover:border-primary/50 transition-colors relative overflow-hidden group animate-slide-up"
+                    style={{ animationDelay: '0.1s' }}
+                >
                     <input
                         type="file"
                         accept=".xlsx, .xls"
@@ -235,24 +237,48 @@ export default function ImportPage() {
                     />
 
                     <div className="text-center space-y-4 transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto transition-colors ${loading ? 'bg-primary/10 text-primary animate-pulse' : 'bg-slate-100 text-slate-400'}`}>
+                        <div
+                            className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto transition-colors ${loading ? 'bg-primary/10 text-primary animate-pulse' : 'bg-slate-100 text-slate-400'}`}
+                        >
                             {loading ? (
-                                <svg className="w-10 h-10 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <svg className="w-10 h-10 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                </svg>
                             ) : (
-                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                    ></path>
+                                </svg>
                             )}
                         </div>
                         <h3 className="text-xl font-bold text-foreground">
                             {loading ? '正在分析檔案...' : '點擊或拖曳上傳 Excel'}
                         </h3>
-                        <p className="text-slate-500 font-medium">
-                            支援 .xlsx, .xls 格式
-                        </p>
+                        <p className="text-slate-500 font-medium">支援 .xlsx, .xls 格式</p>
                     </div>
                 </div>
 
                 {/* Log Console */}
-                <div className="glass-card p-6 font-mono text-sm h-96 overflow-y-auto excel-scrollbar bg-white/40 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                <div
+                    className="glass-card p-6 font-mono text-sm h-96 overflow-y-auto excel-scrollbar bg-white/40 animate-slide-up"
+                    style={{ animationDelay: '0.2s' }}
+                >
                     <h4 className="text-foreground font-bold mb-4 sticky top-0 bg-white/0 backdrop-blur-sm pb-2 border-b border-gray-200/50 flex items-center justify-between">
                         <span>執行紀錄</span>
                         <span className="text-xs text-slate-400 font-normal">System Console</span>
@@ -264,8 +290,13 @@ export default function ImportPage() {
                     ) : (
                         <div className="space-y-2">
                             {logs.map((log, i) => (
-                                <div key={i} className="text-slate-700 border-l-2 border-primary/30 pl-3 py-1 hover:bg-white/30 rounded-r transition-colors">
-                                    <span className="text-primary-deep/60 text-xs font-bold mr-2 block mb-0.5">[{new Date().toLocaleTimeString()}]</span>
+                                <div
+                                    key={i}
+                                    className="text-slate-700 border-l-2 border-primary/30 pl-3 py-1 hover:bg-white/30 rounded-r transition-colors"
+                                >
+                                    <span className="text-primary-deep/60 text-xs font-bold mr-2 block mb-0.5">
+                                        [{new Date().toLocaleTimeString()}]
+                                    </span>
                                     {log}
                                 </div>
                             ))}
@@ -275,10 +306,19 @@ export default function ImportPage() {
             </main>
 
             <style jsx global>{`
-                .excel-scrollbar::-webkit-scrollbar { width: 6px; }
-                .excel-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .excel-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-                .excel-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+                .excel-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .excel-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .excel-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 10px;
+                }
+                .excel-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(0, 0, 0, 0.2);
+                }
             `}</style>
         </div>
     );

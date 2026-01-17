@@ -1,8 +1,8 @@
 'use client';
 
-import { supabase } from "@/lib/supabaseClient";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 export const SideNav = () => {
     const pathname = usePathname();
@@ -36,17 +36,18 @@ export const SideNav = () => {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden ${isActive
-                                ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                                }`}
+                            className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden ${
+                                isActive
+                                    ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                            }`}
                         >
                             <span className="text-xl min-w-[24px]">{item.icon}</span>
                             <span className="font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 {item.name}
                             </span>
                         </Link>
-                    )
+                    );
                 })}
             </nav>
 

@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function patchDatabase() {
     console.log('Running quick database patch...');
-    // Since we can't run SQL directly via anon key easily without RPC, 
+    // Since we can't run SQL directly via anon key easily without RPC,
     // and we don't have service role key, we have to rely on the user having them.
     // BUT the user says they "disappeared", maybe they WERE there.
 

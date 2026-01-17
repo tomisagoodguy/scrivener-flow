@@ -49,17 +49,13 @@ export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeB
             // Check if column exists - if not, we stop here but UI looks updated.
             console.warn('Simulating DB Update for Overtime Status');
 
-            const { error } = await supabase
-                .from('cases')
-                .update({ has_keyed_overtime: newStatus })
-                .eq('id', caseId);
+            const { error } = await supabase.from('cases').update({ has_keyed_overtime: newStatus }).eq('id', caseId);
 
             if (error) throw error;
             router.refresh();
 
             // Mock delay
-            await new Promise(r => setTimeout(r, 500));
-
+            await new Promise((r) => setTimeout(r, 500));
         } catch (e) {
             console.error('Error updating overtime status:', e);
             // Revert on serious error
@@ -127,11 +123,7 @@ export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeB
             className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-xs px-2 py-1 transition-colors"
             title="點擊標記為已申報"
         >
-            {loading ? (
-                <span>...</span>
-            ) : (
-                <span className="text-[10px] font-medium">未申報用印加班費</span>
-            )}
+            {loading ? <span>...</span> : <span className="text-[10px] font-medium">未申報用印加班費</span>}
         </button>
     );
 }

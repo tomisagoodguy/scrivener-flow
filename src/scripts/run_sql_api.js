@@ -6,27 +6,29 @@ const body = JSON.stringify({
     query: `
         ALTER TABLE cases ADD COLUMN IF NOT EXISTS buyer_phone text;
         ALTER TABLE cases ADD COLUMN IF NOT EXISTS seller_phone text;
-    `
+    `,
 });
 
 const options = {
     hostname: 'api.supabase.com',
     path: `/v1/projects/${projectRef}/sql`,
-    // Trying 'query' endpoint, if 404 will try others. 
+    // Trying 'query' endpoint, if 404 will try others.
     // Based on V1 docs, it might be /sql.
     method: 'POST',
     headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Content-Length': body.length
-    }
+        'Content-Length': body.length,
+    },
 };
 
 console.log('Attempting to run SQL via Management API...');
 
 const req = https.request(options, (res) => {
     let responseBody = '';
-    res.on('data', (chunk) => { responseBody += chunk; });
+    res.on('data', (chunk) => {
+        responseBody += chunk;
+    });
     res.on('end', () => {
         console.log(`Status Code: ${res.statusCode}`);
         console.log('Response:', responseBody);

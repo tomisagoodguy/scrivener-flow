@@ -53,7 +53,9 @@ export const Header = () => {
                             <h1 className="text-lg md:text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
                                 不動產代書
                             </h1>
-                            <p className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-black text-slate-500/80 dark:text-slate-400/80">Scrivener Flow</p>
+                            <p className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-black text-slate-500/80 dark:text-slate-400/80">
+                                Scrivener Flow
+                            </p>
                         </Link>
                     </div>
 
@@ -143,9 +145,7 @@ export const Header = () => {
                         </nav>
 
                         <div className="mt-auto border-t border-slate-200 dark:border-slate-800 pt-6">
-                            <p className="text-xs text-center text-slate-400 m-0">
-                                Scrivener Flow Mobile v2.0
-                            </p>
+                            <p className="text-xs text-center text-slate-400 m-0">Scrivener Flow Mobile v2.0</p>
                         </div>
                     </div>
                 </div>

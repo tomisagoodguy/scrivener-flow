@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
@@ -10,7 +9,7 @@ async function run() {
         let url = '';
         let key = '';
 
-        envContent.split('\n').forEach(line => {
+        envContent.split('\n').forEach((line) => {
             if (line.includes('NEXT_PUBLIC_SUPABASE_URL=')) {
                 const parts = line.split('=');
                 if (parts.length >= 2) url = parts[1].trim().replace(/['"]/g, '');
@@ -46,7 +45,6 @@ async function run() {
                 console.log('Todos table exists but is empty or RLS hides data.');
             }
         }
-
     } catch (e) {
         console.error(e);
     }

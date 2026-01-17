@@ -24,7 +24,9 @@ export default function NotesPage() {
         const fetchNotes = async () => {
             setIsLoading(true);
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
                 if (!user) return;
 
                 const { data, error } = await supabase
@@ -47,7 +49,7 @@ export default function NotesPage() {
                                 id: 'default',
                                 title: '主要筆記',
                                 content: data.scratchpad_content,
-                                updated_at: new Date().toISOString()
+                                updated_at: new Date().toISOString(),
                             };
                             setNotes([legacyNote]);
                             setActiveNoteId('default');
@@ -57,7 +59,7 @@ export default function NotesPage() {
                             id: 'default',
                             title: '主要筆記',
                             content: data.scratchpad_content,
-                            updated_at: new Date().toISOString()
+                            updated_at: new Date().toISOString(),
                         };
                         setNotes([legacyNote]);
                         setActiveNoteId('default');
@@ -68,7 +70,7 @@ export default function NotesPage() {
                         id: crypto.randomUUID(),
                         title: '新筆記',
                         content: '',
-                        updated_at: new Date().toISOString()
+                        updated_at: new Date().toISOString(),
                     };
                     setNotes([newNote]);
                     setActiveNoteId(newNote.id);
@@ -84,7 +86,7 @@ export default function NotesPage() {
     }, []);
 
     // Selection helper
-    const activeNote = notes.find(n => n.id === activeNoteId) || null;
+    const activeNote = notes.find((n) => n.id === activeNoteId) || null;
 
     // Auto-save logic
     useEffect(() => {
@@ -93,16 +95,16 @@ export default function NotesPage() {
         const timer = setTimeout(async () => {
             setSaveStatus('saving');
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
                 if (!user) return;
 
-                const { error } = await supabase
-                    .from('user_settings')
-                    .upsert({
-                        user_id: user.id,
-                        scratchpad_content: JSON.stringify(notes),
-                        updated_at: new Date().toISOString()
-                    });
+                const { error } = await supabase.from('user_settings').upsert({
+                    user_id: user.id,
+                    scratchpad_content: JSON.stringify(notes),
+                    updated_at: new Date().toISOString(),
+                });
 
                 if (error) throw error;
                 setSaveStatus('saved');
@@ -121,7 +123,7 @@ export default function NotesPage() {
             id: crypto.randomUUID(),
             title: '未命名筆記',
             content: '',
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
         };
         setNotes([newNote, ...notes]);
         setActiveNoteId(newNote.id);
@@ -129,7 +131,7 @@ export default function NotesPage() {
 
     const handleDeleteNote = (id: string) => {
         if (notes.length <= 1) return; // Keep at least one
-        const filtered = notes.filter(n => n.id !== id);
+        const filtered = notes.filter((n) => n.id !== id);
         setNotes(filtered);
         if (activeNoteId === id) {
             setActiveNoteId(filtered[0].id);
@@ -137,16 +139,15 @@ export default function NotesPage() {
     };
 
     const updateActiveNote = (updates: Partial<Note>) => {
-        setNotes(prev => prev.map(n =>
-            n.id === activeNoteId
-                ? { ...n, ...updates, updated_at: new Date().toISOString() }
-                : n
-        ));
+        setNotes((prev) =>
+            prev.map((n) => (n.id === activeNoteId ? { ...n, ...updates, updated_at: new Date().toISOString() } : n))
+        );
     };
 
-    const filteredNotes = notes.filter(n =>
-        n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        n.content.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredNotes = notes.filter(
+        (n) =>
+            n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            n.content.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -186,18 +187,21 @@ export default function NotesPage() {
                                     找不到相符的筆記
                                 </div>
                             ) : (
-                                filteredNotes.map(note => (
+                                filteredNotes.map((note) => (
                                     <div
                                         key={note.id}
                                         onClick={() => setActiveNoteId(note.id)}
-                                        className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 relative ${activeNoteId === note.id
-                                            ? 'bg-blue-50 border border-blue-100 shadow-sm'
-                                            : 'hover:bg-slate-50 border border-transparent'
-                                            }`}
+                                        className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 relative ${
+                                            activeNoteId === note.id
+                                                ? 'bg-blue-50 border border-blue-100 shadow-sm'
+                                                : 'hover:bg-slate-50 border border-transparent'
+                                        }`}
                                     >
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center justify-between">
-                                                <h3 className={`text-sm font-black truncate max-w-[180px] ${activeNoteId === note.id ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                <h3
+                                                    className={`text-sm font-black truncate max-w-[180px] ${activeNoteId === note.id ? 'text-blue-700' : 'text-slate-700'}`}
+                                                >
                                                     {note.title || '未命名筆記'}
                                                 </h3>
                                                 <button
@@ -236,10 +240,22 @@ export default function NotesPage() {
                                         className="text-2xl font-black text-slate-900 border-none outline-none placeholder:text-slate-200 w-full"
                                     />
                                     <div className="flex items-center gap-4 min-w-[120px] justify-end">
-                                        {saveStatus === 'saving' && <span className="text-[10px] bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full animate-pulse">儲存中...</span>}
-                                        {saveStatus === 'saved' && <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-1 rounded-full">已儲存</span>}
+                                        {saveStatus === 'saving' && (
+                                            <span className="text-[10px] bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full animate-pulse">
+                                                儲存中...
+                                            </span>
+                                        )}
+                                        {saveStatus === 'saved' && (
+                                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-1 rounded-full">
+                                                已儲存
+                                            </span>
+                                        )}
                                         <span className="text-[10px] text-slate-400 font-mono hidden md:block">
-                                            最後更新: {new Date(activeNote.updated_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                                            最後更新:{' '}
+                                            {new Date(activeNote.updated_at).toLocaleTimeString('zh-TW', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
                                         </span>
                                     </div>
                                 </div>

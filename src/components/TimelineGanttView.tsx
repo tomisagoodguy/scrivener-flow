@@ -25,7 +25,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
     const days = useMemo(() => {
         return eachDayOfInterval({
             start: today,
-            end: addDays(today, 30)
+            end: addDays(today, 30),
         });
     }, [today]);
 
@@ -39,7 +39,9 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
         async function loadGCal() {
             try {
                 const supabase = createClient();
-                const { data: { session } } = await supabase.auth.getSession();
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession();
                 const token = (session as any)?.provider_token;
 
                 if (token) {
@@ -61,60 +63,65 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
             }
         }
         loadGCal();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+        };
     }, [today]);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const caseActivity = useMemo(() => {
-        return cases.filter(c => c.status === 'Processing').map(c => {
-            const m = (c.milestones?.[0] || {}) as any;
-            const activities: { date: Date, type: string, color: string, label: string, content?: string }[] = [];
+        return cases
+            .filter((c) => c.status === 'Processing')
+            .map((c) => {
+                const m = (c.milestones?.[0] || {}) as any;
+                const activities: { date: Date; type: string; color: string; label: string; content?: string }[] = [];
 
-            if (m) {
-                MILESTONES.forEach(milestone => {
-                    const dateStr = m[milestone.key as keyof typeof m];
-                    if (dateStr && typeof dateStr === 'string') {
+                if (m) {
+                    MILESTONES.forEach((milestone) => {
+                        const dateStr = m[milestone.key as keyof typeof m];
+                        if (dateStr && typeof dateStr === 'string') {
+                            try {
+                                const date = parseISO(dateStr);
+                                activities.push({
+                                    date,
+                                    type: milestone.key,
+                                    color: milestone.color,
+                                    label: milestone.label,
+                                    content: milestone.key,
+                                });
+                            } catch (e) {}
+                        }
+                    });
+                }
+
+                // ADD: Todos List (Manual Items)
+                if (c.todos_list) {
+                    c.todos_list.forEach((todo) => {
+                        if (todo.is_deleted || todo.is_completed || !todo.due_date) return;
+                        if (todo.source_type === 'system') return; // Skip system reminders
+
                         try {
-                            const date = parseISO(dateStr);
+                            const date = parseISO(todo.due_date);
                             activities.push({
                                 date,
-                                type: milestone.key,
-                                color: milestone.color,
-                                label: milestone.label,
-                                content: milestone.key
+                                type: 'memo',
+                                color: 'bg-pink-500 border-pink-600',
+                                label: '📝',
+                                content: todo.content,
                             });
-                        } catch (e) { }
-                    }
-                });
-            }
+                        } catch (e) {}
+                    });
+                }
 
-            // ADD: Todos List (Manual Items)
-            if (c.todos_list) {
-                c.todos_list.forEach(todo => {
-                    if (todo.is_deleted || todo.is_completed || !todo.due_date) return;
-                    if (todo.source_type === 'system') return; // Skip system reminders
-
-                    try {
-                        const date = parseISO(todo.due_date);
-                        activities.push({
-                            date,
-                            type: 'memo',
-                            color: 'bg-pink-500 border-pink-600',
-                            label: '📝',
-                            content: todo.content
-                        });
-                    } catch (e) { }
-                });
-            }
-
-            return {
-                id: c.id,
-                caseNumber: c.case_number,
-                buyer: c.buyer_name,
-                activities
-            };
-        }).filter(c => c.activities.length > 0);
+                return {
+                    id: c.id,
+                    caseNumber: c.case_number,
+                    buyer: c.buyer_name,
+                    activities,
+                };
+            })
+            .filter((c) => c.activities.length > 0);
     }, [cases]);
 
     if (caseActivity.length === 0) return null;
@@ -125,8 +132,8 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
             provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth/callback`,
-                scopes: 'https://www.googleapis.com/auth/calendar.events'
-            }
+                scopes: 'https://www.googleapis.com/auth/calendar.events',
+            },
         });
     };
 
@@ -140,12 +147,16 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                     <h3 className="text-foreground font-black flex items-center gap-2">
                         <span className="text-xl">📅</span> 30 日進度甘特圖 (Gantt Monitoring)
                     </h3>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isCollapsed ? 'bg-secondary text-secondary-foreground' : 'bg-primary/10 text-primary'}`}>
+                    <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isCollapsed ? 'bg-secondary text-secondary-foreground' : 'bg-primary/10 text-primary'}`}
+                    >
                         {isCollapsed ? '已收折' : '展開中'}
                     </span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase underline">僅顯示案量：{caseActivity.length} 案</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase underline">
+                        僅顯示案量：{caseActivity.length} 案
+                    </span>
                     <button className="text-muted-foreground w-6 h-6 flex items-center justify-center rounded-full hover:bg-background transition-colors">
                         {isCollapsed ? '▼' : '▲'}
                     </button>
@@ -173,7 +184,9 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase">
                                             {format(day, 'E', { locale: zhTW })}
                                         </span>
-                                        <span className={`text-[12px] font-black ${isSameDay(day, today) ? 'text-primary' : 'text-foreground'}`}>
+                                        <span
+                                            className={`text-[12px] font-black ${isSameDay(day, today) ? 'text-primary' : 'text-foreground'}`}
+                                        >
                                             {format(day, 'd')}
                                         </span>
                                     </div>
@@ -219,15 +232,23 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                             >
                                                 連結/重新登入 Google 帳號
                                             </button>
-                                            <span className="ml-2 text-[10px] text-gray-400">無法讀取行事曆 (Token 過期)</span>
+                                            <span className="ml-2 text-[10px] text-gray-400">
+                                                無法讀取行事曆 (Token 過期)
+                                            </span>
                                         </div>
                                     ) : (
                                         // Render Events
                                         gCalEvents.map((evt, eIdx) => {
-                                            const start = evt.start.dateTime ? parseISO(evt.start.dateTime) : (evt.start.date ? parseISO(evt.start.date) : null);
+                                            const start = evt.start.dateTime
+                                                ? parseISO(evt.start.dateTime)
+                                                : evt.start.date
+                                                  ? parseISO(evt.start.date)
+                                                  : null;
                                             if (!start) return null;
 
-                                            const dayOffset = Math.floor((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                            const dayOffset = Math.floor(
+                                                (start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                                            );
                                             if (dayOffset < 0 || dayOffset > 30) return null;
 
                                             return (
@@ -243,9 +264,7 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                                     }}
                                                     title={`[行事曆] ${evt.summary}\n${start.toLocaleTimeString()}`}
                                                 >
-                                                    <span className="truncate w-full block">
-                                                        {evt.summary}
-                                                    </span>
+                                                    <span className="truncate w-full block">{evt.summary}</span>
                                                 </div>
                                             );
                                         })
@@ -255,10 +274,17 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
 
                             {/* Rows: Cases */}
                             {caseActivity.map((c, cIdx) => (
-                                <div key={c.id} className="flex border-b border-border/30 hover:bg-muted/20 transition-colors group">
+                                <div
+                                    key={c.id}
+                                    className="flex border-b border-border/30 hover:bg-muted/20 transition-colors group"
+                                >
                                     <div className="w-48 sticky left-0 z-10 bg-card border-r border-border/50 p-2 flex flex-col justify-center shadow-sm">
-                                        <div className="text-[11px] font-black text-primary group-hover:text-primary/80 truncate">{c.caseNumber}</div>
-                                        <div className="text-[10px] font-bold text-muted-foreground truncate">{c.buyer}</div>
+                                        <div className="text-[11px] font-black text-primary group-hover:text-primary/80 truncate">
+                                            {c.caseNumber}
+                                        </div>
+                                        <div className="text-[10px] font-bold text-muted-foreground truncate">
+                                            {c.buyer}
+                                        </div>
                                     </div>
 
                                     <div className="flex relative items-center h-12">
@@ -276,7 +302,9 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
 
                                         {/* Activity Markers */}
                                         {c.activities.map((act, aIdx) => {
-                                            const dayOffset = Math.floor((act.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                            const dayOffset = Math.floor(
+                                                (act.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                                            );
                                             if (dayOffset < 0 || dayOffset > 30) return null;
 
                                             return (
@@ -296,13 +324,12 @@ export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
                                     </div>
                                 </div>
                             ))}
-
                         </div>
                     </div>
 
                     {/* Legend */}
                     <div className="p-3 bg-muted/20 border-t border-border/50 flex flex-wrap gap-4 text-[10px] font-black uppercase text-muted-foreground">
-                        {MILESTONES.map(m => (
+                        {MILESTONES.map((m) => (
                             <div key={m.key} className="flex items-center gap-1.5">
                                 <div className={`w-3 h-3 rounded ${m.color}`}></div>
                                 <span>{m.label.replace('日', '')}</span>

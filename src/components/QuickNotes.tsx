@@ -4,22 +4,22 @@ import React from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 const DEFAULT_NOTES = [
-    "報稅前檢查是否要退稅",
-    "自用通知客戶戶籍要遷入",
-    "解約檢測條款",
-    "貸款提早好的 打設定時要注意提醒銀行立契日不要押",
-    "用印前測輻射",
-    "增值稅重購退稅",
-    "房地合一",
-    "財交",
-    "用印前塗二胎",
-    "繼承取得",
-    "準備交屋丟水電",
-    "過戶完約交屋",
-    "等換約換好 丟水電",
-    "解約",
-    "房地賣重購",
-    "房地合一退稅(買方)"
+    '報稅前檢查是否要退稅',
+    '自用通知客戶戶籍要遷入',
+    '解約檢測條款',
+    '貸款提早好的 打設定時要注意提醒銀行立契日不要押',
+    '用印前測輻射',
+    '增值稅重購退稅',
+    '房地合一',
+    '財交',
+    '用印前塗二胎',
+    '繼承取得',
+    '準備交屋丟水電',
+    '過戶完約交屋',
+    '等換約換好 丟水電',
+    '解約',
+    '房地賣重購',
+    '房地合一退稅(買方)',
 ];
 
 interface QuickNotesProps {
@@ -35,7 +35,9 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
     React.useEffect(() => {
         const loadNotes = async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
                 if (!user) {
                     // Fallback to local storage for guests
                     const saved = localStorage.getItem('user_quick_notes');
@@ -61,7 +63,9 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
 
     const saveNotesToCloud = async (notes: string[]) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
             if (!user) {
                 localStorage.setItem('user_quick_notes', JSON.stringify(notes));
                 return;
@@ -69,8 +73,8 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
 
             // Sync with Supabase
             // Note: We use upsert to create the row if it doesn't exist.
-            // Be careful to preserve scratchpad_content if it exists? 
-            // supabase.upsert will create new or update. If we only pass custom_quick_notes, 
+            // Be careful to preserve scratchpad_content if it exists?
+            // supabase.upsert will create new or update. If we only pass custom_quick_notes,
             // checking if it handles partial update or not.
             // Supabase upsert requires unique key.
 
@@ -78,14 +82,14 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
             // Actually, the simplest way is to upsert just the fields we want, assuming Supabase handles the rest.
             // But standard SQL UPSERT replaces or updates. "DO UPDATE SET ..."
 
-            await supabase
-                .from('user_settings')
-                .upsert({
+            await supabase.from('user_settings').upsert(
+                {
                     user_id: user.id,
                     custom_quick_notes: notes,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
-
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'user_id' }
+            );
         } catch (e) {
             console.error('Failed to save notes to cloud', e);
         }
@@ -164,14 +168,23 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
                             onClick={handleAddNote}
                             className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-deep transition-colors"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
                         </button>
                         <button
                             type="button"
                             onClick={() => setIsAdding(false)}
                             className="p-1.5 bg-secondary text-foreground/50 rounded-lg hover:bg-secondary-dark transition-colors"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
                         </button>
                     </div>
                 ) : (
@@ -180,7 +193,9 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
                         onClick={() => setIsAdding(true)}
                         className="px-4 py-2 text-sm font-bold text-primary border-2 border-dashed border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary transition-all active:scale-95 flex items-center gap-1"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                         新增常用
                     </button>
                 )}

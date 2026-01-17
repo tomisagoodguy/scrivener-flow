@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const client = new Client({
-    connectionString: 'postgresql://postgres:iKSN3yBgEXnr5Hdx@db.zvomerdcsxvuymnpuvxk.supabase.co:6543/postgres?prepareThreshold=0',
+    connectionString:
+        'postgresql://postgres:iKSN3yBgEXnr5Hdx@db.zvomerdcsxvuymnpuvxk.supabase.co:6543/postgres?prepareThreshold=0',
 });
 
 async function update() {

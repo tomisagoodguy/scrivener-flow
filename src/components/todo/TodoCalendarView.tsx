@@ -1,5 +1,16 @@
 import { TodoTask } from './types';
-import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isToday, addMonths, subMonths } from 'date-fns';
+import {
+    format,
+    isSameDay,
+    startOfMonth,
+    endOfMonth,
+    eachDayOfInterval,
+    startOfWeek,
+    endOfWeek,
+    isToday,
+    addMonths,
+    subMonths,
+} from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -20,7 +31,7 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    const getDayTasks = (day: Date) => tasks.filter(t => isSameDay(t.date, day));
+    const getDayTasks = (day: Date) => tasks.filter((t) => isSameDay(t.date, day));
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -36,7 +47,10 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                     <button onClick={prevMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
                         <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setCurrentDate(new Date())} className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200">
+                    <button
+                        onClick={() => setCurrentDate(new Date())}
+                        className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200"
+                    >
                         今天
                     </button>
                     <button onClick={nextMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
@@ -48,8 +62,11 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
             {/* Days Grid */}
             <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 flex-1 relative z-0">
                 {/* Weekday Headers */}
-                {['日', '一', '二', '三', '四', '五', '六'].map(d => (
-                    <div key={d} className="bg-slate-50 dark:bg-slate-800 p-2 text-center text-xs font-semibold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
+                {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
+                    <div
+                        key={d}
+                        className="bg-slate-50 dark:bg-slate-800 p-2 text-center text-xs font-semibold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg"
+                    >
                         {d}
                     </div>
                 ))}
@@ -69,42 +86,57 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                     return (
                         <div
                             key={day.toString()}
-                            className={`bg-white dark:bg-slate-800 min-h-[80px] p-1 flex flex-col gap-1 transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-900/10 ${!isCurrentMonth ? 'opacity-40 bg-slate-50 dark:bg-slate-800/50' : ''
-                                } ${cellRoundedClass}`}
+                            className={`bg-white dark:bg-slate-800 min-h-[80px] p-1 flex flex-col gap-1 transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-900/10 ${
+                                !isCurrentMonth ? 'opacity-40 bg-slate-50 dark:bg-slate-800/50' : ''
+                            } ${cellRoundedClass}`}
                         >
-                            <div className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ml-auto ${isTodayDate ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 dark:text-slate-300'
-                                }`}>
+                            <div
+                                className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ml-auto ${
+                                    isTodayDate
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'text-slate-700 dark:text-slate-300'
+                                }`}
+                            >
                                 {format(day, 'd')}
                             </div>
 
                             <div className="flex-1 overflow-visible space-y-1 relative">
-                                {dayTasks.map(task => (
+                                {dayTasks.map((task) => (
                                     <div
                                         key={task.id}
-                                        className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${task.isCompleted
-                                            ? 'line-through opacity-50 bg-gray-100 text-gray-400'
-                                            : (() => {
-                                                switch (task.type) {
-                                                    case 'legal': return 'bg-red-50 text-red-700 border-red-100';
-                                                    case 'tax': return 'bg-amber-50 text-amber-700 border-amber-100';
-                                                    case 'appointment': return 'bg-blue-50 text-blue-700 border-blue-100';
-                                                    default: return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-                                                }
-                                            })()
-                                            }`}
+                                        className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${
+                                            task.isCompleted
+                                                ? 'line-through opacity-50 bg-gray-100 text-gray-400'
+                                                : (() => {
+                                                      switch (task.type) {
+                                                          case 'legal':
+                                                              return 'bg-red-50 text-red-700 border-red-100';
+                                                          case 'tax':
+                                                              return 'bg-amber-50 text-amber-700 border-amber-100';
+                                                          case 'appointment':
+                                                              return 'bg-blue-50 text-blue-700 border-blue-100';
+                                                          default:
+                                                              return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                                                      }
+                                                  })()
+                                        }`}
                                     >
                                         {/* Original Mini View */}
                                         <div onClick={() => onToggle(task.id)} className="truncate">
-                                            <span className={onDelete ? "group-hover:pr-3" : ""}>{task.title}</span>
+                                            <span className={onDelete ? 'group-hover:pr-3' : ''}>{task.title}</span>
                                         </div>
 
                                         {/* Magnified Tooltip */}
-                                        <div className={`hidden group-hover:block absolute bottom-full mb-1 w-64 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 z-[100] text-left pointer-events-none ${
-                                            // Smart positioning: if it's Sunday/Monday/Tuesday (0,1,2), align left.
-                                            // If it's Saturday/Friday (5,6) etc, align right to avoid overflow.
-                                            (day.getDay() === 5 || day.getDay() === 6) ? 'right-0' : 'left-0'
-                                            }`}>
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug break-words">{task.title}</h4>
+                                        <div
+                                            className={`hidden group-hover:block absolute bottom-full mb-1 w-64 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 z-[100] text-left pointer-events-none ${
+                                                // Smart positioning: if it's Sunday/Monday/Tuesday (0,1,2), align left.
+                                                // If it's Saturday/Friday (5,6) etc, align right to avoid overflow.
+                                                day.getDay() === 5 || day.getDay() === 6 ? 'right-0' : 'left-0'
+                                            }`}
+                                        >
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug break-words">
+                                                {task.title}
+                                            </h4>
                                             <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
                                                 <div className="flex items-center gap-1">
                                                     <span>📅</span>
@@ -118,8 +150,12 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                                 )}
                                                 {task.priority && (
                                                     <div className="flex items-center gap-1">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-700`}>
-                                                            {task.priority === 'urgent-important' ? '🔥 重要且緊急' : task.priority}
+                                                        <span
+                                                            className={`px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-700`}
+                                                        >
+                                                            {task.priority === 'urgent-important'
+                                                                ? '🔥 重要且緊急'
+                                                                : task.priority}
                                                         </span>
                                                     </div>
                                                 )}
@@ -130,8 +166,11 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                                 )}
                                             </div>
                                             {/* Triangle arrow */}
-                                            <div className={`absolute top-full -mt-px w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-600 transform rotate-45 ${(day.getDay() === 5 || day.getDay() === 6) ? 'right-4' : 'left-4'
-                                                }`}></div>
+                                            <div
+                                                className={`absolute top-full -mt-px w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-600 transform rotate-45 ${
+                                                    day.getDay() === 5 || day.getDay() === 6 ? 'right-4' : 'left-4'
+                                                }`}
+                                            ></div>
                                         </div>
 
                                         {onDelete && (

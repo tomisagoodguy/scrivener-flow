@@ -1,7 +1,7 @@
-import { LoginContent } from './LoginContent'
-import { Suspense } from 'react'
+import { LoginContent } from './LoginContent';
+import { Suspense } from 'react';
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
     return (
@@ -10,5 +10,5 @@ export default function LoginPage() {
                 <LoginContent />
             </Suspense>
         </div>
-    )
+    );
 }

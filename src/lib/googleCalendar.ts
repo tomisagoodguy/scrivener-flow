@@ -1,4 +1,3 @@
-
 export interface GoogleCalendarEvent {
     id?: string;
     summary: string;
@@ -13,7 +12,7 @@ export interface GoogleCalendarEvent {
     };
     reminders?: {
         useDefault: boolean;
-        overrides?: Array<{ method: 'email' | 'popup', minutes: number }>;
+        overrides?: Array<{ method: 'email' | 'popup'; minutes: number }>;
     };
 }
 
@@ -57,11 +56,15 @@ export class GoogleCalendarService {
 
     async getPrimaryCalendarId(): Promise<string> {
         const calendars = await this.listCalendars();
-        const primary = calendars.find(c => c.primary);
+        const primary = calendars.find((c) => c.primary);
         return primary ? primary.id : 'primary';
     }
 
-    async listEvents(calendarId: string = 'primary', timeMin?: string, timeMax?: string): Promise<GoogleCalendarEvent[]> {
+    async listEvents(
+        calendarId: string = 'primary',
+        timeMin?: string,
+        timeMax?: string
+    ): Promise<GoogleCalendarEvent[]> {
         const params = new URLSearchParams({
             singleEvents: 'true',
             orderBy: 'startTime',

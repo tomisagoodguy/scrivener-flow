@@ -50,7 +50,7 @@ async function run() {
 
         const client = new Client({
             connectionString,
-            ssl: { rejectUnauthorized: false }
+            ssl: { rejectUnauthorized: false },
         });
 
         await client.connect();
@@ -64,7 +64,6 @@ async function run() {
 
         await client.end();
         console.log('\n🎉 Migration 完成！');
-
     } catch (e) {
         console.error('❌ Migration 失敗:', e.message);
         console.log('\n請手動在 Supabase Dashboard SQL Editor 中執行以下 SQL：\n');

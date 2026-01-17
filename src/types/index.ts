@@ -81,7 +81,7 @@ export interface DemoCase {
 
     // 4. Flags & Notes (Excel specific)
     today_completion?: string; // 今日須完成
-    other_notes?: string;      // 其他備註
+    other_notes?: string; // 其他備註
 
     is_back_rent: boolean;
     has_tenant: boolean;
@@ -125,13 +125,13 @@ export interface TodoRecord {
 export interface Milestone {
     id: string;
     case_id: string;
-    contract_date?: string;  // 簽約
+    contract_date?: string; // 簽約
     sign_diff_date?: string; // 簽差
-    seal_date?: string;      // 用印
+    seal_date?: string; // 用印
     tax_payment_date?: string; // 完稅
-    transfer_date?: string;    // 過戶
+    transfer_date?: string; // 過戶
     balance_payment_date?: string; // 尾款
-    handover_date?: string;    // 交屋
+    handover_date?: string; // 交屋
     fee_precollect_date?: string; // 預收規費 (Excel shows as date in some columns)
 
     // Custom note for Transfer Date (過戶日)
@@ -181,7 +181,11 @@ export interface Financials {
     house_tax_deadline?: string;
 }
 
-export type TodoPriority = 'urgent_important' | 'urgent_not_important' | 'not_urgent_important' | 'not_urgent_not_important';
+export type TodoPriority =
+    | 'urgent_important'
+    | 'urgent_not_important'
+    | 'not_urgent_important'
+    | 'not_urgent_not_important';
 
 export interface PersonalTodo {
     id: string;

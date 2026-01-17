@@ -26,13 +26,13 @@ export default function GenericExportExcelButton({
     filename = 'export',
     sheetName = 'Sheet1',
     buttonText = '匯出 Excel',
-    className = "flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded shadow-sm transition-all"
+    className = 'flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded shadow-sm transition-all',
 }: GenericExportExcelButtonProps) {
     const handleExport = () => {
         // 1. Transform Data
-        const excelData = data.map(item => {
+        const excelData = data.map((item) => {
             const row: Record<string, any> = {};
-            columns.forEach(col => {
+            columns.forEach((col) => {
                 const val = item[col.key];
                 row[col.header] = col.format ? col.format(val) : val;
             });
@@ -43,8 +43,8 @@ export default function GenericExportExcelButton({
         const worksheet = XLSX.utils.json_to_sheet(excelData);
 
         // Set column widths if provided
-        if (columns.some(c => c.width)) {
-            worksheet['!cols'] = columns.map(c => ({ wch: c.width || 10 }));
+        if (columns.some((c) => c.width)) {
+            worksheet['!cols'] = columns.map((c) => ({ wch: c.width || 10 }));
         }
 
         const workbook = XLSX.utils.book_new();
@@ -56,11 +56,7 @@ export default function GenericExportExcelButton({
     };
 
     return (
-        <button
-            onClick={handleExport}
-            className={className}
-            title={buttonText}
-        >
+        <button onClick={handleExport} className={className} title={buttonText}>
             <span>📊 {buttonText}</span>
         </button>
     );

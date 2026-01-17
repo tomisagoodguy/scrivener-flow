@@ -11,7 +11,12 @@ interface CaseCompactTodoListProps {
     hideCompleted?: boolean;
 }
 
-export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hideCompleted = false }: CaseCompactTodoListProps) {
+export default function CaseCompactTodoList({
+    caseId,
+    todos = {},
+    allTasks,
+    hideCompleted = false,
+}: CaseCompactTodoListProps) {
     const router = useRouter();
     const [localTodos, setLocalTodos] = useState(todos);
     const [updating, setUpdating] = useState<string | null>(null);
@@ -19,7 +24,7 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
     // Sync state if props change (e.g. from router.refresh())
     // This ensures that if other clients update the DB, we see it eventually if the page revalidates
     if (JSON.stringify(todos) !== JSON.stringify(localTodos) && !updating) {
-        // setLocalTodos(todos); // Commented out to avoid infinite loop or jitter during optimistic updates, 
+        // setLocalTodos(todos); // Commented out to avoid infinite loop or jitter during optimistic updates,
         // but typically we want to trust server data if we aren't currently editing.
         // For now, let's just initialize once and trust optimistic updates, OR use a useEffect.
     }
@@ -31,9 +36,9 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
         setUpdating(task);
 
         // Optimistic update
-        setLocalTodos(prev => ({
+        setLocalTodos((prev) => ({
             ...prev,
-            [task]: newValue
+            [task]: newValue,
         }));
 
         try {
@@ -45,7 +50,7 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
                 .single();
 
             if (fetchError) {
-                console.error("Error fetching current todos:", fetchError);
+                console.error('Error fetching current todos:', fetchError);
                 // We will proceed with local state as base if fetch fails, to try to overwrite/save anyway?
                 // Or maybe we should allow it. Let's try to proceed.
             }
@@ -55,13 +60,10 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
 
             console.log(`Updating case ${caseId} todo [${task}] to ${newValue}`);
 
-            const { error: updateError } = await supabase
-                .from('cases')
-                .update({ todos: mergedTodos })
-                .eq('id', caseId);
+            const { error: updateError } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
 
             if (updateError) {
-                console.error("Supabase Update Error Detailed:", JSON.stringify(updateError, null, 2));
+                console.error('Supabase Update Error Detailed:', JSON.stringify(updateError, null, 2));
                 throw updateError;
             }
 
@@ -69,9 +71,9 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
         } catch (error: any) {
             console.error('Error updating todo:', error);
             // Revert
-            setLocalTodos(prev => ({
+            setLocalTodos((prev) => ({
                 ...prev,
-                [task]: !newValue
+                [task]: !newValue,
             }));
             alert(`更新失敗: ${error.message || '未知錯誤'}`);
         } finally {
@@ -82,8 +84,8 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
     return (
         <div className="flex flex-wrap gap-2">
             {allTasks
-                .filter(task => !hideCompleted || !localTodos[task])
-                .map(task => {
+                .filter((task) => !hideCompleted || !localTodos[task])
+                .map((task) => {
                     const isCompleted = localTodos[task];
                     const isUpdating = updating === task;
 
@@ -100,14 +102,16 @@ export default function CaseCompactTodoList({ caseId, todos = {}, allTasks, hide
                             className={`
                                 px-3 py-1 rounded-md text-[12px] font-medium border transition-all whitespace-normal text-left
                                 leading-tight
-                                ${isCompleted
-                                    ? 'bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500 hover:text-white'
-                                    : 'bg-red-400/5 text-red-600 border-red-500/20 hover:bg-red-500 hover:text-white'
+                                ${
+                                    isCompleted
+                                        ? 'bg-green-500/10 text-green-700 border-green-500/20 hover:bg-green-500 hover:text-white'
+                                        : 'bg-red-400/5 text-red-600 border-red-500/20 hover:bg-red-500 hover:text-white'
                                 }
                                 ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer transform hover:scale-105'}
                             `}
                         >
-                            {isCompleted ? '✓ ' : ''}{task}
+                            {isCompleted ? '✓ ' : ''}
+                            {task}
                         </button>
                     );
                 })}

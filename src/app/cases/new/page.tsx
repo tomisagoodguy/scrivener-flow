@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { parseDocx } from '@/app/actions/parseDocx';
 import QuickNotes from '@/components/QuickNotes';
 
-
 export default function NewCasePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -21,10 +20,10 @@ export default function NewCasePage() {
         const taxType = data.get('tax_type')?.toString() as '一般' | '自用' | undefined; // Fallback handled in util if varied
 
         // Map UI values to strictly '一般' or '自用' for calculator
-        // UI options: "一般", "一生一次", "一生一屋" -> all imply Self-use maybe? 
+        // UI options: "一般", "一生一次", "一生一屋" -> all imply Self-use maybe?
         // Usually "一般" is General, others are preferential (Self-use).
         // Let's assume anything other than "一般" might benefit from the longer 3-week period?
-        // User said: "一般增值稅抓2週", "自用增值稅抓3週". 
+        // User said: "一般增值稅抓2週", "自用增值稅抓3週".
         // "一生一次/一生一屋" are types of 自用 (Self-use) tax rates.
         const isGeneral = taxType === '一般' || !taxType;
         const mapTaxType = isGeneral ? '一般' : '自用';
@@ -62,7 +61,7 @@ export default function NewCasePage() {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // alert('正在建立案件... (Debug Mode)'); 
+        // alert('正在建立案件... (Debug Mode)');
         // User reports "button not working", let's be silent first but aggressive on schema safety.
         console.log('>>> handleSubmit triggered');
 
@@ -72,7 +71,7 @@ export default function NewCasePage() {
             const data: any = Object.fromEntries(formData.entries());
             console.log('Form Data:', data);
 
-            const formatDate = (val: FormDataEntryValue) => val ? val.toString() : null;
+            const formatDate = (val: FormDataEntryValue) => (val ? val.toString() : null);
 
             /* 
             // Date Validation: Ensure strictly increasing order (or equal)
@@ -121,7 +120,7 @@ export default function NewCasePage() {
                 notes: data.notes?.toString() || '',
 
                 tax_type: data.tax_type?.toString() || '一般',
-                user_id: (await supabase.auth.getUser()).data.user?.id
+                user_id: (await supabase.auth.getUser()).data.user?.id,
             };
 
             if (!casePayload.user_id) {
@@ -129,7 +128,6 @@ export default function NewCasePage() {
                 // alert('請先登入'); return;
                 console.warn('⚠️ Creating case without user_id (Not logged in)');
             }
-
 
             console.log('Inserting Case Payload:', casePayload);
 
@@ -143,7 +141,7 @@ export default function NewCasePage() {
                 console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
                 console.log('Failed Payload:', casePayload);
 
-                let errorTitle = '資料庫建立失敗';
+                const errorTitle = '資料庫建立失敗';
                 let displayMsg = '';
 
                 if (caseError.code === '23505') {
@@ -173,7 +171,7 @@ export default function NewCasePage() {
                 balance_payment_date: formatDate(data.balance_payment_date),
                 redemption_date: formatDate(data.redemption_date),
                 handover_date: formatDate(data.handover_date),
-                transfer_note: data.transfer_note || null
+                transfer_note: data.transfer_note || null,
             };
 
             // Add amount and other fields if present
@@ -183,10 +181,10 @@ export default function NewCasePage() {
                 'sign_diff_amount',
                 'seal_amount',
                 'tax_amount',
-                'balance_amount'
+                'balance_amount',
             ];
 
-            milestoneFields.forEach(field => {
+            milestoneFields.forEach((field) => {
                 const val = data[field];
                 if (val) {
                     if (field.includes('date')) milestonePayload[field] = formatDate(val);
@@ -196,14 +194,14 @@ export default function NewCasePage() {
 
             console.log('Inserting Milestone Payload:', milestonePayload);
 
-            const { error: milestoneError } = await supabase
-                .from('milestones')
-                .insert([milestonePayload]);
+            const { error: milestoneError } = await supabase.from('milestones').insert([milestonePayload]);
 
             if (milestoneError) {
                 console.error('Milestone Error:', milestoneError);
-                let mDetails = JSON.stringify(milestoneError, Object.getOwnPropertyNames(milestoneError));
-                setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails);
+                const mDetails = JSON.stringify(milestoneError, Object.getOwnPropertyNames(milestoneError));
+                setErrorMsg(
+                    (prev) => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails
+                );
                 setLoading(false);
                 return;
             }
@@ -213,25 +211,24 @@ export default function NewCasePage() {
                 case_id: newCase.id,
                 total_price: data.total_price ? Number(data.total_price) : null, // Changed from contract_price
                 buyer_bank: data.buyer_loan_bank?.toString() || null,
-                seller_bank: data.seller_loan_bank?.toString() || null
+                seller_bank: data.seller_loan_bank?.toString() || null,
             };
 
             console.log('Inserting Financials Payload:', financialsPayload);
 
-            const { error: finError } = await supabase
-                .from('financials')
-                .insert([financialsPayload]);
+            const { error: finError } = await supabase.from('financials').insert([financialsPayload]);
 
             if (finError) {
                 console.error('Financial Error', finError);
-                setErrorMsg(prev => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finError.message);
+                setErrorMsg(
+                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finError.message
+                );
                 setLoading(false);
                 return;
             }
 
             router.push('/cases?status=Processing');
             router.refresh();
-
         } catch (error: any) {
             console.error('Catch Error:', error);
             setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
@@ -259,7 +256,10 @@ export default function NewCasePage() {
                 const form = document.querySelector('form') as HTMLFormElement;
                 if (form) {
                     const setVal = (name: string, val?: string) => {
-                        const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+                        const el = form.elements.namedItem(name) as
+                            | HTMLInputElement
+                            | HTMLSelectElement
+                            | HTMLTextAreaElement;
                         if (el && val) {
                             el.value = val;
                             el.value = val;
@@ -319,24 +319,33 @@ export default function NewCasePage() {
         <div className="min-h-screen p-6 md:p-8 max-w-7xl mx-auto font-sans">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
                 <div>
-                    <h1 className="text-3xl md:text-5xl font-black text-foreground tracking-tight">
-                        新增案件
-                    </h1>
+                    <h1 className="text-3xl md:text-5xl font-black text-foreground tracking-tight">新增案件</h1>
                     <p className="text-foreground/50 font-bold mt-2">Create New Case Process</p>
                 </div>
                 <div className="flex gap-4">
                     <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm">
                         <span>📄 上傳案件單 (.docx)</span>
-                        <input type="file" accept=".docx" className="hidden" onChange={handleFileUpload} disabled={loading} />
+                        <input
+                            type="file"
+                            accept=".docx"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            disabled={loading}
+                        />
                     </label>
-                    <Link href="/" className="bg-card border border-border px-6 py-2 rounded-full hover:bg-secondary transition-colors text-foreground text-sm flex items-center shadow-sm font-bold">
+                    <Link
+                        href="/"
+                        className="bg-card border border-border px-6 py-2 rounded-full hover:bg-secondary transition-colors text-foreground text-sm flex items-center shadow-sm font-bold"
+                    >
                         ← 返回列表
                     </Link>
                 </div>
             </header>
 
-            <form onSubmit={handleSubmit} className="glass-card p-6 md:p-10 animate-slide-up space-y-8 border border-card-border overflow-hidden">
-
+            <form
+                onSubmit={handleSubmit}
+                className="glass-card p-6 md:p-10 animate-slide-up space-y-8 border border-card-border overflow-hidden"
+            >
                 <div className="bg-card glass-card p-6 md:p-8 space-y-8 animate-fade-in border border-card-border">
                     <div className="border-b border-border pb-4">
                         <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
@@ -347,8 +356,15 @@ export default function NewCasePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold uppercase tracking-wider">案件編號 (Case ID)</label>
-                            <input name="case_number" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans" required />
+                            <label className="text-sm text-foreground/70 font-bold uppercase tracking-wider">
+                                案件編號 (Case ID)
+                            </label>
+                            <input
+                                name="case_number"
+                                type="text"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans"
+                                required
+                            />
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
@@ -369,7 +385,10 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">目前進度狀態</label>
-                            <select name="status" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
+                            <select
+                                name="status"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
+                            >
                                 <option value="Processing">辦理中</option>
                                 <option value="Closed">已結案</option>
                                 <option value="Cancelled">解約</option>
@@ -380,11 +399,20 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm text-primary font-bold">成交總價 (萬元)</label>
-                            <input name="total_price" type="number" step="0.1" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all" required />
+                            <input
+                                name="total_price"
+                                type="number"
+                                step="0.1"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all"
+                                required
+                            />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">稅單性質</label>
-                            <select name="tax_type" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
+                            <select
+                                name="tax_type"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
+                            >
                                 <option value="一般">一般</option>
                                 <option value="一生一次">一生一次</option>
                                 <option value="一生一屋">一生一屋</option>
@@ -395,15 +423,27 @@ export default function NewCasePage() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">買方貸款銀行</label>
-                            <input name="buyer_loan_bank" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold" />
+                            <input
+                                name="buyer_loan_bank"
+                                type="text"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                            />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">賣方代償銀行</label>
-                            <input name="seller_loan_bank" type="text" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold" />
+                            <input
+                                name="seller_loan_bank"
+                                type="text"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                            />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">塗銷方式</label>
-                            <select name="cancellation_type" defaultValue="代書塗銷" className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold">
+                            <select
+                                name="cancellation_type"
+                                defaultValue="代書塗銷"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
+                            >
                                 <option value="代書塗銷">代書塗銷</option>
                                 <option value="賣方自辦">賣方自辦</option>
                                 <option value="無">無</option>
@@ -414,7 +454,12 @@ export default function NewCasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-1 md:col-span-2">
                             <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
-                            <input name="escrow_account" type="text" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-wider" placeholder="968282..." />
+                            <input
+                                name="escrow_account"
+                                type="text"
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-wider"
+                                placeholder="968282..."
+                            />
                         </div>
                     </div>
 
@@ -428,21 +473,43 @@ export default function NewCasePage() {
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-xs text-foreground/50">姓名</label>
-                                    <input name="buyer_name" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold" required />
+                                    <input
+                                        name="buyer_name"
+                                        type="text"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
+                                        required
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-foreground/50">電話</label>
-                                    <input name="buyer_phone" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium" />
+                                    <input
+                                        name="buyer_phone"
+                                        type="text"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                    />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">登記名義人</label>
-                                    <input name="registrant_name" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold" placeholder="同買方" />
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">
+                                        登記名義人
+                                    </label>
+                                    <input
+                                        name="registrant_name"
+                                        type="text"
+                                        className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
+                                        placeholder="同買方"
+                                    />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">登記人電話</label>
-                                    <input name="registrant_phone" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium" />
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">
+                                        登記人電話
+                                    </label>
+                                    <input
+                                        name="registrant_phone"
+                                        type="text"
+                                        className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -455,26 +522,45 @@ export default function NewCasePage() {
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-xs text-foreground/50">姓名</label>
-                                    <input name="seller_name" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold" required />
+                                    <input
+                                        name="seller_name"
+                                        type="text"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
+                                        required
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-foreground/50">電話</label>
-                                    <input name="seller_phone" type="text" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium" />
+                                    <input
+                                        name="seller_phone"
+                                        type="text"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                    />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人</label>
-                                    <input name="agent_name" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold" />
+                                    <input
+                                        name="agent_name"
+                                        type="text"
+                                        className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
+                                    />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人電話</label>
-                                    <input name="agent_phone" type="text" className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium" />
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">
+                                        代理人電話
+                                    </label>
+                                    <input
+                                        name="agent_phone"
+                                        type="text"
+                                        className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div >
+                </div>
 
                 <div className="border-t border-gray-200"></div>
 
@@ -490,20 +576,39 @@ export default function NewCasePage() {
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-amber-600">簽約日</label>
-                                <input name="contract_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" required />
+                                <input
+                                    name="contract_date"
+                                    type="date"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    required
+                                />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-foreground/60 font-medium">簽約款 (萬元)</label>
-                                <input name="contract_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="contract_amount"
+                                    type="number"
+                                    step="0.1"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                             <div className="p-3 bg-amber-500/5 rounded-xl border border-dashed border-amber-500/30 space-y-3">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-amber-600 uppercase">補差額日</label>
-                                    <input name="sign_diff_date" type="date" className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                    <input
+                                        name="sign_diff_date"
+                                        type="date"
+                                        className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-amber-600 uppercase">補差金額</label>
-                                    <input name="sign_diff_amount" type="number" step="0.1" className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                    <input
+                                        name="sign_diff_amount"
+                                        type="number"
+                                        step="0.1"
+                                        className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -512,20 +617,38 @@ export default function NewCasePage() {
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-blue-500">用印日</label>
-                                <input name="seal_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="seal_date"
+                                    type="date"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-foreground/60 font-medium">用印款 (萬元)</label>
-                                <input name="seal_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="seal_amount"
+                                    type="number"
+                                    step="0.1"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                             <div className="border-t border-border pt-2">
                                 <div className="space-y-1 pt-2">
                                     <label className="text-xs font-bold text-emerald-500">完稅日</label>
-                                    <input name="tax_payment_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                    <input
+                                        name="tax_payment_date"
+                                        type="date"
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs text-foreground/60 font-medium">完稅款 (萬元)</label>
-                                    <input name="tax_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                    <input
+                                        name="tax_amount"
+                                        type="number"
+                                        step="0.1"
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -534,16 +657,29 @@ export default function NewCasePage() {
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-purple-500">過戶日</label>
-                                <input name="transfer_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="transfer_date"
+                                    type="date"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-foreground/60 font-medium">過戶備註</label>
-                                <input name="transfer_note" type="text" placeholder="例如：代書辦理" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="transfer_note"
+                                    type="text"
+                                    placeholder="例如：代書辦理"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                             <div className="border-t border-border pt-2">
                                 <div className="space-y-1 pt-2">
                                     <label className="text-xs font-bold text-orange-600">代償日</label>
-                                    <input name="redemption_date" type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                    <input
+                                        name="redemption_date"
+                                        type="date"
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -552,13 +688,24 @@ export default function NewCasePage() {
                         <div className="bg-primary/5 p-5 rounded-2xl space-y-4 border border-primary/20 ring-1 ring-primary/5">
                             <div className="space-y-1">
                                 <label className="text-xs font-black text-red-500 uppercase tracking-tighter flex items-center gap-2">
-                                    交屋日 <span className="text-[10px] bg-red-500 text-white px-1.5 rounded-full">必填</span>
+                                    交屋日{' '}
+                                    <span className="text-[10px] bg-red-500 text-white px-1.5 rounded-full">必填</span>
                                 </label>
-                                <input name="handover_date" type="date" className="w-full bg-background border border-primary/30 rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-red-500/20 transition-all" required />
+                                <input
+                                    name="handover_date"
+                                    type="date"
+                                    className="w-full bg-background border border-primary/30 rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-red-500/20 transition-all"
+                                    required
+                                />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs text-foreground/60 font-bold">尾款金額 (萬元)</label>
-                                <input name="balance_amount" type="number" step="0.1" className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all" />
+                                <input
+                                    name="balance_amount"
+                                    type="number"
+                                    step="0.1"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
                         </div>
                     </div>
@@ -584,9 +731,8 @@ export default function NewCasePage() {
                             onChange={(e) => setNotes(e.target.value)}
                             className="w-full bg-secondary/30 border border-border rounded-2xl px-6 py-4 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-sans"
                         />
-                        <QuickNotes onSelect={(note) => setNotes(prev => prev ? `${prev}\n${note}` : note)} />
+                        <QuickNotes onSelect={(note) => setNotes((prev) => (prev ? `${prev}\n${note}` : note))} />
                     </div>
-
                 </div>
 
                 <div className="pt-6 flex flex-col md:flex-row items-center justify-end gap-6">
@@ -599,7 +745,10 @@ export default function NewCasePage() {
                     )}
 
                     <div className="flex gap-4 w-full md:w-auto">
-                        <Link href="/" className="px-8 py-4 bg-secondary/50 text-foreground font-bold rounded-2xl hover:bg-secondary transition-all border border-border flex items-center justify-center">
+                        <Link
+                            href="/"
+                            className="px-8 py-4 bg-secondary/50 text-foreground font-bold rounded-2xl hover:bg-secondary transition-all border border-border flex items-center justify-center"
+                        >
                             取消
                         </Link>
                         <button
@@ -611,8 +760,7 @@ export default function NewCasePage() {
                         </button>
                     </div>
                 </div>
-
-            </form >
-        </div >
+            </form>
+        </div>
     );
 }

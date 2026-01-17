@@ -1,7 +1,7 @@
-
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
+const connectionString =
+    'postgresql://postgres:iKSN3yBgEXnr5Hdxishable_xAprCS1COLD7ePcF08buG@db.zvomerdcsxvuymnpuvxk.supabase.co:5432/postgres';
 
 const sql = `
 ALTER TABLE cases 
@@ -36,7 +36,9 @@ async function run() {
     } catch (err) {
         console.error('❌ 更新失敗：', err.message);
         if (err.message.includes('authentication failed')) {
-            console.log('錯誤：資料庫密碼不正確。請前往 Supabase Dashboard -> Project Settings -> Database -> Reset Database Password 重新設定密碼。');
+            console.log(
+                '錯誤：資料庫密碼不正確。請前往 Supabase Dashboard -> Project Settings -> Database -> Reset Database Password 重新設定密碼。'
+            );
         }
     } finally {
         await client.end();
