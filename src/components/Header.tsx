@@ -9,10 +9,21 @@ export const Header = () => {
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Sync input with URL param 'q'
     useEffect(() => {
         setSearchTerm(searchParams.get('q') || '');
     }, [searchParams]);
+
+    const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            const params = new URLSearchParams(searchParams.toString());
+            if (searchTerm) {
+                params.set('q', searchTerm);
+            } else {
+                params.delete('q');
+            }
+            router.push(`/cases?${params.toString()}`);
+        }
+    };
 
     const navItems = [
         { name: '儀表板', href: '/', icon: '📊' },
