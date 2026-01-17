@@ -84,6 +84,7 @@ When the user asks for a specific "feel," map it to these technical implementati
 | 產生臨時檔 | 不要在 source tree 留 `.csv`, `.log`, `.bak` |
 | 重複建議 | 方案無效就換新方案，不要鬼打牆 |
 | 主動驗證 | 除非使用者要求，否則不主動使用 browser_subagent 驗證網頁結果。由使用者回報錯誤。 |
+| 提交依賴檔 | 嚴禁提交 `node_modules`、`.next` 或 Build Artifacts。確保 `.gitignore` 設定正確。 |
 
 ---
 
