@@ -35,13 +35,22 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
     const [editTime, setEditTime] = useState('');
     const [editContent, setEditContent] = useState('');
 
+    // Filter State
+    const [filter, setFilter] = useState<'all' | 'future' | 'today' | 'expired'>('future');
+
     const fetchSchedule = async () => {
         setLoading(true);
+
+        // 計算 7 天前的日期 (保留最近的過期提醒,避免遺漏)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
         const { data, error } = await supabase
             .from('todos')
             .select('*')
             .eq('case_id', caseId)
             .eq('is_deleted', false)
+            .gte('due_date', sevenDaysAgo.toISOString()) // 只顯示 7 天內的提醒
             .order('due_date', { ascending: true });
 
         if (data) {
@@ -160,6 +169,31 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
         }
     };
 
+    // Filter logic
+    const getFilteredItems = () => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        return scheduleItems.filter(item => {
+            const dueDate = new Date(item.due_date);
+            const itemDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+
+            switch (filter) {
+                case 'future':
+                    return dueDate >= now;
+                case 'today':
+                    return itemDate.getTime() === today.getTime();
+                case 'expired':
+                    return dueDate < now && !item.is_completed;
+                case 'all':
+                default:
+                    return true;
+            }
+        });
+    };
+
+    const filteredItems = getFilteredItems();
+
     return (
         <div className="space-y-6">
             <h3 className="text-xl font-black text-indigo-600 flex items-center gap-3">
@@ -197,7 +231,7 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                             type="text"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            placeholder="例如：下午 2 點與代書確認..."
+                            placeholder="例如:下午 2 點與代書確認..."
                             className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 outline-none"
                         />
                     </div>
@@ -206,7 +240,7 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                             type="button"
                             onClick={handleAdd}
                             disabled={isSubmitting}
-                            className="bg-indigo-600 hovering:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm text-sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm text-sm transition-colors"
                         >
                             <Plus size={16} />
                             新增
@@ -215,18 +249,66 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                 </div>
             </div>
 
+            {/* Filter Buttons */}
+            <div className="flex gap-2 flex-wrap">
+                <button
+                    onClick={() => setFilter('future')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'future'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                >
+                    🔮 未來
+                </button>
+                <button
+                    onClick={() => setFilter('today')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'today'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                >
+                    📅 今天
+                </button>
+                <button
+                    onClick={() => setFilter('expired')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'expired'
+                            ? 'bg-red-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                >
+                    ⚠️ 已過期
+                </button>
+                <button
+                    onClick={() => setFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all'
+                            ? 'bg-slate-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                >
+                    📋 全部
+                </button>
+                <div className="ml-auto text-xs text-slate-400 flex items-center">
+                    共 {filteredItems.length} 筆
+                </div>
+            </div>
+
             {/* List */}
             <div className="space-y-2">
                 {loading ? (
                     <div className="text-center text-slate-400 text-sm py-4">載入中...</div>
-                ) : scheduleItems.length === 0 ? (
+                ) : filteredItems.length === 0 ? (
                     <div className="text-center text-slate-400 text-sm py-4 italic bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                        目前沒有安排特定行程
+                        {filter === 'future' && '目前沒有未來的行程'}
+                        {filter === 'today' && '今天沒有安排行程'}
+                        {filter === 'expired' && '沒有已過期的提醒'}
+                        {filter === 'all' && '目前沒有安排特定行程'}
                     </div>
                 ) : (
-                    scheduleItems.map((item) => {
+                    filteredItems.map((item) => {
                         const isEditing = editingId === item.id;
                         const dateObj = new Date(item.due_date);
+                        const now = new Date();
+                        const isExpired = dateObj < now && !item.is_completed;
 
                         // Check if time is "00:00" or equivalent, likely date-only
                         const hasTime = dateObj.getHours() !== 0 || dateObj.getMinutes() !== 0;
@@ -258,13 +340,13 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => saveEdit(item.id)}
-                                            className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                                            className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200 transition-colors"
                                         >
                                             <Save size={16} />
                                         </button>
                                         <button
                                             onClick={cancelEdit}
-                                            className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
+                                            className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
                                         >
                                             <X size={16} />
                                         </button>
@@ -276,24 +358,34 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                         return (
                             <div
                                 key={item.id}
-                                className="group bg-white hover:bg-indigo-50/30 p-4 rounded-xl border border-slate-100 hover:border-indigo-100 shadow-sm flex items-center justify-between transition-all"
+                                className={`group bg-white hover:bg-indigo-50/30 p-4 rounded-xl border shadow-sm flex items-center justify-between transition-all ${isExpired
+                                        ? 'border-red-200 bg-red-50/20'
+                                        : 'border-slate-100 hover:border-indigo-100'
+                                    }`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="flex flex-col items-center min-w-[60px] border-r border-slate-100 pr-4">
-                                        <span className="text-xs font-bold text-slate-400 uppercase">
+                                    <div className={`flex flex-col items-center min-w-[60px] border-r pr-4 ${isExpired ? 'border-red-100' : 'border-slate-100'
+                                        }`}>
+                                        <span className={`text-xs font-bold uppercase ${isExpired ? 'text-red-400' : 'text-slate-400'
+                                            }`}>
                                             {format(dateObj, 'MMM', { locale: zhTW })}
                                         </span>
-                                        <span className="text-xl font-black text-indigo-600 leading-none">
+                                        <span className={`text-xl font-black leading-none ${isExpired ? 'text-red-600' : 'text-indigo-600'
+                                            }`}>
                                             {format(dateObj, 'd')}
                                         </span>
-                                        <span className="text-[10px] text-slate-400">
+                                        <span className={`text-[10px] ${isExpired ? 'text-red-400' : 'text-slate-400'
+                                            }`}>
                                             {format(dateObj, 'EEE', { locale: zhTW })}
                                         </span>
                                     </div>
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-2 mb-1">
                                             {hasTime && (
-                                                <span className="text-xs font-bold bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${isExpired
+                                                        ? 'bg-red-100 text-red-600'
+                                                        : 'bg-indigo-100 text-indigo-600'
+                                                    }`}>
                                                     <Clock size={10} />
                                                     {format(dateObj, 'HH:mm')}
                                                 </span>
@@ -303,8 +395,14 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                                                     已完成
                                                 </span>
                                             )}
+                                            {isExpired && (
+                                                <span className="text-[10px] bg-red-100 text-red-600 px-1.5 rounded font-bold">
+                                                    已過期
+                                                </span>
+                                            )}
                                         </div>
-                                        <p className="font-bold text-slate-700">{item.content}</p>
+                                        <p className={`font-bold ${isExpired ? 'text-red-700' : 'text-slate-700'
+                                            }`}>{item.content}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">

@@ -2,8 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { SideNav } from '@/components/SideNav';
-import { Header } from '@/components/Header';
+import RichTextEditor from '@/components/knowledge/RichTextEditor';
+
+// Helper to strip HTML for preview
+const stripHtml = (html: string) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>?/gm, '');
+};
 
 interface Note {
     id: string;
@@ -191,11 +196,10 @@ export default function NotesPage() {
                                     <div
                                         key={note.id}
                                         onClick={() => setActiveNoteId(note.id)}
-                                        className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 relative ${
-                                            activeNoteId === note.id
-                                                ? 'bg-blue-50 border border-blue-100 shadow-sm'
-                                                : 'hover:bg-slate-50 border border-transparent'
-                                        }`}
+                                        className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 relative ${activeNoteId === note.id
+                                            ? 'bg-blue-50 border border-blue-100 shadow-sm'
+                                            : 'hover:bg-slate-50 border border-transparent'
+                                            }`}
                                     >
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center justify-between">
@@ -215,7 +219,7 @@ export default function NotesPage() {
                                                 </button>
                                             </div>
                                             <p className="text-[11px] text-slate-400 line-clamp-1">
-                                                {note.content || '尚無內容...'}
+                                                {stripHtml(note.content) || '尚無內容...'}
                                             </p>
                                             <span className="text-[9px] text-slate-300 font-mono mt-1">
                                                 {new Date(note.updated_at).toLocaleDateString('zh-TW')}
@@ -259,13 +263,14 @@ export default function NotesPage() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-hidden">
-                                    <textarea
-                                        value={activeNote.content}
-                                        onChange={(e) => updateActiveNote({ content: e.target.value })}
-                                        placeholder="在此處寫下任何重要事項..."
-                                        className="w-full h-full p-8 resize-none outline-none text-slate-700 text-lg leading-relaxed placeholder:text-slate-200"
-                                    />
+                                <div className="flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex-1 overflow-y-auto">
+                                        <RichTextEditor
+                                            value={activeNote.content}
+                                            onChange={(content) => updateActiveNote({ content })}
+                                            onSave={() => { /* Auto-save is handled by useEffect */ }}
+                                        />
+                                    </div>
                                 </div>
                             </>
                         ) : (

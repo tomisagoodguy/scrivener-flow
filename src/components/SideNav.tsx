@@ -13,7 +13,9 @@ export const SideNav = () => {
         { name: '銀行資訊', href: '/banks', icon: '🏦' },
         { name: '代償資料', href: '/redemptions', icon: '💰' },
         { name: '法規條文', href: '/clauses', icon: '⚖️' },
+        { name: '辦案指南', href: '/guidelines', icon: '🧭' },
         { name: '工作筆記', href: '/notes', icon: '📝' },
+        { name: '共筆', href: '/knowledge', icon: '📚' },
     ];
 
     const handleLogout = async () => {
@@ -36,11 +38,10 @@ export const SideNav = () => {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden ${
-                                isActive
-                                    ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                            }`}
+                            className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden ${isActive
+                                ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                }`}
                         >
                             <span className="text-xl min-w-[24px]">{item.icon}</span>
                             <span className="font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">

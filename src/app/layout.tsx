@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="zh-TW" suppressHydrationWarning>
-            <body className={`${inter.variable} ${outfit.variable} antialiased selection:bg-blue-500/20`}>
+            <body className={`${inter.variable} ${outfit.variable} antialiased selection:bg-blue-500/20`} suppressHydrationWarning>
                 <ThemeProvider>
                     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-500">
                         <SideNav />

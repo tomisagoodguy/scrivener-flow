@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { Search, Plus, Building2, Globe, Clock, Phone, FileText, ChevronRight, Loader2 } from 'lucide-react';
+import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 
 import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
@@ -20,17 +22,18 @@ export default function RedemptionsPage() {
     const [redemptions, setRedemptions] = useState<RedemptionInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedBank, setSelectedBank] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [currentData, setCurrentData] = useState<Partial<RedemptionInfo>>({});
-    const [showSuggestions, setShowSuggestions] = useState(false);
 
     const redemptionColumns = [
-        { header: '銀行名稱', key: 'bank_name', width: 20 },
-        { header: '服務電話', key: 'service_phone', width: 15 },
-        { header: '匯款/帳號資訊', key: 'account_info', width: 40 },
-        { header: '所需作業天數', key: 'lead_time', width: 20 },
+        { header: '銀行名稱', key: 'bank_name', width: 25 },
+        { header: '服務電話', key: 'service_phone', width: 20 },
+        { header: '作業時間', key: 'lead_time', width: 20 },
+        { header: '匯款帳號', key: 'account_info', width: 30 },
         { header: '備註', key: 'notes', width: 30 },
     ];
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     useEffect(() => {
         fetchRedemptions();
@@ -59,21 +62,31 @@ export default function RedemptionsPage() {
             const {
                 data: { user },
             } = await supabase.auth.getUser();
+
             if (!user) {
                 alert('請先登入');
                 return;
             }
 
-            const payload = {
+            const dataToSave = {
                 ...currentData,
-                last_updated_by: user.id,
                 updated_at: new Date().toISOString(),
+                // user_id check is handled by RLS, but strictly we might need to ensure user has right
             };
 
-            const { error } = await supabase
-                .from('bank_redemptions')
-                .upsert(payload as any)
-                .select();
+            let error;
+            if (currentData.id) {
+                const { error: updateError } = await supabase
+                    .from('bank_redemptions')
+                    .update(dataToSave)
+                    .eq('id', currentData.id);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('bank_redemptions')
+                    .insert([dataToSave]);
+                error = insertError;
+            }
 
             if (error) throw error;
 
@@ -81,343 +94,305 @@ export default function RedemptionsPage() {
             setCurrentData({});
             fetchRedemptions();
         } catch (error: any) {
-            alert('儲存失敗：' + error.message);
+            console.error('Error saving:', error);
+            alert('儲存失敗: ' + error.message);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('確定要刪除這筆代償資訊嗎？')) return;
+        if (!confirm('確定要刪除此筆資料嗎？')) return;
+
         try {
-            const { error } = await supabase.from('bank_redemptions').delete().eq('id', id);
+            const { error } = await supabase
+                .from('bank_redemptions')
+                .delete()
+                .eq('id', id);
+
             if (error) throw error;
             fetchRedemptions();
         } catch (error: any) {
-            alert('刪除失敗：' + error.message);
+            console.error('Error deleting:', error);
+            alert('刪除失敗');
         }
     };
 
-    const handleCopy = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            // Could add toast here
-        } catch (err) {
-            console.error('Copy failed', err);
-        }
-    };
+    // --- Sidebar & Filtering Logic ---
+    const uniqueBanks = Array.from(new Set(redemptions.map(r => r.bank_name))).sort();
 
-    const filteredData = redemptions.filter((item) => {
-        const term = searchTerm.toLowerCase();
-        return (
-            (item.bank_name || '').toLowerCase().includes(term) ||
-            (item.account_info || '').toLowerCase().includes(term) ||
-            (item.service_phone || '').toLowerCase().includes(term)
-        );
+    // Group banks? For now, just a list. Maybe group by first char if needed later.
+    const sidebarGroups: SidebarGroup[] = [
+        {
+            title: "依銀行瀏覽",
+            items: uniqueBanks.map(bank => ({
+                id: bank,
+                label: bank,
+                count: redemptions.filter(r => r.bank_name === bank).length,
+                icon: <Building2 className="w-4 h-4" />
+            }))
+        }
+    ];
+
+    const filteredRedemptions = redemptions.filter(item => {
+        const matchesSearch =
+            item.bank_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesBank = selectedBank ? item.bank_name === selectedBank : true;
+
+        return matchesSearch && matchesBank;
     });
 
-    const suggestions = redemptions
-        .filter((c) => c.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
-        .slice(0, 5);
-
     return (
-        <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-            <main className="mt-8">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <Link
-                            href="/"
-                            className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                        >
-                            ← 返回首頁
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
-                                💰 代償塗銷資訊庫
-                            </h1>
-                            <span className="text-xs text-amber-600/80 font-medium px-1">
-                                全團隊共用資料庫・即時同步
-                            </span>
-                        </div>
-                    </div>
+        <div className="flex min-h-screen bg-slate-50 font-sans">
+            <PageSidebar
+                title="代償銀行目錄"
+                groups={sidebarGroups}
+                selectedId={selectedBank}
+                onSelect={setSelectedBank}
+                className="hidden md:block shadow-sm z-10"
+            />
 
-                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
-                        <div className="relative flex-1 md:w-80 group z-20">
-                            <div className="relative">
+            <main className="flex-1 p-6 md:p-12 overflow-y-auto h-screen">
+                <div className="max-w-6xl mx-auto space-y-8 pb-20">
+
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                                <span className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+                                    🏦
+                                </span>
+                                代償資訊
+                            </h1>
+                            <p className="text-slate-500 mt-2 font-medium">
+                                收錄各家銀行的代償窗口、作業時間與匯款帳號資訊。
+                            </p>
+                            <div className="flex items-center gap-2 mt-4">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-100">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    全團隊共用資料庫・即時同步
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="🔍 搜尋銀行、專戶..."
+                                    placeholder="搜尋銀行或備註..."
                                     value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setShowSuggestions(true);
-                                    }}
-                                    onFocus={() => setShowSuggestions(true)}
-                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 shadow-sm focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 shadow-sm transition-all"
                                 />
-                                <svg
-                                    className="w-5 h-5 text-gray-400 absolute left-3 top-3"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
                             </div>
 
-                            {/* Autocomplete */}
-                            {showSuggestions && searchTerm.length > 0 && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform origin-top animate-in fade-in slide-in-from-top-2">
-                                    <div className="text-xs font-bold text-gray-400 px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                                        快速選擇
-                                    </div>
-                                    {suggestions.map((s) => (
+                            <button
+                                onClick={() => {
+                                    setCurrentData({});
+                                    setIsEditing(true);
+                                }}
+                                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold shadow-xl shadow-slate-900/20 border border-slate-700/50 flex items-center gap-2 transition-all active:scale-95"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">新增資料</span>
+                            </button>
+
+                            <GenericExportExcelButton
+                                data={filteredRedemptions}
+                                filename="代償資訊表"
+                                sheetName="代償資訊"
+                                columns={redemptionColumns}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Active Filter Mobile */}
+                    {selectedBank && (
+                        <div className="md:hidden flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg text-sm font-bold">
+                            <span>已選銀行: {selectedBank}</span>
+                            <button onClick={() => setSelectedBank(null)} className="ml-auto text-indigo-400 hover:text-indigo-700">清除</button>
+                        </div>
+                    )}
+
+                    {/* Cards Grid */}
+                    {loading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                        </div>
+                    ) : filteredRedemptions.length === 0 ? (
+                        <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Search className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-700">沒有找到資料</h3>
+                            <p className="text-slate-500 mt-2">請調整搜尋條件或新增資料</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredRedemptions.map((item) => (
+                                <div key={item.id} className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                                                {item.bank_name.charAt(0)}
+                                            </div>
+                                            <h3 className="font-bold text-lg text-slate-800">{item.bank_name}</h3>
+                                        </div>
                                         <button
-                                            key={s.id}
                                             onClick={() => {
-                                                setSearchTerm(s.bank_name);
-                                                setShowSuggestions(false);
+                                                setCurrentData(item);
+                                                setIsEditing(true);
                                             }}
-                                            className="w-full text-left px-4 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center justify-between group/item"
+                                            className="text-slate-300 hover:text-indigo-600 transition-colors"
                                         >
-                                            <span className="font-bold text-gray-700 dark:text-gray-200 group-hover/item:text-amber-600 dark:group-hover/item:text-amber-400">
-                                                {s.bank_name}
-                                            </span>
+                                            <FileText className="w-4 h-4" />
                                         </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <GenericExportExcelButton
-                            data={filteredData}
-                            columns={redemptionColumns}
-                            filename="代書系統_代償塗銷資訊"
-                            sheetName="代償資訊"
-                            buttonText="打包 Excel"
-                        />
-                        <button
-                            onClick={() => {
-                                setCurrentData({});
-                                setIsEditing(true);
-                            }}
-                            className="bg-amber-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-600/20 hover:bg-amber-700 transition-all active:scale-95 whitespace-nowrap h-[46px]"
-                        >
-                            + 新增
-                        </button>
-                    </div>
-                </div>
+                                    </div>
 
-                {loading ? (
-                    <div className="text-center py-12 text-gray-900 font-bold text-lg">資料載入中...</div>
-                ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm border-collapse">
-                                <thead className="bg-gray-100 border-b-2 border-gray-300">
-                                    <tr>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[200px] border-r border-gray-300">
-                                            銀行 / 客服
-                                        </th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[300px] border-r border-gray-300">
-                                            專戶資訊 (點擊複製)
-                                        </th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[250px] border-r border-gray-300">
-                                            領清償 / 備註
-                                        </th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-20 text-center">
-                                            操作
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-300">
-                                    {filteredData.map((item, index) => (
-                                        <tr key={item.id} className="hover:bg-amber-50/50 transition-colors group">
-                                            <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div className="font-bold text-lg text-gray-900 mb-1">
-                                                    {item.bank_name}
+                                    <div className="space-y-4 flex-1">
+                                        {item.service_phone && (
+                                            <div className="flex gap-3 items-start">
+                                                <Phone className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                                                <div className="text-sm">
+                                                    <div className="text-slate-500 text-xs mb-0.5">服務電話</div>
+                                                    <div className="font-medium text-slate-700">{item.service_phone}</div>
                                                 </div>
-                                                {item.service_phone ? (
-                                                    <div className="flex items-center gap-1.5 text-gray-800 font-medium bg-gray-100 px-2 py-1 rounded w-fit">
-                                                        <span>📞</span>
-                                                        <span>{item.service_phone}</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-gray-400 text-xs italic">無客服電話</div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div
-                                                    className="relative group/copy cursor-pointer p-2 -m-2 rounded hover:bg-gray-50"
-                                                    onClick={() => handleCopy(item.account_info)}
-                                                    title="點擊複製"
-                                                >
-                                                    <pre className="whitespace-pre-wrap font-medium text-gray-900 font-sans leading-relaxed">
-                                                        {item.account_info || (
-                                                            <span className="text-gray-400 italic">尚無專戶資料</span>
-                                                        )}
-                                                    </pre>
-                                                    {item.account_info && (
-                                                        <span className="absolute top-2 right-2 opacity-0 group-hover/copy:opacity-100 bg-black/75 text-white text-xs px-1.5 py-0.5 rounded transition-opacity pointer-events-none">
-                                                            複製
-                                                        </span>
-                                                    )}
+                                            </div>
+                                        )}
+
+                                        {item.lead_time && (
+                                            <div className="flex gap-3 items-start">
+                                                <Clock className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                                                <div className="text-sm">
+                                                    <div className="text-slate-500 text-xs mb-0.5">作業天數</div>
+                                                    <div className="font-medium text-slate-700">{item.lead_time}</div>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-4 align-top space-y-3 border-r border-gray-300">
-                                                {item.lead_time && (
-                                                    <div>
-                                                        <span className="text-xs font-bold text-amber-900 bg-amber-200 px-1.5 py-0.5 rounded mr-1 border border-amber-300">
-                                                            時效
-                                                        </span>
-                                                        <span className="text-gray-900 font-medium">
-                                                            {item.lead_time}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {item.notes && (
-                                                    <div>
-                                                        <span className="text-xs font-bold text-blue-900 bg-blue-200 px-1.5 py-0.5 rounded mr-1 border border-blue-300">
-                                                            備註
-                                                        </span>
-                                                        <span className="text-gray-900 font-medium leading-relaxed">
-                                                            {item.notes}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {!item.lead_time && !item.notes && (
-                                                    <span className="text-gray-400 text-xs">-</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4 align-top text-center">
-                                                <div className="flex flex-col gap-2 items-center justify-start opacity-50 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => {
-                                                            setCurrentData(item);
-                                                            setIsEditing(true);
-                                                        }}
-                                                        className="p-1.5 text-blue-800 hover:bg-blue-100 rounded bg-white border border-blue-300"
-                                                        title="編輯"
-                                                    >
-                                                        ✎
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(item.id)}
-                                                        className="p-1.5 text-red-800 hover:bg-red-100 rounded bg-white border border-red-300"
-                                                        title="刪除"
-                                                    >
-                                                        🗑
-                                                    </button>
+                                            </div>
+                                        )}
+
+                                        {item.account_info && (
+                                            <div className="flex gap-3 items-start">
+                                                <Globe className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+                                                <div className="text-sm">
+                                                    <div className="text-slate-500 text-xs mb-0.5">匯款/帳號資訊</div>
+                                                    <div className="font-medium text-slate-700 whitespace-pre-line">{item.account_info}</div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                            </div>
+                                        )}
+
+                                        {item.notes && (
+                                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                                <p className="text-sm text-slate-500 leading-relaxed">{item.notes}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        {filteredData.length === 0 && (
-                            <div className="p-12 text-center text-gray-500 bg-gray-50">
-                                查無相符資料，請嘗試其他關鍵字
-                            </div>
-                        )}
-                    </div>
-                )}
+                    )}
+                </div>
             </main>
 
-            {/* Edit Modal */}
+            {/* Edit Modal (Keeping original structure but styled) */}
             {isEditing && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h2 className="text-lg font-bold text-slate-800">
                                 {currentData.id ? '編輯代償資訊' : '新增代償資訊'}
                             </h2>
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl"
-                            >
-                                ×
+                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600">
+                                <span className="sr-only">Close</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </button>
                         </div>
 
-                        <form onSubmit={handleSave} className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                        銀行名稱 *
-                                    </label>
+                        <form onSubmit={handleSave} className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">銀行名稱</label>
+                                <div className="relative">
                                     <input
-                                        required
+                                        type="text"
                                         value={currentData.bank_name || ''}
-                                        onChange={(e) => setCurrentData({ ...currentData, bank_name: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                        placeholder="例如：兆豐銀行"
+                                        onChange={(e) => {
+                                            setCurrentData({ ...currentData, bank_name: e.target.value });
+                                            setShowSuggestions(true);
+                                        }}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold"
+                                        placeholder="輸入銀行名稱"
+                                        required
+                                    />
+                                    {/* Simple suggestion logic could be added here if needed */}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-600">服務電話</label>
+                                    <input
+                                        type="text"
+                                        value={currentData.service_phone || ''}
+                                        onChange={(e) => setCurrentData({ ...currentData, service_phone: e.target.value })}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                        客服電話
-                                    </label>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-600">作業天數</label>
                                     <input
-                                        value={currentData.service_phone || ''}
-                                        onChange={(e) =>
-                                            setCurrentData({ ...currentData, service_phone: e.target.value })
-                                        }
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        type="text"
+                                        value={currentData.lead_time || ''}
+                                        onChange={(e) => setCurrentData({ ...currentData, lead_time: e.target.value })}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    專戶資訊 / 匯款帳號
-                                </label>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-600">匯款/帳號資訊</label>
                                 <textarea
                                     value={currentData.account_info || ''}
                                     onChange={(e) => setCurrentData({ ...currentData, account_info: e.target.value })}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none min-h-[120px] font-mono text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    placeholder="請輸入分行、戶名、帳號等詳細資訊..."
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                    placeholder="銀行代碼、帳號等..."
                                 />
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    領清償時間 / 規則
-                                </label>
-                                <input
-                                    value={currentData.lead_time || ''}
-                                    onChange={(e) => setCurrentData({ ...currentData, lead_time: e.target.value })}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    placeholder="例如：3日(不含撥款日)"
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">其他備註</label>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-600">備註</label>
                                 <textarea
                                     value={currentData.notes || ''}
                                     onChange={(e) => setCurrentData({ ...currentData, notes: e.target.value })}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 outline-none min-h-[80px] dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditing(false)}
-                                    className="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
-                                >
-                                    取消
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95"
-                                >
-                                    儲存更新
-                                </button>
+                            <div className="flex justify-between items-center pt-4 mt-2 border-t border-slate-100">
+                                {currentData.id ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDelete(currentData.id!)}
+                                        className="text-rose-500 hover:text-rose-600 text-sm font-medium px-2 py-1 hover:bg-rose-50 rounded"
+                                    >
+                                        刪除
+                                    </button>
+                                ) : <div></div>}
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditing(false)}
+                                        className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition-all hover:shadow-lg active:scale-95"
+                                    >
+                                        儲存
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>

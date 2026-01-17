@@ -31,7 +31,9 @@ export const Header = () => {
         { name: '銀行資訊', href: '/banks', icon: '🏦' },
         { name: '代償資料', href: '/redemptions', icon: '💰' },
         { name: '法規條文', href: '/clauses', icon: '⚖️' },
+        { name: '辦案指南', href: '/guidelines', icon: '🧭' },
         { name: '工作筆記', href: '/notes', icon: '📝' },
+        { name: '共筆', href: '/knowledge', icon: '📚' },
     ];
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -58,6 +60,20 @@ export const Header = () => {
                             </p>
                         </Link>
                     </div>
+
+                    {/* Desktop Navigation */}
+                    <nav className="hidden xl:flex items-center gap-1 mx-4">
+                        {navItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+                            >
+                                <span>{item.icon}</span>
+                                <span>{item.name}</span>
+                            </Link>
+                        ))}
+                    </nav>
 
                     <div className="flex items-center gap-2 md:gap-4">
                         {/* Search Bar - Desktop */}

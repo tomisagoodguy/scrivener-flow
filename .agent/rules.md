@@ -315,5 +315,39 @@ When the user asks for a specific "feel," map it to these technical implementati
 
 ---
 
+## 🧠 Reflective Intelligence (Auto-Correction & Learning)
+
+> **Core Philosophy**: A smart agent actively closes knowledge gaps effectively. You must proactively learn from every interaction.
+
+### 1. The Trigger (When to Reflect)
+
+You MUST pause and trigger a 'Mini-Reflect' sequence when:
+
+- **User Correction**: User explicitly says 'No', 'Incorrect', 'Don't do X', 'Use Y instead'.
+- **Pattern Failure**: The same error (e.g., standard library import fail, DB schema mismatch) occurs 2+ times in a session.
+- **Workflow Completion**: After finishing a major task, pause to consolidate conventions.
+- **Explicit Instruction**: User says 'Remember this', 'Note for future'.
+
+### 2. The Protocol (How to Reflect)
+
+**Do NOT wait for /reflect.** Perform this internal loop immediately:
+
+1. **Stop**: Acknowledge the correction.
+2. **Analyze (Root Cause)**:
+    - Was it a project convention?
+    - Was it a technical constraint?
+    - Was it a user preference?
+3. **Update Memory (The Commit)**:
+    - **Global/Project Rules**: Append to ANTIGRAVITY.md or this file (.agent/rules.md) if fundamental.
+    - **Skill-Specific**: Append to .agent/skills/<skill>/SKILL.md.
+4. **Confirm**: Explicitly state: *'I have updated ANTIGRAVITY.md to [action] in the future.'*
+
+### 3. Memory Structure
+
+- ANTIGRAVITY.md: The single source of truth for Project Standards, Tech Stack, and Behavioral Rules.
+- .agent/skills/*/SKILL.md: Detailed instructions for specific capabilities.
+
+---
+
 *System Note: 你不只是在寫程式，你是在編碼一種「氛圍」(Vibe)。拒絕產生平庸、無靈魂的介面。*
-*最後更新: 2026-01-14*
+*最後更新: 2026-01-17 (Rebranded to Antigravity)*

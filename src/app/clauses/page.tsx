@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-
+import { Search, Plus, BookOpen, Scale, FileText, Copy, Trash2, Edit } from 'lucide-react';
+import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
 interface Clause {
@@ -18,7 +19,8 @@ export default function ClausesPage() {
     const [clauses, setClauses] = useState<Clause[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    // selectedCategory used to default to 'All', now will be string | null. If null -> All.
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [currentClause, setCurrentClause] = useState<Partial<Clause>>({});
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -109,10 +111,26 @@ export default function ClausesPage() {
         }
     };
 
+    // --- Sidebar Logic ---
+    const uniqueCategories = Array.from(new Set(clauses.map((c) => c.category || '一般'))).sort();
+
+    const sidebarGroups: SidebarGroup[] = [
+        {
+            title: "條文分類",
+            items: uniqueCategories.map(cat => ({
+                id: cat,
+                label: cat,
+                count: clauses.filter(c => (c.category || '一般') === cat).length,
+                icon: <Scale className="w-4 h-4" />
+            }))
+        }
+    ];
+
     const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        const matchesCategory = selectedCategory === 'All' || clause.category === selectedCategory;
+        const clauseCat = clause.category || '一般';
+        const matchesCategory = selectedCategory ? clauseCat === selectedCategory : true;
         return matchesSearch && matchesCategory;
     });
 
@@ -120,273 +138,254 @@ export default function ClausesPage() {
         .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
         .slice(0, 5);
 
-    const categories = ['All', ...Array.from(new Set(clauses.map((c) => c.category || '一般')))];
-
     return (
-        <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto font-sans bg-background">
-            <main className="mt-8">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <Link
-                            href="/"
-                            className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                        >
-                            ← 返回首頁
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
-                                📜 代書常用條文庫
-                            </h1>
-                            <span className="text-xs text-blue-500/80 font-medium px-1">
-                                全團隊共用資料庫・即時同步
-                            </span>
-                        </div>
-                    </div>
+        <div className="flex min-h-screen bg-slate-50 font-sans">
+            <PageSidebar
+                title="常用條文庫"
+                groups={sidebarGroups}
+                selectedId={selectedCategory}
+                onSelect={setSelectedCategory}
+                className="hidden md:block shadow-sm z-10 sticky top-0 h-screen"
+            />
 
-                    <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
-                        <div className="relative flex-1 md:w-80 group z-20">
-                            <div className="relative">
+            <main className="flex-1 p-6 md:p-12 overflow-y-auto h-screen">
+                <div className="max-w-6xl mx-auto space-y-8 pb-20">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                                <span className="p-2.5 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                                    ⚖️
+                                </span>
+                                代書常用條文
+                            </h1>
+                            <p className="text-slate-500 mt-2 font-medium">
+                                快速檢索、複製與管理合約常用條款。
+                            </p>
+                            <div className="flex items-center gap-2 mt-4">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-100">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    全團隊共用資料庫・即時同步
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 flex-wrap">
+                            <div className="relative group z-20">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="🔍 搜尋情境關鍵字 (如: 違約、漏水)..."
+                                    placeholder="搜尋情境或條文內容..."
                                     value={searchTerm}
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
                                         setShowSuggestions(true);
                                     }}
                                     onFocus={() => setShowSuggestions(true)}
-                                    // Delay blur to allow click on suggestion
+                                    // Delay blur to allow click
                                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
+                                    className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-64 shadow-sm transition-all"
                                 />
-                                <svg
-                                    className="w-5 h-5 text-gray-400 absolute left-3 top-3"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                            </div>
-
-                            {/* Autocomplete Dropdown */}
-                            {showSuggestions && searchTerm.length > 0 && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform origin-top animate-in fade-in slide-in-from-top-2">
-                                    <div className="text-xs font-bold text-gray-400 px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                                        快速選擇
+                                {/* Suggestions Dropdown */}
+                                {showSuggestions && searchTerm.length > 0 && suggestions.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="text-[10px] font-bold text-slate-400 px-3 py-2 bg-slate-50 border-b border-slate-100 uppercase tracking-wider">
+                                            快速選擇
+                                        </div>
+                                        {suggestions.map((s) => (
+                                            <button
+                                                key={s.id}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault(); // Prevent blur
+                                                    setSearchTerm(s.title);
+                                                    setShowSuggestions(false);
+                                                }}
+                                                className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between group/item"
+                                            >
+                                                <span className="font-bold text-slate-700 group-hover/item:text-blue-600 text-sm">
+                                                    {s.title}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                                    {s.category}
+                                                </span>
+                                            </button>
+                                        ))}
                                     </div>
-                                    {suggestions.map((s) => (
-                                        <button
-                                            key={s.id}
-                                            onClick={() => {
-                                                setSearchTerm(s.title);
-                                                setShowSuggestions(false);
-                                            }}
-                                            className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-between group/item"
-                                        >
-                                            <span className="font-bold text-gray-700 dark:text-gray-200 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400">
-                                                {s.title}
-                                            </span>
-                                            <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                                                {s.category}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <GenericExportExcelButton
-                            data={filteredClauses}
-                            columns={clauseColumns}
-                            filename="代書系統_法律法規條文"
-                            sheetName="合約條文"
-                            buttonText="打包 Excel"
-                        />
-                        <button
-                            onClick={() => {
-                                setCurrentClause({ category: '一般' });
-                                setIsEditing(true);
-                            }}
-                            className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 whitespace-nowrap h-[46px]"
-                        >
-                            + 新增
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
-                    {categories.map((cat) => (
-                        <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                                selectedCategory === cat
-                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                            {cat || '未分類'}
-                        </button>
-                    ))}
-                </div>
-
-                {loading ? (
-                    <div className="text-center py-12 text-gray-900 font-bold text-lg">資料載入中...</div>
-                ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm border-collapse">
-                                <thead className="bg-gray-100 border-b-2 border-gray-300">
-                                    <tr>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 whitespace-nowrap min-w-[200px] border-r border-gray-300">
-                                            情境 / 分類
-                                        </th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 min-w-[400px] border-r border-gray-300">
-                                            條文內容 (點擊複製)
-                                        </th>
-                                        <th className="px-4 py-3 font-extrabold text-gray-900 w-24 text-center">
-                                            操作
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-300">
-                                    {filteredClauses.map((clause) => (
-                                        <tr key={clause.id} className="hover:bg-blue-50/50 transition-colors group">
-                                            <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div className="font-bold text-lg text-gray-900 mb-2">
-                                                    {clause.title}
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 items-center">
-                                                    <span className="bg-blue-100 text-blue-800 border border-blue-200 text-xs px-2 py-1 rounded font-medium">
-                                                        {clause.category || '一般'}
-                                                    </span>
-                                                    {clause.usage_count > 0 && (
-                                                        <span className="text-xs text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                                                            已用 {clause.usage_count} 次
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 align-top border-r border-gray-300">
-                                                <div
-                                                    className="relative group/copy cursor-pointer p-2 -m-2 rounded hover:bg-gray-50"
-                                                    onClick={() => handleCopy(clause.content, clause.id)}
-                                                    title="點擊複製條文"
-                                                >
-                                                    <pre className="whitespace-pre-wrap font-medium text-gray-900 font-sans leading-relaxed text-base">
-                                                        {clause.content}
-                                                    </pre>
-                                                    <span
-                                                        className={`absolute top-2 right-2 text-xs px-2 py-1 rounded transition-opacity pointer-events-none ${
-                                                            copyFeedback === clause.id
-                                                                ? 'bg-green-600 text-white opacity-100'
-                                                                : 'bg-black/75 text-white opacity-0 group-hover/copy:opacity-100'
-                                                        }`}
-                                                    >
-                                                        {copyFeedback === clause.id ? '已複製！' : '複製'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 align-top text-center">
-                                                <div className="flex flex-col gap-2 items-center justify-start opacity-50 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => {
-                                                            setCurrentClause(clause);
-                                                            setIsEditing(true);
-                                                        }}
-                                                        className="p-1.5 text-blue-800 hover:bg-blue-100 rounded bg-white border border-blue-300"
-                                                        title="編輯"
-                                                    >
-                                                        ✎
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(clause.id)}
-                                                        className="p-1.5 text-red-800 hover:bg-red-100 rounded bg-white border border-red-300"
-                                                        title="刪除"
-                                                    >
-                                                        🗑
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        {filteredClauses.length === 0 && (
-                            <div className="p-12 text-center text-gray-500 bg-gray-50">
-                                查無相符條文，請嘗試其他關鍵字或分類
+                                )}
                             </div>
-                        )}
+
+                            <button
+                                onClick={() => {
+                                    setCurrentClause({ category: selectedCategory || '一般' });
+                                    setIsEditing(true);
+                                }}
+                                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold shadow-xl shadow-slate-900/20 border border-slate-700/50 flex items-center gap-2 transition-all active:scale-95"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">新增條文</span>
+                            </button>
+
+                            <GenericExportExcelButton
+                                data={filteredClauses}
+                                filename="代書系統_法律法規條文"
+                                sheetName="合約條文"
+                                columns={clauseColumns}
+                            />
+                        </div>
                     </div>
-                )}
+
+                    {/* Active Filter Mobile */}
+                    {selectedCategory && (
+                        <div className="md:hidden flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold">
+                            <span>已選分類: {selectedCategory}</span>
+                            <button onClick={() => setSelectedCategory(null)} className="ml-auto text-blue-400 hover:text-blue-700">清除</button>
+                        </div>
+                    )}
+
+                    {/* Content List */}
+                    {loading ? (
+                        <div className="flex justify-center items-center py-20">
+                            {/* Simple Loader Placeholder */}
+                            <div className="animate-pulse text-slate-400 font-bold">資料載入中...</div>
+                        </div>
+                    ) : filteredClauses.length === 0 ? (
+                        <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Search className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-700">沒有找到條文</h3>
+                            <p className="text-slate-500 mt-2">請調整搜尋條件或新增資料</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredClauses.map((clause) => (
+                                <div key={clause.id} className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
+                                    <div className="flex flex-col sm:flex-row gap-6">
+                                        {/* Left: Metadata */}
+                                        <div className="sm:w-1/4 min-w-[200px] flex flex-col gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                    {clause.category || '一般'}
+                                                </span>
+                                                {clause.usage_count > 0 && (
+                                                    <span className="text-[10px] items-center gap-1 inline-flex text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                                        🔥 {clause.usage_count}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800 leading-tight">
+                                                {clause.title}
+                                            </h3>
+                                        </div>
+
+                                        {/* Center: Content */}
+                                        <div className="flex-1 relative group/content">
+                                            <div
+                                                onClick={() => handleCopy(clause.content, clause.id)}
+                                                className="bg-slate-50 rounded-xl p-4 border border-slate-100 font-mono text-sm leading-relaxed text-slate-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-100 transition-colors relative"
+                                            >
+                                                <pre className="whitespace-pre-wrap font-sans">{clause.content}</pre>
+
+                                                {/* Copy Overlay Hint */}
+                                                <div className="absolute top-2 right-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
+                                                    <span className={`text-[10px] px-2 py-1 rounded font-bold shadow-sm ${copyFeedback === clause.id
+                                                            ? 'bg-emerald-500 text-white'
+                                                            : 'bg-white text-slate-500 border border-slate-200'
+                                                        }`}>
+                                                        {copyFeedback === clause.id ? '已複製！' : '點擊複製'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Actions */}
+                                        <div className="sm:w-12 flex sm:flex-col gap-2 justify-start items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentClause(clause);
+                                                    setIsEditing(true);
+                                                }}
+                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="編輯"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(clause.id)}
+                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                title="刪除"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </main>
 
             {/* Edit/Add Modal */}
             {isEditing && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h2 className="text-lg font-bold text-slate-800">
                                 {currentClause.id ? '編輯條文' : '新增常用條文'}
                             </h2>
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl"
-                            >
-                                ×
+                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600">
+                                <span className="sr-only">Close</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </button>
                         </div>
 
                         <form onSubmit={handleSave} className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                        使用情境 (標題) *
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700">
+                                        使用情境 (標題) <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         required
                                         value={currentClause.title || ''}
                                         onChange={(e) => setCurrentClause({ ...currentClause, title: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
                                         placeholder="例如：現況交屋"
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">分類</label>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700">分類</label>
                                     <input
                                         value={currentClause.category || ''}
                                         onChange={(e) =>
                                             setCurrentClause({ ...currentClause, category: e.target.value })
                                         }
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
                                         placeholder="例如：交屋、違約、稅費"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">條文內容 *</label>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">
+                                    條文內容 <span className="text-rose-500">*</span>
+                                </label>
                                 <textarea
                                     required
                                     value={currentClause.content || ''}
                                     onChange={(e) => setCurrentClause({ ...currentClause, content: e.target.value })}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none min-h-[200px] font-mono text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[200px] text-sm leading-relaxed"
                                     placeholder="輸入完整的合約條文..."
                                 />
                             </div>
 
-                            <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                                 {currentClause.id ? (
                                     <button
                                         type="button"
                                         onClick={() => handleDelete(currentClause.id!)}
-                                        className="text-red-500 hover:text-red-600 font-medium px-4"
+                                        className="text-rose-500 hover:text-rose-600 text-sm font-medium px-2 py-1 hover:bg-rose-50 rounded"
                                     >
                                         刪除條文
                                     </button>
@@ -394,17 +393,17 @@ export default function ClausesPage() {
                                     <div></div>
                                 )}
 
-                                <div className="flex gap-4">
+                                <div className="flex gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setIsEditing(false)}
-                                        className="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
+                                        className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
                                     >
                                         取消
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+                                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all hover:shadow-lg active:scale-95"
                                     >
                                         儲存
                                     </button>

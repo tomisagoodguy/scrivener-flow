@@ -1,0 +1,141 @@
+[
+    {
+        "Bank": "富邦",
+        "Name": "俊平",
+        "Email": "chunping.lee@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "藝馨",
+        "Email": "betty.fan@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "演龍",
+        "Email": "joe.wong@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "昀成",
+        "Email": "yuncheng.chen@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "奕丞",
+        "Email": "jerry.yc.lu@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "慶餘",
+        "Email": "edward.cy.liu@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "橫綱",
+        "Email": "hengkang.kuo@fubon.com"
+    },
+    {
+        "Bank": "富邦",
+        "Name": "耀升",
+        "Email": "sheng.liu@fubon.com"
+    },
+    {
+        "Bank": "台新",
+        "Name": "吳瑋倫",
+        "Email": "1121112@taishinbank.com.tw"
+    },
+    {
+        "Bank": "台新",
+        "Name": "維席",
+        "Email": "Jeff.Chang@taishinbank.com.tw"
+    },
+    {
+        "Bank": "渣打",
+        "Name": "育菁",
+        "Email": "Christine.Chang@sc.com"
+    },
+    {
+        "Bank": "渣打",
+        "Name": "詩昌",
+        "Email": "Eddie.Hung@sc.com"
+    },
+    {
+        "Bank": "匯豐",
+        "Name": "于哲",
+        "Email": "66335605twm@hsbc.com.tw"
+    },
+    {
+        "Bank": "富邦壽",
+        "Name": "董育婕",
+        "Email": "yuchieh.tung@fubon.com"
+    },
+    {
+        "Bank": "兆豐",
+        "Name": "陶融",
+        "Email": "010134@megabank.com.tw",
+        "Branch": "內科"
+    },
+    {
+        "Bank": "兆豐",
+        "Name": "黃小姐",
+        "Email": "007220@megabank.com.tw, 11148@megabank.com.tw, jinging@megabank.com.tw",
+        "Branch": "基隆"
+    },
+    {
+        "Bank": "兆豐",
+        "Name": "施柏光",
+        "Email": "012895@megabank.com.tw, 010216@megabank.com.tw",
+        "Branch": "東內湖"
+    },
+    {
+        "Bank": "兆豐",
+        "Name": "劉芯妍",
+        "Email": "011216@megabank.com.tw",
+        "Branch": "大安"
+    },
+    {
+        "Bank": "華南",
+        "Name": "廖述正",
+        "Email": "ralph.liao@hncb.com.tw",
+        "Branch": "潭美"
+    },
+    {
+        "Bank": "華南",
+        "Name": "王麒雲",
+        "Email": "chitun.wang@hncb.com.tw",
+        "Branch": "大同"
+    },
+    {
+        "Bank": "台銀",
+        "Name": "陳永嘉",
+        "Email": "132846@mail.bot.com.tw, 台銀劍潭 劉先生 *233",
+        "Branch": "北投"
+    },
+    {
+        "Bank": "玉山",
+        "Name": "玉山南港",
+        "Email": "michael-07969@esunbank.com, 143173@mail.bot.com.tw",
+        "Branch": "chishanyang-08241@esunbank.com"
+    },
+    {
+        "Bank": "上海",
+        "Name": "huangcc@scsb.com.tw",
+        "Branch": "bingchen@scsb.com.tw"
+    },
+    {
+        "Bank": "永豐",
+        "Name": "Vansary@sinopac.com",
+        "Branch": "yuen0512@sinopac.com"
+    },
+    {
+        "Bank": "國泰",
+        "Name": "singing@cathaylife.com.tw",
+        "Email": "singing0129@gmail.com",
+        "Branch": "john031092@gmail.com"
+    },
+    {
+        "Bank": "中信",
+        "Name": "junwei.huang@ctbcbank.com",
+        "Branch": "kuanping.lan@ctbcbank.com"
+    }
+]
