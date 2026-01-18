@@ -142,7 +142,7 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
 預收規費：
 費用的部分用於繳納您的
 地政規費、稅費及代書費
-麻煩您匯款整數【${fmtMoney(inputs.prepaidFee)}元整】
+麻煩您匯款整數【${formatMoneySpoken(inputs.prepaidFee)}整】
 剩餘的費用我們會在交屋時用現金的方式多退少補
 
 預收規費的部分麻煩您和下一筆款項一起匯入即可`;
