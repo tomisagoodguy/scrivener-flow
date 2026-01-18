@@ -57,10 +57,53 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
         cancellationOffice: '台北市任意一個地政事務所',
     });
 
-    // Formatting currency
+    // Formatting currency (traditional)
     const fmtMoney = (val: string | number | undefined | null) => {
         if (!val) return '0';
         return Number(val).toLocaleString('zh-TW');
+    };
+
+    // Formatting currency (spoken - 口語化)
+    const formatMoneySpoken = (val: string | number | undefined | null) => {
+        if (!val) return '0元';
+        const num = Number(val);
+        if (num >= 100000000) {
+            // 億
+            const yi = Math.floor(num / 100000000);
+            const remainder = num % 100000000;
+            if (remainder === 0) return `${yi}億元`;
+            const wan = Math.floor(remainder / 10000);
+            if (wan === 0) return `${yi}億元`;
+            return `${yi}億${wan}萬元`;
+        } else if (num >= 10000) {
+            // 萬
+            const wan = Math.floor(num / 10000);
+            const remainder = num % 10000;
+            if (remainder === 0) return `${wan}萬元`;
+            // 如果有零頭但小於1000，忽略不顯示（口語化）
+            if (remainder < 1000) return `${wan}萬元`;
+            return `${wan}萬${remainder}元`;
+        } else {
+            return `${num.toLocaleString('zh-TW')}元`;
+        }
+    };
+
+    // 智慧判斷下一筆款項名稱
+    const guessNextPaymentType = (): string => {
+        const now = new Date();
+        const dates = [
+            { date: milestones.seal_appointment, name: '用印款' },
+            { date: milestones.tax_payment_appointment, name: '完稅款' },
+            { date: milestones.repayment_appointment, name: '代償款' },
+            { date: milestones.handover_appointment, name: '交屋款' }
+        ];
+
+        // 找出最近的未來日期
+        const upcoming = dates
+            .filter(d => d.date && new Date(d.date) > now)
+            .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+
+        return upcoming[0]?.name || '用印款';
     };
 
     // Formatting date
@@ -106,13 +149,23 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
                 break;
 
             case 'NEXT_PAYMENT':
+                const paymentType = inputs.nextPaymentType || guessNextPaymentType();
+                const parts = [];
+                if (inputs.nextPaymentAmount && Number(inputs.nextPaymentAmount) > 0) {
+                    parts.push(formatMoneySpoken(inputs.nextPaymentAmount));
+                }
+                if (inputs.loanDiff && Number(inputs.loanDiff) > 0) {
+                    parts.push(`貸款差額${formatMoneySpoken(inputs.loanDiff)}`);
+                }
+                if (inputs.prepaidFee && Number(inputs.prepaidFee) > 0) {
+                    parts.push(`預收規費${formatMoneySpoken(inputs.prepaidFee)}`);
+                }
+
                 text = `報告後續款項
 
-您這邊下一次款項(${inputs.nextPaymentType})
+您這邊下一次款項(${paymentType})
 時間是 ${inputs.nextPaymentDate}
-麻煩您匯入${fmtMoney(inputs.nextPaymentAmount)}元+貸款差額${fmtMoney(inputs.loanDiff)}元+
-預收規費${fmtMoney(inputs.prepaidFee)}元
-共計${fmtMoney(inputs.totalAmount)}元入履保帳戶`;
+麻煩您匯入${parts.join('+')}共計${formatMoneySpoken(inputs.totalAmount)}入履保帳戶`;
                 break;
 
             case 'CANCELLATION_SELF':
@@ -205,8 +258,13 @@ ${inputs.sealLocation}辦理用印手續
     // Auto-generate on template switch or data change
     useEffect(() => {
         // Pre-fill some defaults based on case data
-        if (milestones.seal_appointment) {
-            setInputs(p => ({ ...p, nextPaymentDate: fmtDate(milestones.seal_appointment) }));
+        if (selectedTemplate === 'NEXT_PAYMENT') {
+            const guessedType = guessNextPaymentType();
+            setInputs(p => ({
+                ...p,
+                nextPaymentType: guessedType,
+                nextPaymentDate: fmtDate(milestones.seal_appointment)
+            }));
         }
 
         // Only auto-generate if NOT in custom mode
