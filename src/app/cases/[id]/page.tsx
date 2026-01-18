@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server'; // Use server client for RLS
-import EditCaseForm from '@/components/EditCaseForm';
+import EditCaseForm from '@/components/features/cases/EditCaseForm';
 
 export const dynamic = 'force-dynamic';
 

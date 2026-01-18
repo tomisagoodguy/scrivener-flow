@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { Search, Plus, BookOpen, Scale, FileText, Copy, Trash2, Edit, Tag } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
-import GenericExportExcelButton from '@/components/GenericExportExcelButton';
+import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
 
 interface Clause {
     id: string;

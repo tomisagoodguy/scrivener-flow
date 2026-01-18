@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Search, Plus, Building2, Globe, Clock, Phone, FileText, ChevronRight, Loader2 } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 
-import GenericExportExcelButton from '@/components/GenericExportExcelButton';
+import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
 
 interface RedemptionInfo {
     id: string;

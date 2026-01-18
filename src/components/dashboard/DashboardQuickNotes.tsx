@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import QuickNotes from './QuickNotes';
+import QuickNotes from '@/components/shared/QuickNotes';
 import { supabase } from '@/lib/supabaseClient';
 
 interface Note {
@@ -210,11 +210,10 @@ export default function DashboardQuickNotes() {
                         <div
                             key={note.id}
                             onClick={() => setActiveNoteId(note.id)}
-                            className={`group flex items-center w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
-                                activeNoteId === note.id
+                            className={`group flex items-center w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all ${activeNoteId === note.id
                                     ? 'bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white'
                                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 hover:text-gray-700 dark:hover:text-gray-200'
-                            }`}
+                                }`}
                         >
                             <input
                                 className="bg-transparent border-none outline-none font-bold text-sm flex-1 cursor-pointer"

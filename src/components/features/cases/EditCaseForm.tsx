@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
 import { parseDocx } from '@/app/actions/parseDocx';
-import CaseScheduleManager from '@/components/CaseScheduleManager';
-import QuickNotes from '@/components/QuickNotes';
-import CaseTodos from '@/components/CaseTodos';
+import CaseScheduleManager from '@/components/features/cases/CaseScheduleManager';
+import QuickNotes from '@/components/shared/QuickNotes';
+import CaseTodos from '@/components/features/cases/CaseTodos';
 import { getCaseStage } from '@/lib/stageUtils';
 import {
     CheckCircle2,

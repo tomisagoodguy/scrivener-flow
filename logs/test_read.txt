@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -52,10 +52,10 @@ export default function NewCasePage() {
 
         if (data) {
             setIsDuplicate(true);
-            setErrorMsg(`❌ 案號 「${caseNum}」 已經存在，請更換一個案號。`);
+            setErrorMsg(`??案�? ??{caseNum}??已�?存在，�??��?一?��??�。`);
         } else {
             setIsDuplicate(false);
-            if (!errorMsg.includes('資料庫建立失敗')) setErrorMsg(''); // Clear if it was a duplicate error
+            if (!errorMsg.includes('資�?庫建立失??)) setErrorMsg(''); // Clear if it was a duplicate error
         }
         setIsChecking(false);
     };
@@ -63,7 +63,7 @@ export default function NewCasePage() {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // alert('正在建立案件... (Debug Mode)');
+        // alert('�?��建�?案件... (Debug Mode)');
         // User reports "button not working", let's be silent first but aggressive on schema safety.
         console.log('>>> handleSubmit triggered');
 
@@ -78,11 +78,11 @@ export default function NewCasePage() {
             /* 
             // Date Validation: Ensure strictly increasing order (or equal)
             const dateFields = [
-                { key: 'contract_date', label: '簽約日' },
-                { key: 'seal_date', label: '用印日' },
-                { key: 'tax_payment_date', label: '完稅日' },
-                { key: 'transfer_date', label: '過戶日' },
-                { key: 'handover_date', label: '交屋日' },
+                { key: 'contract_date', label: '簽�??? },
+                { key: 'seal_date', label: '?�印?? },
+                { key: 'tax_payment_date', label: '完�??? },
+                { key: 'transfer_date', label: '?�戶?? },
+                { key: 'handover_date', label: '交�??? },
             ];
 
             for (let i = 0; i < dateFields.length; i++) {
@@ -93,7 +93,7 @@ export default function NewCasePage() {
                     const prevVal = data[dateFields[j].key]?.toString();
                     // Compare strings "YYYY-MM-DD" directly
                     if (prevVal && currentVal < prevVal) {
-                        alert(`流程日期錯誤：${dateFields[i].label} (${currentVal}) 不可早於 ${dateFields[j].label} (${prevVal})`);
+                        alert(`流�??��??�誤�?{dateFields[i].label} (${currentVal}) 不可?�於 ${dateFields[j].label} (${prevVal})`);
                         setLoading(false);
                         return;
                     }
@@ -117,18 +117,18 @@ export default function NewCasePage() {
                 agent_phone: formData.get('agent_phone') as string,
 
                 status: 'Processing', // Default status
-                city: data.city?.toString() || '台北市',
+                city: data.city?.toString() || '?��?�?,
                 district: data.district?.toString() || '',
                 notes: data.notes?.toString() || '',
 
-                tax_type: data.tax_type?.toString() || '一般',
+                tax_type: data.tax_type?.toString() || '一??,
                 user_id: (await supabase.auth.getUser()).data.user?.id,
             };
 
             if (!casePayload.user_id) {
                 // Optional: Force login if strict mode
-                // alert('請先登入'); return;
-                console.warn('⚠️ Creating case without user_id (Not logged in)');
+                // alert('請�??�入'); return;
+                console.warn('?��? Creating case without user_id (Not logged in)');
             }
 
             console.log('Inserting Case Payload:', casePayload);
@@ -162,13 +162,13 @@ export default function NewCasePage() {
                     console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
                     console.log('Failed Payload:', casePayload);
 
-                    const errorTitle = '資料庫建立失敗';
+                    const errorTitle = '資�?庫建立失??;
                     let displayMsg = '';
 
                     if (caseError.code === '23505') {
-                        displayMsg = `❌ 案號 「${data.case_number}」 已經存在，請更換一個案號。`;
+                        displayMsg = `??案�? ??{data.case_number}??已�?存在，�??��?一?��??�。`;
                     } else {
-                        const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
+                        const errMsg = caseError.message || '?�知?�誤 (Unknown Error)';
                         displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}`;
                     }
 
@@ -179,7 +179,7 @@ export default function NewCasePage() {
                 newCase = insertedCase;
             }
 
-            if (!newCase) throw new Error('案件建立或更新後無回傳資料');
+            if (!newCase) throw new Error('案件建�??�更?��??��??��???);
 
             // 2. Insert Milestones
             const milestonePayload: any = {
@@ -224,7 +224,7 @@ export default function NewCasePage() {
                 console.error('Milestone Error:', milestoneResult.error);
                 const mDetails = JSON.stringify(milestoneResult.error, Object.getOwnPropertyNames(milestoneResult.error));
                 setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails
+                    (prev) => (prev ? prev + '\n\n' : '') + '?��?碑�??�儲存失??(Milestone Error):\n' + mDetails
                 );
                 setLoading(false);
                 return;
@@ -248,7 +248,7 @@ export default function NewCasePage() {
             if (finResult.error) {
                 console.error('Financial Error', finResult.error);
                 setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finResult.error.message
+                    (prev) => (prev ? prev + '\n\n' : '') + '財�?資�??��?失�? (Financial Error):\n' + finResult.error.message
                 );
                 setLoading(false);
                 return;
@@ -258,7 +258,7 @@ export default function NewCasePage() {
             router.refresh();
         } catch (error: any) {
             console.error('Catch Error:', error);
-            setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
+            setErrorMsg('?��??��??��??�誤 (Catch):\n' + (error.message || JSON.stringify(error)));
             setLoading(false);
         }
     };
@@ -278,7 +278,7 @@ export default function NewCasePage() {
             const rawDebug = (parsedData as any).debug_text || '';
 
             if (!parsedData.case_number && !parsedData.buyer_name) {
-                alert('⚠️ 無法識別資料！請確認檔案內容格式。\n\n讀取到的文字預覽:\n' + rawDebug);
+                alert('?��? ?��?識別資�?！�?確�?檔�??�容?��??�\n\n讀?�到?��?字�?�?\n' + rawDebug);
             } else {
                 const form = document.querySelector('form') as HTMLFormElement;
                 if (form) {
@@ -331,11 +331,11 @@ export default function NewCasePage() {
                         setVal('total_price', parsedData.total_price.toString()); // Changed from contract_price
                     }
                 }
-                alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
+                alert('???��?填寫完�?！\n?�件編�?: ' + (parsedData.case_number || '?�找??));
             }
         } catch (err: any) {
             console.error(err);
-            alert('解析失敗: ' + err.message);
+            alert('�??失�?: ' + err.message);
         } finally {
             setLoading(false);
             e.target.value = '';
@@ -346,12 +346,12 @@ export default function NewCasePage() {
         <div className="min-h-screen p-6 md:p-8 max-w-7xl mx-auto font-sans">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
                 <div>
-                    <h1 className="text-3xl md:text-5xl font-black text-foreground tracking-tight">新增案件</h1>
+                    <h1 className="text-3xl md:text-5xl font-black text-foreground tracking-tight">?��?案件</h1>
                     <p className="text-foreground/50 font-bold mt-2">Create New Case Process</p>
                 </div>
                 <div className="flex gap-4">
                     <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm">
-                        <span>📄 上傳案件單 (.docx)</span>
+                        <span>?? 上傳案件??(.docx)</span>
                         <input
                             type="file"
                             accept=".docx"
@@ -364,7 +364,7 @@ export default function NewCasePage() {
                         href="/"
                         className="bg-card border border-border px-6 py-2 rounded-full hover:bg-secondary transition-colors text-foreground text-sm flex items-center shadow-sm font-bold"
                     >
-                        ← 返回列表
+                        ??返�??�表
                     </Link>
                 </div>
             </header>
@@ -376,15 +376,15 @@ export default function NewCasePage() {
                 <div className="bg-card glass-card p-6 md:p-8 space-y-8 animate-fade-in border border-card-border">
                     <div className="border-b border-border pb-4">
                         <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
-                            <span className="p-2 bg-primary/10 rounded-lg text-primary text-xl">📄</span>
-                            基本案件資訊
+                            <span className="p-2 bg-primary/10 rounded-lg text-primary text-xl">??</span>
+                            ?�本案件資�?
                         </h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold uppercase tracking-wider">
-                                案件編號 (Case ID)
+                                案件編�? (Case ID)
                             </label>
                             <input
                                 name="case_number"
@@ -392,10 +392,10 @@ export default function NewCasePage() {
                                 className={`w-full bg-secondary/50 border ${isDuplicate ? 'border-red-500 ring-2 ring-red-500/20' : 'border-border'} rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans`}
                                 required
                                 onBlur={(e) => checkDuplicate(e.target.value)}
-                                placeholder={suggestedNum ? `建議序號: ${suggestedNum}` : '請輸入案號'}
+                                placeholder={suggestedNum ? `建議序�?: ${suggestedNum}` : '請輸?��???}
                             />
-                            {isChecking && <p className="text-[10px] text-primary animate-pulse font-bold mt-1">正在檢查案號重複性...</p>}
-                            {isDuplicate && <p className="text-xs text-red-500 font-bold mt-1">此案號已存在，請修正</p>}
+                            {isChecking && <p className="text-[10px] text-primary animate-pulse font-bold mt-1">�?��檢查案�??��???..</p>}
+                            {isDuplicate && <p className="text-xs text-red-500 font-bold mt-1">此�??�已存在，�?修正</p>}
                             {!isDuplicate && !isChecking && suggestedNum && (
                                 <button
                                     type="button"
@@ -408,20 +408,20 @@ export default function NewCasePage() {
                                     }}
                                     className="text-[11px] text-blue-500 hover:text-blue-700 font-bold mt-1 underline cursor-pointer"
                                 >
-                                    使用建議編號: {suggestedNum}
+                                    使用建議編�?: {suggestedNum}
                                 </button>
                             )}
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
+                            <label className="text-xs font-bold text-foreground/50 uppercase">?�辦?��?</label>
                             <select
                                 name="city" // Keep mapping to 'city' for now to fit schema, but UI shows specific options
-                                defaultValue="台北(士)"
+                                defaultValue="?��?(�?"
                                 className="w-full text-lg font-bold bg-secondary/30 border-2 border-primary/20 rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                             >
-                                <option value="台北(士)">台北(士)</option>
-                                <option value="台北(內)">台北(內)</option>
-                                <option value="新北(內)">新北(內)</option>
+                                <option value="?��?(�?">?��?(�?</option>
+                                <option value="?��?(??">?��?(??</option>
+                                <option value="?��?(??">?��?(??</option>
                             </select>
                             {/* Hidden district field to satisfy payload logic if needed, or we just ignore it */}
                             <input type="hidden" name="district" value="" />
@@ -430,21 +430,21 @@ export default function NewCasePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">目前進度狀態</label>
+                            <label className="text-sm text-foreground/70 font-bold">?��??�度?�??/label>
                             <select
                                 name="status"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
-                                <option value="Processing">辦理中</option>
-                                <option value="Closed">已結案</option>
-                                <option value="Cancelled">解約</option>
+                                <option value="Processing">辦�?�?/option>
+                                <option value="Closed">已�?�?/option>
+                                <option value="Cancelled">�??</option>
                             </select>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm text-primary font-bold">成交總價 (萬元)</label>
+                            <label className="text-sm text-primary font-bold">?�交總價 (?��?)</label>
                             <input
                                 name="total_price"
                                 type="number"
@@ -454,21 +454,21 @@ export default function NewCasePage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">稅單性質</label>
+                            <label className="text-sm text-foreground/70 font-bold">稅單?�質</label>
                             <select
                                 name="tax_type"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
-                                <option value="一般">一般</option>
-                                <option value="一生一次">一生一次</option>
-                                <option value="一生一屋">一生一屋</option>
-                                <option value="道路用地">道路用地</option>
-                                <option value="一生一次+道路用地">一生一次+道路用地</option>
-                                <option value="一生一屋+道路用地">一生一屋+道路用地</option>
+                                <option value="一??>一??/option>
+                                <option value="一?��?�?>一?��?�?/option>
+                                <option value="一?��?�?>一?��?�?/option>
+                                <option value="?�路?�地">?�路?�地</option>
+                                <option value="一?��?�??�路?�地">一?��?�??�路?�地</option>
+                                <option value="一?��?�??�路?�地">一?��?�??�路?�地</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">買方貸款銀行</label>
+                            <label className="text-sm text-foreground/70 font-bold">買方貸款?��?/label>
                             <input
                                 name="buyer_loan_bank"
                                 type="text"
@@ -476,7 +476,7 @@ export default function NewCasePage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">賣方代償銀行</label>
+                            <label className="text-sm text-foreground/70 font-bold">�?���???��?/label>
                             <input
                                 name="seller_loan_bank"
                                 type="text"
@@ -484,22 +484,22 @@ export default function NewCasePage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-foreground/70 font-bold">塗銷方式</label>
+                            <label className="text-sm text-foreground/70 font-bold">塗銷?��?</label>
                             <select
                                 name="cancellation_type"
-                                defaultValue="代書塗銷"
+                                defaultValue="�?��塗銷"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
-                                <option value="代書塗銷">代書塗銷</option>
-                                <option value="賣方自辦">賣方自辦</option>
-                                <option value="無">無</option>
+                                <option value="�?��塗銷">�?��塗銷</option>
+                                <option value="�?��?�辦">�?��?�辦</option>
+                                <option value="??>??/option>
                             </select>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
+                            <label className="text-xs text-foreground/60 font-medium">履�?帳�?</label>
                             <input
                                 name="escrow_account"
                                 type="text"
@@ -518,7 +518,7 @@ export default function NewCasePage() {
                             </h4>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/50">姓名</label>
+                                    <label className="text-xs text-foreground/50">姓�?</label>
                                     <input
                                         name="buyer_name"
                                         type="text"
@@ -527,7 +527,7 @@ export default function NewCasePage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/50">電話</label>
+                                    <label className="text-xs text-foreground/50">?�話</label>
                                     <input
                                         name="buyer_phone"
                                         type="text"
@@ -538,19 +538,17 @@ export default function NewCasePage() {
                             <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-foreground/40 uppercase font-bold">
-                                        登記名義人
-                                    </label>
+                                        ?��??�義�?                                    </label>
                                     <input
                                         name="registrant_name"
                                         type="text"
                                         className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
-                                        placeholder="同買方"
+                                        placeholder="?�買??
                                     />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-foreground/40 uppercase font-bold">
-                                        登記人電話
-                                    </label>
+                                        ?��?人電�?                                    </label>
                                     <input
                                         name="registrant_phone"
                                         type="text"
@@ -563,11 +561,11 @@ export default function NewCasePage() {
                         {/* Seller Side */}
                         <div className="bg-secondary/30 p-4 rounded-xl space-y-3 border border-border">
                             <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-red-500"></span> 賣方
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span> �?��
                             </h4>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/50">姓名</label>
+                                    <label className="text-xs text-foreground/50">姓�?</label>
                                     <input
                                         name="seller_name"
                                         type="text"
@@ -576,7 +574,7 @@ export default function NewCasePage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/50">電話</label>
+                                    <label className="text-xs text-foreground/50">?�話</label>
                                     <input
                                         name="seller_phone"
                                         type="text"
@@ -586,7 +584,7 @@ export default function NewCasePage() {
                             </div>
                             <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人</label>
+                                    <label className="text-[10px] text-foreground/40 uppercase font-bold">�??�?/label>
                                     <input
                                         name="agent_name"
                                         type="text"
@@ -595,8 +593,7 @@ export default function NewCasePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-foreground/40 uppercase font-bold">
-                                        代理人電話
-                                    </label>
+                                        �??人電�?                                    </label>
                                     <input
                                         name="agent_phone"
                                         type="text"
@@ -613,15 +610,14 @@ export default function NewCasePage() {
                 {/* Section 2: Dates */}
                 <div className="space-y-6">
                     <h3 className="text-xl font-black text-amber-500 flex items-center gap-3">
-                        <span className="p-2 bg-amber-500/10 rounded-lg text-amber-500">📅</span>
-                        重要日期與付款明細
-                    </h3>
+                        <span className="p-2 bg-amber-500/10 rounded-lg text-amber-500">??</span>
+                        ?��??��??��?款�?�?                    </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Contract Stage */}
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-amber-600">簽約日</label>
+                                <label className="text-xs font-bold text-amber-600">簽�???/label>
                                 <input
                                     name="contract_date"
                                     type="date"
@@ -630,7 +626,7 @@ export default function NewCasePage() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-foreground/60 font-medium">簽約款 (萬元)</label>
+                                <label className="text-xs text-foreground/60 font-medium">簽�?�?(?��?)</label>
                                 <input
                                     name="contract_amount"
                                     type="number"
@@ -648,7 +644,7 @@ export default function NewCasePage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-amber-600 uppercase">補差金額</label>
+                                    <label className="text-[10px] font-bold text-amber-600 uppercase">補差?��?</label>
                                     <input
                                         name="sign_diff_amount"
                                         type="number"
@@ -662,7 +658,7 @@ export default function NewCasePage() {
                         {/* Seal & Tax */}
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-blue-500">用印日</label>
+                                <label className="text-xs font-bold text-blue-500">?�印??/label>
                                 <input
                                     name="seal_date"
                                     type="date"
@@ -670,7 +666,7 @@ export default function NewCasePage() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-foreground/60 font-medium">用印款 (萬元)</label>
+                                <label className="text-xs text-foreground/60 font-medium">?�印�?(?��?)</label>
                                 <input
                                     name="seal_amount"
                                     type="number"
@@ -680,7 +676,7 @@ export default function NewCasePage() {
                             </div>
                             <div className="border-t border-border pt-2">
                                 <div className="space-y-1 pt-2">
-                                    <label className="text-xs font-bold text-emerald-500">完稅日</label>
+                                    <label className="text-xs font-bold text-emerald-500">完�???/label>
                                     <input
                                         name="tax_payment_date"
                                         type="date"
@@ -688,7 +684,7 @@ export default function NewCasePage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60 font-medium">完稅款 (萬元)</label>
+                                    <label className="text-xs text-foreground/60 font-medium">完�?�?(?��?)</label>
                                     <input
                                         name="tax_amount"
                                         type="number"
@@ -702,7 +698,7 @@ export default function NewCasePage() {
                         {/* Transfer & Note */}
                         <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-purple-500">過戶日</label>
+                                <label className="text-xs font-bold text-purple-500">?�戶??/label>
                                 <input
                                     name="transfer_date"
                                     type="date"
@@ -710,17 +706,17 @@ export default function NewCasePage() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-foreground/60 font-medium">過戶備註</label>
+                                <label className="text-xs text-foreground/60 font-medium">?�戶?�註</label>
                                 <input
                                     name="transfer_note"
                                     type="text"
-                                    placeholder="例如：代書辦理"
+                                    placeholder="例�?：代?�辦??
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
                             <div className="border-t border-border pt-2">
                                 <div className="space-y-1 pt-2">
-                                    <label className="text-xs font-bold text-orange-600">代償日</label>
+                                    <label className="text-xs font-bold text-orange-600">�????/label>
                                     <input
                                         name="redemption_date"
                                         type="date"
@@ -734,7 +730,7 @@ export default function NewCasePage() {
                         <div className="bg-primary/5 p-5 rounded-2xl space-y-4 border border-primary/20 ring-1 ring-primary/5">
                             <div className="space-y-1">
                                 <label className="text-xs font-black text-red-500 uppercase tracking-tighter flex items-center gap-2">
-                                    交屋日{' '}
+                                    交�??�{' '}
                                     <span className="text-[10px] bg-red-500 text-white px-1.5 rounded-full">必填</span>
                                 </label>
                                 <input
@@ -745,7 +741,7 @@ export default function NewCasePage() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs text-foreground/60 font-bold">尾款金額 (萬元)</label>
+                                <label className="text-xs text-foreground/60 font-bold">尾款?��? (?��?)</label>
                                 <input
                                     name="balance_amount"
                                     type="number"
@@ -762,9 +758,8 @@ export default function NewCasePage() {
                 {/* Section 3: Status & Notes */}
                 <div className="space-y-4">
                     <h3 className="text-xl font-black text-foreground flex items-center gap-3">
-                        <span className="p-2 bg-foreground/5 rounded-lg text-foreground">📝</span>
-                        待辦與備註
-                    </h3>
+                        <span className="p-2 bg-foreground/5 rounded-lg text-foreground">??</span>
+                        待辦?��?�?                    </h3>
 
                     {/* Status removed from here as it is redundant (already in basic info) */}
 
@@ -772,7 +767,7 @@ export default function NewCasePage() {
                         <textarea
                             name="notes"
                             rows={4}
-                            placeholder="例如：需做輻射檢測、約定交屋地點..."
+                            placeholder="例�?：�??�輻射檢測、�?定交屋地�?.."
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             className="w-full bg-secondary/30 border border-border rounded-2xl px-6 py-4 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-sans"
@@ -785,7 +780,7 @@ export default function NewCasePage() {
                     {/* DEBUG ERROR DISPLAY */}
                     {errorMsg && (
                         <div className="flex-1 bg-red-500/10 border-l-4 border-red-500 text-red-500 p-4 rounded font-mono text-sm">
-                            <p className="font-black mb-1">發生錯誤：</p>
+                            <p className="font-black mb-1">?��??�誤�?/p>
                             {errorMsg}
                         </div>
                     )}
@@ -795,14 +790,14 @@ export default function NewCasePage() {
                             href="/"
                             className="px-8 py-4 bg-secondary/50 text-foreground font-bold rounded-2xl hover:bg-secondary transition-all border border-border flex items-center justify-center"
                         >
-                            取消
+                            ?��?
                         </Link>
                         <button
                             type="submit"
                             disabled={loading}
                             className="flex-1 md:flex-none md:min-w-[200px] bg-primary hover:bg-primary-deep text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-primary/30 disabled:opacity-50 transition-all transform hover:scale-[1.02] active:scale-100 flex items-center justify-center gap-2 text-lg"
                         >
-                            {loading ? '儲存中...' : '🚀 建立案件 (Save Case)'}
+                            {loading ? '?��?�?..' : '?? 建�?案件 (Save Case)'}
                         </button>
                     </div>
                 </div>
@@ -810,3 +805,4 @@ export default function NewCasePage() {
         </div>
     );
 }
+

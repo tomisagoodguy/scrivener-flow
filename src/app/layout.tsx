@@ -3,10 +3,10 @@ import { Inter, Outfit } from 'next/font/google';
 import { Suspense } from 'react';
 import { Toaster } from 'sonner';
 import './globals.css';
-import Header from '@/components/Header';
-import { SideNav } from '@/components/SideNav';
-import { ThemeProvider } from '@/components/ThemeProvider';
-import { AuthGateProvider } from '@/components/AuthGate';
+import Header from '@/components/layout/Header';
+import { SideNav } from '@/components/layout/SideNav';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { AuthGateProvider } from '@/components/shared/AuthGate';
 
 const inter = Inter({
     variable: '--font-inter',

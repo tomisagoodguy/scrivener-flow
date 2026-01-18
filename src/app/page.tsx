@@ -1,7 +1,7 @@
 import TodoContainer from '@/components/todo/TodoContainer';
-import DashboardDateCalculator from '@/components/DashboardDateCalculator';
-import DashboardQuickNotes from '@/components/DashboardQuickNotes';
-import { RecentCases } from '@/components/RecentCases';
+import DashboardDateCalculator from '@/components/dashboard/DashboardDateCalculator';
+import DashboardQuickNotes from '@/components/dashboard/DashboardQuickNotes';
+import { RecentCases } from '@/components/features/cases/RecentCases';
 import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
 
 export default function Home() {

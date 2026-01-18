@@ -4,17 +4,17 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
 
-import CaseCompactTodoList from '@/components/CaseCompactTodoList';
-import ExcelStep from '@/components/ExcelStep';
-import HighlightableValue from '@/components/HighlightableValue';
+import CaseCompactTodoList from '@/components/features/cases/CaseCompactTodoList';
+import ExcelStep from '@/components/shared/ExcelStep';
+import HighlightableValue from '@/components/shared/HighlightableValue';
 
 // Checking components folder first is safer.
-import Header from '@/components/Header';
-import CaseTodos from '@/components/CaseTodos';
+import Header from '@/components/layout/Header';
+import CaseTodos from '@/components/features/cases/CaseTodos';
 
-import GlobalPipelineChart from '@/components/GlobalPipelineChart';
-import TimelineGanttView from '@/components/TimelineGanttView';
-import ExportExcelButton from '@/components/ExportExcelButton';
+import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
+import TimelineGanttView from '@/components/dashboard/TimelineGanttView';
+import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
 
 import { getCaseStage } from '@/lib/stageUtils';
 

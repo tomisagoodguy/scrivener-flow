@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { DemoCase } from '@/types';
 import { getCaseStage } from '@/lib/stageUtils';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface GlobalPipelineChartProps {
     cases: DemoCase[];
