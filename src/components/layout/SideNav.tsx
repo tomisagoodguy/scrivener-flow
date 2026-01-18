@@ -3,10 +3,44 @@
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { sendLineMessage } from '@/app/actions/lineNotify';
+import { Send, MessageSquareText, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const SideNav = () => {
     const pathname = usePathname();
     const router = useRouter();
+    const [email, setEmail] = useState<string | null>(null);
+    const [lineMsg, setLineMsg] = useState('');
+    const [sending, setSending] = useState(false);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setEmail(user?.email || null);
+        });
+    }, []);
+
+    const handleQuickLine = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!lineMsg.trim()) return;
+
+        setSending(true);
+        try {
+            const res = await sendLineMessage(lineMsg.trim());
+            if (res.success) {
+                toast.success('已發送至您的 Line');
+                setLineMsg('');
+            } else {
+                toast.error('發送失敗: ' + res.error);
+            }
+        } catch (err) {
+            toast.error('系統錯誤');
+        } finally {
+            setSending(false);
+        }
+    };
+
     const navItems = [
         { name: '儀表板', href: '/', icon: '📊' },
         { name: '案件管理', href: '/cases', icon: '📁' },
@@ -20,7 +54,7 @@ export const SideNav = () => {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        router.refresh(); // Refresh to update auth state
+        router.refresh();
     };
 
     return (
@@ -51,6 +85,33 @@ export const SideNav = () => {
                     );
                 })}
             </nav>
+
+            {/* Quick Line Area - Only for Boss Tom */}
+            {email === 'tom890108159@gmail.com' && (
+                <div className="w-full px-4 mb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
+                    <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 mb-2 text-emerald-600 dark:text-emerald-400">
+                            <MessageSquareText size={16} />
+                            <span className="text-xs font-black uppercase tracking-widest">快速傳 Line</span>
+                        </div>
+                        <form onSubmit={handleQuickLine} className="relative">
+                            <textarea
+                                value={lineMsg}
+                                onChange={(e) => setLineMsg(e.target.value)}
+                                placeholder="輸入即時備忘..."
+                                className="w-full bg-white dark:bg-slate-950 border border-emerald-500/10 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500/20 outline-none h-32 max-h-64 overflow-y-auto custom-scrollbar placeholder:text-slate-400 font-medium leading-relaxed"
+                            />
+                            <button
+                                type="submit"
+                                disabled={sending || !lineMsg.trim()}
+                                className="absolute bottom-2 right-2 p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-500/20"
+                            >
+                                {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Avatar / Logout */}
             <button

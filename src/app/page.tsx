@@ -3,27 +3,14 @@ import DashboardDateCalculator from '@/components/dashboard/DashboardDateCalcula
 import DashboardQuickNotes from '@/components/dashboard/DashboardQuickNotes';
 import { RecentCases } from '@/components/features/cases/RecentCases';
 import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
+import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 
 export default function Home() {
-    const hours = new Date().getHours();
-    const greeting = hours < 12 ? '早安' : hours < 18 ? '午安' : '晚安';
-
     return (
         <div className="pb-12 animate-fade-in">
             <main className="max-w-7xl mx-auto pt-4 sm:pt-8 bg-transparent">
-                {/* Welcome Section */}
-                <div className="mb-8 pl-1">
-                    <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <span>{greeting}，</span>
-                        <span className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                            Administrator
-                        </span>
-                        <span className="animate-bounce">👋</span>
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
-                        這是您的個人代書工作台，所有工具已準備就緒。
-                    </p>
-                </div>
+                {/* Welcome Section (Client Side) */}
+                <WelcomeHeader />
 
                 {/* WORK DASHBOARD (7-Day Risk Radar & Pipeline) */}
                 <div className="mb-8">

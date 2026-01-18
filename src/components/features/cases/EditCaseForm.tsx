@@ -9,6 +9,7 @@ import { parseDocx } from '@/app/actions/parseDocx';
 import CaseScheduleManager from '@/components/features/cases/CaseScheduleManager';
 import QuickNotes from '@/components/shared/QuickNotes';
 import CaseTodos from '@/components/features/cases/CaseTodos';
+import CaseMessageGenerator from '@/components/features/cases/CaseMessageGenerator';
 import { getCaseStage } from '@/lib/stageUtils';
 import {
     CheckCircle2,
@@ -31,6 +32,9 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     const [transferNote, setTransferNote] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [debugInfo, setDebugInfo] = useState('');
+
+    // User permission for experimental features
+    const [currentUserEmail, setCurrentUserEmail] = useState('');
 
     // 替代 window.confirm 的二次確認狀態
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -74,6 +78,13 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
         console.log('EditCaseForm initialized with Case ID:', initialData.id);
         const m = (initialData.milestones?.[0] || {}) as any;
         setTransferNote(m.transfer_note || '');
+
+        // Fetch current user
+        supabase.auth.getUser().then(({ data }) => {
+            if (data?.user?.email) {
+                setCurrentUserEmail(data.user.email);
+            }
+        });
     }, [initialData.id, initialData.milestones]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -890,6 +901,15 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
             </div>
 
             <div className="border-t border-border-color"></div>
+
+            {currentUserEmail === 'tom890108159@gmail.com' && (
+                <>
+                    <div className="py-4">
+                        <CaseMessageGenerator caseData={initialData} />
+                    </div>
+                    <div className="border-t border-border-color"></div>
+                </>
+            )}
 
             <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

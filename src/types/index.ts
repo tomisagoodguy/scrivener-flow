@@ -1,4 +1,4 @@
-export type CaseStatus = '辦理中' | '結案' | '解約' | 'Processing' | 'Closed' | 'Cancelled' | 'Pending' | '交屋';
+export type CaseStatus = '辦理中' | '結案' | '解約' | 'Processing' | 'Closed' | 'Cancelled' | 'Pending' | '交屋' | 'Rollback';
 
 export interface Case {
     id: string; // Using string for text-based ID or uuid
@@ -100,6 +100,8 @@ export interface DemoCase {
     todos?: Record<string, boolean>; // 固定代辦事項
     cancellation_type?: '代書塗銷' | '賣方自辦' | '無'; // 塗銷方式
     tax_type?: '一般' | '自用'; // 增值稅類型 (稅單性質)
+    is_on_hold?: boolean;
+    on_hold_reason?: string;
 
     // Joined Tables
     milestones?: Milestone[];
