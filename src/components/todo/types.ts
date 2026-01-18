@@ -11,6 +11,7 @@ export interface TodoTask {
     type: TaskType;
     date: Date;
     isCompleted: boolean;
+    isMilestone?: boolean;
     priority: Priority;
     caseName?: string;
     caseId?: string;

@@ -141,7 +141,8 @@ id, case_number, buyer_name,
         `
                 )
                 .eq('user_id', user.id) // Filter by user to respect isolation
-                .neq('status', 'Closed'); // Only active cases
+                .neq('status', 'Closed')
+                .neq('status', 'Cancelled'); // Only active cases
 
             if (caseError) throw caseError;
 
@@ -173,11 +174,11 @@ id, case_number, buyer_name,
                 const isAppointment = type === 'appointment';
                 const dateDisplay = isAppointment
                     ? new Date(dateStr).toLocaleString('zh-TW', {
-                          month: 'numeric',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                      })
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })
                     : new Date(dateStr).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
 
                 const newTitle = `${c.buyer_name} 案 - ${titlePrefix} (${dateDisplay})`;
@@ -224,7 +225,7 @@ id, case_number, buyer_name,
                 const f = c.financials?.[0] || {};
 
                 // Legal Dates (3 days before)
-                addSystemTask(c, 'contract_date', m.contract_date, 3, 'legal', '簽約日');
+                // Contract Date removed as it is past event
                 addSystemTask(c, 'sign_diff_date', m.sign_diff_date, 3, 'legal', '補差額'); // Added as requested in new form
                 addSystemTask(c, 'seal_date', m.seal_date, 3, 'legal', '用印日');
                 addSystemTask(c, 'tax_payment_date', m.tax_payment_date, 3, 'legal', '完稅日');
@@ -260,10 +261,11 @@ id, case_number, buyer_name,
 
             // Refresh if any changes made, or just mapping existing
             if (todosToUpdate.length > 0 || todosToInsert.length > 0) {
-                const { data: refreshedTodos } = await supabase.from('todos').select('*').eq('user_id', user.id);
-                mapTodosToState(existingTodos || [], activeCases || []);
+                const activeCaseIds = new Set(activeCases?.map(c => c.id) || []);
+                mapTodosToState(cleanExistingTodos, activeCases || [], activeCaseIds);
             } else {
-                mapTodosToState(cleanExistingTodos, activeCases || []);
+                const activeCaseIds = new Set(activeCases?.map(c => c.id) || []);
+                mapTodosToState(cleanExistingTodos, activeCases || [], activeCaseIds);
             }
         } catch (err) {
             console.error('Todo Fetch Error:', err);
@@ -272,11 +274,24 @@ id, case_number, buyer_name,
         }
     };
 
-    const mapTodosToState = (todos: any[], cases: any[]) => {
+    const mapTodosToState = (todos: any[], cases: any[], activeCaseIds: Set<string>) => {
         const todayStr = new Date().toISOString().split('T')[0];
 
         const mapped: TodoTask[] = todos
             .filter((t) => !t.is_deleted) // Filter out soft-deleted items
+            // Filter out tasks belonging to closed/cancelled cases
+            .filter((t) => {
+                if (t.case_id && !activeCaseIds.has(t.case_id)) return false;
+                return true;
+            })
+            // STRICTLY Filter out Contract Date (Legacy or System)
+            .filter((t) => {
+                if (t.source_key === 'contract_date') return false;
+                if (t.source_key === 'sign_appt') return false;
+                if (t.content?.includes('簽約日')) return false;
+                if (t.content?.includes('簽約約定')) return false;
+                return true;
+            })
             .filter((t) => {
                 // Logic: Show all incomplete tasks.
                 // For completed tasks: Only show if due date is Today or Future.
@@ -316,6 +331,20 @@ id, case_number, buyer_name,
 
     useEffect(() => {
         fetchAndSyncTodos();
+
+        // Real-time synchronization for todo table changes
+        const channel = supabase
+            .channel('todos-main-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
+                console.log('Todos changed elsewhere, refreshing...', payload.eventType);
+                // Re-fetch to ensure sync with system logic and case data
+                fetchAndSyncTodos();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const toggleTask = async (id: string) => {
@@ -406,7 +435,7 @@ id, case_number, buyer_name,
             <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                        ✅ 智慧代辦中心
+                        ✅ 智慧待辦中心
                     </h2>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-medium">
                         {loading ? '...' : `${tasks.filter((t) => !t.isCompleted).length} 待辦`}

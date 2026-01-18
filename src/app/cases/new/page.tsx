@@ -9,55 +9,57 @@ import QuickNotes from '@/components/QuickNotes';
 
 export default function NewCasePage() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [notes, setNotes] = useState('');
+    const [isDuplicate, setIsDuplicate] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
+    const [suggestedNum, setSuggestedNum] = useState<string | null>(null);
 
-    const handleAutoCalculate = () => {
-        const form = document.querySelector('form') as HTMLFormElement;
-        const data = new FormData(form);
-        const contractDate = data.get('contract_date')?.toString();
-        const taxType = data.get('tax_type')?.toString() as '一般' | '自用' | undefined; // Fallback handled in util if varied
+    const [loading, setLoading] = useState(false);
 
-        // Map UI values to strictly '一般' or '自用' for calculator
-        // UI options: "一般", "一生一次", "一生一屋" -> all imply Self-use maybe?
-        // Usually "一般" is General, others are preferential (Self-use).
-        // Let's assume anything other than "一般" might benefit from the longer 3-week period?
-        // User said: "一般增值稅抓2週", "自用增值稅抓3週".
-        // "一生一次/一生一屋" are types of 自用 (Self-use) tax rates.
-        const isGeneral = taxType === '一般' || !taxType;
-        const mapTaxType = isGeneral ? '一般' : '自用';
+    // Initial check for latest case number to suggest next one
+    useState(() => {
+        const fetchLatest = async () => {
+            const { data } = await supabase
+                .from('cases')
+                .select('case_number')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
 
-        if (!contractDate) {
-            alert('請先選擇「簽約日」！');
-            return;
+            if (data?.case_number) {
+                // If it looks like a number, try to increment it
+                const match = data.case_number.match(/(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    const nextNum = (num + 1).toString().padStart(match[1].length, '0');
+                    const suggested = data.case_number.replace(/\d+$/, nextNum);
+                    setSuggestedNum(suggested);
+                }
+            }
+        };
+        fetchLatest();
+    });
+
+    const checkDuplicate = async (caseNum: string) => {
+        if (!caseNum) return;
+        setIsChecking(true);
+        const { data, error } = await supabase
+            .from('cases')
+            .select('id')
+            .eq('case_number', caseNum)
+            .maybeSingle();
+
+        if (data) {
+            setIsDuplicate(true);
+            setErrorMsg(`❌ 案號 「${caseNum}」 已經存在，請更換一個案號。`);
+        } else {
+            setIsDuplicate(false);
+            if (!errorMsg.includes('資料庫建立失敗')) setErrorMsg(''); // Clear if it was a duplicate error
         }
-
-        import('@/utils/dateCalculator').then(({ calculateMilestoneDates }) => {
-            const results = calculateMilestoneDates(contractDate, mapTaxType);
-            if (!results) return;
-
-            const setVal = (name: string, val: string) => {
-                const el = form.elements.namedItem(name) as HTMLInputElement;
-                if (el) el.value = val;
-            };
-
-            setVal('sign_diff_date', results.sign_diff_date);
-            setVal('seal_date', results.seal_date);
-            setVal('tax_payment_date', results.tax_payment_date);
-            // Transfer date usually same day as Tax Payment or shortly after? User didn't specify.
-            // Let's assume Transfer Date ~ Tax Payment Date for now, or leave blank.
-            // Actually, Transfer (過戶) happens after Tax Payment (完稅).
-            // Logic: "過戶日" can be same as Tax Payment Date (完稅後送件).
-            setVal('transfer_date', results.tax_payment_date);
-            setVal('handover_date', results.handover_date);
-            setVal('redemption_date', results.handover_date); // Guessing redemption near handover
-
-            // Also auto-fill amounts if Total Price is set?
-            // User didn't ask for amount calc yet, only date.
-            alert(`✅ 日期已自動推算完成！\n\n因為稅單性質為「${mapTaxType}」，完稅期抓 ${isGeneral ? '2' : '3'} 週。`);
-        });
+        setIsChecking(false);
     };
+
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -131,35 +133,53 @@ export default function NewCasePage() {
 
             console.log('Inserting Case Payload:', casePayload);
 
-            const { data: newCase, error: caseError } = await supabase
+            // 1. Check if Case exists to handle "Half-created" states
+            const { data: existingCase } = await supabase
                 .from('cases')
-                .insert([casePayload])
-                .select()
-                .single();
+                .select('id')
+                .eq('case_number', data.case_number)
+                .maybeSingle();
 
-            if (caseError) {
-                console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
-                console.log('Failed Payload:', casePayload);
+            let newCase;
+            if (existingCase) {
+                console.log('Case already exists, updating instead of inserting...', existingCase.id);
+                const { data: updatedCase, error: caseError } = await supabase
+                    .from('cases')
+                    .update(casePayload)
+                    .eq('id', existingCase.id)
+                    .select()
+                    .single();
+                if (caseError) throw caseError;
+                newCase = updatedCase;
+            } else {
+                const { data: insertedCase, error: caseError } = await supabase
+                    .from('cases')
+                    .insert([casePayload])
+                    .select()
+                    .single();
 
-                const errorTitle = '資料庫建立失敗';
-                let displayMsg = '';
+                if (caseError) {
+                    console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
+                    console.log('Failed Payload:', casePayload);
 
-                if (caseError.code === '23505') {
-                    displayMsg = `❌ 案號 「${data.case_number}」 已經存在，請更換一個案號。`;
-                } else {
-                    // Force display of error details even if object seems empty
-                    const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
-                    const errHint = caseError.hint ? `\n提示: ${caseError.hint}` : '';
-                    const errDetail = caseError.details ? `\n細節: ${caseError.details}` : '';
-                    displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}${errDetail}${errHint}`;
+                    const errorTitle = '資料庫建立失敗';
+                    let displayMsg = '';
+
+                    if (caseError.code === '23505') {
+                        displayMsg = `❌ 案號 「${data.case_number}」 已經存在，請更換一個案號。`;
+                    } else {
+                        const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
+                        displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}`;
+                    }
+
+                    setErrorMsg(displayMsg);
+                    setLoading(false);
+                    return;
                 }
-
-                setErrorMsg(displayMsg);
-                setLoading(false);
-                return;
+                newCase = insertedCase;
             }
 
-            if (!newCase) throw new Error('案件建立後無回傳資料');
+            if (!newCase) throw new Error('案件建立或更新後無回傳資料');
 
             // 2. Insert Milestones
             const milestonePayload: any = {
@@ -192,13 +212,17 @@ export default function NewCasePage() {
                 }
             });
 
-            console.log('Inserting Milestone Payload:', milestonePayload);
+            console.log('Upserting Milestone Payload:', milestonePayload);
 
-            const { error: milestoneError } = await supabase.from('milestones').insert([milestonePayload]);
+            const { data: existingMilestone } = await supabase.from('milestones').select('id').eq('case_id', newCase.id).maybeSingle();
 
-            if (milestoneError) {
-                console.error('Milestone Error:', milestoneError);
-                const mDetails = JSON.stringify(milestoneError, Object.getOwnPropertyNames(milestoneError));
+            const milestoneResult = existingMilestone
+                ? await supabase.from('milestones').update(milestonePayload).eq('id', existingMilestone.id)
+                : await supabase.from('milestones').insert([milestonePayload]);
+
+            if (milestoneResult.error) {
+                console.error('Milestone Error:', milestoneResult.error);
+                const mDetails = JSON.stringify(milestoneResult.error, Object.getOwnPropertyNames(milestoneResult.error));
                 setErrorMsg(
                     (prev) => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails
                 );
@@ -214,14 +238,17 @@ export default function NewCasePage() {
                 seller_bank: data.seller_loan_bank?.toString() || null,
             };
 
-            console.log('Inserting Financials Payload:', financialsPayload);
+            console.log('Upserting Financials Payload:', financialsPayload);
+            const { data: existingFin } = await supabase.from('financials').select('id').eq('case_id', newCase.id).maybeSingle();
 
-            const { error: finError } = await supabase.from('financials').insert([financialsPayload]);
+            const finResult = existingFin
+                ? await supabase.from('financials').update(financialsPayload).eq('id', existingFin.id)
+                : await supabase.from('financials').insert([financialsPayload]);
 
-            if (finError) {
-                console.error('Financial Error', finError);
+            if (finResult.error) {
+                console.error('Financial Error', finResult.error);
                 setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finError.message
+                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finResult.error.message
                 );
                 setLoading(false);
                 return;
@@ -362,9 +389,28 @@ export default function NewCasePage() {
                             <input
                                 name="case_number"
                                 type="text"
-                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans"
+                                className={`w-full bg-secondary/50 border ${isDuplicate ? 'border-red-500 ring-2 ring-red-500/20' : 'border-border'} rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans`}
                                 required
+                                onBlur={(e) => checkDuplicate(e.target.value)}
+                                placeholder={suggestedNum ? `建議序號: ${suggestedNum}` : '請輸入案號'}
                             />
+                            {isChecking && <p className="text-[10px] text-primary animate-pulse font-bold mt-1">正在檢查案號重複性...</p>}
+                            {isDuplicate && <p className="text-xs text-red-500 font-bold mt-1">此案號已存在，請修正</p>}
+                            {!isDuplicate && !isChecking && suggestedNum && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const el = document.getElementsByName('case_number')[0] as HTMLInputElement;
+                                        if (el) {
+                                            el.value = suggestedNum;
+                                            setIsDuplicate(false);
+                                        }
+                                    }}
+                                    className="text-[11px] text-blue-500 hover:text-blue-700 font-bold mt-1 underline cursor-pointer"
+                                >
+                                    使用建議編號: {suggestedNum}
+                                </button>
+                            )}
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>

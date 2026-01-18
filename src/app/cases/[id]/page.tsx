@@ -22,7 +22,8 @@ export default async function CaseDetailPage({ params }: PageProps) {
             *,
             milestones (*),
             financials (*),
-            case_date_logs (*)
+            case_date_logs (*),
+            todos (*)
         `
         )
         .eq('id', id)

@@ -1,4 +1,67 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+
+/* Custom Scrollbar for Dashboard Widgets */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Minimal Professional Hover Effects */
+
+/* Button Hover - Subtle lift only */
+button:not(:disabled):hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+button:not(:disabled):active {
+    transform: translateY(0);
+}
+
+/* Link Hover - Color change only */
+a:hover {
+    color: var(--primary);
+    transition: color 0.2s ease;
+}
+
+/* Input Focus - Clean border highlight */
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+    transition: all 0.2s ease;
+}
+
+/* Smooth Scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Text Selection */
+::selection {
+    background: rgba(14, 165, 233, 0.2);
+    color: var(--foreground);
+}
+
+::-moz-selection {
+    background: rgba(14, 165, 233, 0.2);
+    color: var(--foreground);
+}
+
 @source "../app";
 @source "../components";
 @source "../lib";
@@ -35,8 +98,15 @@
     --card-bg: #ffffff;
     --card-border: #e2e8f0;
 
-    --shadow-glass: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --shadow-glass-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-glass:
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 2px 4px -2px rgba(0, 0, 0, 0.05),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+
+    --shadow-glass-hover:
+        0 20px 25px -5px rgba(0, 0, 0, 0.05),
+        0 8px 10px -6px rgba(0, 0, 0, 0.05),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.8);
 
     /* Shadcn UI Variables */
     --muted: 210 40% 96.1%;
@@ -73,6 +143,7 @@
     --animate-fade-in: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     --animate-slide-up: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     --animate-pulse-slow: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    --animate-shimmer: shimmer 2s linear infinite;
 
     @keyframes fade-in {
         from {
@@ -107,16 +178,22 @@
             opacity: 0.8;
         }
     }
+
+    @keyframes shimmer {
+        from {
+            background-position: -200% 0;
+        }
+
+        to {
+            background-position: 200% 0;
+        }
+    }
 }
 
 body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family:
-        var(--font-inter),
-        -apple-system,
-        BlinkMacSystemFont,
-        sans-serif;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
     /* Subtle mesh gradient background */
     background-image:
         radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.03) 0%, transparent 50%),
@@ -150,16 +227,23 @@ h6 {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--card-border);
-    border-radius: 16px;
+    border-radius: 24px;
+    /* Increased for premium feel */
     box-shadow: var(--shadow-glass);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
     background: var(--surface-hover);
     border-color: var(--primary-light);
     box-shadow: var(--shadow-glass-hover);
-    transform: translateY(-2px);
+    transform: translateY(-4px) scale(1.01);
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
 }
 
 /* Custom Scrollbar */

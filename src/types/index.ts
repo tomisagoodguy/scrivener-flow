@@ -214,3 +214,19 @@ export interface DashboardStats {
     newThisWeek: number;
     completionRate: number;
 }
+
+export interface Bank {
+    id: string;
+    created_at?: string;
+    updated_at?: string;
+    name: string;
+    branch?: string;
+    loan_conditions?: string; // Multi-line text for rules
+    redemption_phone?: string;
+    redemption_account?: string;
+    redemption_days?: string;
+    redemption_location?: string;
+    redemption_note?: string;
+    contacts?: any[]; // Keep flexible for JSONB
+    user_id?: string;
+}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { Search, Plus, BookOpen, Scale, FileText, Copy, Trash2, Edit } from 'lucide-react';
+import { Search, Plus, BookOpen, Scale, FileText, Copy, Trash2, Edit, Tag } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/GenericExportExcelButton';
 
@@ -11,7 +11,8 @@ interface Clause {
     id: string;
     title: string; // 使用情境
     content: string; // 條文內容
-    category: string;
+    category: string; // Primary category for display
+    tags: string[]; // Support multiple tags
     usage_count: number;
 }
 
@@ -22,7 +23,8 @@ export default function ClausesPage() {
     // selectedCategory used to default to 'All', now will be string | null. If null -> All.
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [currentClause, setCurrentClause] = useState<Partial<Clause>>({});
+    const [currentClause, setCurrentClause] = useState<Partial<Clause>>({ tags: [] });
+    const [tagInput, setTagInput] = useState('');
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -112,16 +114,17 @@ export default function ClausesPage() {
     };
 
     // --- Sidebar Logic ---
+    const allTags = Array.from(new Set(clauses.flatMap((c) => c.tags || []))).sort();
     const uniqueCategories = Array.from(new Set(clauses.map((c) => c.category || '一般'))).sort();
 
     const sidebarGroups: SidebarGroup[] = [
         {
-            title: "條文分類",
-            items: uniqueCategories.map(cat => ({
-                id: cat,
-                label: cat,
-                count: clauses.filter(c => (c.category || '一般') === cat).length,
-                icon: <Scale className="w-4 h-4" />
+            title: "標籤索引",
+            items: allTags.map(tag => ({
+                id: tag,
+                label: tag,
+                count: clauses.filter(c => c.tags && c.tags.includes(tag)).length,
+                icon: <Tag className="w-4 h-4 text-emerald-400" />
             }))
         }
     ];
@@ -129,8 +132,7 @@ export default function ClausesPage() {
     const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        const clauseCat = clause.category || '一般';
-        const matchesCategory = selectedCategory ? clauseCat === selectedCategory : true;
+        const matchesCategory = selectedCategory ? (clause.category === selectedCategory || (clause.tags && clause.tags.includes(selectedCategory))) : true;
         return matchesSearch && matchesCategory;
     });
 
@@ -216,7 +218,7 @@ export default function ClausesPage() {
 
                             <button
                                 onClick={() => {
-                                    setCurrentClause({ category: selectedCategory || '一般' });
+                                    setCurrentClause({ category: selectedCategory || '一般', tags: [] });
                                     setIsEditing(true);
                                 }}
                                 className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold shadow-xl shadow-slate-900/20 border border-slate-700/50 flex items-center gap-2 transition-all active:scale-95"
@@ -263,10 +265,15 @@ export default function ClausesPage() {
                                     <div className="flex flex-col sm:flex-row gap-6">
                                         {/* Left: Metadata */}
                                         <div className="sm:w-1/4 min-w-[200px] flex flex-col gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                                                     {clause.category || '一般'}
                                                 </span>
+                                                {(clause.tags || []).map(t => (
+                                                    <span key={t} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                                        #{t}
+                                                    </span>
+                                                ))}
                                                 {clause.usage_count > 0 && (
                                                     <span className="text-[10px] items-center gap-1 inline-flex text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
                                                         🔥 {clause.usage_count}
@@ -289,8 +296,8 @@ export default function ClausesPage() {
                                                 {/* Copy Overlay Hint */}
                                                 <div className="absolute top-2 right-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
                                                     <span className={`text-[10px] px-2 py-1 rounded font-bold shadow-sm ${copyFeedback === clause.id
-                                                            ? 'bg-emerald-500 text-white'
-                                                            : 'bg-white text-slate-500 border border-slate-200'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'bg-white text-slate-500 border border-slate-200'
                                                         }`}>
                                                         {copyFeedback === clause.id ? '已複製！' : '點擊複製'}
                                                     </span>
@@ -355,15 +362,45 @@ export default function ClausesPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">分類</label>
-                                    <input
-                                        value={currentClause.category || ''}
-                                        onChange={(e) =>
-                                            setCurrentClause({ ...currentClause, category: e.target.value })
-                                        }
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                                        placeholder="例如：交屋、違約、稅費"
-                                    />
+                                    <label className="text-sm font-bold text-slate-700">標籤 (按 Enter 新增)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            value={tagInput}
+                                            onChange={(e) => setTagInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    const trimmed = tagInput.trim();
+                                                    if (trimmed && !(currentClause.tags || []).includes(trimmed)) {
+                                                        setCurrentClause({
+                                                            ...currentClause,
+                                                            tags: [...(currentClause.tags || []), trimmed]
+                                                        });
+                                                        setTagInput('');
+                                                    }
+                                                }
+                                            }}
+                                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
+                                            placeholder="例如：現況、違約"
+                                        />
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {(currentClause.tags || []).map(t => (
+                                            <span key={t} className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                                                #{t}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentClause({
+                                                        ...currentClause,
+                                                        tags: currentClause.tags?.filter(tag => tag !== t)
+                                                    })}
+                                                    className="hover:text-rose-500"
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 

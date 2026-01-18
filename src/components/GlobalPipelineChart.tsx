@@ -38,15 +38,15 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
     }, [cases]);
 
     return (
-        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm mb-8 overflow-x-auto ring-1 ring-border/5">
-            <div className="flex justify-between items-start mb-8">
+        <div className="bg-card border border-border p-4 rounded-xl shadow-sm mb-6 overflow-x-auto ring-1 ring-border/5">
+            <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                        <span className="text-2xl">📊</span> 案件全流程監控 (Pipeline Status)
+                    <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                        <span className="text-lg">📊</span> 案件全流程監控 (Pipeline Status)
                     </h3>
-                    <p className="text-sm text-foreground/50 font-bold mt-2 ml-9 flex items-center gap-2 animate-pulse">
-                        <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[10px]">TIPS</span>
-                        點擊圓圈可「篩選」下方案件，檢視特定階段進度
+                    <p className="text-xs text-foreground/50 font-bold mt-1 ml-7 flex items-center gap-1.5">
+                        <span className="bg-primary/20 text-primary px-1 py-0.5 rounded text-[9px]">TIPS</span>
+                        點擊圓圈可篩選下方案件
                     </p>
                 </div>
                 {currentStage ? (
@@ -57,20 +57,20 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                         <span>✖ 清除篩選 ({STAGES.find((s) => s.id === currentStage)?.label})</span>
                     </Link>
                 ) : (
-                    <div className="hidden md:block text-right bg-secondary/30 px-4 py-2 rounded-xl border border-border">
-                        <div className="text-[10px] text-foreground/40 font-black uppercase tracking-wider">
+                    <div className="hidden md:block text-right bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
+                        <div className="text-[9px] text-foreground/40 font-black uppercase tracking-wider">
                             Processing Cases
                         </div>
-                        <div className="text-2xl font-black text-primary leading-none mt-1">
+                        <div className="text-xl font-black text-primary leading-none mt-0.5">
                             {Object.values(stageData).reduce((a, b) => a + b, 0)}{' '}
-                            <span className="text-sm text-foreground/30">件</span>
+                            <span className="text-xs text-foreground/30">件</span>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Adjusted container to fit all steps without massive scrolling */}
-            <div className="flex items-center justify-between w-full px-2 py-4 overflow-x-auto">
+            <div className="flex items-center justify-between w-full px-2 py-2 overflow-x-auto">
                 {STAGES.map((stage, idx) => {
                     const count = stageData[stage.id as keyof typeof stageData] || 0;
                     const isLast = idx === STAGES.length - 1;

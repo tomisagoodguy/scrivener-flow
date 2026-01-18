@@ -2,6 +2,7 @@ import TodoContainer from '@/components/todo/TodoContainer';
 import DashboardDateCalculator from '@/components/DashboardDateCalculator';
 import DashboardQuickNotes from '@/components/DashboardQuickNotes';
 import { RecentCases } from '@/components/RecentCases';
+import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
 
 export default function Home() {
     const hours = new Date().getHours();
@@ -22,6 +23,11 @@ export default function Home() {
                     <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
                         這是您的個人代書工作台，所有工具已準備就緒。
                     </p>
+                </div>
+
+                {/* WORK DASHBOARD (7-Day Risk Radar & Pipeline) */}
+                <div className="mb-8">
+                    <WorkDashboard />
                 </div>
 
                 {/* Dashboard Grid */}

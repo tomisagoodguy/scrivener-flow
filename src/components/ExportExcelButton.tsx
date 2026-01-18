@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { DemoCase } from '@/types';
 import { format } from 'date-fns';
@@ -24,7 +23,8 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
         try {
             setIsExporting(true);
 
-            // Create workbook and worksheet
+            // Dynamic import to avoid SSR/Loading issues with ExcelJS
+            const ExcelJS = await import('exceljs');
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('案件列表');
 
@@ -62,6 +62,8 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
 
             // Process data values
             const rows = cases.map((c) => {
+                // Determine milestone/financial object (handle Array vs Object)
+                // Using 'as any' to bypass strict checks on optional relational fields
                 const m = (Array.isArray(c.milestones) ? c.milestones[0] || {} : c.milestones || {}) as any;
                 const f = (Array.isArray(c.financials) ? c.financials[0] || {} : c.financials || {}) as any;
 

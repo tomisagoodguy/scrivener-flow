@@ -123,6 +123,8 @@ export const calculateMilestoneDates = (contractDateStr: string, taxType: '一�
         seal_date: fmt(sealDate),
         tax_payment_date: fmt(taxDate),
         handover_date: fmt(handoverDate),
+        land_value_tax_deadline: fmt(addDays(sealDate, 14)), // 預估限繳日：用印後 14 天
+        deed_tax_deadline: fmt(addDays(sealDate, 14)),      // 預估限繳日：用印後 14 天
         // redemption_date: fmt(subDays(handoverDate, 3)) // Optional guess
     };
 };

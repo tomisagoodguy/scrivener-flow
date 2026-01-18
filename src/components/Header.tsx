@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FC, useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 
-export const Header = () => {
+export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +14,24 @@ export const Header = () => {
     useEffect(() => {
         setSearchTerm(searchParams.get('q') || '');
     }, [searchParams]);
+
+    // Live Clock Logic
+    const [now, setNow] = useState<Date | null>(null);
+    useEffect(() => {
+        setNow(new Date());
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const getGreeting = (h: number) => {
+        if (h < 5) return '😴 熬夜修仙中...';
+        if (h < 9) return '🥯 早安！吃早餐沒？';
+        if (h < 12) return '☕ 精神百倍 衝衝衝';
+        if (h < 14) return '🍱 吃飽睡 睡飽吃';
+        if (h < 18) return '🔥 燃燒小宇宙';
+        if (h < 22) return '🌆 下班還不走？';
+        return '🍺 先喝一杯再說';
+    };
 
     const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -75,9 +95,27 @@ export const Header = () => {
                         ))}
                     </nav>
 
+                    {/* Live Clock Widget - Integrated in Flow */}
+                    {now && (
+                        <div className="hidden 2xl:flex items-center gap-3 px-4 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 mx-auto select-none hover:bg-white dark:hover:bg-slate-800 transition-colors shadow-sm">
+                            <div className="text-xl font-black font-mono text-blue-600 dark:text-blue-400 tracking-widest tabular-nums">
+                                {format(now, 'HH:mm')}
+                            </div>
+                            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
+                                    {format(now, 'MM/dd EEEE', { locale: zhTW })}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 leading-tight">
+                                    {getGreeting(now.getHours())}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center gap-2 md:gap-4">
                         {/* Search Bar - Desktop */}
-                        <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800/40 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 transition-all focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:bg-white dark:focus-within:bg-slate-800 group">
+                        <div className="hidden xl:flex items-center bg-slate-100 dark:bg-slate-800/40 px-4 py-2 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 transition-all focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:bg-white dark:focus-within:bg-slate-800 group">
                             <span className="text-lg grayscale group-focus-within:grayscale-0 transition-all">🔍</span>
                             <input
                                 type="text"

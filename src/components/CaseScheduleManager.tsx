@@ -54,7 +54,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
             .order('due_date', { ascending: true });
 
         if (data) {
-            setScheduleItems(data as any[]);
+            // 只顯示手動新增的項目 (manual)，排除系統自動同步的 (system)
+            setScheduleItems((data as any[]).filter(item => item.source_type === 'manual' || !item.source_type));
         }
         setLoading(false);
     };
@@ -254,8 +255,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                 <button
                     onClick={() => setFilter('future')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'future'
-                            ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                 >
                     🔮 未來
@@ -263,8 +264,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                 <button
                     onClick={() => setFilter('today')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'today'
-                            ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                 >
                     📅 今天
@@ -272,8 +273,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                 <button
                     onClick={() => setFilter('expired')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'expired'
-                            ? 'bg-red-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-red-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                 >
                     ⚠️ 已過期
@@ -281,8 +282,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                 <button
                     onClick={() => setFilter('all')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all'
-                            ? 'bg-slate-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-slate-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                 >
                     📋 全部
@@ -359,8 +360,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                             <div
                                 key={item.id}
                                 className={`group bg-white hover:bg-indigo-50/30 p-4 rounded-xl border shadow-sm flex items-center justify-between transition-all ${isExpired
-                                        ? 'border-red-200 bg-red-50/20'
-                                        : 'border-slate-100 hover:border-indigo-100'
+                                    ? 'border-red-200 bg-red-50/20'
+                                    : 'border-slate-100 hover:border-indigo-100'
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
@@ -383,8 +384,8 @@ export default function CaseScheduleManager({ caseId }: { caseId: string }) {
                                         <div className="flex items-center gap-2 mb-1">
                                             {hasTime && (
                                                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${isExpired
-                                                        ? 'bg-red-100 text-red-600'
-                                                        : 'bg-indigo-100 text-indigo-600'
+                                                    ? 'bg-red-100 text-red-600'
+                                                    : 'bg-indigo-100 text-indigo-600'
                                                     }`}>
                                                     <Clock size={10} />
                                                     {format(dateObj, 'HH:mm')}

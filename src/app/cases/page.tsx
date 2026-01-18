@@ -9,9 +9,9 @@ import ExcelStep from '@/components/ExcelStep';
 import HighlightableValue from '@/components/HighlightableValue';
 
 // Checking components folder first is safer.
-import { Header } from '@/components/Header';
+import Header from '@/components/Header';
 import CaseTodos from '@/components/CaseTodos';
-import TimelineDashboard from '@/components/TimelineDashboard';
+
 import GlobalPipelineChart from '@/components/GlobalPipelineChart';
 import TimelineGanttView from '@/components/TimelineGanttView';
 import ExportExcelButton from '@/components/ExportExcelButton';
@@ -135,17 +135,14 @@ export default async function CasesPage({
                     {[
                         { label: '承辦中', value: 'Processing' },
                         { label: '已結案', value: 'Closed' },
-                        { label: '全部顯示', value: 'All' },
                     ].map((tab) => (
                         <Link
                             key={tab.value}
                             href={`/cases?status=${tab.value}`}
-                            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all duration-300 ${
-                                activeStatus === (tab.value === 'All' ? activeStatus : tab.value) &&
-                                (tab.value === 'All' ? statusParam === 'All' : true)
-                                    ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xl shadow-slate-200/30 dark:shadow-none'
-                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                            }`}
+                            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all duration-300 ${statusParam === tab.value
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xl shadow-slate-200/30 dark:shadow-none'
+                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                }`}
                         >
                             {tab.label}
                         </Link>
@@ -175,13 +172,10 @@ export default async function CasesPage({
             {/* Monitoring View (Active cases only) */}
             {statusParam !== 'Closed' && monitoringCases.length > 0 && (
                 <div className="space-y-8">
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                        <GlobalPipelineChart
-                            cases={monitoringCases}
-                            currentStage={typeof stageParam === 'string' ? stageParam : undefined}
-                        />
-                        <TimelineDashboard cases={monitoringCases} />
-                    </div>
+                    <GlobalPipelineChart
+                        cases={monitoringCases}
+                        currentStage={typeof stageParam === 'string' ? stageParam : undefined}
+                    />
                     <TimelineGanttView cases={monitoringCases} />
                 </div>
             )}

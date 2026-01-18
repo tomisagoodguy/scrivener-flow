@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -9,6 +9,16 @@ import { parseDocx } from '@/app/actions/parseDocx';
 import CaseScheduleManager from '@/components/CaseScheduleManager';
 import QuickNotes from '@/components/QuickNotes';
 import CaseTodos from '@/components/CaseTodos';
+import { getCaseStage } from '@/lib/stageUtils';
+import {
+    CheckCircle2,
+    ChevronRight,
+    Edit3,
+    Flag,
+    FileText,
+    ClipboardCheck,
+    Truck
+} from 'lucide-react';
 
 interface EditCaseFormProps {
     initialData: DemoCase;
@@ -27,6 +37,38 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
 
     const milestones = (initialData.milestones?.[0] || {}) as any;
     const financials = (initialData.financials?.[0] || {}) as any;
+
+    // Helper to format date for <input type="date"> (strips time and handles local time)
+    const toISODate = (val: any) => {
+        if (!val) return '';
+        try {
+            const date = new Date(val);
+            if (isNaN(date.getTime())) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch {
+            return '';
+        }
+    };
+
+    // Helper to format date for <input type="datetime-local">
+    const toISODatetime = (val: any) => {
+        if (!val) return '';
+        try {
+            const date = new Date(val);
+            if (isNaN(date.getTime())) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const mins = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${mins}`;
+        } catch {
+            return '';
+        }
+    };
 
     useEffect(() => {
         console.log('EditCaseForm initialized with Case ID:', initialData.id);
@@ -165,11 +207,11 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     // Formatted display
                     const dateDisplay = isDateTime
                         ? d.toLocaleString('zh-TW', {
-                              month: 'numeric',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                          })
+                            month: 'numeric',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        })
                         : d.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
 
                     const content = `${caseTitle} - ${titleSuffix} (${dateDisplay})`;
@@ -192,7 +234,6 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 };
 
                 // Appointments
-                addSystemTodo('sign_appt', milestoneData.sign_appointment, '簽約約定', 'appointment', 3);
                 addSystemTodo('seal_appt', milestoneData.seal_appointment, '用印約定', 'appointment', 3);
                 addSystemTodo('tax_appt', milestoneData.tax_appointment, '完稅約定', 'appointment', 3);
                 addSystemTodo('handover_appt', milestoneData.handover_appointment, '交屋約定', 'appointment', 3);
@@ -203,32 +244,35 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 addSystemTodo('land_tax', financialData.land_tax_deadline, '地價稅限繳', 'tax', 5);
                 addSystemTodo('house_tax', financialData.house_tax_deadline, '房屋稅限繳', 'tax', 5);
 
-                // Legal Dates (Optional, sync these too to match Dashboard logic)
-                addSystemTodo('contract_date', milestoneData.contract_date, '簽約日', 'legal', 3);
-                addSystemTodo('seal_date', milestoneData.seal_date, '用印日', 'legal', 3);
-                addSystemTodo('tax_payment_date', milestoneData.tax_payment_date, '完稅日', 'legal', 3);
-                addSystemTodo('handover_date', milestoneData.handover_date, '交屋日', 'legal', 3);
-
                 if (todosToUpsert.length > 0) {
-                    // We need to upsert. The constraint for upsert typically needs a unique index.
-                    // IMPORTANT: 'todos' table may NOT have a unique constraint on (case_id, source_key).
-                    // So specific upsert might fail or create duplicates if we rely on implicit ID.
-                    // Strategy:
-                    // 1. Fetch existing system todos for this case
-                    // 2. Map existing IDs to keys
-                    // 3. Attach IDs to payload to force Update instead of Insert
-
-                    const { data: existingTodos } = await supabase
+                    // 1. Fetch ALL pre-existing system todos for this case to handle duplicates
+                    const { data: existingSystemTodos } = await supabase
                         .from('todos')
                         .select('id, source_key')
                         .eq('case_id', initialData.id)
                         .eq('source_type', 'system');
 
                     const keyMap = new Map();
-                    (existingTodos || []).forEach((t: any) => {
-                        if (t.source_key) keyMap.set(t.source_key, t.id);
+                    const idsToCleanup = [];
+
+                    (existingSystemTodos || []).forEach((t: any) => {
+                        if (t.source_key) {
+                            if (keyMap.has(t.source_key)) {
+                                // Already have one for this key? Mark extras for deletion to fix the "Double Reminder" bug
+                                idsToCleanup.push(t.id);
+                            } else {
+                                keyMap.set(t.source_key, t.id);
+                            }
+                        }
                     });
 
+                    // 2. Perform cleanup of extras if found
+                    if (idsToCleanup.length > 0) {
+                        console.log(`Cleaning up ${idsToCleanup.length} pre-existing duplicate system todos...`);
+                        await supabase.from('todos').delete().in('id', idsToCleanup);
+                    }
+
+                    // 3. Prepare final payload with correct IDs for upsert
                     const finalPayload = todosToUpsert.map((t) => {
                         const existingId = keyMap.get(t.source_key);
                         if (existingId) {
@@ -237,10 +281,17 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         return t;
                     });
 
-                    const { error: todoError } = await supabase.from('todos').upsert(finalPayload);
-                    if (todoError) {
-                        console.error('Todo Sync Error:', todoError);
-                        // Don't block save success but warn
+                    if (finalPayload.length > 0) {
+                        const { error: todoError } = await supabase.from('todos').upsert(finalPayload);
+                        if (todoError) {
+                            console.error('Todo Sync Error Detail:', {
+                                message: todoError.message,
+                                details: todoError.details,
+                                hint: todoError.hint,
+                                code: todoError.code,
+                                payload: finalPayload
+                            });
+                        }
                     }
                 }
             }
@@ -254,6 +305,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
             setLoading(false);
         }
     };
+
 
     const performDelete = async () => {
         console.log('performDelete absolute start');
@@ -340,6 +392,70 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </div>
                 </div>
             )}
+
+            {/* 案件全流程監控 (Pipeline Status) */}
+            <div className="bg-secondary/30 border border-border-color rounded-2xl p-6 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-sm font-black text-foreground/60 flex items-center gap-2 tracking-widest uppercase">
+                        <Flag className="w-4 h-4 text-primary" /> 案件流程進度 (Pipeline Status)
+                    </h3>
+                    <div className="text-[10px] font-black bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20 animate-pulse">
+                        AUTO-TRACKING
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between relative px-2">
+                    {[
+                        { id: 'contract', label: '簽約', icon: <Edit3 className="w-5 h-5" />, color: 'bg-blue-500' },
+                        { id: 'seal', label: '用印', icon: <FileText className="w-5 h-5" />, color: 'bg-indigo-500' },
+                        { id: 'tax', label: '完稅', icon: <ClipboardCheck className="w-5 h-5" />, color: 'bg-emerald-500' },
+                        { id: 'transfer', label: '過戶', icon: <CheckCircle2 className="w-5 h-5" />, color: 'bg-purple-500' },
+                        { id: 'handover', label: '交屋', icon: <Truck className="w-5 h-5" />, color: 'bg-red-500' },
+                    ].map((stage, idx, stages) => {
+                        const currentStage = getCaseStage(initialData);
+                        const stageOrder = ['contract', 'seal', 'tax', 'transfer', 'handover', 'closed'];
+                        const currentIdx = stageOrder.indexOf(currentStage);
+                        const isCompleted = currentIdx > idx;
+                        const isCurrent = currentIdx === idx;
+                        const isLast = idx === stages.length - 1;
+
+                        return (
+                            <React.Fragment key={stage.id}>
+                                <div className="flex flex-col items-center flex-shrink-0 z-10 transition-all duration-500">
+                                    <div
+                                        className={`
+                                            relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black shadow-lg border-4 transition-all duration-300
+                                            ${isCompleted ? stage.color : isCurrent ? `${stage.color} ring-4 ring-primary/20 scale-110` : 'bg-secondary text-foreground/20 border-border-color'}
+                                            ${isCurrent ? 'border-white' : 'border-transparent'}
+                                        `}
+                                    >
+                                        {isCompleted ? <CheckCircle2 className="w-6 h-6 animate-fade-in" /> : stage.icon}
+
+                                        {isCurrent && (
+                                            <div className="absolute -top-1 -right-1 bg-primary w-4 h-4 rounded-full border-2 border-white animate-bounce" />
+                                        )}
+                                    </div>
+                                    <div className="mt-2 text-center">
+                                        <div className={`text-[12px] font-black transition-colors ${isCurrent ? 'text-primary scale-110' : isCompleted ? 'text-foreground' : 'text-foreground/30'}`}>
+                                            {stage.label}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {!isLast && (
+                                    <div className="flex-grow mx-2 h-1 bg-secondary/50 rounded-full relative -mt-6">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-1000 ${stages[idx].color}`}
+                                            style={{ width: isCompleted ? '100%' : '0%' }}
+                                        />
+                                        <ChevronRight className={`absolute top-1/2 -translate-y-1/2 right-0 w-4 h-4 ${isCompleted ? 'text-primary' : 'text-foreground/10'}`} />
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
+            </div>
 
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -522,14 +638,20 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
             <div className="border-t border-border-color"></div>
 
             <div className="space-y-4">
-                <h3 className="text-lg font-bold text-amber-600 border-l-4 border-amber-500 pl-3">進度日期</h3>
+                <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-amber-600 border-l-4 border-amber-500 pl-3">進度日期</h3>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-amber-600">簽約日/款</label>
                         <input
                             name="contract_date"
-                            defaultValue={milestones?.contract_date}
+                            defaultValue={toISODate(milestones?.contract_date)}
                             type="date"
+                            id="contract_date_input"
+                            onBlur={(e) => {
+                                // 當簽約日改變時，可以觸發一些提示，或者使用者點擊自動推算
+                            }}
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs focus:ring-1 focus:ring-primary/30 outline-none"
                             required
                         />
@@ -546,7 +668,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-amber-600">補差額/款</label>
                         <input
                             name="sign_diff_date"
-                            defaultValue={milestones?.sign_diff_date}
+                            defaultValue={toISODate(milestones?.sign_diff_date)}
                             type="date"
                             className="w-full bg-secondary/20 border border-border-color rounded px-2 py-2 text-xs outline-none"
                         />
@@ -563,7 +685,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-blue-600">用印日/款</label>
                         <input
                             name="seal_date"
-                            defaultValue={milestones?.seal_date}
+                            defaultValue={toISODate(milestones?.seal_date)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none"
                         />
@@ -580,7 +702,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-emerald-600">完稅日/款</label>
                         <input
                             name="tax_payment_date"
-                            defaultValue={milestones?.tax_payment_date}
+                            defaultValue={toISODate(milestones?.tax_payment_date)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none"
                         />
@@ -600,7 +722,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         </label>
                         <input
                             name="transfer_date"
-                            defaultValue={milestones?.transfer_date}
+                            defaultValue={toISODate(milestones?.transfer_date)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none"
                         />
@@ -631,14 +753,14 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-red-600">代償/交屋/尾款</label>
                         <input
                             name="redemption_date"
-                            defaultValue={milestones?.redemption_date}
+                            defaultValue={toISODate(milestones?.redemption_date)}
                             type="date"
                             className="w-full bg-secondary/20 border border-border-color rounded px-2 py-2 text-xs outline-none"
                             title="代償日"
                         />
                         <input
                             name="handover_date"
-                            defaultValue={milestones?.handover_date}
+                            defaultValue={toISODate(milestones?.handover_date)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-xs outline-none"
                             required
@@ -669,11 +791,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-indigo-600">用印約定</label>
                         <input
                             name="seal_appointment"
-                            defaultValue={
-                                milestones?.seal_appointment
-                                    ? new Date(milestones.seal_appointment).toISOString().slice(0, 16)
-                                    : ''
-                            }
+                            defaultValue={toISODatetime(milestones?.seal_appointment)}
                             type="datetime-local"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none"
                         />
@@ -682,11 +800,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-indigo-600">完稅約定</label>
                         <input
                             name="tax_appointment"
-                            defaultValue={
-                                milestones?.tax_appointment
-                                    ? new Date(milestones.tax_appointment).toISOString().slice(0, 16)
-                                    : ''
-                            }
+                            defaultValue={toISODatetime(milestones?.tax_appointment)}
                             type="datetime-local"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none"
                         />
@@ -695,11 +809,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         <label className="text-xs font-bold text-indigo-600">交屋約定</label>
                         <input
                             name="handover_appointment"
-                            defaultValue={
-                                milestones?.handover_appointment
-                                    ? new Date(milestones.handover_appointment).toISOString().slice(0, 16)
-                                    : ''
-                            }
+                            defaultValue={toISODatetime(milestones?.handover_appointment)}
                             type="datetime-local"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-300 outline-none"
                         />
@@ -715,37 +825,57 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 <p className="text-xs text-foreground/50">設定限繳日後，系統將於前 5 天開始提醒。</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-rose-600">土增稅限繳日 (常用)</label>
+                        <div className="flex items-center gap-1">
+                            <label className="text-xs font-bold text-rose-600">土增稅限繳日 (常用)</label>
+                            {((initialData as any).todos || []).find((t: any) => t.source_key === 'land_value_tax_deadline')?.is_completed && (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            )}
+                        </div>
                         <input
                             name="land_value_tax_deadline"
-                            defaultValue={financials?.land_value_tax_deadline}
+                            defaultValue={toISODate(financials?.land_value_tax_deadline)}
                             type="date"
                             className="w-full bg-rose-50/50 border border-rose-200 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-rose-300 outline-none"
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-rose-600">契稅限繳日 (常用)</label>
+                        <div className="flex items-center gap-1">
+                            <label className="text-xs font-bold text-rose-600">契稅限繳日 (常用)</label>
+                            {((initialData as any).todos || []).find((t: any) => t.source_key === 'deed_tax_deadline')?.is_completed && (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            )}
+                        </div>
                         <input
                             name="deed_tax_deadline"
-                            defaultValue={financials?.deed_tax_deadline}
+                            defaultValue={toISODate(financials?.deed_tax_deadline)}
                             type="date"
                             className="w-full bg-rose-50/50 border border-rose-200 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-rose-300 outline-none"
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500">地價稅限繳日</label>
+                        <div className="flex items-center gap-1">
+                            <label className="text-xs font-bold text-gray-500">地價稅限繳日</label>
+                            {((initialData as any).todos || []).find((t: any) => t.source_key === 'land_tax_deadline')?.is_completed && (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            )}
+                        </div>
                         <input
                             name="land_tax_deadline"
-                            defaultValue={financials?.land_tax_deadline}
+                            defaultValue={toISODate(financials?.land_tax_deadline)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-gray-300 outline-none"
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500">房屋稅限繳日</label>
+                        <div className="flex items-center gap-1">
+                            <label className="text-xs font-bold text-gray-500">房屋稅限繳日</label>
+                            {((initialData as any).todos || []).find((t: any) => t.source_key === 'house_tax_deadline')?.is_completed && (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            )}
+                        </div>
                         <input
                             name="house_tax_deadline"
-                            defaultValue={financials?.house_tax_deadline}
+                            defaultValue={toISODate(financials?.house_tax_deadline)}
                             type="date"
                             className="w-full bg-secondary/30 border border-border-color rounded px-2 py-2 text-sm focus:ring-1 focus:ring-gray-300 outline-none"
                         />
