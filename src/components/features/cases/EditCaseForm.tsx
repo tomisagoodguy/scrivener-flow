@@ -10,6 +10,7 @@ import CaseScheduleManager from '@/components/features/cases/CaseScheduleManager
 import QuickNotes from '@/components/shared/QuickNotes';
 import CaseTodos from '@/components/features/cases/CaseTodos';
 import CaseMessageGenerator from '@/components/features/cases/CaseMessageGenerator';
+import GoogleDriveUpload from '@/components/features/cases/GoogleDriveUpload';
 import { getCaseStage } from '@/lib/stageUtils';
 import {
     CheckCircle2,

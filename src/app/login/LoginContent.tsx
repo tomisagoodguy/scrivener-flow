@@ -17,6 +17,7 @@ export function LoginContent() {
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
+                        scopes: 'https://www.googleapis.com/auth/drive.file email openid profile',
                     },
                 },
             });

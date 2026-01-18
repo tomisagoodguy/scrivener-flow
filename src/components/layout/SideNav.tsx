@@ -8,6 +8,8 @@ import { sendLineMessage } from '@/app/actions/lineNotify';
 import { Send, MessageSquareText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import GoogleDriveUpload from '../features/cases/GoogleDriveUpload';
+
 export const SideNav = () => {
     const pathname = usePathname();
     const router = useRouter();
@@ -59,10 +61,14 @@ export const SideNav = () => {
 
     return (
         <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-8 gap-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-[999] transition-all hover:w-64 group">
-            {/* Logo Area */}
-            <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <span className="text-white font-black text-xl">S</span>
-            </div>
+            {/* Logo Area & Google Drive Trigger */}
+            {email === 'tom890108159@gmail.com' ? (
+                <GoogleDriveUpload />
+            ) : (
+                <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <span className="text-white font-black text-xl">S</span>
+                </div>
+            )}
 
             {/* Navigation Icons */}
             <nav className="flex-1 flex flex-col gap-3 w-full px-3">
