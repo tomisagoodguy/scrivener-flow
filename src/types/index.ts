@@ -125,60 +125,60 @@ export interface TodoRecord {
 export interface Milestone {
     id: string;
     case_id: string;
-    contract_date?: string; // 簽約
-    sign_diff_date?: string; // 簽差
-    seal_date?: string; // 用印
-    tax_payment_date?: string; // 完稅
-    transfer_date?: string; // 過戶
-    balance_payment_date?: string; // 尾款
-    handover_date?: string; // 交屋
-    fee_precollect_date?: string; // 預收規費 (Excel shows as date in some columns)
+    contract_date?: string | null; // 簽約
+    sign_diff_date?: string | null; // 簽差
+    seal_date?: string | null; // 用印
+    tax_payment_date?: string | null; // 完稅
+    transfer_date?: string | null; // 過戶
+    balance_payment_date?: string | null; // 尾款
+    handover_date?: string | null; // 交屋
+    fee_precollect_date?: string | null; // 預收規費 (Excel shows as date in some columns)
 
     // Custom note for Transfer Date (過戶日)
-    transfer_note?: string;
+    transfer_note?: string | null;
 
-    sign_diff_days?: number;
-    redemption_date?: string;
-    tax_filing_date?: string;
+    sign_diff_days?: number | null;
+    redemption_date?: string | null;
+    tax_filing_date?: string | null;
 
     // Appointments (Client Meetings)
-    sign_appointment?: string;
-    seal_appointment?: string;
-    tax_appointment?: string;
-    handover_appointment?: string;
+    sign_appointment?: string | null;
+    seal_appointment?: string | null;
+    tax_appointment?: string | null;
+    handover_appointment?: string | null;
 
     // Payment Details
-    contract_method?: string;
-    contract_amount?: number;
-    sign_diff_amount?: number;
-    seal_method?: string;
-    seal_amount?: number;
-    tax_method?: string;
-    tax_amount?: number;
-    balance_method?: string;
-    balance_amount?: number;
+    contract_method?: string | null;
+    contract_amount?: number | null;
+    sign_diff_amount?: number | null;
+    seal_method?: string | null;
+    seal_amount?: number | null;
+    tax_method?: string | null;
+    tax_amount?: number | null;
+    balance_method?: string | null;
+    balance_amount?: number | null;
 }
 
 export interface Financials {
     id: string;
     case_id: string;
-    total_price?: number;
-    pre_collected_fee?: number;
-    balance_payment?: number;
+    total_price?: number | null;
+    pre_collected_fee?: number | null;
+    balance_payment?: number | null;
     vat_type?: VatType; // 類型
     tax_house_land: boolean;
     tax_repurchase: boolean;
 
-    buyer_bank?: string; // B貸款
-    buyer_loan_amount?: number;
-    seller_bank?: string; // S貸款
-    seller_redemption_amount?: number;
+    buyer_bank?: string | null; // B貸款
+    buyer_loan_amount?: number | null;
+    seller_bank?: string | null; // S貸款
+    seller_redemption_amount?: number | null;
 
     // Tax Deadlines
-    land_value_tax_deadline?: string;
-    deed_tax_deadline?: string;
-    land_tax_deadline?: string;
-    house_tax_deadline?: string;
+    land_value_tax_deadline?: string | null;
+    deed_tax_deadline?: string | null;
+    land_tax_deadline?: string | null;
+    house_tax_deadline?: string | null;
 }
 
 export type TodoPriority =
@@ -229,4 +229,14 @@ export interface Bank {
     redemption_note?: string;
     contacts?: any[]; // Keep flexible for JSONB
     user_id?: string;
+}
+
+export interface BankRedemptionInfo {
+    bank_name: string;
+    phone: string;
+    account_info: string;
+    processing_days: string;
+    pickup_location: string;
+    requirements: string;
+    notes: string;
 }

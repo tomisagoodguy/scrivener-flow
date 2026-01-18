@@ -90,10 +90,10 @@ export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
                             date: new Date(t.due_date),
                             isCompleted: t.is_completed,
                             isMilestone: false,
-                            priority: t.priority,
+                            priority: t.priority as any,
                             caseId: t.case_id,
-                            caseName: t.case_id ? caseMap[t.case_id] : null,
-                            notes: t.notes
+                            caseName: t.case_id ? (caseMap[t.case_id] || undefined) : undefined,
+                            notes: t.notes || undefined
                         };
                     });
 

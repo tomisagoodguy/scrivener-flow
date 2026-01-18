@@ -253,7 +253,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         .eq('source_type', 'system');
 
                     const keyMap = new Map();
-                    const idsToCleanup = [];
+                    const idsToCleanup: any[] = [];
 
                     (existingSystemTodos || []).forEach((t: any) => {
                         if (t.source_key) {

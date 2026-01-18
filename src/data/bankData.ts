@@ -1,6 +1,16 @@
 import { BankContact, BankRedemptionInfo } from "@/types";
 
-export const BANK_CONTACTS: BankContact[] = [
+// Local interface matching the seed data structure
+interface LocalBankContact {
+    credit_system?: string;
+    bank_name?: string;
+    name?: string;
+    branch?: string;
+    email?: string;
+    phone?: string;
+}
+
+export const BANK_CONTACTS: LocalBankContact[] = [
     { credit_system: "富邦", name: "俊平", email: "chunping.lee@fubon.com" },
     { credit_system: "富邦", name: "藝馨", email: "betty.fan@fubon.com" },
     { credit_system: "富邦", name: "演龍", email: "joe.wong@fubon.com" },
