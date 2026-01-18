@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={`${inter.variable} ${outfit.variable} antialiased selection:bg-blue-500/20`} suppressHydrationWarning>
                 <ThemeProvider>
                     <AuthGateProvider>
-                        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-500">
+                        <div className="min-h-screen bg-slate-50 flex transition-colors duration-500">
                             <Toaster richColors position="top-center" />
                             <SideNav />
                             <main className="flex-1 lg:pl-32 min-h-screen relative">
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                                 ></div>
 
                                 <Suspense
-                                    fallback={<div className="h-16 w-full animate-pulse bg-slate-100 dark:bg-slate-800" />}
+                                    fallback={<div className="h-16 w-full animate-pulse bg-slate-100" />}
                                 >
                                     <Header />
                                 </Suspense>

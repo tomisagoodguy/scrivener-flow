@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* 強制禁用深色模式 - 確保手機瀏覽器使用淺色主題 */
+:root {
+    color-scheme: light only;
+}
+
+html {
+    color-scheme: light;
+}
+
+/* 明確禁用所有深色模式樣式 */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: light only;
+    }
+}
+
 /* Custom Scrollbar for Dashboard Widgets */
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
