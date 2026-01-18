@@ -89,4 +89,19 @@ Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追�
 
 ---
 
+## 🌐 部署說明 (Deployment)
+
+本專案已部署至 Vercel：`https://scrivener-flow.vercel.app`
+
+### 環境變數設定
+在 Vercel Dashboard 的 Environment Variables 中需設定：
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `LINE_CHANNEL_ACCESS_TOKEN`
+- `LINE_USER_ID`
+
+**注意**：設定環境變數後，務必執行 Redeploy 才會生效。
+
+---
+
 **Scrivener Flow** - 讓代書作業更精確、更優雅。
