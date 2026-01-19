@@ -93,8 +93,8 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
         const now = new Date();
         const dates = [
             { date: milestones.seal_appointment, name: '用印款' },
-            { date: milestones.tax_payment_appointment, name: '完稅款' },
-            { date: milestones.repayment_appointment, name: '代償款' },
+            { date: milestones.tax_payment_date, name: '完稅款' },
+            { date: milestones.redemption_date, name: '代償款' },
             { date: milestones.handover_appointment, name: '交屋款' }
         ];
 
