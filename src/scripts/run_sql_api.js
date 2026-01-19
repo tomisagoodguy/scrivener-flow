@@ -1,7 +1,15 @@
 const https = require('https');
+require('dotenv').config();
 
-const projectRef = 'zvomerdcsxvuymnpuvxk';
-const token = 'sbp_042b3193398e99132d553da47ac798d3d17c6664';
+const projectRef = process.env.SUPABASE_PROJECT_REF || 'zvomerdcsxvuymnpuvxk';
+const token = process.env.SUPABASE_PERSONAL_ACCESS_TOKEN;
+
+if (!token) {
+    console.error('❌ 錯誤: 未設定 SUPABASE_PERSONAL_ACCESS_TOKEN 環境變數');
+    console.error('請在 .env.local 中設定: SUPABASE_PERSONAL_ACCESS_TOKEN=your_token');
+    process.exit(1);
+}
+
 const body = JSON.stringify({
     query: `
         ALTER TABLE cases ADD COLUMN IF NOT EXISTS buyer_phone text;
