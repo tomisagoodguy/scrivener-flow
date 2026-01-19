@@ -39,6 +39,7 @@ interface CaseFormData {
     redemption_date: string;
     handover_date: string;
     balance_amount: string;
+    balance_payment_date: string;
     notes: string;
 }
 
@@ -74,6 +75,7 @@ const initialFormData: CaseFormData = {
     redemption_date: '',
     handover_date: '',
     balance_amount: '',
+    balance_payment_date: '',
     notes: '',
 };
 
