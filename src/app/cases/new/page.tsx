@@ -1,24 +1,93 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { parseDocx } from '@/app/actions/parseDocx';
 import QuickNotes from '@/components/shared/QuickNotes';
 
+interface CaseFormData {
+    case_number: string;
+    city: string;
+    district: string;
+    status: string;
+    total_price: string;
+    tax_type: string;
+    buyer_loan_bank: string;
+    seller_loan_bank: string;
+    cancellation_type: string;
+    escrow_account: string;
+    buyer_name: string;
+    buyer_phone: string;
+    registrant_name: string;
+    registrant_phone: string;
+    seller_name: string;
+    seller_phone: string;
+    agent_name: string;
+    agent_phone: string;
+    contract_date: string;
+    contract_amount: string;
+    sign_diff_date: string;
+    sign_diff_amount: string;
+    seal_date: string;
+    seal_amount: string;
+    tax_payment_date: string;
+    tax_amount: string;
+    transfer_date: string;
+    transfer_note: string;
+    redemption_date: string;
+    handover_date: string;
+    balance_amount: string;
+    notes: string;
+}
+
+const initialFormData: CaseFormData = {
+    case_number: '',
+    city: '台北(士)',
+    district: '',
+    status: 'Processing',
+    total_price: '',
+    tax_type: '一般',
+    buyer_loan_bank: '',
+    seller_loan_bank: '',
+    cancellation_type: '代書塗銷',
+    escrow_account: '',
+    buyer_name: '',
+    buyer_phone: '',
+    registrant_name: '',
+    registrant_phone: '',
+    seller_name: '',
+    seller_phone: '',
+    agent_name: '',
+    agent_phone: '',
+    contract_date: '',
+    contract_amount: '',
+    sign_diff_date: '',
+    sign_diff_amount: '',
+    seal_date: '',
+    seal_amount: '',
+    tax_payment_date: '',
+    tax_amount: '',
+    transfer_date: '',
+    transfer_note: '',
+    redemption_date: '',
+    handover_date: '',
+    balance_amount: '',
+    notes: '',
+};
+
 export default function NewCasePage() {
     const router = useRouter();
+    const [formData, setFormData] = useState<CaseFormData>(initialFormData);
     const [errorMsg, setErrorMsg] = useState('');
-    const [notes, setNotes] = useState('');
     const [isDuplicate, setIsDuplicate] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
     const [suggestedNum, setSuggestedNum] = useState<string | null>(null);
-
     const [loading, setLoading] = useState(false);
 
     // Initial check for latest case number to suggest next one
-    useState(() => {
+    useEffect(() => {
         const fetchLatest = async () => {
             const { data } = await supabase
                 .from('cases')
@@ -39,10 +108,23 @@ export default function NewCasePage() {
             }
         };
         fetchLatest();
-    });
+    }, []);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'case_number') {
+            checkDuplicate(value);
+        }
+    };
 
     const checkDuplicate = async (caseNum: string) => {
-        if (!caseNum) return;
+        if (!caseNum) {
+            setIsDuplicate(false);
+            if (errorMsg.includes('案號')) setErrorMsg('');
+            return;
+        }
         setIsChecking(true);
         const { data, error } = await supabase
             .from('cases')
@@ -60,74 +142,105 @@ export default function NewCasePage() {
         setIsChecking(false);
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        // alert('正在建立案件... (Debug Mode)');
-        // User reports "button not working", let's be silent first but aggressive on schema safety.
-        console.log('>>> handleSubmit triggered');
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
 
         try {
             setLoading(true);
-            const formData = new FormData(e.currentTarget);
-            const data: any = Object.fromEntries(formData.entries());
-            console.log('Form Data:', data);
+            const parsedData = await parseDocx(uploadFormData);
+            console.log('Parsed Data:', parsedData);
 
-            const formatDate = (val: FormDataEntryValue) => (val ? val.toString() : null);
+            const rawDebug = (parsedData as any).debug_text || '';
 
-            /* 
-            // Date Validation: Ensure strictly increasing order (or equal)
-            const dateFields = [
-                { key: 'contract_date', label: '簽約日' },
-                { key: 'seal_date', label: '用印日' },
-                { key: 'tax_payment_date', label: '完稅日' },
-                { key: 'transfer_date', label: '過戶日' },
-                { key: 'handover_date', label: '交屋日' },
-            ];
+            if (!parsedData.case_number && !parsedData.buyer_name) {
+                alert('⚠️ 無法識別資料！請確認檔案內容格式。\n\n讀取到的文字預覽:\n' + rawDebug);
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    case_number: parsedData.case_number || prev.case_number,
+                    buyer_name: parsedData.buyer_name || prev.buyer_name,
+                    buyer_phone: parsedData.buyer_phone || prev.buyer_phone,
+                    seller_name: parsedData.seller_name || prev.seller_name,
+                    seller_phone: parsedData.seller_phone || prev.seller_phone,
+                    registrant_name: parsedData.registrant_name || prev.registrant_name,
+                    registrant_phone: parsedData.registrant_phone || prev.registrant_phone,
+                    agent_name: parsedData.agent_name || prev.agent_name,
+                    agent_phone: parsedData.agent_phone || prev.agent_phone,
+                    escrow_account: parsedData.escrow_account || prev.escrow_account,
+                    total_price: parsedData.total_price?.toString() || prev.total_price,
 
-            for (let i = 0; i < dateFields.length; i++) {
-                const currentVal = data[dateFields[i].key]?.toString();
-                if (!currentVal) continue;
+                    contract_date: parsedData.contract_date || prev.contract_date,
+                    contract_amount: parsedData.contract_amount?.toString() || prev.contract_amount,
 
-                for (let j = 0; j < i; j++) {
-                    const prevVal = data[dateFields[j].key]?.toString();
-                    // Compare strings "YYYY-MM-DD" directly
-                    if (prevVal && currentVal < prevVal) {
-                        alert(`流程日期錯誤：${dateFields[i].label} (${currentVal}) 不可早於 ${dateFields[j].label} (${prevVal})`);
-                        setLoading(false);
-                        return;
-                    }
+                    sign_diff_date: parsedData.sign_diff_date || prev.sign_diff_date,
+                    sign_diff_amount: parsedData.sign_diff_amount?.toString() || prev.sign_diff_amount,
+
+                    seal_date: parsedData.seal_date || prev.seal_date,
+                    seal_amount: parsedData.seal_amount?.toString() || prev.seal_amount,
+
+                    tax_payment_date: parsedData.tax_payment_date || prev.tax_payment_date,
+                    tax_amount: parsedData.tax_amount?.toString() || prev.tax_amount,
+
+                    balance_payment_date: parsedData.balance_payment_date || prev.balance_payment_date,
+                    balance_amount: parsedData.balance_amount?.toString() || prev.balance_amount,
+
+                    handover_date: parsedData.handover_date || prev.handover_date,
+                    transfer_date: parsedData.transfer_date || prev.transfer_date,
+                }));
+
+                // If case number found, check duplicate
+                if (parsedData.case_number) {
+                    checkDuplicate(parsedData.case_number);
                 }
-            }
-            */
 
-            console.log('Date validation passed. Preparing insert payload...');
+                alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
+            }
+        } catch (err: any) {
+            console.error(err);
+            alert('解析失敗: ' + err.message);
+        } finally {
+            setLoading(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        console.log('>>> handleSubmit triggered with state:', formData);
+
+        try {
+            setLoading(true);
+            const formatDate = (val: string) => (val ? val : null);
+
+            console.log('Preparing insert payload...');
 
             // 1. Insert Case
             const casePayload = {
-                case_number: data.case_number?.toString() || '', // Ensure string
-                buyer_name: data.buyer_name?.toString() || '',
-                buyer_phone: data.buyer_phone?.toString() || null,
-                seller_name: data.seller_name?.toString() || '',
-                seller_phone: data.seller_phone?.toString() || null,
-                escrow_account: formData.get('escrow_account') as string,
-                registrant_name: formData.get('registrant_name') as string,
-                registrant_phone: formData.get('registrant_phone') as string,
-                agent_name: formData.get('agent_name') as string,
-                agent_phone: formData.get('agent_phone') as string,
+                case_number: formData.case_number,
+                buyer_name: formData.buyer_name,
+                buyer_phone: formData.buyer_phone || null,
+                seller_name: formData.seller_name,
+                seller_phone: formData.seller_phone || null,
+                escrow_account: formData.escrow_account,
+                registrant_name: formData.registrant_name,
+                registrant_phone: formData.registrant_phone,
+                agent_name: formData.agent_name,
+                agent_phone: formData.agent_phone,
 
-                status: 'Processing', // Default status
-                city: data.city?.toString() || '台北市',
-                district: data.district?.toString() || '',
-                notes: data.notes?.toString() || '',
+                status: formData.status,
+                city: formData.city,
+                district: formData.district,
+                notes: formData.notes,
 
-                tax_type: data.tax_type?.toString() || '一般',
+                tax_type: formData.tax_type,
                 user_id: (await supabase.auth.getUser()).data.user?.id,
             };
 
             if (!casePayload.user_id) {
-                // Optional: Force login if strict mode
-                // alert('請先登入'); return;
                 console.warn('⚠️ Creating case without user_id (Not logged in)');
             }
 
@@ -137,7 +250,7 @@ export default function NewCasePage() {
             const { data: existingCase } = await supabase
                 .from('cases')
                 .select('id')
-                .eq('case_number', data.case_number)
+                .eq('case_number', formData.case_number)
                 .maybeSingle();
 
             let newCase;
@@ -160,13 +273,12 @@ export default function NewCasePage() {
 
                 if (caseError) {
                     console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
-                    console.log('Failed Payload:', casePayload);
 
                     const errorTitle = '資料庫建立失敗';
                     let displayMsg = '';
 
                     if (caseError.code === '23505') {
-                        displayMsg = `❌ 案號 「${data.case_number}」 已經存在，請更換一個案號。`;
+                        displayMsg = `❌ 案號 「${formData.case_number}」 已經存在，請更換一個案號。`;
                     } else {
                         const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
                         displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}`;
@@ -182,35 +294,24 @@ export default function NewCasePage() {
             if (!newCase) throw new Error('案件建立或更新後無回傳資料');
 
             // 2. Insert Milestones
-            const milestonePayload: any = {
+            const milestonePayload = {
                 case_id: newCase.id,
-                contract_date: formatDate(data.contract_date),
-                seal_date: formatDate(data.seal_date),
-                tax_payment_date: formatDate(data.tax_payment_date),
-                transfer_date: formatDate(data.transfer_date),
-                balance_payment_date: formatDate(data.balance_payment_date),
-                redemption_date: formatDate(data.redemption_date),
-                handover_date: formatDate(data.handover_date),
-                transfer_note: data.transfer_note || null,
+                contract_date: formatDate(formData.contract_date),
+                seal_date: formatDate(formData.seal_date),
+                tax_payment_date: formatDate(formData.tax_payment_date),
+                transfer_date: formatDate(formData.transfer_date),
+                balance_payment_date: formatDate(formData.balance_payment_date),
+                redemption_date: formatDate(formData.redemption_date),
+                handover_date: formatDate(formData.handover_date),
+                transfer_note: formData.transfer_note || null,
+
+                contract_amount: formData.contract_amount ? Number(formData.contract_amount) : null,
+                sign_diff_date: formatDate(formData.sign_diff_date),
+                sign_diff_amount: formData.sign_diff_amount ? Number(formData.sign_diff_amount) : null,
+                seal_amount: formData.seal_amount ? Number(formData.seal_amount) : null,
+                tax_amount: formData.tax_amount ? Number(formData.tax_amount) : null,
+                balance_amount: formData.balance_amount ? Number(formData.balance_amount) : null,
             };
-
-            // Add amount and other fields if present
-            const milestoneFields = [
-                'contract_amount',
-                'sign_diff_date',
-                'sign_diff_amount',
-                'seal_amount',
-                'tax_amount',
-                'balance_amount',
-            ];
-
-            milestoneFields.forEach((field) => {
-                const val = data[field];
-                if (val) {
-                    if (field.includes('date')) milestonePayload[field] = formatDate(val);
-                    else milestonePayload[field] = Number(val);
-                }
-            });
 
             console.log('Upserting Milestone Payload:', milestonePayload);
 
@@ -233,9 +334,9 @@ export default function NewCasePage() {
             // 3. Insert Financials
             const financialsPayload = {
                 case_id: newCase.id,
-                total_price: data.total_price ? Number(data.total_price) : null, // Changed from contract_price
-                buyer_bank: data.buyer_loan_bank?.toString() || null,
-                seller_bank: data.seller_loan_bank?.toString() || null,
+                total_price: formData.total_price ? Number(formData.total_price) : null,
+                buyer_bank: formData.buyer_loan_bank || null,
+                seller_bank: formData.seller_loan_bank || null,
             };
 
             console.log('Upserting Financials Payload:', financialsPayload);
@@ -263,85 +364,6 @@ export default function NewCasePage() {
         }
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            setLoading(true);
-            const parsedData = await parseDocx(formData);
-            console.log('Parsed Data:', parsedData);
-
-            const rawDebug = (parsedData as any).debug_text || '';
-
-            if (!parsedData.case_number && !parsedData.buyer_name) {
-                alert('⚠️ 無法識別資料！請確認檔案內容格式。\n\n讀取到的文字預覽:\n' + rawDebug);
-            } else {
-                const form = document.querySelector('form') as HTMLFormElement;
-                if (form) {
-                    const setVal = (name: string, val?: string) => {
-                        const el = form.elements.namedItem(name) as
-                            | HTMLInputElement
-                            | HTMLSelectElement
-                            | HTMLTextAreaElement;
-                        if (el && val) {
-                            el.value = val;
-                            el.value = val;
-                            if (name === 'notes') setNotes(val);
-                        }
-                    };
-
-                    if (parsedData.escrow_account) setVal('escrow_account', parsedData.escrow_account);
-                    if (parsedData.registrant_name) setVal('registrant_name', parsedData.registrant_name);
-                    if (parsedData.registrant_phone) setVal('registrant_phone', parsedData.registrant_phone);
-                    if (parsedData.agent_name) setVal('agent_name', parsedData.agent_name);
-                    if (parsedData.agent_phone) setVal('agent_phone', parsedData.agent_phone);
-
-                    setVal('case_number', parsedData.case_number);
-                    setVal('buyer_name', parsedData.buyer_name);
-                    setVal('buyer_phone', parsedData.buyer_phone);
-                    setVal('seller_name', parsedData.seller_name);
-                    setVal('seller_phone', parsedData.seller_phone);
-
-                    setVal('contract_date', parsedData.contract_date);
-                    setVal('contract_amount', parsedData.contract_amount?.toString());
-                    setVal('contract_method', parsedData.contract_method);
-
-                    setVal('sign_diff_date', parsedData.sign_diff_date);
-                    setVal('sign_diff_amount', parsedData.sign_diff_amount?.toString());
-
-                    setVal('seal_date', parsedData.seal_date);
-                    setVal('seal_amount', parsedData.seal_amount?.toString());
-                    setVal('seal_method', parsedData.seal_method);
-
-                    setVal('tax_payment_date', parsedData.tax_payment_date);
-                    setVal('tax_amount', parsedData.tax_amount?.toString());
-                    setVal('tax_method', parsedData.tax_method);
-
-                    setVal('balance_amount', parsedData.balance_amount?.toString());
-                    setVal('balance_method', parsedData.balance_method);
-                    setVal('balance_payment_date', parsedData.balance_payment_date);
-
-                    setVal('handover_date', parsedData.handover_date);
-
-                    if (parsedData.total_price) {
-                        setVal('total_price', parsedData.total_price.toString()); // Changed from contract_price
-                    }
-                }
-                alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
-            }
-        } catch (err: any) {
-            console.error(err);
-            alert('解析失敗: ' + err.message);
-        } finally {
-            setLoading(false);
-            e.target.value = '';
-        }
-    };
-
     return (
         <div className="min-h-screen p-6 md:p-8 max-w-7xl mx-auto font-sans">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
@@ -350,8 +372,8 @@ export default function NewCasePage() {
                     <p className="text-foreground/50 font-bold mt-2">Create New Case Process</p>
                 </div>
                 <div className="flex gap-4">
-                    <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm">
-                        <span>📄 上傳案件單 (.docx)</span>
+                    <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm font-bold">
+                        <span>📄 重新讀取案件單 (.docx)</span>
                         <input
                             type="file"
                             accept=".docx"
@@ -391,21 +413,16 @@ export default function NewCasePage() {
                                 type="text"
                                 className={`w-full bg-secondary/50 border ${isDuplicate ? 'border-red-500 ring-2 ring-red-500/20' : 'border-border'} rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all font-sans`}
                                 required
-                                onBlur={(e) => checkDuplicate(e.target.value)}
+                                value={formData.case_number}
+                                onChange={handleChange}
                                 placeholder={suggestedNum ? `建議序號: ${suggestedNum}` : '請輸入案號'}
                             />
                             {isChecking && <p className="text-[10px] text-primary animate-pulse font-bold mt-1">正在檢查案號重複性...</p>}
                             {isDuplicate && <p className="text-xs text-red-500 font-bold mt-1">此案號已存在，請修正</p>}
-                            {!isDuplicate && !isChecking && suggestedNum && (
+                            {!isDuplicate && !isChecking && suggestedNum && !formData.case_number && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        const el = document.getElementsByName('case_number')[0] as HTMLInputElement;
-                                        if (el) {
-                                            el.value = suggestedNum;
-                                            setIsDuplicate(false);
-                                        }
-                                    }}
+                                    onClick={() => setFormData(prev => ({ ...prev, case_number: suggestedNum }))}
                                     className="text-[11px] text-blue-500 hover:text-blue-700 font-bold mt-1 underline cursor-pointer"
                                 >
                                     使用建議編號: {suggestedNum}
@@ -415,15 +432,15 @@ export default function NewCasePage() {
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
                             <select
-                                name="city" // Keep mapping to 'city' for now to fit schema, but UI shows specific options
-                                defaultValue="台北(士)"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleChange}
                                 className="w-full text-lg font-bold bg-secondary/30 border-2 border-primary/20 rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                             >
                                 <option value="台北(士)">台北(士)</option>
                                 <option value="台北(內)">台北(內)</option>
                                 <option value="新北(內)">新北(內)</option>
                             </select>
-                            {/* Hidden district field to satisfy payload logic if needed, or we just ignore it */}
                             <input type="hidden" name="district" value="" />
                         </div>
                     </div>
@@ -433,6 +450,8 @@ export default function NewCasePage() {
                             <label className="text-sm text-foreground/70 font-bold">目前進度狀態</label>
                             <select
                                 name="status"
+                                value={formData.status}
+                                onChange={handleChange}
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-4 min-h-[56px] text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
                                 <option value="Processing">辦理中</option>
@@ -451,12 +470,16 @@ export default function NewCasePage() {
                                 step="0.1"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground font-black focus:ring-2 focus:ring-primary/20 transition-all"
                                 required
+                                value={formData.total_price}
+                                onChange={handleChange}
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">稅單性質</label>
                             <select
                                 name="tax_type"
+                                value={formData.tax_type}
+                                onChange={handleChange}
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
                                 <option value="一般">一般</option>
@@ -473,6 +496,8 @@ export default function NewCasePage() {
                                 name="buyer_loan_bank"
                                 type="text"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                                value={formData.buyer_loan_bank}
+                                onChange={handleChange}
                             />
                         </div>
                         <div className="space-y-2">
@@ -481,13 +506,16 @@ export default function NewCasePage() {
                                 name="seller_loan_bank"
                                 type="text"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                                value={formData.seller_loan_bank}
+                                onChange={handleChange}
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm text-foreground/70 font-bold">塗銷方式</label>
                             <select
                                 name="cancellation_type"
-                                defaultValue="代書塗銷"
+                                value={formData.cancellation_type}
+                                onChange={handleChange}
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all appearance-none font-bold"
                             >
                                 <option value="代書塗銷">代書塗銷</option>
@@ -505,6 +533,8 @@ export default function NewCasePage() {
                                 type="text"
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-wider"
                                 placeholder="968282..."
+                                value={formData.escrow_account}
+                                onChange={handleChange}
                             />
                         </div>
                     </div>
@@ -524,6 +554,8 @@ export default function NewCasePage() {
                                         type="text"
                                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
                                         required
+                                        value={formData.buyer_name}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -532,6 +564,8 @@ export default function NewCasePage() {
                                         name="buyer_phone"
                                         type="text"
                                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                        value={formData.buyer_phone}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -545,6 +579,8 @@ export default function NewCasePage() {
                                         type="text"
                                         className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
                                         placeholder="同買方"
+                                        value={formData.registrant_name}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -555,6 +591,8 @@ export default function NewCasePage() {
                                         name="registrant_phone"
                                         type="text"
                                         className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                        value={formData.registrant_phone}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -573,6 +611,8 @@ export default function NewCasePage() {
                                         type="text"
                                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
                                         required
+                                        value={formData.seller_name}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -581,6 +621,8 @@ export default function NewCasePage() {
                                         name="seller_phone"
                                         type="text"
                                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                        value={formData.seller_phone}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -591,6 +633,8 @@ export default function NewCasePage() {
                                         name="agent_name"
                                         type="text"
                                         className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
+                                        value={formData.agent_name}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -601,6 +645,8 @@ export default function NewCasePage() {
                                         name="agent_phone"
                                         type="text"
                                         className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                        value={formData.agent_phone}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -627,6 +673,8 @@ export default function NewCasePage() {
                                     type="date"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
                                     required
+                                    value={formData.contract_date}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -636,6 +684,8 @@ export default function NewCasePage() {
                                     type="number"
                                     step="0.1"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.contract_amount}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="p-3 bg-amber-500/5 rounded-xl border border-dashed border-amber-500/30 space-y-3">
@@ -645,6 +695,8 @@ export default function NewCasePage() {
                                         name="sign_diff_date"
                                         type="date"
                                         className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={formData.sign_diff_date}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -654,6 +706,8 @@ export default function NewCasePage() {
                                         type="number"
                                         step="0.1"
                                         className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={formData.sign_diff_amount}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -667,6 +721,8 @@ export default function NewCasePage() {
                                     name="seal_date"
                                     type="date"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.seal_date}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -676,6 +732,8 @@ export default function NewCasePage() {
                                     type="number"
                                     step="0.1"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.seal_amount}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="border-t border-border pt-2">
@@ -685,6 +743,8 @@ export default function NewCasePage() {
                                         name="tax_payment_date"
                                         type="date"
                                         className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={formData.tax_payment_date}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="space-y-1">
@@ -694,6 +754,8 @@ export default function NewCasePage() {
                                         type="number"
                                         step="0.1"
                                         className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={formData.tax_amount}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -707,6 +769,8 @@ export default function NewCasePage() {
                                     name="transfer_date"
                                     type="date"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.transfer_date}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -716,6 +780,8 @@ export default function NewCasePage() {
                                     type="text"
                                     placeholder="例如：代書辦理"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.transfer_note}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="border-t border-border pt-2">
@@ -725,6 +791,8 @@ export default function NewCasePage() {
                                         name="redemption_date"
                                         type="date"
                                         className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={formData.redemption_date}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -742,6 +810,8 @@ export default function NewCasePage() {
                                     type="date"
                                     className="w-full bg-background border border-primary/30 rounded-xl px-4 py-4 min-h-[56px] text-foreground font-black focus:ring-2 focus:ring-red-500/20 transition-all"
                                     required
+                                    value={formData.handover_date}
+                                    onChange={handleChange}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -751,6 +821,8 @@ export default function NewCasePage() {
                                     type="number"
                                     step="0.1"
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={formData.balance_amount}
+                                    onChange={handleChange}
                                 />
                             </div>
                         </div>
@@ -766,18 +838,16 @@ export default function NewCasePage() {
                         待辦與備註
                     </h3>
 
-                    {/* Status removed from here as it is redundant (already in basic info) */}
-
                     <div className="space-y-4">
                         <textarea
                             name="notes"
                             rows={4}
                             placeholder="例如：需做輻射檢測、約定交屋地點..."
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
+                            value={formData.notes}
+                            onChange={handleChange}
                             className="w-full bg-secondary/30 border border-border rounded-2xl px-6 py-4 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-sans"
                         />
-                        <QuickNotes onSelect={(note) => setNotes((prev) => (prev ? `${prev}\n${note}` : note))} />
+                        <QuickNotes onSelect={(note) => setFormData(prev => ({ ...prev, notes: prev.notes ? `${prev.notes}\n${note}` : note }))} />
                     </div>
                 </div>
 
