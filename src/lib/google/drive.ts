@@ -17,18 +17,21 @@ export class GoogleDriveService {
     /**
      * Get or create a designated folder for Scrivener Flow
      */
-    static async getOrCreateFolder(folderName: string = 'ScrivenerFlow_Attachments'): Promise<string> {
+    static async getOrCreateFolder(folderName: string, parentId?: string): Promise<string> {
         const token = await this.getAccessToken();
         if (!token) {
             console.error('Google Drive Debug: Token is missing from session');
             throw new Error('請登出並重新登入，並確保勾選 Google Drive 權限');
         }
 
-        // Search for the folder with proper encoding
-        const query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-        const url = `https://www.googleapis.com/drive/v3/files?${new URLSearchParams({ q: query })}`;
+        // Search options
+        let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+        if (parentId) {
+            query += ` and '${parentId}' in parents`;
+        }
 
-        console.log('Google Drive Debug: Fetching folder search...', { folderName });
+        const url = `https://www.googleapis.com/drive/v3/files?${new URLSearchParams({ q: query })}`;
+        console.log('Google Drive Debug: Fetching folder search...', { folderName, parentId });
 
         try {
             const searchRes = await fetch(url, {
@@ -51,16 +54,21 @@ export class GoogleDriveService {
 
             // Create the folder if not found
             console.log('Google Drive Debug: Folder not found, creating...', folderName);
+            const createBody: any = {
+                name: folderName,
+                mimeType: 'application/vnd.google-apps.folder',
+            };
+            if (parentId) {
+                createBody.parents = [parentId];
+            }
+
             const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    name: folderName,
-                    mimeType: 'application/vnd.google-apps.folder',
-                }),
+                body: JSON.stringify(createBody),
             });
             const createData = await createRes.json();
             return createData.id;
@@ -70,6 +78,38 @@ export class GoogleDriveService {
                 throw new Error('網路連線失敗，可能是公司防火牆阻擋了瀏覽器直接連線到 googleapis.com');
             }
             throw err;
+        }
+    }
+
+    /**
+     * Helper: Get the specific case folder ID
+     */
+    static async getCaseFolderId(caseId?: string, caseNumber?: string): Promise<string> {
+        // 1. Get Root Folder (Fixed ID or Search)
+        const ROOT_FOLDER_NAME = 'ScrivenerFlow_Attachments';
+        // Optimize: Use fixed ID if known to avoid search, but fallback to search/create
+        // Fixed ID provided by user: 1pC9YvdIIVLMPD6TFje0Lvuo2RnWMUdki
+        // We verify if we can access it, otherwise we search/create
+
+        let rootId = '1pC9YvdIIVLMPD6TFje0Lvuo2RnWMUdki';
+
+        // 2. Determine Target Folder Name
+        const targetFolderName = (caseId && caseNumber)
+            ? `${caseNumber}_${caseId}`
+            : '公司資料';
+
+        // 3. Get/Create Target Folder inside Root
+        // Note: checking permission on hardcoded ID is tricky without an API call, 
+        // so we'll just try to create the subfolder inside it. 
+        // If it fails (e.g. not found), we might need to recreate the root, but for now assume root exists or we use search.
+
+        // Safety check: try to list root, if fail, search for it by name
+        try {
+            return await this.getOrCreateFolder(targetFolderName, rootId);
+        } catch (e) {
+            console.warn('Fixed root folder not accessible, searching by name...');
+            rootId = await this.getOrCreateFolder(ROOT_FOLDER_NAME);
+            return await this.getOrCreateFolder(targetFolderName, rootId);
         }
     }
 

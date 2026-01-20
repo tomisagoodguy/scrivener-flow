@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { DriveFile } from '@/lib/google/drive';
+import { DriveFile, GoogleDriveService } from '@/lib/google/drive';
 import { Upload, File, CheckCircle2, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,39 +23,61 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
         setUploading(true);
         try {
-            // E2EE 加密上傳流程
-            // 1. 讀取檔案為 Base64
-            const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = error => reject(error);
-            });
+            const isSmallFile = file.size < 4 * 1024 * 1024; // 4MB Limit for Vercel Serverless
 
-            const dataUrl = await toBase64(file);
-            const base64Content = dataUrl.split(',')[1]; // 移除 "data:application/pdf;base64," 前綴
+            if (isSmallFile) {
+                // === 模式 A: E2EE 加密通道 (小檔案) ===
+                toast.info('啟動 E2EE 加密傳輸通道...', { description: '檔案將透過隱密通道傳送，全程加密' });
 
-            // 2. 使用 SecureApi 發送加密請求 (Payload 會被自動加密)
-            // 動態匯入以避免 Server Component 預渲染問題 (雖然此為 use client 元件，但安全起見)
-            const { SecureApi } = await import('@/lib/crypto/secureApi');
+                // 1. 讀取檔案為 Base64
+                const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = error => reject(error);
+                });
 
-            const res = await SecureApi.post<any>('/api/drive/secure-upload', {
-                fileName: file.name,
-                fileType: file.type,
-                fileContentBase64: base64Content,
-                caseId,
-                caseNumber
-            });
+                const dataUrl = await toBase64(file);
+                const base64Content = dataUrl.split(',')[1];
 
-            if (res.success) {
-                setUploadedFiles(prev => [...prev, res.data]);
-                toast.success(`檔案 ${file.name} 安全上傳成功！`);
-                if (onUploadComplete) onUploadComplete(res.data);
+                // 2. 使用 SecureApi 發送加密請求
+                const { SecureApi } = await import('@/lib/crypto/secureApi');
+                const res = await SecureApi.post<any>('/api/drive/secure-upload', {
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileContentBase64: base64Content,
+                    caseId,
+                    caseNumber
+                });
+
+                if (res.success) {
+                    setUploadedFiles(prev => [...prev, res.data]);
+                    toast.success(`檔案 ${file.name} 安全上傳成功！`);
+                    if (onUploadComplete) onUploadComplete(res.data);
+                } else {
+                    throw new Error(res.error || '上傳失敗');
+                }
+
             } else {
-                throw new Error(res.error || '上傳失敗');
+                // === 模式 B: 直連加密通道 (大檔案) ===
+                toast.info('檔案較大 (>4MB)，切換至直連通道...', { description: '正在建立安全連線，請稍候' });
+
+                // 1. 取得目標資料夾 ID (自動判斷結構)
+                const folderId = await GoogleDriveService.getCaseFolderId(caseId, caseNumber);
+
+                // 2. 直連上傳 Google Drive
+                const tempFile = await GoogleDriveService.uploadFile(file, folderId);
+
+                // 3. 取得完整檔案資訊 (包含 webViewLink)
+                const fullFile = await GoogleDriveService.getFileDetails(tempFile.id);
+
+                setUploadedFiles(prev => [...prev, fullFile]);
+                toast.success(`檔案 ${file.name} 上傳成功！`);
+                if (onUploadComplete) onUploadComplete(fullFile);
             }
+
         } catch (error: any) {
-            console.error('Secure Upload Error:', error);
+            console.error('Upload Error:', error);
             toast.error(error.message || '連線失敗');
         } finally {
             setUploading(false);
@@ -173,7 +195,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
                             <div className="mt-8 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/30">
                                 <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold leading-relaxed text-center italic">
-                                    Secure Server Proxy Encrypted Transmission
+                                    Secure Smart Routing: E2EE (Small) / Direct SSL (Large) Active
                                 </p>
                             </div>
                         </div>
