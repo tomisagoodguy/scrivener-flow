@@ -310,8 +310,8 @@ export default function TaxRentCalculator({ initialRegDate, initialHandoverDate 
                     <section className="space-y-4">
                         <h3 className="section-title"><Calendar className="w-4 h-4" /> 關鍵日期</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <InputGroup label="登記(過戶)日" type="date" value={regDate} onChange={e => setRegDate(e.target.value)} />
-                            <InputGroup label="交屋(分算)日" type="date" value={handoverDate} onChange={e => setHandoverDate(e.target.value)} />
+                            <InputGroup label="登記(過戶)日" type="date" value={regDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegDate(e.target.value)} />
+                            <InputGroup label="交屋(分算)日" type="date" value={handoverDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHandoverDate(e.target.value)} />
                         </div>
                         <div className="bg-white dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700 flex justify-between items-center">
                             <span className="text-xs font-semibold px-2">交屋日歸屬</span>
