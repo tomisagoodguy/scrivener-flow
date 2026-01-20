@@ -5,7 +5,7 @@ import { BANK_CONTACTS, BANK_REDEMPTION_INFO } from '@/data/bankData';
 
 export async function GET() {
     console.log('Starting bank data migration...');
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // 1. Generate the "Local Rich Data" structure
     // (Replicating logic from src/app/banks/page.tsx)
