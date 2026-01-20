@@ -435,6 +435,30 @@ export default function BanksPage() {
                                 新增銀行
                             </button>
                         )}
+                        {isDbMode && (
+                            <button
+                                onClick={async () => {
+                                    if (!confirm('這將會把本地的聯絡人資料合併到資料庫中。現有的資料不會被刪除，但空白欄位會被補齊。確定要執行嗎？')) return;
+                                    const toastId = toast.loading('資料還原中...');
+                                    try {
+                                        const res = await fetch('/api/migrations/seed-banks');
+                                        const result = await res.json();
+                                        if (res.ok) {
+                                            toast.success(`還原成功！(更新: ${result.stats.updated}, 新增: ${result.stats.inserted})`, { id: toastId });
+                                            fetchBanks();
+                                        } else {
+                                            throw new Error(result.error);
+                                        }
+                                    } catch (e: any) {
+                                        toast.error('還原失敗: ' + e.message, { id: toastId });
+                                    }
+                                }}
+                                className="bg-slate-200 text-slate-600 px-4 py-2 rounded-xl font-bold hover:bg-slate-300 transition-all flex items-center gap-2"
+                            >
+                                <Database size={18} />
+                                還原預設資料
+                            </button>
+                        )}
                     </div>
                 </div>
 
