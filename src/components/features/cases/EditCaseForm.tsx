@@ -11,6 +11,7 @@ import QuickNotes from '@/components/shared/QuickNotes';
 import CaseTodos from '@/components/features/cases/CaseTodos';
 import CaseMessageGenerator from '@/components/features/cases/CaseMessageGenerator';
 
+
 import { getCaseStage } from '@/lib/stageUtils';
 import {
     CheckCircle2,
@@ -957,6 +958,8 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     </select>
                 </div>
             </div>
+
+
 
             {/* 日期更動紀錄 (Audit Log) */}
             {(initialData as any).case_date_logs && (initialData as any).case_date_logs.length > 0 && (

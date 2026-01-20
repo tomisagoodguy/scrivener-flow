@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import QuickNotes from '@/components/shared/QuickNotes';
 import { supabase } from '@/lib/supabaseClient';
+import RichTextEditor from '@/components/knowledge/RichTextEditor';
 
 interface Note {
     id: string;
@@ -211,8 +212,8 @@ export default function DashboardQuickNotes() {
                             key={note.id}
                             onClick={() => setActiveNoteId(note.id)}
                             className={`group flex items-center w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all ${activeNoteId === note.id
-                                    ? 'bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 hover:text-gray-700 dark:hover:text-gray-200'
+                                ? 'bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white'
+                                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 hover:text-gray-700 dark:hover:text-gray-200'
                                 }`}
                         >
                             <input
@@ -250,12 +251,10 @@ export default function DashboardQuickNotes() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 bg-white dark:bg-slate-900 relative">
-                    <textarea
+                <div className="flex-1 bg-white dark:bg-slate-900 relative flex flex-col overflow-hidden">
+                    <RichTextEditor
                         value={activeNote.content}
-                        onChange={(e) => updateActiveNoteContent(e.target.value)}
-                        placeholder="點擊此處開始輸入..."
-                        className="w-full h-full p-6 resize-none outline-none text-gray-700 dark:text-slate-200 text-base leading-relaxed placeholder-gray-300 dark:placeholder-slate-600 bg-transparent"
+                        onChange={(content) => updateActiveNoteContent(content)}
                     />
                 </div>
             </div>

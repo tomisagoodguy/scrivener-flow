@@ -52,6 +52,7 @@ export const SideNav = () => {
         { name: '辦案指南', href: '/guidelines', icon: '🧭' },
         { name: '工作筆記', href: '/notes', icon: '📝' },
         { name: '共筆', href: '/knowledge', icon: '📚' },
+        { name: '稅費試算', href: '/calculator', icon: '🧮' },
     ];
 
     const handleLogout = async () => {
@@ -60,7 +61,7 @@ export const SideNav = () => {
     };
 
     return (
-        <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-8 gap-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-[999] transition-all hover:w-64 group">
+        <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-6 gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-[999] transition-all hover:w-64 group">
             {/* Logo Area & Google Drive Trigger */}
             {email === 'tom890108159@gmail.com' ? (
                 <GoogleDriveUpload />
@@ -70,54 +71,56 @@ export const SideNav = () => {
                 </div>
             )}
 
-            {/* Navigation Icons */}
-            <nav className="flex-1 flex flex-col gap-3 w-full px-3">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden ${isActive
-                                ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                                }`}
-                        >
-                            <span className="text-xl min-w-[24px]">{item.icon}</span>
-                            <span className="font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                {item.name}
-                            </span>
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            {/* Quick Line Area - Only for Boss Tom */}
-            {email === 'tom890108159@gmail.com' && (
-                <div className="w-full px-4 mb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
-                    <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
-                        <div className="flex items-center gap-2 mb-2 text-emerald-600 dark:text-emerald-400">
-                            <MessageSquareText size={16} />
-                            <span className="text-xs font-black uppercase tracking-widest">快速傳 Line</span>
-                        </div>
-                        <form onSubmit={handleQuickLine} className="relative">
-                            <textarea
-                                value={lineMsg}
-                                onChange={(e) => setLineMsg(e.target.value)}
-                                placeholder="輸入即時備忘..."
-                                className="w-full bg-white dark:bg-slate-950 border border-emerald-500/10 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500/20 outline-none h-32 max-h-64 overflow-y-auto custom-scrollbar placeholder:text-slate-400 font-medium leading-relaxed"
-                            />
-                            <button
-                                type="submit"
-                                disabled={sending || !lineMsg.trim()}
-                                className="absolute bottom-2 right-2 p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-500/20"
+            {/* Navigation Icons & Content Wrapper */}
+            <div className="flex-1 w-full flex flex-col gap-3 overflow-y-auto custom-scrollbar overflow-x-hidden min-h-0">
+                <nav className="flex flex-col gap-2 w-full px-3 pt-2">
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden shrink-0 ${isActive
+                                    ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                    }`}
                             >
-                                {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                            </button>
-                        </form>
+                                <span className="text-xl min-w-[24px] flex justify-center">{item.icon}</span>
+                                <span className="font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    {item.name}
+                                </span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* Quick Line Area - Only for Boss Tom */}
+                {email === 'tom890108159@gmail.com' && (
+                    <div className="w-full px-4 mb-4 mt-auto opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0 shrink-0">
+                        <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
+                            <div className="flex items-center gap-2 mb-2 text-emerald-600 dark:text-emerald-400">
+                                <MessageSquareText size={16} />
+                                <span className="text-xs font-black uppercase tracking-widest">快速傳 Line</span>
+                            </div>
+                            <form onSubmit={handleQuickLine} className="relative">
+                                <textarea
+                                    value={lineMsg}
+                                    onChange={(e) => setLineMsg(e.target.value)}
+                                    placeholder="輸入即時備忘..."
+                                    className="w-full bg-white dark:bg-slate-950 border border-emerald-500/10 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500/20 outline-none h-32 max-h-64 overflow-y-auto custom-scrollbar placeholder:text-slate-400 font-medium leading-relaxed"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={sending || !lineMsg.trim()}
+                                    className="absolute bottom-2 right-2 p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-slate-300 transition-colors shadow-lg shadow-emerald-500/20"
+                                >
+                                    {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Bottom Avatar / Logout */}
             <button
