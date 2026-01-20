@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { webcrypto } from 'crypto';
+
 
 /**
  * 金鑰資訊
@@ -83,7 +83,7 @@ export class KeyVault {
             .eq('is_active', true)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .single<{ key_value: string }>();
 
         if (error || !data) {
             // Fallback
@@ -110,7 +110,7 @@ export class KeyVault {
             .from('encryption_keys')
             .select('key_value')
             .eq('key_id', keyId)
-            .single();
+            .single<{ key_value: string }>();
 
         if (error || !data) {
             return null;
@@ -125,7 +125,17 @@ export class KeyVault {
      * @returns string - 256-bit hex 金鑰
      */
     static generateKey(): string {
-        const keyBytes = webcrypto.getRandomValues(new Uint8Array(32)); // 256 bits
+        let cryptoApi: Crypto;
+        if (typeof window !== 'undefined' && window.crypto) {
+            cryptoApi = window.crypto;
+        } else if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+            cryptoApi = globalThis.crypto as Crypto;
+        } else {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            cryptoApi = require('node:crypto').webcrypto as Crypto;
+        }
+
+        const keyBytes = cryptoApi.getRandomValues(new Uint8Array(32)); // 256 bits
         return Buffer.from(keyBytes).toString('hex');
     }
 
@@ -142,21 +152,29 @@ export class KeyVault {
      * ```
      */
     static async rotateKey(): Promise<{ newKeyId: string; newKey: string }> {
+        let cryptoApi: Crypto;
+        if (typeof window !== 'undefined' && window.crypto) {
+            cryptoApi = window.crypto;
+        } else if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+            cryptoApi = globalThis.crypto as Crypto;
+        } else {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            cryptoApi = require('node:crypto').webcrypto as Crypto;
+        }
+
         const supabase = this.getSupabase();
-        const newKeyId = webcrypto.randomUUID();
+        const newKeyId = cryptoApi.randomUUID();
         const newKey = this.generateKey();
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + this.KEY_ROTATION_DAYS);
 
         // 1. 停用所有現有金鑰
-        await supabase
-            .from('encryption_keys')
+        await (supabase.from('encryption_keys') as any)
             .update({ is_active: false })
             .eq('is_active', true);
 
         // 2. 插入新金鑰
-        const { error } = await supabase
-            .from('encryption_keys')
+        const { error } = await (supabase.from('encryption_keys') as any)
             .insert({
                 key_id: newKeyId,
                 key_value: newKey,
@@ -179,8 +197,7 @@ export class KeyVault {
      */
     static async cleanupExpiredKeys(): Promise<number> {
         const supabase = this.getSupabase();
-        const { data: recentKeys } = await supabase
-            .from('encryption_keys')
+        const { data: recentKeys } = await (supabase.from('encryption_keys') as any)
             .select('key_id, created_at')
             .order('created_at', { ascending: false })
             .limit(3);
@@ -189,10 +206,9 @@ export class KeyVault {
             return 0;
         }
 
-        const recentKeyIds = recentKeys.map((k) => k.key_id);
+        const recentKeyIds = recentKeys.map((k: any) => k.key_id);
 
-        const { count } = await supabase
-            .from('encryption_keys')
+        const { count } = await (supabase.from('encryption_keys') as any)
             .delete({ count: 'exact' })
             .not('key_id', 'in', `(${recentKeyIds.join(',')})`);
 
@@ -206,8 +222,7 @@ export class KeyVault {
      */
     static async initialize(): Promise<void> {
         const supabase = this.getSupabase();
-        const { data: existingKeys } = await supabase
-            .from('encryption_keys')
+        const { data: existingKeys } = await (supabase.from('encryption_keys') as any)
             .select('key_id')
             .limit(1);
 
@@ -228,8 +243,7 @@ export class KeyVault {
      */
     static async shouldRotateKey(): Promise<boolean> {
         const supabase = this.getSupabase();
-        const { data } = await supabase
-            .from('encryption_keys')
+        const { data } = await (supabase.from('encryption_keys') as any)
             .select('expires_at')
             .eq('is_active', true)
             .single();

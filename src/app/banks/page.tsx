@@ -539,7 +539,7 @@ export default function BanksPage() {
                                                                 const emails = c.email.split(/[,;]/).map((e: string) => e.trim()).filter(Boolean);
                                                                 if (emails.length > 1) {
                                                                     // Multiple emails - create separate cards
-                                                                    emails.forEach((email, idx) => {
+                                                                    emails.forEach((email: string, idx: number) => {
                                                                         expandedContacts.push({
                                                                             name: c.name,
                                                                             branch: c.branch,

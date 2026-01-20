@@ -12,6 +12,21 @@
 
 import * as jose from 'jose';
 
+export interface EncryptedData {
+    ciphertext: string;
+    iv: string;
+    salt: string;
+    keyId: string;
+    algorithm: 'AES-GCM-256';
+    timestamp: number;
+}
+
+export interface KeyPair {
+    publicKey: string;
+    privateKey: string;
+    keyId: string;
+}
+
 /**
  * E2EE 加密服務類別
  */
@@ -58,7 +73,7 @@ export class E2EEEncryption {
         const key = await crypto.subtle.deriveKey(
             {
                 name: 'PBKDF2',
-                salt: actualSalt,
+                salt: actualSalt as any,
                 iterations: 100000,
                 hash: 'SHA-256',
             },
