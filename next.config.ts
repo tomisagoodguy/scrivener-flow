@@ -56,7 +56,11 @@ const nextConfig: NextConfig = {
     },
 
     // 🎭 隱藏技術棧資訊 (移除 X-Powered-By)
-    poweredByHeader: false
+    poweredByHeader: false,
+
+    // 🕵️‍♂️ 反逆向工程：關閉 Source Maps
+    // 這會讓瀏覽器裡的程式碼變成真正的「天書」，就算網管打開 DevTools 也只能看到亂碼
+    productionBrowserSourceMaps: false
 };
 
 export default nextConfig;
