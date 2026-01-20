@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { sendLineMessage } from '@/app/actions/lineNotify';
 import { Send, MessageSquareText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,14 +28,21 @@ export const SideNav = () => {
 
         setSending(true);
         try {
-            const res = await sendLineMessage(lineMsg.trim());
+            // E2EE 加密傳輸
+            // 動態匯入確保在 Client 端執行
+            const { SecureApi } = await import('@/lib/crypto/secureApi');
+            const res = await SecureApi.post<any>('/api/line/secure', {
+                text: lineMsg.trim()
+            });
+
             if (res.success) {
-                toast.success('已發送至您的 Line');
+                toast.success('已隱蔽發送至您的 Line');
                 setLineMsg('');
             } else {
                 toast.error('發送失敗: ' + res.error);
             }
         } catch (err) {
+            console.error(err);
             toast.error('系統錯誤');
         } finally {
             setSending(false);

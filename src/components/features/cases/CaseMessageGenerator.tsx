@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { DemoCase, Financials, Milestone } from '@/types';
 import { Copy, MessageSquare, Check, RefreshCw, Send, Loader2 } from 'lucide-react';
-import { sendLineMessage } from '@/app/actions/lineNotify';
 
 interface CaseMessageGeneratorProps {
     caseData: DemoCase;
@@ -283,15 +282,19 @@ ${inputs.sealLocation}辦理用印手續
         if (!generatedText) return;
         setSending(true);
         try {
-            const result = await sendLineMessage(generatedText);
+            // E2EE 加密傳輸
+            const { SecureApi } = await import('@/lib/crypto/secureApi');
+            const result = await SecureApi.post<any>('/api/line/secure', { text: generatedText });
+
             if (result.success) {
-                alert('✅ 訊息已成功發送至您的 Line！');
+                alert('✅ 訊息已隱蔽發送至您的 Line！');
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
             } else {
                 alert(`❌ 發送失敗: ${result.error || '未知錯誤'}\n請確認您已設定 Line Channel Access Token 及 User ID。`);
             }
         } catch (error: any) {
+            console.error('Secure LINE Error:', error);
             alert(`❌ 發生錯誤: ${error.message}`);
         } finally {
             setSending(false);

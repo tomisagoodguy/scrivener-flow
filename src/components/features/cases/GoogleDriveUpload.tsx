@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from 'react';
 import { DriveFile } from '@/lib/google/drive';
-import { uploadFileToServerAction } from '@/app/actions/googleDrive';
 import { Upload, File, CheckCircle2, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,19 +23,39 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
         setUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await uploadFileToServerAction(formData, caseId, caseNumber);
+            // E2EE 加密上傳流程
+            // 1. 讀取檔案為 Base64
+            const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+
+            const dataUrl = await toBase64(file);
+            const base64Content = dataUrl.split(',')[1]; // 移除 "data:application/pdf;base64," 前綴
+
+            // 2. 使用 SecureApi 發送加密請求 (Payload 會被自動加密)
+            // 動態匯入以避免 Server Component 預渲染問題 (雖然此為 use client 元件，但安全起見)
+            const { SecureApi } = await import('@/lib/crypto/secureApi');
+
+            const res = await SecureApi.post<any>('/api/drive/secure-upload', {
+                fileName: file.name,
+                fileType: file.type,
+                fileContentBase64: base64Content,
+                caseId,
+                caseNumber
+            });
 
             if (res.success) {
                 setUploadedFiles(prev => [...prev, res.data]);
-                toast.success(`檔案 ${file.name} 上傳成功！`);
+                toast.success(`檔案 ${file.name} 安全上傳成功！`);
                 if (onUploadComplete) onUploadComplete(res.data);
             } else {
                 throw new Error(res.error || '上傳失敗');
             }
         } catch (error: any) {
-            console.error('Upload Error:', error);
+            console.error('Secure Upload Error:', error);
             toast.error(error.message || '連線失敗');
         } finally {
             setUploading(false);

@@ -42,10 +42,41 @@ const categoryIcons = {
 };
 
 export default function NoteCard({ note, onClick }: NoteCardProps) {
-    // Helper function to strip HTML tags for summary
+    // Helper function to strip HTML tags and decode entities for summary
     const stripHtml = (html: string) => {
         if (!html) return '';
-        return html.replace(/<[^>]*>?/gm, '');
+
+        // Remove HTML tags
+        let text = html.replace(/<[^>]*>?/gm, '');
+
+        // Decode common HTML entities
+        const entityMap: { [key: string]: string } = {
+            '&nbsp;': ' ',
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&quot;': '"',
+            '&#39;': "'",
+            '&apos;': "'",
+            '&mdash;': '—',
+            '&ndash;': '–',
+            '&hellip;': '...',
+        };
+
+        // Replace entities
+        Object.keys(entityMap).forEach(entity => {
+            text = text.replace(new RegExp(entity, 'g'), entityMap[entity]);
+        });
+
+        // Also handle numeric entities like &#160; (non-breaking space)
+        text = text.replace(/&#(\d+);/g, (match, dec) => {
+            return String.fromCharCode(dec);
+        });
+
+        // Clean up multiple spaces
+        text = text.replace(/\s+/g, ' ').trim();
+
+        return text;
     };
 
     const rawContent = stripHtml(note.content || '');
@@ -83,8 +114,8 @@ export default function NoteCard({ note, onClick }: NoteCardProps) {
 
                     <span
                         className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 transition-colors ${note.category === '法規更新' ? 'bg-purple-50 text-purple-700' :
-                                note.category === '常見問題' ? 'bg-blue-50 text-blue-700' :
-                                    'bg-slate-50 text-slate-600'
+                            note.category === '常見問題' ? 'bg-blue-50 text-blue-700' :
+                                'bg-slate-50 text-slate-600'
                             }`}
                     >
                         {categoryIcons[note.category] || categoryIcons['其他']}

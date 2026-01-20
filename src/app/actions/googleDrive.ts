@@ -11,7 +11,7 @@ interface DriveActionResponse {
 /**
  * 取得當前使用者的 Google Access Token (從伺服器端取得)
  */
-async function getAccessToken() {
+export async function getAccessToken() {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 

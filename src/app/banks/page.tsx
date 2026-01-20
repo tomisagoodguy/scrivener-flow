@@ -275,43 +275,91 @@ export default function BanksPage() {
                                 {!currentBank.contacts?.length && (
                                     <div className="text-center text-slate-400 py-4 text-sm">目前沒有聯絡人，請點擊上方按鈕新增。</div>
                                 )}
-                                {currentBank.contacts?.map((contact: any, index: number) => (
-                                    <div key={index} className="flex gap-2 items-start bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
-                                            <input
-                                                placeholder="姓名"
-                                                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
-                                                value={contact.name || ''}
-                                                onChange={e => updateContact(index, 'name', e.target.value)}
-                                            />
-                                            <input
-                                                placeholder="分行/職稱"
-                                                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
-                                                value={contact.branch || ''}
-                                                onChange={e => updateContact(index, 'branch', e.target.value)}
-                                            />
-                                            <input
-                                                placeholder="電話/分機"
-                                                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
-                                                value={contact.phone || ''}
-                                                onChange={e => updateContact(index, 'phone', e.target.value)}
-                                            />
-                                            <input
-                                                placeholder="Email"
-                                                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
-                                                value={contact.email || ''}
-                                                onChange={e => updateContact(index, 'email', e.target.value)}
-                                            />
+                                {currentBank.contacts?.map((contact: any, index: number) => {
+                                    // Check if email contains multiple addresses
+                                    const emails = contact.email ? contact.email.split(/[,;]/).map((e: string) => e.trim()).filter(Boolean) : [];
+                                    const hasMultipleEmails = emails.length > 1;
+
+                                    return (
+                                        <div key={index} className="flex gap-2 items-start bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+                                                <input
+                                                    placeholder="姓名"
+                                                    className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
+                                                    value={contact.name || ''}
+                                                    onChange={e => updateContact(index, 'name', e.target.value)}
+                                                />
+                                                <input
+                                                    placeholder="分行/職稱"
+                                                    className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
+                                                    value={contact.branch || ''}
+                                                    onChange={e => updateContact(index, 'branch', e.target.value)}
+                                                />
+                                                <input
+                                                    placeholder="電話/分機"
+                                                    className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm"
+                                                    value={contact.phone || ''}
+                                                    onChange={e => updateContact(index, 'phone', e.target.value)}
+                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        placeholder="Email"
+                                                        className={`p-2 rounded-lg border text-sm w-full ${hasMultipleEmails ? 'border-orange-300 bg-orange-50/30 dark:bg-orange-900/10' : 'border-slate-200 dark:border-slate-600'}`}
+                                                        value={contact.email || ''}
+                                                        onChange={e => updateContact(index, 'email', e.target.value)}
+                                                    />
+                                                    {hasMultipleEmails && (
+                                                        <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                                                            {emails.length} 個信箱
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Split Button for Multiple Emails */}
+                                            {hasMultipleEmails && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newContacts = [...(currentBank.contacts || [])];
+                                                        // Remove original contact
+                                                        const [original] = newContacts.splice(index, 1);
+                                                        // Add split contacts
+                                                        emails.forEach((email) => {
+                                                            newContacts.push({
+                                                                name: original.name,
+                                                                branch: original.branch,
+                                                                phone: original.phone,
+                                                                email: email
+                                                            });
+                                                        });
+                                                        setCurrentBank({ ...currentBank, contacts: newContacts });
+                                                        toast.success(`已拆分為 ${emails.length} 筆獨立聯絡人`);
+                                                    }}
+                                                    className="text-orange-500 hover:text-orange-600 hover:bg-orange-50 p-2 rounded-lg transition-colors shrink-0"
+                                                    title={`拆分為 ${emails.length} 筆聯絡人`}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M17 12h-5"></path>
+                                                        <path d="M17 18h-5"></path>
+                                                        <path d="M17 6h-5"></path>
+                                                        <path d="M3 12h5"></path>
+                                                        <path d="M3 18h5"></path>
+                                                        <path d="M3 6h5"></path>
+                                                    </svg>
+                                                </button>
+                                            )}
+
+                                            <button
+                                                onClick={() => removeContact(index)}
+                                                className="text-slate-400 hover:text-red-500 p-2"
+                                                title="刪除"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => removeContact(index)}
-                                            className="text-slate-400 hover:text-red-500 p-2"
-                                            title="刪除"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -475,31 +523,122 @@ export default function BanksPage() {
 
                                             {bank.contacts && bank.contacts.length > 0 ? (
                                                 <div className="grid grid-cols-1 gap-2">
-                                                    {bank.contacts.map((c: any, idx: number) => (
-                                                        <div key={idx} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-lg flex flex-col gap-1.5 shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-colors group/contact">
-                                                            <div className="flex justify-between items-center">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{c.name}</span>
-                                                                    {c.branch && <span className="text-[10px] text-slate-400 bg-slate-200 dark:bg-slate-900 px-1.5 rounded">{c.branch}</span>}
+                                                    {(() => {
+                                                        // Flatten contacts: split multi-email contacts into individual cards
+                                                        const expandedContacts: Array<{
+                                                            name: string;
+                                                            branch: string;
+                                                            phone: string;
+                                                            email: string;
+                                                            isMultiple: boolean;
+                                                            emailIndex: number;
+                                                        }> = [];
+
+                                                        bank.contacts.forEach((c: any) => {
+                                                            if (c.email) {
+                                                                const emails = c.email.split(/[,;]/).map((e: string) => e.trim()).filter(Boolean);
+                                                                if (emails.length > 1) {
+                                                                    // Multiple emails - create separate cards
+                                                                    emails.forEach((email, idx) => {
+                                                                        expandedContacts.push({
+                                                                            name: c.name,
+                                                                            branch: c.branch,
+                                                                            phone: c.phone,
+                                                                            email: email,
+                                                                            isMultiple: true,
+                                                                            emailIndex: idx + 1
+                                                                        });
+                                                                    });
+                                                                } else {
+                                                                    // Single email - normal display
+                                                                    expandedContacts.push({
+                                                                        name: c.name,
+                                                                        branch: c.branch,
+                                                                        phone: c.phone,
+                                                                        email: emails[0],
+                                                                        isMultiple: false,
+                                                                        emailIndex: 0
+                                                                    });
+                                                                }
+                                                            } else {
+                                                                // No email
+                                                                expandedContacts.push({
+                                                                    name: c.name,
+                                                                    branch: c.branch,
+                                                                    phone: c.phone,
+                                                                    email: '',
+                                                                    isMultiple: false,
+                                                                    emailIndex: 0
+                                                                });
+                                                            }
+                                                        });
+
+                                                        return expandedContacts.map((contact, idx) => (
+                                                            <div key={idx} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-lg flex flex-col gap-1.5 shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-colors group/contact">
+                                                                {/* Name & Branch Header with Copy */}
+                                                                <div className="flex justify-between items-center">
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                await navigator.clipboard.writeText(contact.name);
+                                                                                toast.success(`已複製姓名: ${contact.name}`);
+                                                                            } catch (err) {
+                                                                                console.error('複製失敗', err);
+                                                                            }
+                                                                        }}
+                                                                        className="group/name flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-900/50 px-2 py-1 rounded-lg transition-all"
+                                                                        title="點擊複製姓名"
+                                                                    >
+                                                                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                                            {contact.name}
+                                                                            {contact.isMultiple && <span className="text-[9px] text-blue-500 ml-1">#{contact.emailIndex}</span>}
+                                                                        </span>
+                                                                        {contact.branch && <span className="text-[10px] text-slate-400 bg-slate-200 dark:bg-slate-900 px-1.5 rounded">{contact.branch}</span>}
+                                                                        <Copy size={10} className="text-slate-300 group-hover/name:text-blue-500 opacity-0 group-hover/name:opacity-100 transition-all shrink-0" />
+                                                                    </button>
+                                                                </div>
+
+                                                                <div className="flex flex-col gap-1 pl-1">
+                                                                    {contact.phone && (
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                try {
+                                                                                    await navigator.clipboard.writeText(contact.phone);
+                                                                                    toast.success(`已複製電話: ${contact.phone}`);
+                                                                                } catch (err) {
+                                                                                    console.error('複製失敗', err);
+                                                                                }
+                                                                            }}
+                                                                            className="group/phone text-xs text-slate-600 dark:text-slate-400 font-mono flex items-center gap-2 bg-slate-100/50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                                                                            title="點擊複製電話"
+                                                                        >
+                                                                            <Phone size={12} className="text-slate-400 shrink-0" />
+                                                                            <span className="flex-1 text-left">{contact.phone}</span>
+                                                                            <Copy size={10} className="text-slate-300 group-hover/phone:text-blue-500 opacity-0 group-hover/phone:opacity-100 transition-all shrink-0" />
+                                                                        </button>
+                                                                    )}
+                                                                    {contact.email && (
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                try {
+                                                                                    await navigator.clipboard.writeText(contact.email);
+                                                                                    toast.success(`已複製: ${contact.email}`);
+                                                                                } catch (err) {
+                                                                                    console.error('複製失敗', err);
+                                                                                }
+                                                                            }}
+                                                                            className="group/email text-xs text-slate-600 dark:text-slate-400 font-mono flex items-center gap-2 select-all bg-slate-100/50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                                                                            title="點擊複製"
+                                                                        >
+                                                                            <Mail size={12} className="text-slate-400 shrink-0" />
+                                                                            <span className="flex-1 text-left truncate">{contact.email}</span>
+                                                                            <Copy size={10} className="text-slate-300 group-hover/email:text-blue-500 opacity-0 group-hover/email:opacity-100 transition-all shrink-0" />
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </div>
-
-                                                            <div className="flex flex-col gap-1 pl-1">
-                                                                {c.phone && (
-                                                                    <div className="text-xs text-slate-500 font-mono flex items-center gap-2">
-                                                                        <Phone size={12} className="text-slate-400" />
-                                                                        {c.phone}
-                                                                    </div>
-                                                                )}
-                                                                {c.email && (
-                                                                    <div className="text-xs text-slate-600 dark:text-slate-400 font-mono flex items-center gap-2 select-all">
-                                                                        <Mail size={12} className="text-slate-400" />
-                                                                        {c.email}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        ));
+                                                    })()}
                                                 </div>
                                             ) : (
                                                 <div className="text-slate-400 text-sm italic py-2">
@@ -528,7 +667,7 @@ export default function BanksPage() {
                                         </div>
 
                                         {/* Right: Redemption Info */}
-                                        <div className="space-y-4">
+                                        < div className="space-y-4" >
                                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                                 <CreditCard size={14} className="text-purple-500" />
                                                 代償與塗銷資訊
@@ -541,7 +680,7 @@ export default function BanksPage() {
                                             </div>
 
                                             {/* Quick Actions/Info */}
-                                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300 mt-4">
+                                            < div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300 mt-4" >
                                                 <div className="bg-blue-100 dark:bg-blue-800 p-1 rounded-full shrink-0">
                                                     <Phone size={12} />
                                                 </div>
@@ -552,13 +691,14 @@ export default function BanksPage() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                </div >
+                            ))
+                            }
+                        </div >
+                    </div >
                 )}
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
 
