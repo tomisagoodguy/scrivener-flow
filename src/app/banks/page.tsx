@@ -325,7 +325,7 @@ export default function BanksPage() {
                                                         // Remove original contact
                                                         const [original] = newContacts.splice(index, 1);
                                                         // Add split contacts
-                                                        emails.forEach((email) => {
+                                                        emails.forEach((email: string) => {
                                                             newContacts.push({
                                                                 name: original.name,
                                                                 branch: original.branch,
