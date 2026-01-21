@@ -14,6 +14,7 @@ export default function AIWorkAssistant() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [initialized, setInitialized] = useState(false);
+    const [lastDraft, setLastDraft] = useState<string | null>(null);
 
     useEffect(() => {
         checkUser();
@@ -43,6 +44,9 @@ export default function AIWorkAssistant() {
             const result = await generateAIBriefing(userMsg);
             if (result.success && result.message) {
                 setMessages(prev => [...prev, { role: 'ai', content: result.message }]);
+                // Extract draft if present
+                const draftMatch = result.message.match(/:::LINE_DRAFT_START:::([\s\S]*?):::LINE_DRAFT_END:::/);
+                if (draftMatch) setLastDraft(draftMatch[1].trim());
             } else {
                 toast.error(result.message || '回應失敗');
             }
@@ -59,6 +63,7 @@ export default function AIWorkAssistant() {
             const res = await sendLineMessage(text);
             if (res.success) {
                 toast.success('LINE 訊息已發送！', { id: toastId });
+                setLastDraft(null); // Clear after manual send
             } else {
                 toast.error(`發送失敗: ${res.error}`, { id: toastId });
             }
@@ -71,15 +76,26 @@ export default function AIWorkAssistant() {
         e?.preventDefault();
         if (!input.trim() || loading) return;
 
-        const userMsg = input;
+        let userMsg = input;
+
+        // Context enhancement: If user says "Confirm/OK" and we have a draft, inject it into the prompt
+        const confirmationKeywords = ['可以', 'ok', '好', '寄吧', '發送', '寄出'];
+        if (lastDraft && confirmationKeywords.some(k => input.toLowerCase().includes(k)) && input.length < 10) {
+            userMsg = `【Context: 上一回建議的 LINE 草稿內容如下：\n"""\n${lastDraft}\n"""\n】使用者說：${input}`;
+        }
+
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        setMessages(prev => [...prev, { role: 'user', content: input }]); // Show original input in UI
         setLoading(true);
 
         try {
             const result = await generateAIBriefing(userMsg);
             if (result.success && result.message) {
                 setMessages(prev => [...prev, { role: 'ai', content: result.message }]);
+                // Update draft for next turn
+                const draftMatch = result.message.match(/:::LINE_DRAFT_START:::([\s\S]*?):::LINE_DRAFT_END:::/);
+                if (draftMatch) setLastDraft(draftMatch[1].trim());
+                else if (!result.message.includes('LINE')) setLastDraft(null); // Clear if AI changed topic
             } else {
                 toast.error(result.message || '回應失敗');
             }

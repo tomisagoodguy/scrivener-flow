@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { sendLineMessage } from './lineNotify';
 
 // Initialize Gemini
 // Note: This requires GOOGLE_GEMINI_API_KEY to be set in .env.local
@@ -174,38 +175,79 @@ export async function generateAIBriefing(userMessage?: string) {
 
     // Models to try in order of preference (Fastest/Best -> Fallback)
     const modelsToTry = [
-        'gemini-2.5-flash',
-        'gemini-3-flash',
-        'gemini-2.5-flash-lite',
-        'gemini-robotics-er-1.5-preview',
-        'gemma-3-27b',
-        'gemma-3-12b',
-        'gemma-3-4b',
-        'gemma-3-2b',
-        'gemma-3-1b'
+        'gemini-2-flash',      // Fixed model name (gemini-2-flash is the current stable flash)
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
+    ];
+
+    // Tool definition for Gemini
+    const tools = [
+        {
+            functionDeclarations: [
+                {
+                    name: 'sendLineMessage',
+                    description: '將修飾好的訊息內容發送到使用者的 LINE 帳號。僅在使用者明確表示「好」、「可以」、「寄出」或「發送」時執行。',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            text: {
+                                type: 'string',
+                                description: '要發送到 LINE 的訊息內容。'
+                            }
+                        },
+                        required: ['text']
+                    }
+                }
+            ]
+        }
     ];
 
     try {
         for (const modelName of modelsToTry) {
             try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                const result = await model.generateContent(systemPrompt);
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    tools: tools
+                });
+
+                // Start chat to handle potential tool calls (even if stateless, we simulate a single turn with history if needed)
+                const chat = model.startChat();
+                const result = await chat.sendMessage(systemPrompt);
                 const response = result.response;
-                const text = response.text();
-                return { success: true, message: text };
+
+                // Handle tool calls
+                const call = response.functionCalls()?.[0];
+                if (call && call.name === 'sendLineMessage') {
+                    const { text } = call.args as { text: string };
+                    const lineRes = await sendLineMessage(text);
+
+                    // Send tool result back to model so it can confirm to user
+                    const toolResult = {
+                        functionResponse: {
+                            name: 'sendLineMessage',
+                            response: { success: lineRes.success, error: lineRes.error }
+                        }
+                    };
+
+                    const finalResult = await chat.sendMessage([toolResult]);
+                    return { success: true, message: finalResult.response.text() };
+                }
+
+                return { success: true, message: response.text() };
             } catch (error: any) {
-                console.warn(`Model ${modelName} failed, trying next...`);
-                // If it's the last model, throw the error to be caught by the outer catch
+                console.warn(`Model ${modelName} failed/unavailable, trying next... Error: ${error.message}`);
                 if (modelName === modelsToTry[modelsToTry.length - 1]) throw error;
             }
         }
-
-        return { success: false, message: 'All models failed.' }; // Should not reach here
+        return { success: false, message: '所有 AI 模型目前均無法連線，請稍後再試。' };
     } catch (error: any) {
         console.error('Gemini API Error:', error);
-        return { success: false, message: `連線錯誤: ${error.message || '未知原因'}` };
+        return { success: false, message: `串接錯誤: ${error.message || '未知原因'}` };
     }
 }
+
+// Fixed sendLineMessage in the same file or reference the one in lineNotify.ts
+// Let's ensure lineNotify.ts handles quotes correctly.
 
 /**
  * Optimize text content (for Notes)

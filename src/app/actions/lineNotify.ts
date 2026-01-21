@@ -6,8 +6,8 @@ interface LineMessageResponse {
 }
 
 export async function sendLineMessage(text: string): Promise<LineMessageResponse> {
-    const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-    const USER_ID = process.env.LINE_USER_ID;
+    let CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN?.replace(/^["']|["']$/g, '');
+    let USER_ID = process.env.LINE_USER_ID?.replace(/^["']|["']$/g, '');
 
     if (!CHANNEL_ACCESS_TOKEN || !USER_ID) {
         return {
