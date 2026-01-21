@@ -175,9 +175,9 @@ export async function generateAIBriefing(userMessage?: string) {
 
     // Models to try in order of preference (Fastest/Best -> Fallback)
     const modelsToTry = [
-        'gemini-2-flash',      // Fixed model name (gemini-2-flash is the current stable flash)
-        'gemini-1.5-flash',
-        'gemini-1.5-pro'
+        'gemini-2.0-flash',     // Latest stable 2.0
+        'gemini-1.5-flash',     // Very stable 1.5
+        'gemini-1.5-pro'        // Powerful fallback
     ];
 
     // Tool definition for Gemini
