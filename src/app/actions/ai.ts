@@ -173,11 +173,17 @@ export async function generateAIBriefing(userMessage?: string) {
     ${userMessage ? `【使用者特別指令】：${userMessage}` : '【指令】：請提供今天的「每日簡報 (Daily Briefing)」，並包含我的整體進度概況。'}
     `;
 
-    // Models to try in order of preference (Fastest/Best -> Fallback)
+    // Models to try in order of preference (STRICTLY from user provided internal list)
     const modelsToTry = [
-        'gemini-2.0-flash',     // Latest stable 2.0
-        'gemini-1.5-flash',     // Very stable 1.5
-        'gemini-1.5-pro'        // Powerful fallback
+        'gemini-2.5-flash',
+        'gemini-3-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-robotics-er-1.5-preview',
+        'gemma-3-27b',
+        'gemma-3-12b',
+        'gemma-3-4b',
+        'gemma-3-2b',
+        'gemma-3-1b'
     ];
 
     // Tool definition for Gemini
