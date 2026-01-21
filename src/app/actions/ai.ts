@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType, Tool } from '@google/generative-ai';
 import { sendLineMessage } from './lineNotify';
 
 // Initialize Gemini
@@ -187,17 +187,17 @@ export async function generateAIBriefing(userMessage?: string) {
     ];
 
     // Tool definition for Gemini
-    const tools = [
+    const tools: Tool[] = [
         {
             functionDeclarations: [
                 {
                     name: 'sendLineMessage',
-                    description: '將修飾好的訊息內容發送到使用者的 LINE 帳號。僅在使用者明確表示「好」、「可以」、「寄出」或「發送」時執行。',
+                    description: '將修飾好的訊息內容發送到使用者的 LINE 帳號。僅在使用者明確表示「好」、「可以」、「K」、「寄出」或「發送」時執行。',
                     parameters: {
-                        type: 'object',
+                        type: SchemaType.OBJECT,
                         properties: {
                             text: {
-                                type: 'string',
+                                type: SchemaType.STRING,
                                 description: '要發送到 LINE 的訊息內容。'
                             }
                         },
