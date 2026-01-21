@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateAIBriefing } from '@/app/actions/ai';
+import { sendLineMessage } from '@/app/actions/lineNotify';
 import { Sparkles, Send, Loader2, Calendar, User, ChevronDown, ChevronUp, Bot } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
@@ -52,6 +53,20 @@ export default function AIWorkAssistant() {
         }
     };
 
+    const handleSendline = async (text: string) => {
+        const toastId = toast.loading('正在發送 LINE 訊息...');
+        try {
+            const res = await sendLineMessage(text);
+            if (res.success) {
+                toast.success('LINE 訊息已發送！', { id: toastId });
+            } else {
+                toast.error(`發送失敗: ${res.error}`, { id: toastId });
+            }
+        } catch (e) {
+            toast.error('連線錯誤', { id: toastId });
+        }
+    };
+
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!input.trim() || loading) return;
@@ -75,14 +90,50 @@ export default function AIWorkAssistant() {
         }
     };
 
+    const renderMessageContent = (content: string) => {
+        const draftRegex = /:::LINE_DRAFT_START:::([\s\S]*?):::LINE_DRAFT_END:::/;
+        const match = content.match(draftRegex);
+
+        if (match) {
+            const [fullStr, draftText] = match;
+            const parts = content.split(fullStr);
+            const cleanDraft = draftText.trim();
+
+            return (
+                <div className="w-full">
+                    {parts[0]}
+                    <div className="my-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 animate-fade-in">
+                        <div className="flex items-center gap-2 mb-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            LINE 預覽 (Ready to Send)
+                        </div>
+                        <div className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-medium p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm text-sm">
+                            {cleanDraft}
+                        </div>
+                        <button
+                            onClick={() => handleSendline(cleanDraft)}
+                            className="mt-4 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                        >
+                            <Send className="w-4 h-4" />
+                            確認並發送 LINE
+                        </button>
+                    </div>
+                    {parts[1]}
+                </div>
+            );
+        }
+
+        return content;
+    };
+
     if (!isVisible) return null;
 
     return (
-        <div className="mb-6 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-3xl p-[1px] shadow-xl shadow-indigo-500/20 animate-fade-in">
+        <div className="mb-6 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-3xl p-[1px] shadow-xl shadow-indigo-500/20 animate-fade-in tracking-tight">
             <div className="bg-white dark:bg-slate-900 rounded-[23px] overflow-hidden">
                 {/* Header */}
                 <div
-                    className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer"
+                    className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer select-none"
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className="flex items-center gap-3">
@@ -94,7 +145,7 @@ export default function AIWorkAssistant() {
                                 Scrivener AI 行政特助
                                 <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 text-[10px] rounded-full uppercase tracking-wider font-bold">PRO</span>
                             </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">您的專屬智慧助理 - 隨時待命</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-normal">您的專屬智慧助理 - 隨時待命</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -105,9 +156,9 @@ export default function AIWorkAssistant() {
 
                 {/* Content */}
                 {isExpanded && (
-                    <div className="flex flex-col h-[400px]">
+                    <div className="flex flex-col h-[450px]">
                         {/* Chat Area */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30 dark:bg-slate-900/50">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30 dark:bg-slate-900/50 scroll-smooth">
                             {messages.length === 0 && loading ? (
                                 <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
                                     <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
@@ -116,28 +167,28 @@ export default function AIWorkAssistant() {
                             ) : (
                                 messages.map((msg, idx) => (
                                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
+                                        <div className={`max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
                                             ? 'bg-indigo-600 text-white rounded-tr-none'
                                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-tl-none whitespace-pre-wrap'
                                             }`}>
                                             {msg.role === 'ai' && (
-                                                <div className="flex items-center gap-2 mb-2 text-indigo-500 font-bold text-xs uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 pb-2">
+                                                <div className="flex items-center gap-2 mb-2 text-indigo-500 font-bold text-[10px] uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-2">
                                                     <Sparkles className="w-3 h-3" />
-                                                    AI Response
+                                                    AI Assistant Response
                                                 </div>
                                             )}
-                                            {msg.content}
+                                            {renderMessageContent(msg.content)}
                                         </div>
                                     </div>
                                 ))
                             )}
                             {loading && initialized && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm">
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm px-5 py-3">
+                                        <div className="flex gap-1.5 items-center h-4">
+                                            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -146,22 +197,22 @@ export default function AIWorkAssistant() {
 
                         {/* Quick Actions (Chips) */}
                         {!loading && messages.length === 1 && (
-                            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+                            <div className="px-6 py-3 flex gap-2 overflow-x-auto no-scrollbar border-t border-slate-50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50">
                                 <button
                                     onClick={() => handleQuickAction('briefing')}
-                                    className="whitespace-nowrap px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 flex items-center gap-1"
+                                    className="whitespace-nowrap px-4 py-2 bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-full text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all border border-indigo-100/50 dark:border-indigo-500/20 flex items-center gap-2 active:scale-95"
                                 >
                                     📅 今日概覽
                                 </button>
                                 <button
                                     onClick={() => handleQuickAction('progress')}
-                                    className="whitespace-nowrap px-3 py-1.5 bg-amber-50 text-amber-600 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors border border-amber-100 flex items-center gap-1"
+                                    className="whitespace-nowrap px-4 py-2 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 rounded-full text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all border border-amber-100/50 dark:border-amber-500/20 flex items-center gap-2 active:scale-95"
                                 >
                                     🚨 進度追蹤
                                 </button>
                                 <button
                                     onClick={() => handleQuickAction('stress')}
-                                    className="whitespace-nowrap px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors border border-emerald-100 flex items-center gap-1"
+                                    className="whitespace-nowrap px-4 py-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all border border-emerald-100/50 dark:border-emerald-500/20 flex items-center gap-2 active:scale-95"
                                 >
                                     📊 壓力分析
                                 </button>
@@ -174,14 +225,14 @@ export default function AIWorkAssistant() {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="問問特定行程、或是請我幫忙整理重點..."
-                                className="flex-1 bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400"
+                                placeholder="問問特定行程、或是請我幫助撰寫訊息..."
+                                className="flex-1 bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-400 dark:text-white"
                                 disabled={loading}
                             />
                             <button
                                 type="submit"
                                 disabled={loading || !input.trim()}
-                                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white p-3 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
+                                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white p-3 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                             >
                                 <Send className="w-5 h-5" />
                             </button>

@@ -164,6 +164,7 @@ export async function generateAIBriefing(userMessage?: string) {
     3. **進度判斷**：
        - 若某個案件 [未完成_紅燈] 項目很多，且日期已近，請提醒進度落後。
     4. **語氣**：專業、精準。給予數據和具體項目，不要模糊帶過。
+    5. **撰寫訊息**：若使用者要求「寫訊息」、「修飾文字」或「寄Line」，請將你建議的 **最終發送內容** (不含其他解釋文字) 放在 \`:::LINE_DRAFT_START:::\` 與 \`:::LINE_DRAFT_END:::\` 之間。即便只有一句話也要包起來，方便系統辨識。
 
     【目前全域資料】：
     ${JSON.stringify(contextData, null, 2)}
