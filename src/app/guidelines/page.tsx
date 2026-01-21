@@ -109,7 +109,7 @@ export default function GuidelinesPage() {
                 className="hidden md:block shadow-sm z-10"
             />
 
-            <main className="flex-1 p-6 md:p-12 overflow-y-auto h-screen">
+            <main className="flex-1 p-6 md:p-12">
                 <div className="max-w-5xl mx-auto space-y-8 pb-20">
                     {/* Header Section */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

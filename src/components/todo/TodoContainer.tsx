@@ -74,7 +74,7 @@ const TodoContainer = () => {
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [newTodoContent, setNewTodoContent] = useState('');
-    const [newTodoDate, setNewTodoDate] = useState(new Date().toISOString().slice(0, 10)); // Default to today YYYY-MM-DD
+    const [newTodoDate, setNewTodoDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
     const fetchAndSyncTodos = async () => {
         try {
@@ -301,7 +301,8 @@ id, case_number, buyer_name,
 
                 const d = new Date(t.due_date || t.created_at);
                 const tDate = d.toISOString().split('T')[0];
-                return tDate >= todayStr;
+                const nowStr = new Date().toISOString().split('T')[0];
+                return tDate >= nowStr;
             })
             .map((t) => {
                 // Determine type based on source or content content heuristics if manual
@@ -391,9 +392,9 @@ id, case_number, buyer_name,
         const user = (await supabase.auth.getUser()).data.user;
         if (!user) return;
 
-        // Use selected date or today
+        // Use selected date direct parsing (it includes time if datetime-local)
+        // If user didn't change it, it defaults to now()
         const targetDate = new Date(newTodoDate);
-        targetDate.setHours(9, 0, 0, 0); // Default to 9 AM
 
         const newTodo = {
             user_id: user.id,
@@ -552,10 +553,10 @@ id, case_number, buyer_name,
                             />
                             <div className="relative">
                                 <input
-                                    type="date"
+                                    type="datetime-local"
                                     value={newTodoDate}
                                     onChange={(e) => setNewTodoDate(e.target.value)}
-                                    className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-32"
+                                    className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-40"
                                 />
                             </div>
                         </div>
@@ -574,7 +575,7 @@ id, case_number, buyer_name,
                 ) : (
                     <button
                         onClick={() => {
-                            setNewTodoDate(new Date().toISOString().slice(0, 10)); // Reset to today
+                            setNewTodoDate(format(new Date(), "yyyy-MM-dd'T'HH:mm")); // Reset to today
                             setShowAdd(true);
                         }}
                         className="w-full py-2 px-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
@@ -587,5 +588,6 @@ id, case_number, buyer_name,
         </div>
     );
 };
+
 
 export default TodoContainer;

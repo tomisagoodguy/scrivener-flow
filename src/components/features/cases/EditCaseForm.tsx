@@ -35,6 +35,9 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     const [errorMsg, setErrorMsg] = useState('');
     const [debugInfo, setDebugInfo] = useState('');
 
+    // New: Private Notes
+    const [privateNotes, setPrivateNotes] = useState(initialData.private_notes || '');
+
     // User permission for experimental features
     const [currentUserEmail, setCurrentUserEmail] = useState('');
 
@@ -113,6 +116,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     seller_name: data.seller,
                     status: data.status,
                     notes: data.notes,
+                    private_notes: privateNotes,
                     pending_tasks: data.pending_tasks,
                     is_back_rent: data.is_back_rent === 'on',
                     tax_type: data.tax_type,
@@ -945,6 +949,31 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         />
                     </div>
                 </div>
+
+                {/* Private Notes Section - Full Width */}
+                <div className="space-y-2 pt-2 pb-4">
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            🔒 詳細備註與特殊條款 (Private Notes)
+                        </h4>
+                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                            不會顯示在列表
+                        </span>
+                    </div>
+                    <textarea
+                        name="private_notes"
+                        value={privateNotes}
+                        onChange={(e) => setPrivateNotes(e.target.value)}
+                        rows={12}
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                        placeholder="此欄位適合紀錄：
+1. 複雜的合約條款
+2. 案件的詳細處理經過
+3. 目前遭遇的困難點
+4. 任何需要長篇幅記錄但不希望干擾列表顯示的內容"
+                    />
+                </div>
+
                 <div className="space-y-2">
                     <h4 className="text-sm font-bold text-foreground/40">塗銷方式</h4>
                     <select

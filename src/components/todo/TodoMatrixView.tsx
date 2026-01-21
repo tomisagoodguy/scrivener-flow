@@ -32,7 +32,7 @@ const MiniTaskCard = ({
                     {task.title}
                 </div>
                 <div className="text-[10px] text-slate-400">
-                    {format(task.date, 'MM/dd')} {task.caseName ? `• ${task.caseName}` : ''}
+                    {format(task.date, format(task.date, 'HH:mm') === '00:00' ? 'MM/dd' : 'MM/dd HH:mm')} {task.caseName ? `• ${task.caseName}` : ''}
                 </div>
             </div>
             {onDelete && (

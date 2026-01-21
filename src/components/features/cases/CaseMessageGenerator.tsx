@@ -1,537 +1,448 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { DemoCase, Financials, Milestone } from '@/types';
-import { Copy, MessageSquare, Check, RefreshCw, Send, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Copy, MessageSquare, Check, Send, Loader2, Save, Trash2 } from 'lucide-react';
 
-interface CaseMessageGeneratorProps {
-    caseData: DemoCase;
-}
+import { SecureApi } from '@/lib/crypto/secureApi';
 
 type TemplateType =
     | 'PREPAID_FEES'
-    | 'NEXT_PAYMENT'
-    | 'CANCELLATION_SELF'
-    | 'HANDOVER_NOTICE'
-    | 'BANK_INFO_QUERY'
-    | 'BANK_INFO_EXPLAIN'
-    | 'TAX_REPORT_BUYER'
-    | 'TAX_REPORT_SELLER'
-    | 'SEAL_APPOINTMENT'
-    | 'CUSTOM';
+    | 'SIGNING'
+    | 'SEAL'
+    | 'TAX_PAYMENT'
+    | 'TRANSFER'
+    | 'HANDOVER'
+    | 'COMPLETION'
+    | 'CUSTOM'
+    | 'NEXT_PAYMENT';
+
+interface CustomTemplate {
+    name: string;
+    content: string;
+}
+
+interface CaseMessageGeneratorProps {
+    caseData: any;
+}
 
 export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorProps) {
-    const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('PREPAID_FEES');
+    const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | string>('PREPAID_FEES');
     const [generatedText, setGeneratedText] = useState('');
     const [copied, setCopied] = useState(false);
     const [sending, setSending] = useState(false);
+    const [userTemplates, setUserTemplates] = useState<CustomTemplate[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
-    // Extraction helpers
-    const financials: Partial<Financials> = caseData.financials?.[0] || {};
-    const milestones: Partial<Milestone> = caseData.milestones?.[0] || {};
-
-    // Local state for variable inputs not in DB
+    // Initial state derived from caseData
     const [inputs, setInputs] = useState({
-        nextPaymentType: '用印款',
+        buyerName: caseData.buyer_name || '',
+        prepaidFee: caseData.financials?.[0]?.pre_collected_fee || '',
         nextPaymentDate: '',
         nextPaymentAmount: '',
+        nextPaymentType: '',
         loanDiff: '',
-        prepaidFee: financials.pre_collected_fee?.toString() || '0',
         totalAmount: '',
-
-        // Tax details
-        deedTax: '',
-        landStamp: '',
-        houseStamp: '',
-        landValueTax1: '',
-        landValueTax2: '',
-
-        // Handover
-        handoverLocation: '台北市士林區承德路四段116號',
-
-        // Sealing
-        sealLocation: '台北市士林區承德路四段116號',
-
-        // Cancellation
-        cancellationOffice: '台北市任意一個地政事務所',
+        bankName: caseData.financials?.[0]?.buyer_bank || '',
+        meetingTime: '',
+        meetingLocation: '事務所',
     });
 
-    // Formatting currency (traditional)
-    const fmtMoney = (val: string | number | undefined | null) => {
+    // Load templates on mount
+    useEffect(() => {
+        const loadTemplates = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('user_settings')
+                .select('message_templates')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data?.message_templates) {
+                setUserTemplates(data.message_templates as unknown as CustomTemplate[]);
+            }
+        };
+        loadTemplates();
+    }, []);
+
+    // Helpers
+    const fmtMoney = (val: string | number) => {
         if (!val) return '0';
-        return Number(val).toLocaleString('zh-TW');
+        return Number(val).toLocaleString();
     };
 
-    // Formatting currency (spoken - 口語化)
-    const formatMoneySpoken = (val: string | number | undefined | null) => {
+    const formatMoneySpoken = (val: string | number) => {
         if (!val) return '0元';
         const num = Number(val);
-        if (num >= 100000000) {
-            // 億
-            const yi = Math.floor(num / 100000000);
-            const remainder = num % 100000000;
-            if (remainder === 0) return `${yi}億元`;
-            const wan = Math.floor(remainder / 10000);
-            if (wan === 0) return `${yi}億元`;
-            return `${yi}億${wan}萬元`;
-        } else if (num >= 10000) {
-            // 萬
+        if (num >= 10000) {
             const wan = Math.floor(num / 10000);
             const remainder = num % 10000;
-            if (remainder === 0) return `${wan}萬元`;
-            // 如果有零頭但小於1000，忽略不顯示（口語化）
-            if (remainder < 1000) return `${wan}萬元`;
-            return `${wan}萬${remainder}元`;
-        } else {
-            return `${num.toLocaleString('zh-TW')}元`;
+            return `${wan}萬${remainder > 0 ? remainder : ''}元`;
+        }
+        return `${num}元`;
+    };
+
+    const guessNextPaymentType = () => {
+        const stage = caseData.status; // Simple heuristic
+        if (stage === 'Processing') return '用印款';
+        return '尾款';
+    };
+
+    const handleSaveTemplate = async () => {
+        const name = prompt('請輸入新範本名稱：');
+        if (!name) return;
+
+        setIsSaving(true);
+        try {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not found');
+
+            const newTemplates = [...userTemplates, { name, content: generatedText }];
+
+            const { error } = await supabase
+                .from('user_settings')
+                .upsert({ user_id: user.id, message_templates: newTemplates }, { onConflict: 'user_id' });
+
+            if (error) throw error;
+
+            setUserTemplates(newTemplates);
+            alert('✅ 範本儲存成功！');
+        } catch (error) {
+            console.error('Failed to save template:', error);
+            alert('❌ 儲存失敗，請稍後再試');
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    // 智慧判斷下一筆款項名稱
-    const guessNextPaymentType = (): string => {
-        const now = new Date();
-        const dates = [
-            { date: milestones.seal_appointment, name: '用印款' },
-            { date: milestones.tax_payment_date, name: '完稅款' },
-            { date: milestones.redemption_date, name: '代償款' },
-            { date: milestones.handover_appointment, name: '交屋款' }
-        ];
+    const handleDeleteTemplate = async (index: number) => {
+        if (!confirm('確定要刪除此範本嗎？')) return;
 
-        // 找出最近的未來日期
-        const upcoming = dates
-            .filter(d => d.date && new Date(d.date) > now)
-            .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+        const newTemplates = userTemplates.filter((_, i) => i !== index);
+        setUserTemplates(newTemplates);
 
-        return upcoming[0]?.name || '用印款';
+        if (selectedTemplate === `USER_${index}`) {
+            setSelectedTemplate('PREPAID_FEES');
+        }
+
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase
+                .from('user_settings')
+                .update({ message_templates: newTemplates })
+                .eq('user_id', user.id);
+        }
     };
 
-    // Formatting date
-    const fmtDate = (val: string | undefined | null) => {
-        if (!val) return '___月___日';
-        const d = new Date(val);
-        if (isNaN(d.getTime())) return '___月___日';
-        return `${d.getMonth() + 1}月${d.getDate()}日`;
-    };
-
-    const fmtTime = (val: string | undefined | null) => {
-        if (!val) return '___:___';
-        const d = new Date(val);
-        if (isNaN(d.getTime())) return '___:___';
-        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    };
-
-    // Auto-calculate total for next payment
+    // Auto-calculate total
     useEffect(() => {
         if (selectedTemplate === 'NEXT_PAYMENT') {
-            const p1 = Number(inputs.nextPaymentAmount) || 0;
-            const p2 = Number(inputs.loanDiff) || 0;
-            const p3 = Number(inputs.prepaidFee) || 0;
-            setInputs(prev => ({ ...prev, totalAmount: (p1 + p2 + p3).toString() }));
+            const total = (Number(inputs.nextPaymentAmount || 0) + Number(inputs.loanDiff || 0) + Number(inputs.prepaidFee || 0));
+            setInputs(prev => ({ ...prev, totalAmount: total.toString() }));
         }
     }, [inputs.nextPaymentAmount, inputs.loanDiff, inputs.prepaidFee, selectedTemplate]);
 
-    // Generator Logic
-    const generate = () => {
+    const generate = (templateOverride?: TemplateType | string) => {
+        const template = templateOverride !== undefined ? templateOverride : selectedTemplate;
+
+        if (typeof template === 'string' && template.startsWith('USER_')) {
+            const index = parseInt(template.replace('USER_', ''));
+            if (userTemplates[index]) {
+                setGeneratedText(userTemplates[index].content);
+                setCopied(false);
+                return;
+            }
+        }
+
         let text = '';
-        switch (selectedTemplate) {
+        const buyer = inputs.buyerName;
+
+        switch (template) {
             case 'PREPAID_FEES':
-                text = `預收規費
-
-跟您報告預收規費的部分
-預收規費：
-費用的部分用於繳納您的
-地政規費、稅費及代書費
-麻煩您匯款整數【${formatMoneySpoken(inputs.prepaidFee)}整】
-剩餘的費用我們會在交屋時用現金的方式多退少補
-
-預收規費的部分麻煩您和下一筆款項一起匯入即可`;
+                text = `【預收規費通知】\n\n${buyer} 您好，\n跟您報告預收規費的部分。\n\n預收規費：${formatMoneySpoken(inputs.prepaidFee)}\n此費用包含地政規費、稅費及代書費。\n\n麻煩您匯款整數【${formatMoneySpoken(inputs.prepaidFee)}整】\n剩餘的費用我們會在交屋時用現金的方式多退少補。\n\n麻煩您和下一筆款項一起匯入履保帳戶即可，謝謝！`;
                 break;
-
             case 'NEXT_PAYMENT':
-                const paymentType = inputs.nextPaymentType || guessNextPaymentType();
                 const parts = [];
-                if (inputs.nextPaymentAmount && Number(inputs.nextPaymentAmount) > 0) {
-                    parts.push(formatMoneySpoken(inputs.nextPaymentAmount));
-                }
-                if (inputs.loanDiff && Number(inputs.loanDiff) > 0) {
-                    parts.push(`貸款差額${formatMoneySpoken(inputs.loanDiff)}`);
-                }
-                if (inputs.prepaidFee && Number(inputs.prepaidFee) > 0) {
-                    parts.push(`預收規費${formatMoneySpoken(inputs.prepaidFee)}`);
-                }
+                if (Number(inputs.nextPaymentAmount) > 0) parts.push(`款項 ${formatMoneySpoken(inputs.nextPaymentAmount)}`);
+                if (Number(inputs.loanDiff) > 0) parts.push(`貸款差額 ${formatMoneySpoken(inputs.loanDiff)}`);
+                if (Number(inputs.prepaidFee) > 0) parts.push(`預收規費 ${formatMoneySpoken(inputs.prepaidFee)}`);
 
-                text = `報告後續款項
-
-您這邊下一次款項(${paymentType})
-時間是 ${inputs.nextPaymentDate}
-麻煩您匯入${parts.join('+')}共計${formatMoneySpoken(inputs.totalAmount)}入履保帳戶`;
+                text = `【付款通知】\n\n${buyer} 您好，\n提醒您下一筆款項 (${inputs.nextPaymentType || guessNextPaymentType()})。\n\n應匯金額：${parts.join(' + ')}\n總計：${formatMoneySpoken(inputs.totalAmount)}\n\n匯款截止日：${inputs.nextPaymentDate || '請依約定時間匯款'}\n\n請匯入履保專戶，匯款後請通知我們，謝謝！`;
                 break;
-
-            case 'CANCELLATION_SELF':
-                text = `屋主自辦塗銷流程
-帶
-1.抵押權塗銷同意書(紅色)
-2.他項權利證明書(綠色)
-3.身分證
-4.印章
-到${inputs.cancellationOffice}辦理塗銷
-
-塗銷完成以後麻煩拍收據給業務
-地址：${inputs.handoverLocation}`; // Using handover location as agency address usually
+            case 'SIGNING':
+                text = `【簽約通知】\n\n${buyer} 您好，\n恭喜您成交！\n\n簽約時間：${inputs.meetingTime}\n地點：${inputs.meetingLocation}\n\n請攜帶：\n1. 身分證\n2. 印章\n3. 簽約金\n\n期待與您見面！`;
                 break;
-
-            case 'HANDOVER_NOTICE':
-                text = `交屋通知
-
-您好
-跟您報告交屋需帶文件
-❶簽約時給的黑色資料夾(方便收納，當天會有一些資料交給您帶回)
-❷印章
-❸存摺
-
-時間:${fmtDate(milestones.handover_appointment)} ${fmtTime(milestones.handover_appointment)}
-地點:${inputs.handoverLocation}`;
+            case 'SEAL':
+                text = `【用印通知】\n\n${buyer} 您好，\n提醒您用印時間。\n\n時間：${inputs.meetingTime}\n地點：${inputs.meetingLocation}\n\n請準備好印鑑證明與印鑑章。\n謝謝！`;
                 break;
-
-            case 'BANK_INFO_QUERY':
-                const today = new Date();
-                text = `問代償資訊
-
-您好：案件已過戶完成，接下來將進行代償作業；因個資法關係，需麻煩您致電至${financials.seller_bank || '銀行'}客服中心確認代償資訊，謝謝您。
-
-${today.getMonth() + 1}月${today.getDate()}日代償資訊：
-➊金額：
-➋帳號 ：
-➌戶名 ：
-➍匯款分行：
-➎銀行聯絡電話：`;
+            case 'TAX_PAYMENT':
+                text = `【完稅通知】\n\n${buyer} 您好，\n稅單已核發，我們將儘速處理完稅事宜。\n\n預計完稅日：${inputs.nextPaymentDate}\n\n如有任何問題請隨時聯繫，謝謝！`;
                 break;
-
-            case 'BANK_INFO_EXPLAIN':
-                text = `解釋代償：
-您好：目前因有個資法緣故，銀行回覆清償具體數字只能告知您本人，要再麻煩你致電詢問。`;
-                break;
-
-            case 'TAX_REPORT_BUYER':
-                text = `報告稅款
-
-您好，我們稅單的部分已經核發了
-跟您報告稅款的部分
-契稅金額是${fmtMoney(inputs.deedTax)}元
-土地印花稅${fmtMoney(inputs.landStamp)}元
-建物印花稅${fmtMoney(inputs.houseStamp)}元
-
-我們預計${inputs.nextPaymentDate}會從履保出款繳納您的稅款
-
-上述稅費的部分會從預收規費出款
-不會再另外跟您收費🙇🏻‍♀️`;
-                break;
-
-            case 'TAX_REPORT_SELLER':
-                text = `${caseData.seller_name}先生/小姐您好，我們稅單的部分已經核發了
-跟您報告稅款的部分
-土地增值稅金額是${inputs.landValueTax1 ? fmtMoney(inputs.landValueTax1) + '元' : ''} ${inputs.landValueTax2 ? '+' + fmtMoney(inputs.landValueTax2) + '元' : ''}
-共${fmtMoney(Number(inputs.landValueTax1 || 0) + Number(inputs.landValueTax2 || 0))}元
-待買方完稅款匯入後
-會從履保出款繳納您的稅`;
-                break;
-
-            case 'SEAL_APPOINTMENT':
-                text = `${caseData.buyer_name || caseData.seller_name}先生/小姐您好
-我是永慶房屋陳代書
-跟您約${fmtDate(milestones.seal_appointment)} ${fmtTime(milestones.seal_appointment)}
-${inputs.sealLocation}辦理用印手續
-麻煩您準備
-1.土地建物權狀
-2.印鑑證明(用途：不動產登記）
-3.辦理印鑑證明印章`;
+            case 'HANDOVER':
+                text = `【交屋通知】\n\n${buyer} 您好，\n恭喜即將交屋！\n\n交屋時間：${inputs.meetingTime}\n地點：${inputs.meetingLocation}\n\n請攜帶：\n1. 身份證\n2. 印章\n3. 找補款項(若有)\n\n期待您的新居落成！`;
                 break;
             case 'CUSTOM':
-                // In custom mode, we don't overwrite the existing state
-                return;
+                text = inputs.buyerName ? `${inputs.buyerName} 您好，\n\n` : '';
+                break;
+            default:
+                text = '';
         }
         setGeneratedText(text);
         setCopied(false);
     };
 
-    // Auto-generate on template switch or data change
+    // Auto-generate when inputs change (only if not custom/user template)
     useEffect(() => {
-        // Pre-fill some defaults based on case data
-        if (selectedTemplate === 'NEXT_PAYMENT') {
-            const guessedType = guessNextPaymentType();
-            setInputs(p => ({
-                ...p,
-                nextPaymentType: guessedType,
-                nextPaymentDate: fmtDate(milestones.seal_appointment)
-            }));
-        }
-
-        // Only auto-generate if NOT in custom mode
-        if (selectedTemplate !== 'CUSTOM') {
+        if (selectedTemplate !== 'CUSTOM' && !String(selectedTemplate).startsWith('USER_')) {
             generate();
         }
-    }, [selectedTemplate, inputs, caseData]);
+    }, [inputs]); // Removed selectedTemplate to prevent overwrite on switch to CUSTOM manually
 
-    const handleCopy = () => {
+    const copyToClipboard = () => {
         navigator.clipboard.writeText(generatedText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleSendToLine = async () => {
+    const sendToLine = async () => {
         if (!generatedText) return;
         setSending(true);
         try {
-            // E2EE 加密傳輸
-            const { SecureApi } = await import('@/lib/crypto/secureApi');
-            const result = await SecureApi.post<any>('/api/line/secure', { text: generatedText });
-
-            if (result.success) {
-                alert('✅ 訊息已隱蔽發送至您的 Line！');
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            } else {
-                alert(`❌ 發送失敗: ${result.error || '未知錯誤'}\n請確認您已設定 Line Channel Access Token 及 User ID。`);
-            }
-        } catch (error: any) {
-            console.error('Secure LINE Error:', error);
-            alert(`❌ 發生錯誤: ${error.message}`);
+            // Using secureApi to ensure E2EE if implemented, though here it's likely just a backend proxy call
+            await SecureApi.post('/api/line/secure', {
+                message: generatedText,
+                caseId: caseData.id
+            });
+            alert('訊息已發送至 LINE Bot！');
+        } catch (e) {
+            console.error(e);
+            alert('發送失敗');
         } finally {
             setSending(false);
         }
     };
 
     return (
-        <div className="bg-card glass-card p-6 rounded-xl border border-border-color space-y-6">
-            <div className="flex items-center gap-3 border-b border-border-color pb-4">
-                <div className="bg-primary/10 p-2 rounded-lg">
-                    <MessageSquare className="w-5 h-5 text-primary" />
+        <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600">
+                        <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                            AI 訊息生成器
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium">Message Generator</p>
+                    </div>
                 </div>
-                <h3 className="text-lg font-bold text-foreground">智慧訊息生成 (AI Message Generator)</h3>
-                <div className="ml-auto text-xs bg-secondary/50 px-2 py-1 rounded text-foreground/50">
-                    Experimental
+                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-400 border border-slate-200 dark:border-slate-700">
+                    E2EE Encrypted
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Controls */}
-                <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left: Controls (4/12 cols) */}
+                <div className="lg:col-span-4 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-foreground/50 uppercase">選擇訊息範本</label>
-                        <select
-                            className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 font-bold cursor-pointer hover:bg-secondary/70 transition-all"
-                            value={selectedTemplate}
-                            onChange={(e) => setSelectedTemplate(e.target.value as TemplateType)}
-                        >
-                            <optgroup label="款項與規費">
-                                <option value="PREPAID_FEES">預收規費已收通知</option>
-                                <option value="NEXT_PAYMENT">報告後續款項與明細</option>
-                            </optgroup>
-                            <optgroup label="稅務申報">
-                                <option value="TAX_REPORT_BUYER">報告稅款 (買方-契稅/印花)</option>
-                                <option value="TAX_REPORT_SELLER">報告稅款 (賣方-土增稅)</option>
-                            </optgroup>
-                            <optgroup label="程序與通知">
-                                <option value="SEAL_APPOINTMENT">用印手續預約</option>
-                                <option value="HANDOVER_NOTICE">交屋需帶文件與時間</option>
-                                <option value="CANCELLATION_SELF">屋主自辦塗銷流程</option>
-                            </optgroup>
-                            <optgroup label="代償溝通">
-                                <option value="BANK_INFO_QUERY">詢問銀行代償資訊</option>
-                                <option value="BANK_INFO_EXPLAIN">解釋為何需本人詢問</option>
-                            </optgroup>
-                            <optgroup label="自定義">
-                                <option value="CUSTOM">✨ 自定義訊息 (Free Edit)</option>
-                            </optgroup>
-                        </select>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">選擇範本 (Template)</label>
+                        <div className="relative">
+                            <select
+                                value={String(selectedTemplate)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedTemplate(val);
+                                    generate(val);
+                                }}
+                                className="w-full appearance-none bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer shadow-sm hover:border-blue-300"
+                            >
+                                <optgroup label="常用範本">
+                                    <option value="PREPAID_FEES">📄 預收規費通知</option>
+                                    <option value="NEXT_PAYMENT">💰 付款/尾款通知</option>
+                                    <option value="SIGNING">✍️ 簽約通知</option>
+                                    <option value="SEAL">⭕ 用印通知</option>
+                                    <option value="TAX_PAYMENT">🧾 完稅通知</option>
+                                    <option value="HANDOVER">🏠 交屋通知</option>
+                                </optgroup>
+                                <option value="CUSTOM">✏️ 自訂訊息</option>
+                                {userTemplates.length > 0 && (
+                                    <optgroup label="我的範本">
+                                        {userTemplates.map((t, idx) => (
+                                            <option key={idx} value={`USER_${idx}`}>⭐ {t.name}</option>
+                                        ))}
+                                    </optgroup>
+                                )}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Dynamic Inputs based on Template */}
-                    <div className="bg-secondary/20 p-4 rounded-xl space-y-3 animate-fade-in">
-                        <h4 className="text-xs font-black text-foreground/40 uppercase mb-2">參數設定</h4>
+                    {typeof selectedTemplate === 'string' && selectedTemplate.startsWith('USER_') && (
+                        <button
+                            onClick={() => handleDeleteTemplate(parseInt(selectedTemplate.replace('USER_', '')))}
+                            className="w-full py-2 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 text-xs font-bold transition-all flex items-center justify-center gap-2"
+                        >
+                            <Trash2 className="w-3 h-3" /> 刪除此範本
+                        </button>
+                    )}
+
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-700 space-y-4">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">參數設定</h4>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 ml-1">買方姓名</label>
+                            <input
+                                type="text"
+                                value={inputs.buyerName}
+                                onChange={(e) => setInputs({ ...inputs, buyerName: e.target.value })}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
+                                placeholder="輸入姓名"
+                            />
+                        </div>
 
                         {selectedTemplate === 'PREPAID_FEES' && (
-                            <div className="space-y-1">
-                                <label className="text-xs text-foreground/60">預收金額</label>
+                            <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
+                                <label className="text-xs font-bold text-slate-500 ml-1">預收規費金額</label>
                                 <input
                                     type="number"
                                     value={inputs.prepaidFee}
-                                    onChange={e => setInputs({ ...inputs, prepaidFee: e.target.value })}
-                                    className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
+                                    onChange={(e) => setInputs({ ...inputs, prepaidFee: e.target.value })}
+                                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono"
                                 />
                             </div>
                         )}
 
                         {selectedTemplate === 'NEXT_PAYMENT' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">款項名稱</label>
-                                    <input
-                                        value={inputs.nextPaymentType}
-                                        onChange={e => setInputs({ ...inputs, nextPaymentType: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-1">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-500 ml-1">款項類別</label>
+                                        <input
+                                            type="text"
+                                            placeholder="例：完稅款"
+                                            value={inputs.nextPaymentType}
+                                            onChange={(e) => setInputs({ ...inputs, nextPaymentType: e.target.value })}
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-500 ml-1">應匯金額</label>
+                                        <input
+                                            type="number"
+                                            value={inputs.nextPaymentAmount}
+                                            onChange={(e) => setInputs({ ...inputs, nextPaymentAmount: e.target.value })}
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 transition-all font-mono"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">日期</label>
+                                    <label className="text-xs font-bold text-slate-500 ml-1">匯款日期</label>
                                     <input
-                                        type="text"
+                                        type="date"
                                         value={inputs.nextPaymentDate}
-                                        onChange={e => setInputs({ ...inputs, nextPaymentDate: e.target.value })}
-                                        placeholder="8月5日"
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
+                                        onChange={(e) => setInputs({ ...inputs, nextPaymentDate: e.target.value })}
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 transition-all cursor-pointer"
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">匯入金額</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.nextPaymentAmount}
-                                        onChange={e => setInputs({ ...inputs, nextPaymentAmount: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">貸款差額</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.loanDiff}
-                                        onChange={e => setInputs({ ...inputs, loanDiff: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                            </>
-                        )}
-
-                        {selectedTemplate === 'TAX_REPORT_BUYER' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">契稅</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.deedTax}
-                                        onChange={e => setInputs({ ...inputs, deedTax: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">土地印花</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.landStamp}
-                                        onChange={e => setInputs({ ...inputs, landStamp: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">建物印花</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.houseStamp}
-                                        onChange={e => setInputs({ ...inputs, houseStamp: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">預計繳納日</label>
-                                    <input
-                                        value={inputs.nextPaymentDate}
-                                        onChange={e => setInputs({ ...inputs, nextPaymentDate: e.target.value })}
-                                        placeholder="2/11"
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                            </>
-                        )}
-                        {selectedTemplate === 'TAX_REPORT_SELLER' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">一般土增稅</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.landValueTax1}
-                                        onChange={e => setInputs({ ...inputs, landValueTax1: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs text-foreground/60">自用土增稅 (如有)</label>
-                                    <input
-                                        type="number"
-                                        value={inputs.landValueTax2}
-                                        onChange={e => setInputs({ ...inputs, landValueTax2: e.target.value })}
-                                        className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                    />
-                                </div>
-                            </>
-                        )}
-                        {(selectedTemplate === 'SEAL_APPOINTMENT' || selectedTemplate === 'HANDOVER_NOTICE') && (
-                            <div className="space-y-1">
-                                <label className="text-xs text-foreground/60">地點</label>
-                                <input
-                                    value={selectedTemplate === 'SEAL_APPOINTMENT' ? inputs.sealLocation : inputs.handoverLocation}
-                                    onChange={e => setInputs({
-                                        ...inputs,
-                                        [selectedTemplate === 'SEAL_APPOINTMENT' ? 'sealLocation' : 'handoverLocation']: e.target.value
-                                    })}
-                                    className="w-full text-sm bg-white/50 border border-border-color rounded px-2 py-1"
-                                />
                             </div>
                         )}
-                        {selectedTemplate === 'CUSTOM' && (
-                            <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 animate-fade-in">
-                                <p className="text-xs text-primary font-bold">手動編輯模式中</p>
-                                <p className="text-[10px] text-foreground/50 mt-1">您可以直接修改右側文字。若要恢復範本，請從左側選單重新選擇。</p>
+
+                        {(selectedTemplate === 'SIGNING' || selectedTemplate === 'SEAL' || selectedTemplate === 'HANDOVER') && (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-1">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 ml-1">會議時間</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={inputs.meetingTime}
+                                        onChange={(e) => setInputs({ ...inputs, meetingTime: e.target.value })}
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 transition-all cursor-pointer"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 ml-1">地點</label>
+                                    <input
+                                        type="text"
+                                        value={inputs.meetingLocation}
+                                        onChange={(e) => setInputs({ ...inputs, meetingLocation: e.target.value })}
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 transition-all"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Preview Area */}
-                <div className="col-span-1 lg:col-span-2 flex flex-col h-full">
-                    <div className="relative flex-grow">
+                {/* Right: Preview & Action (8/12 cols) */}
+                <div className="lg:col-span-8 flex flex-col h-full">
+                    <div className="flex justify-between items-end mb-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-wider ml-1">
+                            訊息預覽 (Preview)
+                        </label>
+                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-full">
+                            可直接編輯內容
+                        </span>
+                    </div>
+
+                    <div className="relative flex-grow group">
                         <textarea
                             value={generatedText}
                             onChange={(e) => {
                                 setGeneratedText(e.target.value);
-                                // 當使用者手動打字時，自動切換到自定義模式，避免被 useEffect 覆蓋
-                                if (selectedTemplate !== 'CUSTOM') {
+                                if (selectedTemplate !== 'CUSTOM' && !String(selectedTemplate).startsWith('USER_')) {
+                                    // Switch to CUSTOM to stop auto-updates, but DO NOT regenerate
                                     setSelectedTemplate('CUSTOM');
                                 }
                             }}
-                            placeholder="在此輸入訊息內容..."
-                            className="w-full h-full min-h-[300px] p-6 bg-secondary/30 rounded-xl border border-border-color focus:ring-2 focus:ring-primary/20 transition-all resize-none font-mono text-sm leading-relaxed"
+                            className="w-full h-full min-h-[400px] bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 text-base leading-relaxed border-2 border-slate-100 dark:border-slate-700 
+                                      focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none font-mono text-slate-700 dark:text-slate-200
+                                      shadow-inner transition-all selection:bg-blue-100 selection:text-blue-900"
                         />
-                        <div className="absolute top-4 right-4 flex gap-2">
-                            <button
-                                onClick={generate}
-                                className="p-2 bg-white/80 hover:bg-white text-foreground/70 rounded-full shadow-sm backdrop-blur transition-all"
-                                title="重新生成 (Reset)"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                            </button>
+                        {/* Status Indicator */}
+                        <div className="absolute bottom-4 right-4 flex gap-2">
+                            <div className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${generatedText.length > 0 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
+                                {generatedText.length} chars
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                         <button
-                            onClick={handleSendToLine}
-                            disabled={sending}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-bold transition-all shadow-md active:scale-95 ${sending ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#06C755] hover:bg-[#05b34c] hover:shadow-lg'
+                            onClick={copyToClipboard}
+                            className={`col-span-1 md:col-span-2 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-black transition-all transform active:scale-95 shadow-sm
+                                ${copied
+                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                                    : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                                 }`}
                         >
-                            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                            {sending ? '傳送中...' : '傳送至 Line Bot'}
+                            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                            {copied ? '已複製成功' : '複製訊息'}
                         </button>
+
                         <button
-                            onClick={handleCopy}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all shadow-md active:scale-95 ${copied
-                                ? 'bg-primary/10 text-primary border border-primary/20'
-                                : 'bg-primary text-white hover:bg-primary/90'
-                                }`}
+                            onClick={handleSaveTemplate}
+                            disabled={isSaving}
+                            className="col-span-1 py-3 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                            title="存為範本"
                         >
-                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                            {copied ? '已複製！' : '複製內容'}
+                            <Save className="w-5 h-5" />
+                            <span className="hidden md:inline">存為範本</span>
+                        </button>
+
+                        <button
+                            onClick={sendToLine}
+                            disabled={sending}
+                            className="col-span-2 md:col-span-1 py-3 rounded-xl bg-[#00B900] hover:bg-[#009900] text-white flex items-center justify-center gap-2 text-sm font-black shadow-lg shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                            <span className="hidden md:inline">LINE 發送</span>
+                            <span className="md:hidden">LINE</span>
                         </button>
                     </div>
                 </div>

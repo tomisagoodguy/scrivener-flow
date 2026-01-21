@@ -47,8 +47,8 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
                 { header: '交屋日', key: 'handover_date', width: 12 },
                 { header: '過戶備註', key: 'transfer_note', width: 20 },
                 { header: '未完成待辦', key: 'todos', width: 30 },
-                { header: '備註', key: 'notes', width: 25 },
-                { header: '警示', key: 'pending_tasks', width: 25 },
+                { header: '備註(風險)', key: 'notes', width: 25 },
+                { header: '警示(手動)', key: 'pending_tasks', width: 25 },
             ];
 
             // Add Header Row Style

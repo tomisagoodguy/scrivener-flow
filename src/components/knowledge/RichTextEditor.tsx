@@ -14,11 +14,52 @@ import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
     List, ListOrdered, Quote, Heading1, Heading2,
     CheckSquare, Code, Minus, Table as TableIcon,
-    Maximize2, Minimize2
+    Maximize2, Minimize2, Sparkles, Loader2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { optimizeTextContent } from '@/app/actions/ai';
+import { toast } from 'sonner';
 
 const MenuBar = ({ editor }: { editor: any }) => {
+    const [isOptimizing, setIsOptimizing] = useState(false);
+
+    const handleAIOptimize = async (type: 'grammar' | 'expand' | 'summarize' | 'structure') => {
+        const selection = editor.state.selection;
+        const textToOptimize = selection.empty ? editor.getText() : editor.state.doc.textBetween(selection.from, selection.to, ' ');
+
+        if (!textToOptimize || textToOptimize.length < 5) {
+            toast.error('請先輸入或選取足夠的文字');
+            return;
+        }
+
+        setIsOptimizing(true);
+        try {
+            const result = await optimizeTextContent(textToOptimize, type);
+            if (result.success && result.data) {
+                // If text selected, replace selection. If not, append or replace?
+                // Let's adopt a safe approach: Copy to clipboard or ask user? 
+                // Better: If selection, replace. If no selection (whole doc), verify user intention? 
+                // Let's just append for safety if full doc, replace if selection.
+
+                if (!selection.empty) {
+                    editor.chain().focus().insertContent(result.data).run();
+                    toast.success('AI 優化完成');
+                } else {
+                    // Show in a modal or append? 
+                    // For simplicity in this iteration: Insert at cursor
+                    editor.chain().focus().insertContent(`\n\n--- AI 優化結果 ---\n${result.data}\n`).run();
+                    toast.success('AI 建議已附加於下方');
+                }
+            } else {
+                toast.error(result.message || 'AI 服務暫時無法使用');
+            }
+        } catch (e) {
+            toast.error('發生錯誤');
+        } finally {
+            setIsOptimizing(false);
+        }
+    };
+
     if (!editor) {
         return null;
     }
@@ -176,6 +217,38 @@ const MenuBar = ({ editor }: { editor: any }) => {
             >
                 <TableIcon size={18} /> {/* Placeholder for delete column icon */}
             </button>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1 self-center" />
+            <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 rounded p-1 border border-indigo-100 dark:border-indigo-800">
+                <Sparkles size={14} className="text-indigo-500 ml-1" />
+                <button
+                    onClick={() => handleAIOptimize('grammar')}
+                    disabled={isOptimizing}
+                    className="px-2 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded disabled:opacity-50"
+                >
+                    {isOptimizing ? <Loader2 size={12} className="animate-spin" /> : '潤飾'}
+                </button>
+                <button
+                    onClick={() => handleAIOptimize('expand')}
+                    disabled={isOptimizing}
+                    className="px-2 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded disabled:opacity-50"
+                >
+                    擴充
+                </button>
+                <button
+                    onClick={() => handleAIOptimize('summarize')}
+                    disabled={isOptimizing}
+                    className="px-2 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded disabled:opacity-50"
+                >
+                    摘要
+                </button>
+                <button
+                    onClick={() => handleAIOptimize('structure')}
+                    disabled={isOptimizing}
+                    className="px-2 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 rounded disabled:opacity-50"
+                >
+                    整理
+                </button>
+            </div>
         </div>
     );
 };

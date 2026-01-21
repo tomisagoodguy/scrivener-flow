@@ -152,7 +152,7 @@ export default function RedemptionsPage() {
                 className="hidden md:block shadow-sm z-10"
             />
 
-            <main className="flex-1 p-6 md:p-12 overflow-y-auto h-screen">
+            <main className="flex-1 p-6 md:p-12">
                 <div className="max-w-6xl mx-auto space-y-8 pb-20">
 
                     {/* Header */}

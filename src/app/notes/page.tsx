@@ -159,7 +159,7 @@ export default function NotesPage() {
         <div className="flex bg-slate-50 min-h-screen">
             {/* Split Pane Layout */}
             <div className="flex-1 lg:pl-32 flex flex-col">
-                <main className="flex-1 flex overflow-hidden h-[calc(100vh-120px)] mt-4 mb-4 mx-6">
+                <main className="flex-1 flex flex-col md:flex-row min-h-[calc(100vh-120px)] mt-4 mb-4 mx-6">
                     {/* Left Sidebar - Note List */}
                     <div className="w-80 flex flex-col bg-white border border-slate-200 rounded-l-3xl overflow-hidden">
                         <div className="p-6 border-b border-slate-100 space-y-4">
@@ -184,7 +184,7 @@ export default function NotesPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div className="flex-1 p-4 space-y-2">
                             {isLoading ? (
                                 <div className="p-8 text-center text-slate-400 text-sm italic">載入中...</div>
                             ) : filteredNotes.length === 0 ? (
@@ -263,8 +263,8 @@ export default function NotesPage() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-hidden flex flex-col">
-                                    <div className="flex-1 overflow-y-auto">
+                                <div className="flex-1 flex flex-col">
+                                    <div className="flex-1">
                                         <RichTextEditor
                                             value={activeNote.content}
                                             onChange={(content) => updateActiveNote({ content })}

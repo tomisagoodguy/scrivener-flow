@@ -29,6 +29,7 @@ export interface Case {
 
     pending_tasks?: string;
     notes?: string;
+    private_notes?: string;
 
     is_back_rent: boolean;
     back_rent_until?: string;
@@ -93,6 +94,7 @@ export interface DemoCase {
     check_seal_certificate: boolean;
 
     notes?: string; // 備註 (Excel: 備註)
+    private_notes?: string;
     pending_tasks?: string;
     bank_contact_notes?: string;
 

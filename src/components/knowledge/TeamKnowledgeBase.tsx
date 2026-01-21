@@ -6,6 +6,7 @@ import { Search, Plus, X, Folder, Tag, BookOpen, Star } from 'lucide-react';
 import NoteCard, { TeamNote } from './NoteCard';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import { useRouter } from 'next/navigation';
+import AIWorkAssistant from '../dashboard/AIWorkAssistant';
 
 export default function TeamKnowledgeBase() {
     const router = useRouter();
@@ -147,7 +148,7 @@ export default function TeamKnowledgeBase() {
     const { type: filterType, value: filterValue } = getFilterFromId(selectedId);
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans">
+        <div className="flex min-h-screen bg-slate-50 font-sans">
             <PageSidebar
                 title="共筆知識庫"
                 groups={sidebarGroups}
@@ -157,7 +158,7 @@ export default function TeamKnowledgeBase() {
             />
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col">
                 {/* Header */}
                 <div className="bg-white border-b border-slate-200 p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-6">
@@ -227,7 +228,8 @@ export default function TeamKnowledgeBase() {
                 </div>
 
                 {/* Notes Grid */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+                <div className="flex-1 p-6 md:p-8 bg-slate-50/50">
+                    <AIWorkAssistant />
                     {loading ? (
                         <div className="flex justify-center items-center py-20">
                             <div className="animate-pulse text-slate-400 font-bold">資料載入中...</div>
