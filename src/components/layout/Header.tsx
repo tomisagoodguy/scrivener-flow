@@ -74,7 +74,7 @@ export default function Header() {
 
                         <Link href="/" className="flex flex-col hover:opacity-80 transition-opacity">
                             <h1 className="text-lg md:text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                                不動產代書
+                                地政長工
                             </h1>
                             <p className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-black text-slate-500/80 dark:text-slate-400/80">
                                 Scrivener Flow
