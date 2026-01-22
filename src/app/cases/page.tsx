@@ -1,20 +1,12 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-// Use the Server Client for authenticated requests in Server Components
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
-
-import CaseCompactTodoList from '@/components/features/cases/CaseCompactTodoList';
-import ExcelStep from '@/components/shared/ExcelStep';
-import HighlightableValue from '@/components/shared/HighlightableValue';
-
-// Checking components folder first is safer.
-import Header from '@/components/layout/Header';
-import CaseTodos from '@/components/features/cases/CaseTodos';
 
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
 import TimelineGanttView from '@/components/dashboard/TimelineGanttView';
 import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
+import { CaseTableRow } from '@/components/features/cases/case-list/CaseTableRow';
 
 import { getCaseStage } from '@/lib/stageUtils';
 
@@ -30,12 +22,9 @@ export default async function CasesPage({
     const queryParam = resolvedSearchParams?.q || '';
     const stageParam = resolvedSearchParams?.stage || '';
 
-    // Initialize authenticated Supabase client
     const supabase = await createClient();
-
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
 
-    // Get current user for data isolation
     const {
         data: { user },
     } = await supabase.auth.getUser();
@@ -51,10 +40,8 @@ export default async function CasesPage({
       todos_list:todos(*)
     `
         )
-        // Default sort by created_at desc (newest first)
         .order('created_at', { ascending: false });
 
-    // Force isolation: Only show cases belonging to current user
     if (user) {
         query = query.eq('user_id', user.id);
     }
@@ -64,7 +51,6 @@ export default async function CasesPage({
     } else if (statusParam === 'All') {
         // Show everything
     } else {
-        // Show everything NOT closed for "Ongoing" by default
         query = query.neq('status', 'Closed').neq('status', 'Cancelled');
     }
 
@@ -75,35 +61,29 @@ export default async function CasesPage({
     }
 
     const { data, error } = await query;
-
     const rawCases = (data || []) as unknown as DemoCase[];
-
-    // Dashboard Data: STRICTLY processing cases only (No Closed, No Cancelled)
     const monitoringCases = rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled');
 
     let cases = rawCases;
 
-    // client-side sort helper
+    // Client-side sort helper
     const getNextActionDate = (c: DemoCase) => {
         const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
         if (!m) return 9999999999999;
         const now = new Date().getTime();
         const dates = [m.contract_date, m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]
-            .filter((d) => d) // filter undefined/null
+            .filter((d) => d)
             .map((d) => new Date(d!).getTime())
-            .filter((t) => t >= now) // future only
-            .sort((a, b) => a - b); // earliest future first
-        return dates[0] || 9999999999999; // if no future date, push to end
+            .filter((t) => t >= now)
+            .sort((a, b) => a - b);
+        return dates[0] || 9999999999999;
     };
 
-    // Filter by Stage (Client-side logic) AND Sort by Urgency
+    // Filter by Stage & Sort by Urgency
     if (stageParam && typeof stageParam === 'string') {
         cases = cases.filter((c) => getCaseStage(c) === stageParam);
-        // Sort filtered results by the earliest UPCOMING date (Urgency)
         cases.sort((a, b) => getNextActionDate(a) - getNextActionDate(b));
     }
-
-    const activeCases = cases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled');
 
     return (
         <div className="space-y-8 pb-20 animate-fade-in px-4 lg:px-0">
@@ -116,7 +96,7 @@ export default async function CasesPage({
                 <span className="text-slate-900 dark:text-slate-100 italic">CASE MANAGEMENT</span>
             </nav>
 
-            {/* Header Section - Simplified */}
+            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">案件管理中心</h1>
@@ -129,7 +109,7 @@ export default async function CasesPage({
                 </div>
             </div>
 
-            {/* Main Tabs (Filters) & Search */}
+            {/* Main Tabs & Search */}
             <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
                 <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-[20px] border border-slate-200 dark:border-slate-800 backdrop-blur-sm">
                     {[
@@ -169,7 +149,7 @@ export default async function CasesPage({
                 </form>
             </div>
 
-            {/* Monitoring View (Active cases only) */}
+            {/* Monitoring View */}
             {statusParam !== 'Closed' && monitoringCases.length > 0 && (
                 <div className="space-y-8">
                     <GlobalPipelineChart
@@ -180,7 +160,7 @@ export default async function CasesPage({
                 </div>
             )}
 
-            {/* List Table - Excel Style Restored */}
+            {/* List Table */}
             <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                 <div className="overflow-x-auto overflow-y-auto max-h-[75vh]">
                     <table className="w-full text-left border-collapse table-fixed">
@@ -229,201 +209,3 @@ export default async function CasesPage({
         </div>
     );
 }
-
-function CaseTableRow({ caseData }: { caseData: DemoCase }) {
-    const milestones = (caseData.milestones?.[0] || {}) as any; // Using any to bypass strict type check for safety during build
-    const financials = (caseData.financials?.[0] || {}) as any; // Using any to bypass strict type check for safety during build
-
-    const SIGNING_TODOS = [
-        '買方蓋印章',
-        '賣方蓋印章',
-        '用印款',
-        '完稅款',
-        '權狀印鑑',
-        '授權',
-        '解約排除',
-        '規費',
-        '設定',
-        '稅單',
-        '差額',
-        '整過戶',
-    ];
-    const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥'];
-
-    const allTasks = [...SIGNING_TODOS, ...TRANSFER_TODOS];
-
-    return (
-        <tr className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
-            <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <Link
-                    href={`/cases/${caseData.id}`}
-                    className="block font-black text-[13px] text-blue-600 hover:text-blue-700 text-center"
-                >
-                    {caseData.case_number}
-                </Link>
-            </td>
-            <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div className="text-[12px] text-slate-900 dark:text-slate-100 font-bold text-center leading-tight whitespace-normal">
-                    {caseData.district || caseData.city || '-'}
-                </div>
-            </td>
-            <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div
-                    className="text-[12px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
-                    title={caseData.buyer_name}
-                >
-                    {caseData.buyer_name}
-                </div>
-            </td>
-            <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div
-                    className="text-[12px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
-                    title={caseData.seller_name}
-                >
-                    {caseData.seller_name}
-                </div>
-            </td>
-            <td className="px-1 py-1 border border-slate-100 dark:border-slate-800">
-                <div className="flex flex-col gap-0.5">
-                    {(financials.total_price || financials.contract_amount) && (
-                        <div className="flex items-center justify-between px-0.5">
-                            <span className="text-[9px] text-slate-400">總</span>
-                            <span className="text-[11px] font-black text-emerald-600">
-                                {financials.total_price || financials.contract_amount}萬
-                            </span>
-                        </div>
-                    )}
-                    {financials.buyer_bank && (
-                        <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">買</span>
-                            <span
-                                className="text-[10px] font-bold text-blue-600 truncate max-w-[60px]"
-                                title={financials.buyer_bank}
-                            >
-                                {financials.buyer_bank}
-                            </span>
-                        </div>
-                    )}
-                    {financials.seller_bank && (
-                        <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">賣</span>
-                            <span
-                                className="text-[10px] font-bold text-purple-600 truncate max-w-[60px]"
-                                title={financials.seller_bank}
-                            >
-                                {financials.seller_bank}
-                            </span>
-                        </div>
-                    )}
-                    {caseData.cancellation_type && caseData.cancellation_type !== '無' && (
-                        <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">塗</span>
-                            <span
-                                className="text-[10px] font-bold text-slate-500 truncate max-w-[60px]"
-                                title={caseData.cancellation_type}
-                            >
-                                {caseData.cancellation_type}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </td>
-            <td className="px-1 py-2 border border-slate-100 dark:border-slate-800 text-center">
-                <div className="flex flex-col gap-1 items-center">
-                    <HighlightableValue
-                        value={caseData.tax_type || '一般'}
-                        caseId={caseData.id}
-                        fieldKey="tax_type"
-                        defaultClassName="text-[11px] font-black text-slate-700 border border-slate-200 rounded bg-slate-50 px-1 py-0.5 shadow-sm w-full"
-                    />
-                    {financials.pre_collected_fee && (
-                        <div className="mt-0.5">
-                            <HighlightableValue
-                                value={
-                                    <div className="flex items-center gap-0.5 justify-center">
-                                        <span className="text-[9px] text-slate-400">預</span>
-                                        <span className="text-[10px] font-bold text-amber-600">
-                                            {financials.pre_collected_fee >= 1000
-                                                ? Number((financials.pre_collected_fee / 10000).toFixed(2))
-                                                : financials.pre_collected_fee}
-                                            萬
-                                        </span>
-                                    </div>
-                                }
-                                caseId={caseData.id}
-                                fieldKey="pre_fee"
-                                defaultClassName="px-1 rounded border border-transparent hover:border-slate-200 transition-all cursor-pointer"
-                            />
-                        </div>
-                    )}
-                </div>
-            </td>
-            <td className="px-0 py-0 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between gap-0 h-full min-h-[45px]">
-                    <ExcelStep label="簽" date={milestones.contract_date} caseId={caseData.id} />
-                    <ExcelStep label="印" date={milestones.seal_date} caseId={caseData.id} />
-                    <ExcelStep label="稅" date={milestones.tax_payment_date} caseId={caseData.id} />
-                    <ExcelStep
-                        label="過"
-                        date={milestones.transfer_date}
-                        note={milestones.transfer_note}
-                        caseId={caseData.id}
-                    />
-                    <ExcelStep label="交" date={milestones.handover_date} caseId={caseData.id} />
-                </div>
-            </td>
-            <td className="px-2 py-2 border border-slate-100 dark:border-slate-800">
-                <CaseCompactTodoList
-                    caseId={caseData.id}
-                    todos={caseData.todos as Record<string, boolean>}
-                    allTasks={allTasks}
-                    hideCompleted={true}
-                />
-                {(caseData.pending_tasks || caseData.notes) && (
-                    <div className="mt-2 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-1.5">
-                        {caseData.pending_tasks && (
-                            <div className="flex items-start gap-1.5">
-                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] px-1 rounded">
-                                    📝
-                                </span>
-                                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-tight italic">
-                                    {caseData.pending_tasks}
-                                </p>
-                            </div>
-                        )}
-                        {caseData.notes && caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim() && (
-                            <div className="flex items-start gap-1.5">
-                                <span className="bg-rose-500/10 text-rose-500 text-[9px] px-1 rounded">⚠️</span>
-                                <p className="text-[10px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap">
-                                    {caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim()}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </td>
-        </tr>
-    );
-}
-
-const TimelineStep = ({ label, date, note }: { label: string; date?: string; note?: string }) => {
-    const isCompleted = !!date;
-    const formatDate = (d?: string) =>
-        d ? new Date(d).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
-
-    return (
-        <div className="flex flex-col items-center min-w-[55px]">
-            <span
-                className={`text-[9px] font-black px-1 rounded-sm mb-1 ${isCompleted ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'}`}
-            >
-                {label}
-            </span>
-            <span
-                className={`text-[10px] font-mono ${isCompleted ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-700'}`}
-            >
-                {isCompleted ? formatDate(date) : '--'}
-            </span>
-            {note && <div className="text-[8px] bg-red-500 text-white px-1 rounded absolute mt-8">{note}</div>}
-        </div>
-    );
-};

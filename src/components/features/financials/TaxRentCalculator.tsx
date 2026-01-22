@@ -1,35 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Calculator, Calendar, DollarSign, ArrowRightLeft,
-    CheckCircle2, AlertCircle, Building2, Car, Home,
-    Plus, Trash2, RotateCcw, Droplets, Zap, Flame, Sprout
+    CheckCircle2, Building2, Car, Home,
+    Plus, Trash2, RotateCcw, Droplets, Zap, Sprout
 } from 'lucide-react';
-import {
-    calculateLandTaxProration,
-    calculateHouseTaxProration,
-    calculateFeeProration,
-    calculateRentProration,
-    calculateAnnualLandTax,
-    HOUSE_TAX_SCENARIOS,
-    LandItem,
-    money
-} from '@/lib/calculatorUtils';
+import { HOUSE_TAX_SCENARIOS } from '@/lib/calculatorUtils';
+import { money } from '@/lib/calculatorUtils';
 
-// Define Lease Interface (Already in utils but usually local usage is fine or import)
-interface LeaseItem {
-    id: string;
-    tenantName: string;
-    monthlyRent: number;
-    deposit: number;
-    paidUntil: string;
-}
-
-interface TaxRentCalculatorProps {
-    initialRegDate?: string;
-    initialHandoverDate?: string;
-}
+import { useTaxCalculation } from './tax-calculator/useTaxCalculation';
+import { TaxRentCalculatorProps } from './tax-calculator/types';
+import { Label, Input, InputGroup, TabButton, ResultItem } from './tax-calculator/TaxCalculatorComponents';
 
 /**
  * 稅費分算計算機組件
@@ -39,249 +21,40 @@ interface TaxRentCalculatorProps {
  * - 管理費/車位費分算
  * - 租金與押金分算
  * - 水電瓦斯溢繳處理
- * 
- * @param initialRegDate - 初始登記日期（選填）
- * @param initialHandoverDate - 初始交屋日期（選填）
  */
 export default function TaxRentCalculator({ initialRegDate, initialHandoverDate }: TaxRentCalculatorProps) {
-    // --- State ---
-    const [regDate, setRegDate] = useState<string>(initialRegDate || '');
-    const [handoverDate, setHandoverDate] = useState<string>(initialHandoverDate || '');
-    const [handoverToBuyer, setHandoverToBuyer] = useState<boolean>(true);
+    const {
+        regDate, setRegDate,
+        handoverDate, setHandoverDate,
+        handoverToBuyer, setHandoverToBuyer,
 
-    // Land Tax Inputs
-    // Land Tax Inputs
-    const [landTaxMode, setLandTaxMode] = useState<'detailed' | 'quick'>('quick');
-    const [lands, setLands] = useState<LandItem[]>([]);
-    const [progStartValue, setProgStartValue] = useState<number>(1700000); // 累進起點地價
-    const [quickLandTax, setQuickLandTax] = useState<number>(0); // Manual Input
+        landTaxMode, setLandTaxMode,
+        lands, addLand, removeLand, updateLand,
+        progStartValue, setProgStartValue,
+        quickLandTax, setQuickLandTax,
 
-    // House Tax Inputs
-    const [houseTaxMode, setHouseTaxMode] = useState<'detailed' | 'quick'>('quick');
-    const [housePV, setHousePV] = useState<string | number>(0); // 現值（支援減項格式，例如 "1000000-100000"）
-    const [houseRateIdx, setHouseRateIdx] = useState<number>(1); // Index in SCENARIOS (Default: 自住用-全國3戶內)
-    const [quickHouseTax, setQuickHouseTax] = useState<number>(0); // Manual Input
+        houseTaxMode, setHouseTaxMode,
+        housePV, setHousePV,
+        houseRateIdx, setHouseRateIdx,
+        quickHouseTax, setQuickHouseTax,
 
-    // Monthly Fees
-    const [mgmtFee, setMgmtFee] = useState<number>(0);
-    const [mgmtPaidUntil, setMgmtPaidUntil] = useState<string>('');
-    const [parkFee, setParkFee] = useState<number>(0);
-    const [parkPaidUntil, setParkPaidUntil] = useState<string>('');
+        mgmtFee, setMgmtFee,
+        mgmtPaidUntil, setMgmtPaidUntil,
+        parkFee, setParkFee,
+        parkPaidUntil, setParkPaidUntil,
 
-    // Utilities (Overpayment - Buyer Pays Seller)
-    const [waterOverpay, setWaterOverpay] = useState<number>(0);
-    const [elecOverpay, setElecOverpay] = useState<number>(0);
-    const [gasOverpay, setGasOverpay] = useState<number>(0);
+        waterOverpay, setWaterOverpay,
+        elecOverpay, setElecOverpay,
+        gasOverpay, setGasOverpay,
 
-    // Leases (Multiple)
-    const [leases, setLeases] = useState<LeaseItem[]>([]);
+        leases, addLease, removeLease, updateLease,
 
-    // Other Adjustments
-    const [otherBuyerPays, setOtherBuyerPays] = useState<number>(0);
-    const [otherSellerPays, setOtherSellerPays] = useState<number>(0);
+        otherBuyerPays, setOtherBuyerPays,
+        otherSellerPays, setOtherSellerPays,
 
-    // Results
-    const [result, setResult] = useState<any>(null);
-
-    // --- Helpers: Land ---
-    const addLand = () => {
-        setLands([
-            ...lands,
-            { id: crypto.randomUUID(), lotNo: '', value: 0, area: 0, scope: 1, landType: '自用住宅 (2‰)' }
-        ]);
-    };
-    const removeLand = (id: string) => setLands(lands.filter(l => l.id !== id));
-    const updateLand = (id: string, field: keyof LandItem, value: any) => {
-        setLands(lands.map(l => l.id === id ? { ...l, [field]: value } : l));
-    };
-
-    // --- Helpers: Lease ---
-    const addLease = () => {
-        setLeases([
-            ...leases,
-            { id: crypto.randomUUID(), tenantName: '', monthlyRent: 0, deposit: 0, paidUntil: '' }
-        ]);
-    };
-    const removeLease = (id: string) => setLeases(leases.filter(l => l.id !== id));
-    const updateLease = (id: string, field: keyof LeaseItem, value: any) => {
-        setLeases(leases.map(l => l.id === id ? { ...l, [field]: value } : l));
-    };
-
-    // HELPER: Clear All
-    const handleClearAll = () => {
-        if (!confirm('確定要清除所有資料嗎？')) return;
-        setRegDate('');
-        setHandoverDate('');
-        setHandoverToBuyer(true);
-        setLandTaxMode('quick');
-        setLands([]);
-        setQuickLandTax(0);
-        setHouseTaxMode('quick');
-        setHousePV(0);
-        setHouseRateIdx(1);
-        setQuickHouseTax(0);
-        setMgmtFee(0);
-        setMgmtPaidUntil('');
-        setParkFee(0);
-        setParkPaidUntil('');
-        setWaterOverpay(0);
-        setElecOverpay(0);
-        setGasOverpay(0);
-        setLeases([]);
-        setOtherBuyerPays(0);
-        setOtherSellerPays(0);
-        setResult(null);
-    };
-
-    // --- Calculation Effect ---
-    useEffect(() => {
-        if (!regDate || !handoverDate) {
-            setResult(null);
-            return;
-        }
-
-        const rDate = new Date(regDate);
-        const hDate = new Date(handoverDate);
-
-        // 1. Calculate Annual Taxes
-        // Land
-        let annualLandTax = 0;
-        let landDetail = '';
-        if (landTaxMode === 'detailed') {
-            const res = calculateAnnualLandTax(lands, progStartValue);
-            annualLandTax = res.totalTax;
-            landDetail = res.detail;
-        } else {
-            annualLandTax = quickLandTax;
-            landDetail = `手動輸入年稅額 (快速模式)`;
-        }
-
-        // House
-        let annualHouseTax = 0;
-        let houseDetail = '';
-        // Safe check for houseRateIdx validity
-        const scenario = HOUSE_TAX_SCENARIOS[houseRateIdx] || HOUSE_TAX_SCENARIOS[1];
-        const houseRate = scenario?.rate || 0.012;
-
-        // 解析房屋現值（支援減項格式，例如 "1000000-100000"）
-        let parsedHousePV = 0;
-        if (typeof housePV === 'string' && housePV.includes('-')) {
-            // 減項格式處理
-            const parts = housePV.split('-').map(p => parseFloat(p.trim()));
-            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                parsedHousePV = parts[0] - parts[1];
-                houseDetail = `房屋現值: (${money(parts[0])} - ${money(parts[1])}) = $${money(parsedHousePV)}\n`;
-            }
-        } else {
-            parsedHousePV = typeof housePV === 'number' ? housePV : parseFloat(housePV) || 0;
-        }
-
-        if (houseTaxMode === 'detailed') {
-            annualHouseTax = Math.round(parsedHousePV * houseRate);
-            if (!houseDetail) {
-                houseDetail = `現值 $${money(parsedHousePV)} × 稅率 ${(houseRate * 100).toFixed(1)}% (${scenario?.label})\n= 年稅額 $${money(annualHouseTax)}`;
-            } else {
-                houseDetail += `$${money(parsedHousePV)} × 稅率 ${(houseRate * 100).toFixed(1)}% (${scenario?.label})\n= 年稅額 $${money(annualHouseTax)}`;
-            }
-        } else {
-            annualHouseTax = quickHouseTax;
-            houseDetail = `手動輸入年稅額 (快速模式)`;
-        }
-
-        // 2. Prorate Taxes
-        const landRes = calculateLandTaxProration(annualLandTax, hDate, rDate, handoverToBuyer);
-        // Prepend logic detail to breakdown
-        landRes.breakdown = `【地價稅年繳額計算】\n${landDetail}\n= 年稅額 $${money(annualLandTax)}\n\n` + landRes.breakdown;
-
-        const houseRes = calculateHouseTaxProration(annualHouseTax, hDate, rDate, handoverToBuyer);
-        houseRes.breakdown = `【房屋稅年繳額計算】\n${houseDetail}\n= 年稅額 $${money(annualHouseTax)}\n\n` + houseRes.breakdown;
-
-        // 3. Fees
-        let mgmtRes = { buyerPaysSeller: 0, sellerPaysBuyer: 0, breakdown: '' };
-        if (mgmtFee > 0 && mgmtPaidUntil) {
-            mgmtRes = calculateFeeProration(mgmtFee, new Date(mgmtPaidUntil), hDate, handoverToBuyer);
-        }
-
-        let parkRes = { buyerPaysSeller: 0, sellerPaysBuyer: 0, breakdown: '' };
-        if (parkFee > 0 && parkPaidUntil) {
-            parkRes = calculateFeeProration(parkFee, new Date(parkPaidUntil), hDate, handoverToBuyer);
-        }
-
-        // 4. Utilities (Overpayment) -> Buyer Pays Seller
-        // User Logic: "Only Overpayment because seller lives there" -> Seller paid -> Buyer refunds Seller
-        const utilTotal = waterOverpay + elecOverpay + gasOverpay;
-        const utilRes = {
-            buyerPaysSeller: utilTotal,
-            sellerPaysBuyer: 0,
-            breakdown: utilTotal > 0
-                ? `水費 $${money(waterOverpay)} + 電費 $${money(elecOverpay)} + 瓦斯 $${money(gasOverpay)} = $${money(utilTotal)}\n(賣方溢繳/預繳，由買方歸還)`
-                : '無溢繳金額'
-        };
-
-        // 5. Leases (Multiple)
-        let rentBuyerPays = 0;
-        let rentSellerPays = 0;
-        let rentBreakdown = '';
-        let depositTransfer = 0;
-
-        leases.forEach((lease, index) => {
-            if (lease.monthlyRent > 0 && lease.paidUntil) {
-                const res = calculateRentProration(lease.monthlyRent, new Date(lease.paidUntil), hDate, handoverToBuyer);
-                rentBuyerPays += res.buyerPaysSeller;
-                rentSellerPays += res.sellerPaysBuyer;
-                const tenantLabel = lease.tenantName ? `租客[${lease.tenantName}]` : `租客 #${index + 1}`;
-                rentBreakdown += `${tenantLabel}:\n${res.breakdown}\n\n`;
-            }
-            if (lease.deposit > 0) {
-                depositTransfer += lease.deposit;
-                const tenantLabel = lease.tenantName ? `租客[${lease.tenantName}]` : `租客 #${index + 1}`;
-                rentBreakdown += `${tenantLabel} 押金移轉: 賣方退還買方 $${money(lease.deposit)}\n`;
-            }
-        });
-        rentSellerPays += depositTransfer; // Deposit moves from Seller to Buyer
-
-        const rentRes = {
-            buyerPaysSeller: rentBuyerPays,
-            sellerPaysBuyer: rentSellerPays,
-            breakdown: rentBreakdown || '無租約分算'
-        };
-
-        // 6. Aggregation
-        const totalBuyerPays =
-            landRes.buyerPaysSeller +
-            houseRes.buyerPaysSeller +
-            mgmtRes.buyerPaysSeller +
-            parkRes.buyerPaysSeller +
-            utilRes.buyerPaysSeller +
-            rentRes.buyerPaysSeller +
-            otherBuyerPays;
-
-        const totalSellerPays =
-            landRes.sellerPaysBuyer +
-            houseRes.sellerPaysBuyer +
-            mgmtRes.sellerPaysBuyer +
-            parkRes.sellerPaysBuyer +
-            utilRes.sellerPaysBuyer + // usually 0
-            rentRes.sellerPaysBuyer +
-            otherSellerPays;
-
-        const net = totalBuyerPays - totalSellerPays;
-
-        setResult({
-            land: landRes,
-            house: houseRes,
-            mgmt: mgmtRes,
-            park: parkRes,
-            util: utilRes,
-            rent: rentRes,
-            totals: {
-                buyerPays: totalBuyerPays,
-                sellerPays: totalSellerPays,
-                net: net
-            }
-        });
-
-    }, [regDate, handoverDate, handoverToBuyer, landTaxMode, quickLandTax, lands, progStartValue, houseTaxMode, quickHouseTax, housePV, houseRateIdx, mgmtFee, mgmtPaidUntil, parkFee, parkPaidUntil, waterOverpay, elecOverpay, gasOverpay, leases, otherBuyerPays, otherSellerPays]);
+        handleClearAll,
+        result,
+    } = useTaxCalculation(initialRegDate, initialHandoverDate);
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden font-sans">
@@ -464,7 +237,7 @@ export default function TaxRentCalculator({ initialRegDate, initialHandoverDate 
 
                     <div className="divider" />
 
-                    {/* Fees for Mgmt & Parking */}
+                    {/* Fees */}
                     <section className="space-y-4">
                         <h3 className="section-title"><DollarSign className="w-4 h-4" /> 管理費 / 車位費</h3>
                         <div className="space-y-3">
@@ -530,7 +303,7 @@ export default function TaxRentCalculator({ initialRegDate, initialHandoverDate 
 
                 </div>
 
-                {/* Left Panel: Results */}
+                {/* Results */}
                 <div className="lg:col-span-6 p-6 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 h-[800px] flex flex-col">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-6 flex items-center gap-2 shrink-0">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500" /> 分算結果 (Result)
@@ -591,49 +364,6 @@ export default function TaxRentCalculator({ initialRegDate, initialHandoverDate 
                         )}
                     </div>
                 </div>
-            </div >
-        </div >
-    );
-}
-
-// UI Components
-const Label = ({ children }: { children: React.ReactNode }) => <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase text-ellipsis overflow-hidden whitespace-nowrap">{children}</label>;
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="w-full px-2 py-1.5 rounded border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700" />;
-const InputGroup = ({ label, ...props }: any) => (
-    <div><Label>{label}</Label><Input {...props} /></div>
-);
-const TabButton = ({ active, label, color, onClick }: any) => {
-    const activeClass = color === 'blue' ? 'bg-blue-100 text-blue-700 shadow-sm' : 'bg-pink-100 text-pink-700 shadow-sm';
-    return (
-        <button onClick={onClick} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${active ? activeClass : 'text-slate-400 hover:text-slate-600'}`}>
-            {label}
-        </button>
-    );
-};
-function ResultItem({ title, icon, res }: { title: string, icon?: React.ReactNode, res: any }) {
-    if (res.buyerPaysSeller === 0 && res.sellerPaysBuyer === 0) return null;
-    return (
-        <div className="flex flex-col gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-blue-300 transition-colors group">
-            <div className="flex justify-between items-start">
-                <div className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                    <span className="p-1 bg-slate-200 rounded text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">{icon || <CheckCircle2 size={14} />}</span>
-                    {title}
-                </div>
-                <div className="text-right whitespace-nowrap flex flex-col items-end gap-1">
-                    {res.buyerPaysSeller > 0 && (
-                        <div className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded text-xs">
-                            +${money(res.buyerPaysSeller)}
-                        </div>
-                    )}
-                    {res.sellerPaysBuyer > 0 && (
-                        <div className="text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded text-xs">
-                            -${money(res.sellerPaysBuyer)}
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className="text-xs text-slate-500 mt-1 leading-relaxed whitespace-pre-wrap pl-8 border-l-2 border-slate-200 ml-2">
-                {res.breakdown}
             </div>
         </div>
     );

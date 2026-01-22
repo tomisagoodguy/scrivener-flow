@@ -1,370 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import { parseDocx } from '@/app/actions/parseDocx';
 import QuickNotes from '@/components/shared/QuickNotes';
-
-interface CaseFormData {
-    case_number: string;
-    city: string;
-    district: string;
-    status: string;
-    total_price: string;
-    tax_type: string;
-    buyer_loan_bank: string;
-    seller_loan_bank: string;
-    cancellation_type: string;
-    escrow_account: string;
-    buyer_name: string;
-    buyer_phone: string;
-    registrant_name: string;
-    registrant_phone: string;
-    seller_name: string;
-    seller_phone: string;
-    agent_name: string;
-    agent_phone: string;
-    contract_date: string;
-    contract_amount: string;
-    sign_diff_date: string;
-    sign_diff_amount: string;
-    seal_date: string;
-    seal_amount: string;
-    tax_payment_date: string;
-    tax_amount: string;
-    transfer_date: string;
-    transfer_note: string;
-    redemption_date: string;
-    handover_date: string;
-    balance_amount: string;
-    balance_payment_date: string;
-    notes: string;
-}
-
-const initialFormData: CaseFormData = {
-    case_number: '',
-    city: '台北(士)',
-    district: '',
-    status: 'Processing',
-    total_price: '',
-    tax_type: '一般',
-    buyer_loan_bank: '',
-    seller_loan_bank: '',
-    cancellation_type: '代書塗銷',
-    escrow_account: '',
-    buyer_name: '',
-    buyer_phone: '',
-    registrant_name: '',
-    registrant_phone: '',
-    seller_name: '',
-    seller_phone: '',
-    agent_name: '',
-    agent_phone: '',
-    contract_date: '',
-    contract_amount: '',
-    sign_diff_date: '',
-    sign_diff_amount: '',
-    seal_date: '',
-    seal_amount: '',
-    tax_payment_date: '',
-    tax_amount: '',
-    transfer_date: '',
-    transfer_note: '',
-    redemption_date: '',
-    handover_date: '',
-    balance_amount: '',
-    balance_payment_date: '',
-    notes: '',
-};
+import { useNewCaseForm } from '@/components/features/cases/new-case/useNewCaseForm';
+import { useDocxUpload } from '@/components/features/cases/new-case/useDocxUpload';
 
 export default function NewCasePage() {
-    const router = useRouter();
-    const [formData, setFormData] = useState<CaseFormData>(initialFormData);
-    const [errorMsg, setErrorMsg] = useState('');
-    const [isDuplicate, setIsDuplicate] = useState(false);
-    const [isChecking, setIsChecking] = useState(false);
-    const [suggestedNum, setSuggestedNum] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const {
+        formData,
+        setFormData,
+        errorMsg,
+        isDuplicate,
+        isChecking,
+        suggestedNum,
+        loading,
+        setLoading,
+        handleChange,
+        checkDuplicate,
+        handleSubmit,
+    } = useNewCaseForm();
 
-    // Initial check for latest case number to suggest next one
-    useEffect(() => {
-        const fetchLatest = async () => {
-            const { data } = await supabase
-                .from('cases')
-                .select('case_number')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+    const { loading: docxLoading, handleFileUpload } = useDocxUpload(setFormData, checkDuplicate);
 
-            if (data?.case_number) {
-                // If it looks like a number, try to increment it
-                const match = data.case_number.match(/(\d+)$/);
-                if (match) {
-                    const num = parseInt(match[1]);
-                    const nextNum = (num + 1).toString().padStart(match[1].length, '0');
-                    const suggested = data.case_number.replace(/\d+$/, nextNum);
-                    setSuggestedNum(suggested);
-                }
-            }
-        };
-        fetchLatest();
-    }, []);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-
-        if (name === 'case_number') {
-            checkDuplicate(value);
-        }
-    };
-
-    const checkDuplicate = async (caseNum: string) => {
-        if (!caseNum) {
-            setIsDuplicate(false);
-            if (errorMsg.includes('案號')) setErrorMsg('');
-            return;
-        }
-        setIsChecking(true);
-        const { data, error } = await supabase
-            .from('cases')
-            .select('id')
-            .eq('case_number', caseNum)
-            .maybeSingle();
-
-        if (data) {
-            setIsDuplicate(true);
-            setErrorMsg(`❌ 案號 「${caseNum}」 已經存在，請更換一個案號。`);
-        } else {
-            setIsDuplicate(false);
-            if (!errorMsg.includes('資料庫建立失敗')) setErrorMsg(''); // Clear if it was a duplicate error
-        }
-        setIsChecking(false);
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-
-        try {
-            setLoading(true);
-            const parsedData = await parseDocx(uploadFormData);
-            console.log('Parsed Data:', parsedData);
-
-            const rawDebug = (parsedData as any).debug_text || '';
-
-            if (!parsedData.case_number && !parsedData.buyer_name) {
-                alert('⚠️ 無法識別資料！請確認檔案內容格式。\n\n讀取到的文字預覽:\n' + rawDebug);
-            } else {
-                setFormData(prev => ({
-                    ...prev,
-                    case_number: parsedData.case_number || prev.case_number,
-                    buyer_name: parsedData.buyer_name || prev.buyer_name,
-                    buyer_phone: parsedData.buyer_phone || prev.buyer_phone,
-                    seller_name: parsedData.seller_name || prev.seller_name,
-                    seller_phone: parsedData.seller_phone || prev.seller_phone,
-                    registrant_name: parsedData.registrant_name || prev.registrant_name,
-                    registrant_phone: parsedData.registrant_phone || prev.registrant_phone,
-                    agent_name: parsedData.agent_name || prev.agent_name,
-                    agent_phone: parsedData.agent_phone || prev.agent_phone,
-                    escrow_account: parsedData.escrow_account || prev.escrow_account,
-                    total_price: parsedData.total_price?.toString() || prev.total_price,
-
-                    contract_date: parsedData.contract_date || prev.contract_date,
-                    contract_amount: parsedData.contract_amount?.toString() || prev.contract_amount,
-
-                    sign_diff_date: parsedData.sign_diff_date || prev.sign_diff_date,
-                    sign_diff_amount: parsedData.sign_diff_amount?.toString() || prev.sign_diff_amount,
-
-                    seal_date: parsedData.seal_date || prev.seal_date,
-                    seal_amount: parsedData.seal_amount?.toString() || prev.seal_amount,
-
-                    tax_payment_date: parsedData.tax_payment_date || prev.tax_payment_date,
-                    tax_amount: parsedData.tax_amount?.toString() || prev.tax_amount,
-
-                    balance_payment_date: parsedData.balance_payment_date || prev.balance_payment_date,
-                    balance_amount: parsedData.balance_amount?.toString() || prev.balance_amount,
-
-                    handover_date: parsedData.handover_date || prev.handover_date,
-                    transfer_date: parsedData.transfer_date || prev.transfer_date,
-                }));
-
-                // If case number found, check duplicate
-                if (parsedData.case_number) {
-                    checkDuplicate(parsedData.case_number);
-                }
-
-                alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
-            }
-        } catch (err: any) {
-            console.error(err);
-            alert('解析失敗: ' + err.message);
-        } finally {
-            setLoading(false);
-            e.target.value = '';
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        console.log('>>> handleSubmit triggered with state:', formData);
-
-        try {
-            setLoading(true);
-            const formatDate = (val: string) => (val ? val : null);
-
-            console.log('Preparing insert payload...');
-
-            // 1. Insert Case
-            const casePayload = {
-                case_number: formData.case_number,
-                buyer_name: formData.buyer_name,
-                buyer_phone: formData.buyer_phone || null,
-                seller_name: formData.seller_name,
-                seller_phone: formData.seller_phone || null,
-                escrow_account: formData.escrow_account,
-                registrant_name: formData.registrant_name,
-                registrant_phone: formData.registrant_phone,
-                agent_name: formData.agent_name,
-                agent_phone: formData.agent_phone,
-
-                status: formData.status,
-                city: formData.city,
-                district: formData.district,
-                notes: formData.notes,
-
-                tax_type: formData.tax_type,
-                user_id: (await supabase.auth.getUser()).data.user?.id,
-            };
-
-            if (!casePayload.user_id) {
-                console.warn('⚠️ Creating case without user_id (Not logged in)');
-            }
-
-            console.log('Inserting Case Payload:', casePayload);
-
-            // 1. Check if Case exists to handle "Half-created" states
-            const { data: existingCase } = await supabase
-                .from('cases')
-                .select('id')
-                .eq('case_number', formData.case_number)
-                .maybeSingle();
-
-            let newCase;
-            if (existingCase) {
-                console.log('Case already exists, updating instead of inserting...', existingCase.id);
-                const { data: updatedCase, error: caseError } = await supabase
-                    .from('cases')
-                    .update(casePayload)
-                    .eq('id', existingCase.id)
-                    .select()
-                    .single();
-                if (caseError) throw caseError;
-                newCase = updatedCase;
-            } else {
-                const { data: insertedCase, error: caseError } = await supabase
-                    .from('cases')
-                    .insert([casePayload])
-                    .select()
-                    .single();
-
-                if (caseError) {
-                    console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
-
-                    const errorTitle = '資料庫建立失敗';
-                    let displayMsg = '';
-
-                    if (caseError.code === '23505') {
-                        displayMsg = `❌ 案號 「${formData.case_number}」 已經存在，請更換一個案號。`;
-                    } else {
-                        const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
-                        displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}`;
-                    }
-
-                    setErrorMsg(displayMsg);
-                    setLoading(false);
-                    return;
-                }
-                newCase = insertedCase;
-            }
-
-            if (!newCase) throw new Error('案件建立或更新後無回傳資料');
-
-            // 2. Insert Milestones
-            const milestonePayload = {
-                case_id: newCase.id,
-                contract_date: formatDate(formData.contract_date),
-                seal_date: formatDate(formData.seal_date),
-                tax_payment_date: formatDate(formData.tax_payment_date),
-                transfer_date: formatDate(formData.transfer_date),
-                balance_payment_date: formatDate(formData.balance_payment_date),
-                redemption_date: formatDate(formData.redemption_date),
-                handover_date: formatDate(formData.handover_date),
-                transfer_note: formData.transfer_note || null,
-
-                contract_amount: formData.contract_amount ? Number(formData.contract_amount) : null,
-                sign_diff_date: formatDate(formData.sign_diff_date),
-                sign_diff_amount: formData.sign_diff_amount ? Number(formData.sign_diff_amount) : null,
-                seal_amount: formData.seal_amount ? Number(formData.seal_amount) : null,
-                tax_amount: formData.tax_amount ? Number(formData.tax_amount) : null,
-                balance_amount: formData.balance_amount ? Number(formData.balance_amount) : null,
-            };
-
-            console.log('Upserting Milestone Payload:', milestonePayload);
-
-            const { data: existingMilestone } = await supabase.from('milestones').select('id').eq('case_id', newCase.id).maybeSingle();
-
-            const milestoneResult = existingMilestone
-                ? await supabase.from('milestones').update(milestonePayload).eq('id', existingMilestone.id)
-                : await supabase.from('milestones').insert([milestonePayload]);
-
-            if (milestoneResult.error) {
-                console.error('Milestone Error:', milestoneResult.error);
-                const mDetails = JSON.stringify(milestoneResult.error, Object.getOwnPropertyNames(milestoneResult.error));
-                setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails
-                );
-                setLoading(false);
-                return;
-            }
-
-            // 3. Insert Financials
-            const financialsPayload = {
-                case_id: newCase.id,
-                total_price: formData.total_price ? Number(formData.total_price) : null,
-                buyer_bank: formData.buyer_loan_bank || null,
-                seller_bank: formData.seller_loan_bank || null,
-            };
-
-            console.log('Upserting Financials Payload:', financialsPayload);
-            const { data: existingFin } = await supabase.from('financials').select('id').eq('case_id', newCase.id).maybeSingle();
-
-            const finResult = existingFin
-                ? await supabase.from('financials').update(financialsPayload).eq('id', existingFin.id)
-                : await supabase.from('financials').insert([financialsPayload]);
-
-            if (finResult.error) {
-                console.error('Financial Error', finResult.error);
-                setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finResult.error.message
-                );
-                setLoading(false);
-                return;
-            }
-
-            router.push('/cases?status=Processing');
-            router.refresh();
-        } catch (error: any) {
-            console.error('Catch Error:', error);
-            setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
-            setLoading(false);
-        }
-    };
+    const isLoading = loading || docxLoading;
 
     return (
         <div className="min-h-screen p-6 md:p-8 max-w-7xl mx-auto font-sans">
@@ -381,7 +39,7 @@ export default function NewCasePage() {
                             accept=".docx"
                             className="hidden"
                             onChange={handleFileUpload}
-                            disabled={loading}
+                            disabled={isLoading}
                         />
                     </label>
                     <Link
@@ -871,10 +529,10 @@ export default function NewCasePage() {
                         </Link>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="flex-1 md:flex-none md:min-w-[200px] bg-primary hover:bg-primary-deep text-white font-black py-4 px-8 rounded-2xl shadow-lg shadow-primary/30 disabled:opacity-50 transition-all transform hover:scale-[1.02] active:scale-100 flex items-center justify-center gap-2 text-lg"
                         >
-                            {loading ? '儲存中...' : '🚀 建立案件 (Save Case)'}
+                            {isLoading ? '儲存中...' : '🚀 建立案件 (Save Case)'}
                         </button>
                     </div>
                 </div>

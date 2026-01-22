@@ -1,0 +1,42 @@
+'use client';
+
+import React from 'react';
+import CaseTodos from '@/components/features/cases/CaseTodos';
+import { DemoCase } from '@/types';
+
+interface ChecklistSectionProps {
+    initialData: DemoCase;
+}
+
+export const ChecklistSection: React.FC<ChecklistSectionProps> = ({ initialData }) => {
+    return (
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-accent border-l-4 border-accent pl-3">辦事清單 (Checklist)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
+                    <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">簽約與用印階段</h4>
+                    <CaseTodos
+                        caseId={initialData.id}
+                        initialTodos={initialData.todos || {}}
+                        items={[
+                            '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀印鑑',
+                            '授權', '解約排除', '規費', '設定', '稅單', '差額', '整過戶',
+                        ]}
+                        hideCompleted={false}
+                    />
+                </div>
+                <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
+                    <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">過戶與交屋階段</h4>
+                    <CaseTodos
+                        caseId={initialData.id}
+                        initialTodos={initialData.todos || {}}
+                        items={[
+                            '整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥',
+                        ]}
+                        hideCompleted={false}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};

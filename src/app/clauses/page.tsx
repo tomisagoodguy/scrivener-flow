@@ -1,32 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
-import { Search, Plus, BookOpen, Scale, FileText, Copy, Trash2, Edit, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Plus, Tag } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
-
-interface Clause {
-    id: string;
-    title: string; // 使用情境
-    content: string; // 條文內容
-    category: string; // Primary category for display
-    tags: string[]; // Support multiple tags
-    usage_count: number;
-}
+import { useClauses, Clause } from '@/components/features/clauses/useClauses';
+import { ClauseEditModal } from '@/components/features/clauses/ClauseEditModal';
+import { ClauseItem } from '@/components/features/clauses/ClauseItem';
 
 export default function ClausesPage() {
-    const [clauses, setClauses] = useState<Clause[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    // selectedCategory used to default to 'All', now will be string | null. If null -> All.
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const {
+        filteredClauses,
+        loading,
+        searchTerm,
+        setSearchTerm,
+        selectedCategory,
+        setSelectedCategory,
+        copyFeedback,
+        allTags,
+        suggestions,
+        handleDelete,
+        handleCopy,
+        handleSaveClause
+    } = useClauses();
+
     const [isEditing, setIsEditing] = useState(false);
     const [currentClause, setCurrentClause] = useState<Partial<Clause>>({ tags: [] });
-    const [tagInput, setTagInput] = useState('');
-    const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     const clauseColumns = [
@@ -36,109 +35,17 @@ export default function ClausesPage() {
         { header: '使用次數', key: 'usage_count', width: 10 },
     ];
 
-    useEffect(() => {
-        fetchClauses();
-    }, []);
-
-    const fetchClauses = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('contract_clauses')
-                .select('*')
-                .order('usage_count', { ascending: false });
-
-            if (error) throw error;
-            setClauses(data || []);
-        } catch (error) {
-            console.error('Error fetching clauses:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) {
-                alert('請先登入');
-                return;
-            }
-
-            const payload = {
-                ...currentClause,
-                last_updated_by: user.id,
-                updated_at: new Date().toISOString(),
-            };
-
-            const { error } = await supabase
-                .from('contract_clauses')
-                .upsert(payload as any)
-                .select();
-
-            if (error) throw error;
-
-            setIsEditing(false);
-            setCurrentClause({});
-            fetchClauses();
-        } catch (error: any) {
-            alert('儲存失敗：' + error.message);
-        }
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!confirm('確定要刪除這條常用條文嗎？')) return;
-        try {
-            const { error } = await supabase.from('contract_clauses').delete().eq('id', id);
-            if (error) throw error;
-            fetchClauses();
-        } catch (error: any) {
-            alert('刪除失敗：' + error.message);
-        }
-    };
-
-    const handleCopy = async (text: string, id: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setCopyFeedback(id);
-            setTimeout(() => setCopyFeedback(null), 2000);
-
-            // Increment usage count silently
-            await supabase.rpc('increment_clause_usage', { row_id: id });
-        } catch (err) {
-            console.error('Copy failed', err);
-        }
-    };
-
-    // --- Sidebar Logic ---
-    const allTags = Array.from(new Set(clauses.flatMap((c) => c.tags || []))).sort();
-    const uniqueCategories = Array.from(new Set(clauses.map((c) => c.category || '一般'))).sort();
-
     const sidebarGroups: SidebarGroup[] = [
         {
             title: "標籤索引",
             items: allTags.map(tag => ({
                 id: tag,
                 label: tag,
-                count: clauses.filter(c => c.tags && c.tags.includes(tag)).length,
+                count: filteredClauses.filter(c => c.tags && c.tags.includes(tag)).length, // Dynamic count based on current filter context (or use clauses.filter if global count desired)
                 icon: <Tag className="w-4 h-4 text-emerald-400" />
             }))
         }
     ];
-
-    const filteredClauses = clauses.filter((clause) => {
-        const term = searchTerm.toLowerCase();
-        const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        const matchesCategory = selectedCategory ? (clause.category === selectedCategory || (clause.tags && clause.tags.includes(selectedCategory))) : true;
-        return matchesSearch && matchesCategory;
-    });
-
-    const suggestions = clauses
-        .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
-        .slice(0, 5);
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -261,72 +168,17 @@ export default function ClausesPage() {
                     ) : (
                         <div className="space-y-4">
                             {filteredClauses.map((clause) => (
-                                <div key={clause.id} className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
-                                    <div className="flex flex-col sm:flex-row gap-6">
-                                        {/* Left: Metadata */}
-                                        <div className="sm:w-1/4 min-w-[200px] flex flex-col gap-2">
-                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                                                    {clause.category || '一般'}
-                                                </span>
-                                                {(clause.tags || []).map(t => (
-                                                    <span key={t} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                                        #{t}
-                                                    </span>
-                                                ))}
-                                                {clause.usage_count > 0 && (
-                                                    <span className="text-[10px] items-center gap-1 inline-flex text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                                                        🔥 {clause.usage_count}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h3 className="text-lg font-bold text-slate-800 leading-tight">
-                                                {clause.title}
-                                            </h3>
-                                        </div>
-
-                                        {/* Center: Content */}
-                                        <div className="flex-1 relative group/content">
-                                            <div
-                                                onClick={() => handleCopy(clause.content, clause.id)}
-                                                className="bg-slate-50 rounded-xl p-4 border border-slate-100 font-mono text-sm leading-relaxed text-slate-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-100 transition-colors relative"
-                                            >
-                                                <pre className="whitespace-pre-wrap font-sans">{clause.content}</pre>
-
-                                                {/* Copy Overlay Hint */}
-                                                <div className="absolute top-2 right-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
-                                                    <span className={`text-[10px] px-2 py-1 rounded font-bold shadow-sm ${copyFeedback === clause.id
-                                                        ? 'bg-emerald-500 text-white'
-                                                        : 'bg-white text-slate-500 border border-slate-200'
-                                                        }`}>
-                                                        {copyFeedback === clause.id ? '已複製！' : '點擊複製'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Right: Actions */}
-                                        <div className="sm:w-12 flex sm:flex-col gap-2 justify-start items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => {
-                                                    setCurrentClause(clause);
-                                                    setIsEditing(true);
-                                                }}
-                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="編輯"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(clause.id)}
-                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                title="刪除"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                <ClauseItem
+                                    key={clause.id}
+                                    clause={clause}
+                                    copyFeedback={copyFeedback}
+                                    onCopy={handleCopy}
+                                    onEdit={(c) => {
+                                        setCurrentClause(c);
+                                        setIsEditing(true);
+                                    }}
+                                    onDelete={handleDelete}
+                                />
                             ))}
                         </div>
                     )}
@@ -335,159 +187,12 @@ export default function ClausesPage() {
 
             {/* Edit/Add Modal */}
             {isEditing && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h2 className="text-lg font-bold text-slate-800">
-                                {currentClause.id ? '編輯條文' : '新增常用條文'}
-                            </h2>
-                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600">
-                                <span className="sr-only">Close</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSave} className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">
-                                        使用情境 (標題) <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        required
-                                        value={currentClause.title || ''}
-                                        onChange={(e) => setCurrentClause({ ...currentClause, title: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                                        placeholder="例如：現況交屋"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                        <Tag className="w-4 h-4 text-emerald-500" />
-                                        標籤管理
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            value={tagInput}
-                                            onChange={(e) => setTagInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    const trimmed = tagInput.trim();
-                                                    if (trimmed && !(currentClause.tags || []).includes(trimmed)) {
-                                                        setCurrentClause({
-                                                            ...currentClause,
-                                                            tags: [...(currentClause.tags || []), trimmed]
-                                                        });
-                                                        setTagInput('');
-                                                    }
-                                                }
-                                            }}
-                                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                                            placeholder="例如:現況、違約、交屋"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const trimmed = tagInput.trim();
-                                                if (trimmed && !(currentClause.tags || []).includes(trimmed)) {
-                                                    setCurrentClause({
-                                                        ...currentClause,
-                                                        tags: [...(currentClause.tags || []), trimmed]
-                                                    });
-                                                    setTagInput('');
-                                                }
-                                            }}
-                                            disabled={!tagInput.trim()}
-                                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            新增
-                                        </button>
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                                        <span className="inline-flex items-center gap-1">
-                                            💡 提示: 輸入標籤後按
-                                            <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600 font-mono">Enter</kbd>
-                                            或點擊「新增」按鈕
-                                        </span>
-                                    </div>
-                                    {/* 已新增的標籤顯示區域 */}
-                                    <div className="min-h-[40px] bg-slate-50/50 rounded-lg p-3 border border-slate-100">
-                                        {(currentClause.tags || []).length > 0 ? (
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {(currentClause.tags || []).map(t => (
-                                                    <span key={t} className="bg-emerald-100 text-emerald-700 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm hover:shadow transition-shadow">
-                                                        #{t}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentClause({
-                                                                ...currentClause,
-                                                                tags: currentClause.tags?.filter(tag => tag !== t)
-                                                            })}
-                                                            className="hover:text-rose-500 text-emerald-400 hover:scale-110 transition-all"
-                                                            title="移除標籤"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs text-slate-400 italic flex items-center gap-1.5">
-                                                <Tag className="w-3.5 h-3.5" />
-                                                尚未新增標籤 - 標籤可幫助您快速分類與搜尋條文
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">
-                                    條文內容 <span className="text-rose-500">*</span>
-                                </label>
-                                <textarea
-                                    required
-                                    value={currentClause.content || ''}
-                                    onChange={(e) => setCurrentClause({ ...currentClause, content: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[200px] text-sm leading-relaxed"
-                                    placeholder="輸入完整的合約條文..."
-                                />
-                            </div>
-
-                            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                                {currentClause.id ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDelete(currentClause.id!)}
-                                        className="text-rose-500 hover:text-rose-600 text-sm font-medium px-2 py-1 hover:bg-rose-50 rounded"
-                                    >
-                                        刪除條文
-                                    </button>
-                                ) : (
-                                    <div></div>
-                                )}
-
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsEditing(false)}
-                                        className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
-                                    >
-                                        取消
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all hover:shadow-lg active:scale-95"
-                                    >
-                                        儲存
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                <ClauseEditModal
+                    initialClause={currentClause}
+                    onClose={() => setIsEditing(false)}
+                    onSave={handleSaveClause}
+                    onDelete={handleDelete}
+                />
             )}
         </div>
     );
