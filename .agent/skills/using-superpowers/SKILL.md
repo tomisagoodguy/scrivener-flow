@@ -1,87 +1,40 @@
 ---
 name: using-superpowers
-description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+description: "Use when you need to know what capabilities are available, or when starting a complex task and want to see your toolkit. Lists all active superpowers."
 ---
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+# 🦸 Agent Superpowers Catalog
 
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+You have equipped your agent with a powerful set of skills from the **Obra Superpowers** library and other specialized tools.
 
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
-</EXTREMELY-IMPORTANT>
+## 🛠 Top Core Workflows (Most Commonly Used)
 
-## How to Access Skills
+- **/brainstorm** (`brainstorming`): **Start here for new features.** Turns vague ideas into concrete designs.
+- **/write-plan** (`writing-plans`): Creates detailed implementation plans from designs.
+- **/execute** (`executing-plans`): Executes a plan file step-by-step.
+- **/debug** (`systematic-debugging`): Structured debugging guide.
+- **/review-me** (`requesting-code-review`): Review your work before "finishing".
+- **/git-push** (`git-pushing`): Commit and push changes properly.
 
-**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+## 🎨 Frontend & Design
 
-**In other environments:** Check your platform's documentation for how skills are loaded.
+- **UI/UX Expert** (`ui-ux-pro-max`): comprehensive design system, color palettes, and component patterns.
+- **Frontend Guidelines** (`frontend-dev-guidelines`): Next.js/React best practices (server components, hooks).
+- **React Patterns** (`react-ui-patterns`): Specific patterns for loading, error handling, etc.
 
-# Using Skills
+## 🏗 Architecture & Code Quality
 
-## The Rule
+- **Senior Architect** (`senior-architect`): High-level system design and tech stack decisions.
+- **Kaizen** (`kaizen`): Continuous improvement and refactoring strategies.
+- **Test Fixing** (`test-fixing`): Help fixing failing tests.
 
-**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+## 📂 File & Project Management
 
-```dot
-digraph skill_flow {
-    "User message received" [shape=doublecircle];
-    "Might any skill apply?" [shape=diamond];
-    "Invoke Skill tool" [shape=box];
-    "Announce: 'Using [skill] to [purpose]'" [shape=box];
-    "Has checklist?" [shape=diamond];
-    "Create TodoWrite todo per item" [shape=box];
-    "Follow skill exactly" [shape=box];
-    "Respond (including clarifications)" [shape=doublecircle];
+- **File Organizer** (`file-organizer`): Clean up messy directories.
+- **Worktrees** (`using-git-worktrees`): Work on features in isolation.
 
-    "User message received" -> "Might any skill apply?";
-    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
-    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
-    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
-    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
-    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
-    "Has checklist?" -> "Follow skill exactly" [label="no"];
-    "Create TodoWrite todo per item" -> "Follow skill exactly";
-}
-```
+## ❓ How to Use
 
-## Red Flags
+Simply type the command (e.g., `/brainstorm`) or mention what you want to do (e.g., "Help me design this UI"). The agent will automatically select the best skill for the job.
 
-These thoughts mean STOP—you're rationalizing:
-
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
-| "Let me gather information first" | Skills tell you HOW to gather information. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
-
-## Skill Priority
-
-When multiple skills could apply, use this order:
-
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
-
-"Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → debugging first, then domain-specific skills.
-
-## Skill Types
-
-**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
-
-**Flexible** (patterns): Adapt principles to context.
-
-The skill itself tells you which.
-
-## User Instructions
-
-Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+If you are unsure, just ask: **"What skill should I use for X?"**
