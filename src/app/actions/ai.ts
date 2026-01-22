@@ -269,13 +269,13 @@ export async function optimizeTextContent(content: string, type: 'grammar' | 'ex
     }
 
     let prompt = '';
-    if (type === 'grammar') prompt = '你是專業的文書編輯。請幫我潤飾以下文字，修正錯字、語法，並使其更通順專業，但不要改變原意：\n\n';
-    if (type === 'expand') prompt = '你是創意寫作助手。請幫我擴充以下文字的內容，增加細節與專業深度：\n\n';
-    if (type === 'summarize') prompt = '你是重點整理專家。請幫我將以下內容總結為條列式的重點摘要：\n\n';
+    if (type === 'grammar') prompt = '你是專業的文書編輯。請幫我潤飾以下文字，修正錯字、語法，並使其更通順專業，但不要改變原意。如果輸入包含 HTML 標籤（如 <table>, <tr>, <td>, <u>, <mark>），請務必保留這些標籤及其結構，僅優化其中的文字內容：\n\n';
+    if (type === 'expand') prompt = '你是創意寫作助手。請幫我擴充以下文字的內容，增加細節與專業深度。如果輸入包含 HTML 標籤，請保留結構並在適當處擴充內容：\n\n';
+    if (type === 'summarize') prompt = '你是重點整理專家。請幫我將以下內容總結為條列式的重點摘要。如果輸入包含重要數據表格，請保留表格格式：\n\n';
     if (type === 'structure') {
         prompt = `
 You are a world-class structured thinking expert and UI/UX specialist.
-Your task is to take the provided "Messy/Unstructured Text" and transform it into a highly organized, visually structured, and easy-to-read document.
+Your task is to take the provided "Text" (which might be in HTML or plain text) and transform it into a highly organized, visually structured document.
 
 **Role & Persona:**
 - **Structured Thinker:** You organize chaos into logic.
@@ -283,23 +283,21 @@ Your task is to take the provided "Messy/Unstructured Text" and transform it int
 - **Productivity Guru:** You highlight action items and key takeaways.
 
 **Formatting Guidelines (Strictly Follow):**
-1.  **Use Markdown Heavily:**
-    - Use **H2 (##)** for main sections (e.g., "CORE MESSAGE", "ACTION ITEMS", "DETAILS").
-    - Use **H3 (###)** for sub-sections.
-    - Use **Bold** for keywords and emphasis.
-    - Use *Italics* for nuance.
+1.  **Strict HTML Output:** 
+    - You MUST output content as **HTML strings** (e.g., <h2>, <p>, <ul>, <li>, <strong>, <em>).
+    - **Use HTML Tables (<table>, <tr>, <td>, <th>) for any tabular data.** 
+    - Do NOT use Markdown (no #, **, [ ]). Use HTML equivalents.
+    - Preserve existing HTML tags if they were in the input (like <u>, <mark>).
 2.  **Visual Elements:**
     - Use Emoji 🎨 intelligently to add visual cues (e.g., ✅ for tasks, 💡 for ideas, 🚀 for goals, ⚠️ for risks).
     - Use **Blockquotes (>)** for important summaries or context.
-    - Use **Tables** if data comparison is detected.
     - Use **Bullet Points** and **Numbered Lists** for readability.
-    - Use **Code Blocks** for any technical content or scripts.
     - Use **Horizontal Rules (---)** to separate major sections.
 3.  **Content Organization:**
     - **Summary First (Executive Summary):** Start with a 1-2 sentence high-level summary.
     - **Core Content:** Group related points together logically.
-    - **Actionable Items (Next Steps):** Always extract potential tasks into a checklist (- [ ] task).
-    - **Tags/Metadata:** Suggest 3-5 relevant tags at the bottom.
+    - **Actionable Items (Next Steps):** Always extract potential tasks into a list or table.
+    - **Tags/Metadata:** Suggest 3-5 relevant tags at the bottom using <div> or <span>.
 
 **Tone:**
 - Professional, Clean, Efficient, and "Not Boring."
@@ -307,8 +305,8 @@ Your task is to take the provided "Messy/Unstructured Text" and transform it int
 
 **Constraints (CRITICAL):**
 1.  **NO HALLUCINATION:** Do NOT add any facts, dates, or details that are not in the source text.
-2.  **PRESERVE MEANING:** You are an editor and designer, not a ghostwriter. Keep the user's original intent 100% intact.
-3.  **NO FLUFF:** Do not add introductory or concluding pleasantries (e.g., "Here is your structured text..."). Just output the result.
+2.  **PRESERVE MEANING & STRUCTURE:** You are an editor and designer, not a ghostwriter. Keep the user's original intent 100% intact. PRESERVE ALL TABLES if they exist in the input.
+3.  **NO FLUFF:** Do not add introductory or concluding pleasantries. Just output the result.
 
 **Instruction:**
 Strictly restructure and format the following text based on the guidelines above:

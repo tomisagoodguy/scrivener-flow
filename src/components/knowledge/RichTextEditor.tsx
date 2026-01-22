@@ -10,11 +10,12 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
 import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
 import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
     List, ListOrdered, Quote, Heading1, Heading2,
     CheckSquare, Code, Minus, Table as TableIcon,
-    Maximize2, Minimize2, Sparkles, Loader2
+    Maximize2, Minimize2, Sparkles, Loader2, Highlighter
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { optimizeTextContent } from '@/app/actions/ai';
@@ -25,16 +26,17 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
     const handleAIOptimize = async (type: 'grammar' | 'expand' | 'summarize' | 'structure') => {
         const selection = editor.state.selection;
-        const textToOptimize = selection.empty ? editor.getText() : editor.state.doc.textBetween(selection.from, selection.to, ' ');
+        // Use HTML to preserve tables and structure when sending to AI
+        const contentToOptimize = selection.empty ? editor.getHTML() : editor.state.doc.textBetween(selection.from, selection.to, ' ');
 
-        if (!textToOptimize || textToOptimize.length < 5) {
+        if (!contentToOptimize || (selection.empty && contentToOptimize === '<p></p>') || (!selection.empty && contentToOptimize.length < 5)) {
             toast.error('請先輸入或選取足夠的文字');
             return;
         }
 
         setIsOptimizing(true);
         try {
-            const result = await optimizeTextContent(textToOptimize, type);
+            const result = await optimizeTextContent(contentToOptimize, type);
             if (result.success && result.data) {
                 // If text selected, replace selection. If not, append or replace?
                 // Let's adopt a safe approach: Copy to clipboard or ask user? 
@@ -42,12 +44,24 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 // Let's just append for safety if full doc, replace if selection.
 
                 if (!selection.empty) {
-                    editor.chain().focus().insertContent(result.data).run();
+                    // Extract HTML from code blocks if AI wrapped it
+                    let cleanData = result.data;
+                    if (cleanData.includes('```html')) {
+                        cleanData = cleanData.match(/```html([\s\S]*?)```/)?.[1] || cleanData;
+                    } else if (cleanData.includes('```')) {
+                        cleanData = cleanData.match(/```([\s\S]*?)```/)?.[1] || cleanData;
+                    }
+                    editor.chain().focus().insertContent(cleanData.trim()).run();
                     toast.success('AI 優化完成');
                 } else {
-                    // Show in a modal or append? 
+                    let cleanData = result.data;
+                    if (cleanData.includes('```html')) {
+                        cleanData = cleanData.match(/```html([\s\S]*?)```/)?.[1] || cleanData;
+                    } else if (cleanData.includes('```')) {
+                        cleanData = cleanData.match(/```([\s\S]*?)```/)?.[1] || cleanData;
+                    }
                     // For simplicity in this iteration: Insert at cursor
-                    editor.chain().focus().insertContent(`\n\n--- AI 優化結果 ---\n${result.data}\n`).run();
+                    editor.chain().focus().insertContent(`<br><br><div style="border-left: 4px solid #6366f1; padding-left: 1rem; margin: 1rem 0;"><strong>--- AI 優化建議 ---</strong><br>${cleanData.trim()}</div><br>`).run();
                     toast.success('AI 建議已附加於下方');
                 }
             } else {
@@ -108,6 +122,14 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 title="行內程式碼"
             >
                 <Code size={18} />
+            </button>
+            <button
+                onClick={() => editor.chain().focus().toggleHighlight().run()}
+                className={`p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${editor.isActive('highlight') ? 'bg-yellow-200 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100' : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                title="螢光筆 (畫重點)"
+            >
+                <Highlighter size={18} />
             </button>
             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1 self-center" />
             <button
@@ -279,6 +301,9 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             TableRow,
             TableHeader,
             TableCell,
+            Highlight.configure({
+                multicolor: true,
+            }),
         ],
         content: value,
         immediatelyRender: false,
@@ -347,6 +372,16 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 pointer-events: none;
                 position: absolute;
                 z-index: 2;
+            }
+            .ProseMirror mark {
+                background-color: #fef08a;
+                border-radius: 0.25rem;
+                padding: 0.125rem 0.25rem;
+                box-decoration-break: clone;
+            }
+            .dark .ProseMirror mark {
+                background-color: #854d0e;
+                color: #fef9c3;
             }
         `;
         document.head.appendChild(style);

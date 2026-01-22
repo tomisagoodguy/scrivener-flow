@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Copy, MessageSquare, Check, Send, Loader2, Save, Trash2 } from 'lucide-react';
+import { Copy, MessageSquare, Check, Send, Loader2, Save, Trash2, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { SecureApi } from '@/lib/crypto/secureApi';
 
@@ -214,14 +215,20 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
         setSending(true);
         try {
             // Using secureApi to ensure E2EE if implemented, though here it's likely just a backend proxy call
-            await SecureApi.post('/api/line/secure', {
-                message: generatedText,
+            const res = await SecureApi.post<any>('/api/line/secure', {
+                text: generatedText,
                 caseId: caseData.id
             });
-            alert('訊息已發送至 LINE Bot！');
-        } catch (e) {
-            console.error(e);
-            alert('發送失敗');
+
+            if (res.success) {
+                toast.success('訊息已發送至 LINE Bot！');
+            } else {
+                console.error('Line send failed:', res.error);
+                toast.error('發送失敗: ' + (res.error || '未知錯誤'));
+            }
+        } catch (e: any) {
+            console.error('Line API connection error:', e);
+            toast.error('連線錯誤: ' + e.message);
         } finally {
             setSending(false);
         }
