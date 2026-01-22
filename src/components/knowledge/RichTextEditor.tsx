@@ -43,25 +43,29 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 // Better: If selection, replace. If no selection (whole doc), verify user intention? 
                 // Let's just append for safety if full doc, replace if selection.
 
-                if (!selection.empty) {
-                    // Extract HTML from code blocks if AI wrapped it
-                    let cleanData = result.data;
-                    if (cleanData.includes('```html')) {
-                        cleanData = cleanData.match(/```html([\s\S]*?)```/)?.[1] || cleanData;
-                    } else if (cleanData.includes('```')) {
-                        cleanData = cleanData.match(/```([\s\S]*?)```/)?.[1] || cleanData;
+                const getCleanHtml = (data: string) => {
+                    let clean = data;
+                    if (clean.includes('```html')) {
+                        clean = clean.match(/```html([\s\S]*?)```/)?.[1] || clean;
+                    } else if (clean.includes('```')) {
+                        clean = clean.match(/```([\s\S]*?)```/)?.[1] || clean;
                     }
-                    editor.chain().focus().insertContent(cleanData.trim()).run();
+                    // Remove excessive empty tags and duplicate breaks that make it "gappy"
+                    return clean
+                        .replace(/<li>\s*<p>([\s\S]*?)<\/p>\s*<\/li>/g, '<li>$1</li>') // flatten li > p
+                        .replace(/<p>\s*<\/p>/g, '') // remove empty paragraphs
+                        .replace(/(<br\s*\/?>\s*){2,}/g, '<br>') // collapse multiple breaks
+                        .trim();
+                };
+
+                const cleanData = getCleanHtml(result.data);
+
+                if (!selection.empty) {
+                    editor.chain().focus().insertContent(cleanData).run();
                     toast.success('AI 優化完成');
                 } else {
-                    let cleanData = result.data;
-                    if (cleanData.includes('```html')) {
-                        cleanData = cleanData.match(/```html([\s\S]*?)```/)?.[1] || cleanData;
-                    } else if (cleanData.includes('```')) {
-                        cleanData = cleanData.match(/```([\s\S]*?)```/)?.[1] || cleanData;
-                    }
                     // For simplicity in this iteration: Insert at cursor
-                    editor.chain().focus().insertContent(`<br><br><div style="border-left: 4px solid #6366f1; padding-left: 1rem; margin: 1rem 0;"><strong>--- AI 優化建議 ---</strong><br>${cleanData.trim()}</div><br>`).run();
+                    editor.chain().focus().insertContent(`<br><div style="border-left: 4px solid #6366f1; padding-left: 1rem; margin: 0.5rem 0;"><strong>--- AI 優化建議 ---</strong><br>${cleanData}</div>`).run();
                     toast.success('AI 建議已附加於下方');
                 }
             } else {
@@ -382,6 +386,19 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             .dark .ProseMirror mark {
                 background-color: #854d0e;
                 color: #fef9c3;
+            }
+            /* Make AI content even tighter */
+            .ProseMirror ul, .ProseMirror ol {
+                margin-top: 0.25rem !important;
+                margin-bottom: 0.25rem !important;
+            }
+            .ProseMirror li {
+                margin-top: 0.125rem !important;
+                margin-bottom: 0.125rem !important;
+            }
+            .ProseMirror p {
+                margin-top: 0.25rem !important;
+                margin-bottom: 0.25rem !important;
             }
         `;
         document.head.appendChild(style);

@@ -1,6 +1,7 @@
 # 🤖 Senior Architect & Product Designer Guidelines
 
 > 此規則適用於所有專案開發環境。目標：極致的效能、可維護性與自動化。
+> 💡 核心知識庫載入：詳見 [ANTIGRAVITY_INTELLIGENCE.md](./ANTIGRAVITY_INTELLIGENCE.md)
 
 ## 🚨 核心指令 (Critical)
 

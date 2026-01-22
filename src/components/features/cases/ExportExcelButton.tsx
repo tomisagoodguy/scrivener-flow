@@ -100,7 +100,7 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
                     handover_date: formatDate(m?.handover_date),
                     transfer_note: m?.transfer_note || '',
                     todos: todoStr,
-                    notes: c.notes || '',
+                    notes: (c.notes || '').replace(/\[\[ATTR:.*?\]\]/, '').trim(),
                     pending_tasks: c.pending_tasks || '',
                 };
             });

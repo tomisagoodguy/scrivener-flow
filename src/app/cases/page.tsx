@@ -391,11 +391,11 @@ function CaseTableRow({ caseData }: { caseData: DemoCase }) {
                                 </p>
                             </div>
                         )}
-                        {caseData.notes && (
+                        {caseData.notes && caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim() && (
                             <div className="flex items-start gap-1.5">
                                 <span className="bg-rose-500/10 text-rose-500 text-[9px] px-1 rounded">⚠️</span>
                                 <p className="text-[10px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap">
-                                    {caseData.notes}
+                                    {caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim()}
                                 </p>
                             </div>
                         )}

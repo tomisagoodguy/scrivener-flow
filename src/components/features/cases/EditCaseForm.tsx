@@ -16,6 +16,7 @@ import { getCaseStage } from '@/lib/stageUtils';
 import {
     CheckCircle2,
     ChevronRight,
+    ChevronDown,
     Edit3,
     Flag,
     FileText,
@@ -41,8 +42,38 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     // User permission for experimental features
     const [currentUserEmail, setCurrentUserEmail] = useState('');
 
+    // --- Custom Attributes (inspired by Twenty) ---
+    const [attributes, setAttributes] = useState<Record<string, string>>({});
+    const [isAttributesExpanded, setIsAttributesExpanded] = useState(false);
+
+    // Helper to parse/extract attributes from notes string
+    const parseAttributes = (rawNotes: string) => {
+        const match = rawNotes.match(/\[\[ATTR:(.*?)\]\]/);
+        if (match && match[1]) {
+            try {
+                return JSON.parse(match[1]);
+            } catch (e) {
+                return {};
+            }
+        }
+        return {};
+    };
+
+    const stripAttributesFromNotes = (rawNotes: string) => {
+        return rawNotes.replace(/\[\[ATTR:.*?\]\]/, '').trim();
+    };
+
+    useEffect(() => {
+        if (initialData.notes) {
+            setAttributes(parseAttributes(initialData.notes));
+            setNotes(stripAttributesFromNotes(initialData.notes));
+        }
+    }, [initialData.notes]);
+
     // 替代 window.confirm 的二次確認狀態
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
     const milestones = (initialData.milestones?.[0] || {}) as any;
     const financials = (initialData.financials?.[0] || {}) as any;
@@ -92,6 +123,41 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
         });
     }, [initialData.id, initialData.milestones]);
 
+    // --- Incremental Persistence (Auto-save) ---
+    useEffect(() => {
+        // Only auto-save if content actually changed
+        const currentFullNotes = `${notes}\n\n[[ATTR:${JSON.stringify(attributes)}]]`.trim();
+        const initialFullNotes = (initialData.notes || '').trim();
+
+        if (currentFullNotes === initialFullNotes && privateNotes === (initialData.private_notes || '')) {
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setSaveStatus('saving');
+            try {
+                const { error } = await supabase
+                    .from('cases')
+                    .update({
+                        notes: currentFullNotes,
+                        private_notes: privateNotes,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', initialData.id);
+
+                if (error) throw error;
+                setSaveStatus('saved');
+                setLastSaved(new Date());
+                setTimeout(() => setSaveStatus('idle'), 3000);
+            } catch (err) {
+                console.error('Auto-save failed:', err);
+                setSaveStatus('error');
+            }
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [notes, privateNotes, attributes, initialData.id, initialData.notes]);
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (loading) return;
@@ -115,7 +181,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     buyer_name: data.buyer,
                     seller_name: data.seller,
                     status: data.status,
-                    notes: data.notes,
+                    notes: `${notes}\n\n[[ATTR:${JSON.stringify(attributes)}]]`.trim(),
                     private_notes: privateNotes,
                     pending_tasks: data.pending_tasks,
                     is_back_rent: data.is_back_rent === 'on',
@@ -602,6 +668,81 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                         </select>
                     </div>
                 </div>
+
+                {/* --- Custom Attributes (Inspired by Twenty) --- */}
+                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl mt-6 shadow-inner overflow-hidden transition-all">
+                    <div
+                        className="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                        onClick={() => setIsAttributesExpanded(!isAttributesExpanded)}
+                    >
+                        <div className="flex items-center gap-2">
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isAttributesExpanded ? 'rotate-180' : ''}`} />
+                            <h4 className="text-sm font-black text-slate-500 tracking-widest uppercase">
+                                ⚙️ 自定義屬性 (Case Attributes)
+                            </h4>
+                            {Object.keys(attributes).length > 0 && (
+                                <span className="text-[10px] bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    {Object.keys(attributes).length}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">EXPERIMENTAL</span>
+                            {isAttributesExpanded && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const key = prompt('請輸入新欄位名稱 (例如：案件來源、居留證號):');
+                                        if (key) setAttributes(prev => ({ ...prev, [key]: '' }));
+                                    }}
+                                    className="text-[11px] font-black bg-white dark:bg-slate-800 text-slate-600 px-4 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary transition-all shadow-sm active:scale-95"
+                                >
+                                    ＋ 新增欄位
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {isAttributesExpanded && (
+                        <div className="p-6 pt-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 pt-4 border-t border-slate-200/50 dark:border-slate-800/50">
+                                {Object.entries(attributes).map(([key, value]) => (
+                                    <div key={key} className="flex flex-col gap-1.5 p-3 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 shadow-sm group hover:border-primary/30 transition-all">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{key}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (confirm(`確定刪除「${key}」欄位嗎？內容將遺失。`)) {
+                                                        const newAttrs = { ...attributes };
+                                                        delete newAttrs[key];
+                                                        setAttributes(newAttrs);
+                                                    }
+                                                }}
+                                                className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                <span className="text-xs">✕</span>
+                                            </button>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={value}
+                                            onChange={(e) => setAttributes(prev => ({ ...prev, [key]: e.target.value }))}
+                                            placeholder="輸入內容..."
+                                            className="bg-transparent border-none p-0 text-sm font-medium focus:ring-0 focus:outline-none placeholder:text-slate-300 text-slate-700 dark:text-slate-200"
+                                        />
+                                    </div>
+                                ))}
+                                {Object.keys(attributes).length === 0 && (
+                                    <div className="col-span-full py-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                                        <p className="text-xs text-slate-400 italic">目前沒有自定義屬性。使用右上方按鈕為此案件建立專屬欄位。</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-4">
@@ -1043,20 +1184,33 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     )}
                 </div>
 
-                <div className="flex gap-4 w-full md:w-auto order-1 md:order-2">
-                    <Link
-                        href="/cases"
-                        className="flex-1 md:flex-none px-6 py-3 rounded-xl hover:bg-secondary transition-all text-sm font-bold border border-transparent flex items-center justify-center"
-                    >
-                        取消編輯
-                    </Link>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-1 md:flex-none bg-primary hover:bg-primary-deep text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50 flex justify-center"
-                    >
-                        {loading ? '儲存中...' : '✅ 儲存並返回'}
-                    </button>
+                <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-4">
+                        <Link
+                            href="/cases"
+                            className="flex-1 md:flex-none px-6 py-3 rounded-xl hover:bg-secondary transition-all text-sm font-bold border border-transparent flex items-center justify-center"
+                        >
+                            取消編輯
+                        </Link>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 md:flex-none bg-primary hover:bg-primary-deep text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50 flex justify-center"
+                        >
+                            {loading ? '儲存中...' : '✅ 儲存並返回'}
+                        </button>
+                    </div>
+                    {saveStatus !== 'idle' && (
+                        <span className={`text-[10px] font-bold flex items-center gap-1 animate-fade-in ${saveStatus === 'saving' ? 'text-blue-500' :
+                            saveStatus === 'saved' ? 'text-green-500' : 'text-red-500'
+                            }`}>
+                            {saveStatus === 'saving' && <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
+                            {saveStatus === 'saved' && '✓ 已自動儲存'}
+                            {saveStatus === 'saving' && '正在自動備份...'}
+                            {saveStatus === 'error' && '⚠ 自動存檔失敗'}
+                            {saveStatus === 'saved' && lastSaved && ` (${lastSaved.toLocaleTimeString()})`}
+                        </span>
+                    )}
                 </div>
             </div>
         </form>
