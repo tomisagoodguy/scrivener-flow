@@ -2,6 +2,8 @@
 
 Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追蹤與代辦管理系統。結合合約里程碑監控、智慧任務提醒及團隊知識庫，協助您精確掌握每一個案件細節，從簽約到交屋全程無憂。
 
+> 🗺️ **[文件導覽地圖 (DOCS_MAP)](./DOCS_MAP.md)**：如果您迷路了，可以在這裡找到所有的專案手冊與規範。
+
 ---
 
 ## 🌟 核心功能 (Core Features)
@@ -94,13 +96,61 @@ Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追�
 本專案已部署至 Vercel：`https://scrivener-flow.vercel.app`
 
 ### 環境變數設定
+
 在 Vercel Dashboard 的 Environment Variables 中需設定：
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `LINE_CHANNEL_ACCESS_TOKEN`
-- `LINE_USER_ID`
+
+* `NEXT_PUBLIC_SUPABASE_URL`
+* `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+* `LINE_CHANNEL_ACCESS_TOKEN`
+* `LINE_USER_ID`
 
 **注意**：設定環境變數後，務必執行 Redeploy 才會生效。
+
+---
+
+## 🛠 開發規範：OpenSpec 規格驅動開發 (SDD)
+
+本專案採用 **OpenSpec** 進行規格驅動開發 (Specification Driven Development)。這能確保功能在實作前已有明確規格，並讓 AI 助理能精確執行任務。
+
+### 1. 安裝與初始化
+
+如果您在新的環境開發，請先安裝 OpenSpec：
+
+```bash
+# 全域安裝
+npm install -g @fission-ai/openspec@latest
+
+# 專案初始化 (僅需執行一次)
+openspec init
+```
+
+### 2. 三階段工作流程
+
+#### **Stage 1: 建立提案 (Draft Proposal)**
+
+當要新增功能或改變系統行為時，先建立提案：
+
+* **指令**：`幫我建立一個 OpenSpec 提案，我想新增 [功能名稱]`
+* **產出**：會在 `openspec/changes/` 產生提案文件、任務清單與規格差異。
+
+#### **Stage 2: 實作功能 (Implement)**
+
+提案確認後，啟動 AI 進行實作：
+
+* **指令**：`請根據 openspec/changes/[提案名稱] 開始實作`
+* **過程**：AI 會依照 `tasks.md` 逐項完成，並確保符合規格定義。
+
+#### **Stage 3: 歸檔變更 (Archive)**
+
+實作完成且測試通過後，將變更合併回系統真相：
+
+* **指令**：`openspec archive [提案名稱]`
+* **結果**：提案會移入 `archive/` 歷史，規格會正式生效於 `openspec/specs/`。
+
+### 3. 用途判斷
+
+* ✅ **需建立提案**：新增頁面、改動 API 邏輯、修改資料庫 Schema、變更計算規則。
+* ❌ **不需建立提案**：修正純程式碼 Bug、調整 CSS 樣式、改錯字、補測試。
 
 ---
 
