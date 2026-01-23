@@ -2,14 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { RealEstateGuideline } from '@/data/real_estate_guidelines';
-import { Search, Scale, Clock, AlertTriangle, FileText, ChevronRight, Plus, Loader2, User, Building2 } from 'lucide-react';
+import { Search, Scale, FileText, Plus, Loader2, User, Building2 } from 'lucide-react';
 import { createGuideline, seedGuidelines, getGuidelines } from '../actions/guidelines';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
+import { AddGuidelineForm } from '@/components/features/guidelines/AddGuidelineForm';
+import { GuidelineCard } from '@/components/features/guidelines/GuidelineCard';
 
 export default function GuidelinesPage() {
     const [guidelines, setGuidelines] = useState<RealEstateGuideline[]>([]);
@@ -164,7 +163,7 @@ export default function GuidelinesPage() {
                         </div>
                     </div>
 
-                    {/* Active Filter Display for Mobile (since sidebar is hidden) or just general status */}
+                    {/* Active Filter Display for Mobile */}
                     {selectedFilter && (
                         <div className="md:hidden flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold">
                             <span>當前篩選: {selectedFilter.split(':')[1]}</span>
@@ -194,191 +193,6 @@ export default function GuidelinesPage() {
                     )}
                 </div>
             </main>
-        </div>
-    );
-}
-
-function AddGuidelineForm({ onSubmit }: { onSubmit: (data: any) => void }) {
-    const [formData, setFormData] = useState({
-        role: '買方',
-        scenario: '',
-        legal_info: '',
-        required_docs: '',
-        processing_time: '',
-        special_clauses: '',
-        caution: ''
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-6 py-6">
-            <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label htmlFor="role" className="text-base font-bold text-slate-700">角色對象</Label>
-                    <Input id="role" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} placeholder="例如：買方、賣方" required className="h-12 text-base" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="scenario" className="text-base font-bold text-slate-700">情境類別</Label>
-                    <Input id="scenario" value={formData.scenario} onChange={e => setFormData({ ...formData, scenario: e.target.value })} placeholder="例如：外國人購屋" required className="h-12 text-base" />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="legal" className="text-base font-bold text-slate-700">法規須知</Label>
-                <Textarea
-                    id="legal"
-                    value={formData.legal_info}
-                    onChange={e => setFormData({ ...formData, legal_info: e.target.value })}
-                    placeholder="請輸入相關法條或規定..."
-                    className="min-h-[200px] text-base leading-relaxed p-4"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="docs" className="text-base font-bold text-slate-700">應備文件</Label>
-                <Textarea
-                    id="docs"
-                    value={formData.required_docs}
-                    onChange={e => setFormData({ ...formData, required_docs: e.target.value })}
-                    placeholder="請條列出需要準備的文件項目..."
-                    className="min-h-[150px] text-base leading-relaxed p-4"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="special_clauses" className="text-base font-bold text-slate-700">特約條款參考</Label>
-                <Textarea
-                    id="special_clauses"
-                    value={formData.special_clauses}
-                    onChange={e => setFormData({ ...formData, special_clauses: e.target.value })}
-                    placeholder="請輸入建議的特約條款內文..."
-                    className="min-h-[100px] text-base leading-relaxed p-4"
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label htmlFor="time" className="text-base font-bold text-slate-700">作業時間</Label>
-                    <Input id="time" value={formData.processing_time} onChange={e => setFormData({ ...formData, processing_time: e.target.value })} placeholder="例如：7-14 個工作天" className="h-12 text-base" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="caution" className="text-base font-bold text-slate-700">特別注意</Label>
-                    <Input id="caution" value={formData.caution} onChange={e => setFormData({ ...formData, caution: e.target.value })} placeholder="重要提醒事項..." className="h-12 text-base" />
-                </div>
-            </div>
-
-            <DialogFooter className="pt-4">
-                <Button type="submit" size="lg" className="w-full sm:w-auto text-base px-8">確認新增</Button>
-            </DialogFooter>
-        </form>
-    );
-}
-
-function GuidelineCard({ item }: { item: RealEstateGuideline }) {
-    // Generate a deterministic hash for the ID based on content to ensure hydration match
-    const seed = item.role + item.scenario;
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash |= 0;
-    }
-    const scenarioId = `SC-${Math.abs(hash).toString().substring(0, 6)}`;
-
-    return (
-        <div className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent opacity-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
-
-            <div className="relative z-10">
-                <div className="flex items-start justify-between mb-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${item.role === '買方' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                item.role === '賣方' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                    'bg-purple-50 text-purple-600 border-purple-100'
-                                }`}>
-                                {item.role}
-                            </span>
-                            <span className="text-slate-400 text-xs font-mono">
-                                #{scenarioId}
-                            </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 group-hover:text-blue-600 transition-colors">
-                            {item.scenario}
-                            <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-500" />
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                    <div className="space-y-4">
-                        {item.legal_info && (
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group-hover:bg-blue-50/30 group-hover:border-blue-100 transition-colors">
-                                <div className="flex items-center gap-2 text-slate-800 font-bold mb-2">
-                                    <Scale className="w-4 h-4 text-blue-500" />
-                                    法規須知
-                                </div>
-                                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{item.legal_info}</p>
-                            </div>
-                        )}
-
-                        {item.special_clauses && (
-                            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                <div className="flex items-center gap-2 text-amber-900 font-bold mb-2">
-                                    <FileText className="w-4 h-4 text-amber-600" />
-                                    特約條款參考
-                                </div>
-                                <code className="text-xs text-amber-800 bg-white/50 px-2 py-1 rounded block mt-1 font-mono whitespace-pre-line">
-                                    {item.special_clauses}
-                                </code>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-4">
-                        {item.required_docs && (
-                            <div className="flex gap-3">
-                                <div className="p-2 bg-indigo-50 rounded-lg h-fit text-indigo-600">
-                                    <FileText className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="text-sm font-bold text-slate-900 mb-1">應備文件</h4>
-                                    <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                                        {item.required_docs}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {item.processing_time && (
-                            <div className="flex gap-3">
-                                <div className="p-2 bg-emerald-50 rounded-lg h-fit text-emerald-600">
-                                    <Clock className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="text-sm font-bold text-slate-900 mb-1">作業時間</h4>
-                                    <p className="text-sm text-slate-600">{item.processing_time}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {item.caution && (
-                            <div className="flex gap-3">
-                                <div className="p-2 bg-rose-50 rounded-lg h-fit text-rose-600">
-                                    <AlertTriangle className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="text-sm font-bold text-slate-900 mb-1">特別注意</h4>
-                                    <p className="text-sm text-slate-600">{item.caution}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

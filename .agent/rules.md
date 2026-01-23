@@ -59,14 +59,23 @@ When the user asks for a specific "feel," map it to these technical implementati
    - 涉及新功能、結構變更、API 異動或複雜重構時，**必須** 優先啟動 OpenSpec 流程。
    - 步驟：`建立提案 (Proposal)` -> `執行驗證 (Validate)` -> `實作 (Apply)` -> `歸檔 (Archive)`。
    - 規格定義優先於程式碼實作。
-2. **Analyze (CoT)**: 在撰寫程式碼前，分析 UI 需求、程式架構、依賴關係與潛在邊界條件。
-3. **Git Workflow**:
+
+2. **瀏覽器自動化 (Browser Automation)**:
+   - **優先使用 `agent-browser` 流程**：用於網頁測試、資料抓取與表單自動化。
+   - **核心流程 (SDD for UI)**：
+     1. `open <url>`：導覽至目標頁面。
+     2. `snapshot -i`：獲取包含 `@refs` 的互動元件快照。
+     3. **Ref 操作**：直接使用 `@e1`, `@e2` 進行 `click`, `fill`, `hover`。
+     4. **驗證**：操作後再次執行 `snapshot` 或 `screenshot` 驗證狀態。
+   - **Fallback 策略**：若 `agent-browser` 指令環境不可用，使用 `puppeteer` 或 `firecrawl` 工具，但必須維持「先快照、後識別編號、再執行動作」的系統化邏輯。
+3. **Analyze (CoT)**: 在撰寫程式碼前，分析 UI 需求、程式架構、依賴關係與潛在邊界條件。
+4. **Git Workflow**:
    - `feat`: 新功能, `fix`: 修補 Bug, `docs`: 文件, `refactor`: 重構, `perf`: 效能。
    - `git add . && git commit -m "type(scope): message"`。
-4. **Implementation**:
+5. **Implementation**:
    - **Frontend**: Tailwind CSS (Mobile-First), React Functional Components, Zustand/Context.
    - **Backend**: Python (uv), Asyncio, Type Hints, Pydantic.
-5. **Review & Test**: 執行自動化測試與 UI 審查。
+6. **Review & Test**: 執行自動化測試與 UI 審查。
 
 ---
 
