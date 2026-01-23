@@ -3,6 +3,25 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
     // -----------------------------------------------------------------
+    // 0. CSP Nonce Generation (New Security Feature)
+    // -----------------------------------------------------------------
+    const nonce = crypto.randomUUID();
+    const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: http: 'unsafe-inline' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : ''};
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com data:;
+    img-src 'self' data: https: blob:;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live;
+    frame-ancestors 'none';
+    base-uri 'self';
+    form-action 'self';
+    object-src 'none';
+  `
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    // -----------------------------------------------------------------
     // 1. Domain Redirection (Force Custom Domain)
     // -----------------------------------------------------------------
     const hostname = request.headers.get('host');
@@ -23,11 +42,20 @@ export async function middleware(request: NextRequest) {
     // -----------------------------------------------------------------
     // 2. Supabase Auth & Protected Routes (Original proxy.ts logic)
     // -----------------------------------------------------------------
+
+    // 初始化 request headers (加入 nonce header 以供 Server Components 使用)
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-nonce', nonce);
+    requestHeaders.set('Content-Security-Policy', cspHeader);
+
     let response = NextResponse.next({
         request: {
-            headers: request.headers,
+            headers: requestHeaders,
         },
     });
+
+    // 設定 Response CSP Header
+    response.headers.set('Content-Security-Policy', cspHeader);
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +97,6 @@ export async function middleware(request: NextRequest) {
     // If NO user and NOT on login page -> Redirect to Login
     if (!user && !pathname.startsWith('/login')) {
         const loginUrl = new URL('/login', request.url);
-        // loginUrl.searchParams.set('redirect_to', pathname) // Optional: preserve redirect
         return NextResponse.redirect(loginUrl);
     }
 

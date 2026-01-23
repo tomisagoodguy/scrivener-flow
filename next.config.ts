@@ -5,27 +5,12 @@ const nextConfig: NextConfig = {
     turbopack: {},
 
     // 🔒 Security Headers - 提升網站安全性評分
+    // 注意：Content-Security-Policy (CSP) 已移至 src/middleware.ts 以支援動態 Nonce
     async headers() {
         return [
             {
                 source: '/:path*',
                 headers: [
-                    // 🛡️ Content Security Policy - 防止 XSS 攻擊
-                    {
-                        key: 'Content-Security-Policy',
-                        value: [
-                            "default-src 'self'",
-                            // 移除 'unsafe-eval'，僅保留 'unsafe-inline' (Next.js Hydration 必須，除非實作 Nonce)
-                            "script-src 'self' 'unsafe-inline' https://vercel.live",
-                            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-                            "font-src 'self' https://fonts.gstatic.com data:",
-                            "img-src 'self' data: https: blob:",
-                            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live",
-                            "frame-ancestors 'none'",
-                            "base-uri 'self'",
-                            "form-action 'self'"
-                        ].join('; ')
-                    },
                     // 🚫 Clickjacking Protection
                     {
                         key: 'X-Frame-Options',
