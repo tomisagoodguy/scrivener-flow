@@ -16,13 +16,25 @@ from lib.reflect_utils import get_queue_path, get_backup_dir, load_queue, backup
 
 def main() -> int:
     """Main entry point."""
-    queue_path = get_queue_path()
+    # Check for CLI arguments
+    status_only = len(sys.argv) > 1 and sys.argv[1] == "--status"
 
+    queue_path = get_queue_path()
     if not queue_path.exists():
+        if status_only:
+             print("Queue is empty.")
         return 0
 
     items = load_queue()
     if not items:
+        if status_only:
+             print("Queue is empty.")
+        return 0
+
+    if status_only:
+        print(f"Queue has {len(items)} items:")
+        for i, item in enumerate(items):
+            print(f"{i+1}. {item.get('message', 'Unknown')} (Type: {item.get('item_type')})")
         return 0
 
     # Create backup directory if needed

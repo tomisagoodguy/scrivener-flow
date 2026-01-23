@@ -1,64 +1,64 @@
 ---
 name: claude-reflect
-description: Self-learning system that captures corrections during sessions and reminds users to run /reflect to update CLAUDE.md. Use when discussing learnings, corrections, or when the user mentions remembering something for future sessions.
+description: Self-learning system that captures corrections, preferences, and mistakes during sessions to update CLAUDE.md. Use when the user makes a correction ("no, use X"), mentions a preference ("always do Y"), explicitly asks to remember something, or runs /reflect commands.
 ---
 
 # Claude Reflect - Self-Learning System
 
-A two-stage system that helps Claude Code learn from user corrections.
+A two-stage system that helps Claude Code learn from user corrections and update project context.
 
-## How It Works
+## 🧠 Trigger Conditions
 
-**Stage 1: Capture (Automatic)**
-Hooks detect correction patterns ("no, use X", "actually...", "use X not Y") and queue them to `~/.claude/learnings-queue.json`.
+**Activate this skill when:**
 
-**Stage 2: Process (Manual)**
-User runs `/reflect` to review and apply queued learnings to CLAUDE.md files.
+1. **User Corrections:** "No, use X", "Don't do that", "Actually, I prefer..."
+2. **Explicit Memory:** "Remember this for next time", "Add this to your rules."
+3. **Reflect Commands:** `/reflect`, `/reflect --scan-history`, `/view-queue`.
+4. **Context Updates:** User updates a convention or rule that should be persisted.
 
-## Available Commands
+## 🛠️ Scripts & Tools
 
-| Command | Purpose |
-|---------|---------|
-| `/reflect` | Process queued learnings with human review |
-| `/reflect --scan-history` | Scan past sessions for missed learnings |
-| `/reflect --dry-run` | Preview changes without applying |
-| `/reflect-skills` | Discover skill candidates from repeating patterns |
-| `/skip-reflect` | Discard all queued learnings |
-| `/view-queue` | View pending learnings without processing |
+While hooks handle most capture automatically, you can manually verify or manage the system using these scripts in `.agent/skills/antigravity-reflect/scripts/`:
 
-## When to Remind Users
+| Script | Usage | Description |
+|--------|-------|-------------|
+| `capture_learning.py` | `python scripts/capture_learning.py "correction text"` | Manually capture a learning item if the hook missed it. |
+| `check_learnings.py` | `python scripts/check_learnings.py --status` | Check status of the learning queue. |
+| `extract_session_learnings.py` | `python scripts/extract_session_learnings.py <session_path>` | Scan a session file for missed learnings. |
 
-Remind users about `/reflect` when:
-- They complete a feature or meaningful work unit
-- They make corrections you should remember for future sessions
-- They explicitly say "remember this" or similar
-- Context is about to compact and queue has items
+## 💡 How It Works
 
-## Correction Detection Patterns
+1. **Capture (Stage 1):**
+    * **Automatic:** `UserPromptSubmit` hook detects patterns and appends to `~/.claude/learnings-queue.json`.
+    * **Manual:** You can call `capture_learning.py` if a user explicitly asks you to "remember this" and you want to ensure it's queued.
 
-High-confidence corrections:
-- Tool rejections (user stops an action with guidance)
-- "no, use X" / "don't use Y"
-- "actually..." / "I meant..."
-- "use X not Y" / "X instead of Y"
-- "remember:" (explicit marker)
+2. **Process (Stage 2):**
+    * User runs `/reflect`.
+    * You interactively review the queue and decide where to apply learnings:
+        * `~/.claude/CLAUDE.md`: Global knowledge.
+        * `./CLAUDE.md`: Project-specific conventions.
+        * `SKILL.md`: Updates to specific skills (e.g., "update the git skill to use -v").
 
-## Learning Destinations
+## 📝 Examples
 
-- `~/.claude/CLAUDE.md` - Global learnings (model names, general patterns)
-- `./CLAUDE.md` - Project-specific learnings (conventions, tools, structure)
-- `commands/*.md` - Skill improvements (corrections during skill execution)
+### Example 1: Automatic Capture & Reflect
 
-## Example Interaction
+**User:** "No, always use `uv run` for python commands."
+**System:** (Hook captures "Always use `uv run` for python commands" to queue)
+**Claude:** "Understood. I will use `uv run` for python commands."
+...
+**User:** "/reflect"
+**Claude:** "I have 1 queued learning: 'Always use `uv run` for python commands'. Should I add this to `./CLAUDE.md`?"
 
-```
-User: no, use gpt-5.1 not gpt-5 for reasoning tasks
-Claude: Got it, I'll use gpt-5.1 for reasoning tasks.
+### Example 2: Manual Capture (Edge Case)
 
-[Hook captures this correction to queue]
+**User:** "I want you to remember that this project uses Python 3.12, but don't write it to file yet."
+**Claude:** (Recognizes explicit memory request)
+*Action:* Runs `python .agent/skills/antigravity-reflect/scripts/capture_learning.py "Project uses Python 3.12"`
+**Claude:** "I've queued that learning for your next `/reflect` session."
 
-User: /reflect
-Claude: Found 1 learning queued. "Use gpt-5.1 for reasoning tasks"
-        Scope: global
-        Apply to ~/.claude/CLAUDE.md? [y/n]
-```
+## ⚠️ Edge Cases
+
+* **Queue Corrupted:** If `/reflect` fails, try clearing the queue manually or checking valid JSON in `~/.claude/learnings-queue.json`.
+* **False Positives:** If the hook captures something irrelevant, user can skip it during `/reflect` review.
+* **Duplicate Rules:** Always check existing `CLAUDE.md` content before adding new rules to avoid conflicts.

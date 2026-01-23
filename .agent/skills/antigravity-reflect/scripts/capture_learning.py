@@ -23,18 +23,27 @@ from lib.reflect_utils import (
 
 def main() -> int:
     """Main entry point."""
-    # Read JSON from stdin
-    input_data = sys.stdin.read()
-    if not input_data:
-        return 0
+    # Check for CLI arguments first (Manual Agent Usage)
+    if len(sys.argv) > 1:
+        prompt = " ".join(sys.argv[1:])
+    else:
+        # Read JSON from stdin (Hook Usage)
+        # Check if there is data on stdin to prevent blocking if not pipelined
+        if sys.stdin.isatty():
+            return 0
+            
+        input_data = sys.stdin.read()
+        if not input_data:
+            return 0
 
-    try:
-        data = json.loads(input_data)
-    except json.JSONDecodeError:
-        return 0
+        try:
+            data = json.loads(input_data)
+        except json.JSONDecodeError:
+            return 0
 
-    # Extract prompt from JSON - handle different possible field names
-    prompt = data.get("prompt") or data.get("message") or data.get("text")
+        # Extract prompt from JSON - handle different possible field names
+        prompt = data.get("prompt") or data.get("message") or data.get("text")
+        
     if not prompt:
         return 0
 
