@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
     /* config options here */
     turbopack: {},
 
-    // 🔒 Security Headers - 提升網站安全性評分至近滿分
+    // 🔒 Security Headers - 提升網站安全性評分
     async headers() {
         return [
             {
@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+                            // 移除 'unsafe-eval'，僅保留 'unsafe-inline' (Next.js Hydration 必須，除非實作 Nonce)
+                            "script-src 'self' 'unsafe-inline' https://vercel.live",
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: https: blob:",
@@ -59,10 +60,7 @@ const nextConfig: NextConfig = {
     poweredByHeader: false,
 
     // 🕵️‍♂️ 反逆向工程：關閉 Source Maps
-    // 這會讓瀏覽器裡的程式碼變成真正的「天書」，就算網管打開 DevTools 也只能看到亂碼
     productionBrowserSourceMaps: false
 };
 
 export default nextConfig;
-
-
