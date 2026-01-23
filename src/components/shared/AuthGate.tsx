@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/auth/client';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, ShieldCheck, ArrowRight, KeyRound } from 'lucide-react';
+import { Lock, ShieldCheck, ArrowRight, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 interface AuthGateContextType {
     isAuthorized: boolean;
@@ -81,6 +81,7 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [showPassphrase, setShowPassphrase] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -139,17 +140,24 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                                 >
                                     <KeyRound className="absolute left-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={20} />
                                     <input
-                                        type="password"
+                                        type={showPassphrase ? 'text' : 'password'}
                                         value={input}
                                         onChange={(e) => {
                                             setInput(e.target.value);
                                             if (error) setError(false);
                                         }}
                                         placeholder="請輸入通關密語..."
-                                        className={`w-full pl-14 pr-6 py-5 rounded-2xl bg-white/5 border-2 transition-all outline-none text-white font-bold tracking-widest placeholder:text-slate-600 placeholder:font-normal placeholder:tracking-normal focus:bg-white/10 ${error ? 'border-red-500/50' : 'border-white/5 focus:border-blue-500/50'
+                                        className={`w-full pl-14 pr-14 py-5 rounded-2xl bg-white/5 border-2 transition-all outline-none text-white font-bold tracking-widest placeholder:text-slate-600 placeholder:font-normal placeholder:tracking-normal focus:bg-white/10 ${error ? 'border-red-500/50' : 'border-white/5 focus:border-blue-500/50'
                                             }`}
                                         autoFocus
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassphrase(!showPassphrase)}
+                                        className="absolute right-5 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        {showPassphrase ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
                                 </motion.div>
                             </AnimatePresence>
 
