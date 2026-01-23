@@ -13,7 +13,8 @@ import {
 } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gift } from 'lucide-react';
+import { getHolidayByDate, getHolidayColor } from '@/utils/publicHolidays';
 
 interface Props {
     tasks: TodoTask[];
@@ -76,6 +77,7 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                     const dayTasks = getDayTasks(day);
                     const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                     const isTodayDate = isToday(day);
+                    const holiday = getHolidayByDate(day); // 取得政府假期
 
                     // Logic to handle rounded corners for bottom cells
                     const isLastRow = idx >= days.length - 7;
@@ -86,40 +88,85 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                     return (
                         <div
                             key={day.toString()}
-                            className={`bg-white dark:bg-slate-800 min-h-[80px] p-1 flex flex-col gap-1 transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-900/10 ${
-                                !isCurrentMonth ? 'opacity-40 bg-slate-50 dark:bg-slate-800/50' : ''
-                            } ${cellRoundedClass}`}
+                            className={`bg-white dark:bg-slate-800 min-h-[80px] p-1 flex flex-col gap-1 transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-900/10 ${!isCurrentMonth ? 'opacity-40 bg-slate-50 dark:bg-slate-800/50' : ''
+                                } ${cellRoundedClass}`}
                         >
-                            <div
-                                className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ml-auto ${
-                                    isTodayDate
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'text-slate-700 dark:text-slate-300'
-                                }`}
-                            >
-                                {format(day, 'd')}
+                            {/* 日期數字 + 假期徽章 */}
+                            <div className="flex items-center justify-end gap-1">
+                                {holiday && isCurrentMonth && (
+                                    <div
+                                        className={`text-[8px] px-1 py-0.5 rounded font-black ${holiday.category === 'spring-festival'
+                                                ? 'bg-red-100 text-red-600'
+                                                : holiday.category === 'national'
+                                                    ? 'bg-blue-100 text-blue-600'
+                                                    : holiday.category === 'traditional'
+                                                        ? 'bg-orange-100 text-orange-600'
+                                                        : holiday.category === 'memorial'
+                                                            ? 'bg-purple-100 text-purple-600'
+                                                            : 'bg-green-100 text-green-600'
+                                            }`}
+                                        title={holiday.name}
+                                    >
+                                        {holiday.category === 'spring-festival'
+                                            ? '春'
+                                            : holiday.category === 'national'
+                                                ? '國'
+                                                : holiday.category === 'traditional'
+                                                    ? '節'
+                                                    : holiday.category === 'memorial'
+                                                        ? '紀'
+                                                        : '勞'}
+                                    </div>
+                                )}
+                                <div
+                                    className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${isTodayDate
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'text-slate-700 dark:text-slate-300'
+                                        }`}
+                                >
+                                    {format(day, 'd')}
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-visible space-y-1 relative">
+                                {/* 假期名稱（僅在無待辦時顯示） */}
+                                {holiday && isCurrentMonth && dayTasks.length === 0 && (
+                                    <div
+                                        className={`text-[9px] px-1 py-0.5 rounded font-bold truncate text-center ${holiday.category === 'spring-festival'
+                                                ? 'bg-red-50 text-red-700 border border-red-100'
+                                                : holiday.category === 'national'
+                                                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                                    : holiday.category === 'traditional'
+                                                        ? 'bg-orange-50 text-orange-700 border border-orange-100'
+                                                        : holiday.category === 'memorial'
+                                                            ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                                                            : 'bg-green-50 text-green-700 border border-green-100'
+                                            }`}
+                                        title={holiday.name}
+                                    >
+                                        {holiday.name.length > 6 ? holiday.name.substring(0, 6) + '...' : holiday.name}
+                                    </div>
+                                )}
+
+                                {/* 待辦事項 */}
                                 {dayTasks.map((task) => (
                                     <div
                                         key={task.id}
-                                        className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${
-                                            task.isCompleted
-                                                ? 'line-through opacity-50 bg-gray-100 text-gray-400'
-                                                : (() => {
-                                                      switch (task.type) {
-                                                          case 'legal':
-                                                              return 'bg-red-50 text-red-700 border-red-100';
-                                                          case 'tax':
-                                                              return 'bg-amber-50 text-amber-700 border-amber-100';
-                                                          case 'appointment':
-                                                              return 'bg-blue-50 text-blue-700 border-blue-100';
-                                                          default:
-                                                              return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-                                                      }
-                                                  })()
-                                        }`}
+                                        className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${task.isCompleted
+                                            ? 'line-through opacity-50 bg-gray-100 text-gray-400'
+                                            : (() => {
+                                                switch (task.type) {
+                                                    case 'legal':
+                                                        return 'bg-red-50 text-red-700 border-red-100';
+                                                    case 'tax':
+                                                        return 'bg-amber-50 text-amber-700 border-amber-100';
+                                                    case 'appointment':
+                                                        return 'bg-blue-50 text-blue-700 border-blue-100';
+                                                    default:
+                                                        return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                                                }
+                                            })()
+                                            }`}
                                     >
                                         {/* Original Mini View */}
                                         <div onClick={() => onToggle(task.id)} className="truncate">
@@ -132,7 +179,7 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                                 // Smart positioning: if it's Sunday/Monday/Tuesday (0,1,2), align left.
                                                 // If it's Saturday/Friday (5,6) etc, align right to avoid overflow.
                                                 day.getDay() === 5 || day.getDay() === 6 ? 'right-0' : 'left-0'
-                                            }`}
+                                                }`}
                                         >
                                             <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug break-words">
                                                 {task.title}
@@ -167,9 +214,8 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                             </div>
                                             {/* Triangle arrow */}
                                             <div
-                                                className={`absolute top-full -mt-px w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-600 transform rotate-45 ${
-                                                    day.getDay() === 5 || day.getDay() === 6 ? 'right-4' : 'left-4'
-                                                }`}
+                                                className={`absolute top-full -mt-px w-2 h-2 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-600 transform rotate-45 ${day.getDay() === 5 || day.getDay() === 6 ? 'right-4' : 'left-4'
+                                                    }`}
                                             ></div>
                                         </div>
 
