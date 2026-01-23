@@ -13,9 +13,21 @@ export async function GET(request: Request) {
 
     if (code) {
         const supabase = await createClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host'); // original origin before load balancer
+        const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!error && session) {
+            // 持久化 Google Token 到 user_settings，供後端 Drive API 使用
+            if (session.provider_token) {
+                await supabase.from('user_settings').upsert({
+                    user_id: session.user.id,
+                    google_access_token: session.provider_token,
+                    google_refresh_token: session.provider_refresh_token,
+                    last_token_update: new Date().toISOString(),
+                });
+                console.log('Google Token persisted for user:', session.user.id);
+            }
+
+            const forwardedHost = request.headers.get('x-forwarded-host');
             const isLocalEnv = process.env.NODE_ENV === 'development';
 
             if (isLocalEnv) {

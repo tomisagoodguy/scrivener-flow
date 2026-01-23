@@ -3,9 +3,12 @@ import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
     List, ListOrdered, Quote, Heading1, Heading2,
     CheckSquare, Code, Minus, Table as TableIcon,
-    Sparkles, Loader2, Highlighter, Maximize2, Minimize2
+    Sparkles, Loader2, Highlighter, Maximize2, Minimize2, Image as ImageIcon, Link as LinkIcon,
+    Undo, Redo, Trash2
 } from 'lucide-react';
 import { useAIOptimizer } from './useAIOptimizer';
+import { useImageUpload } from './useImageUpload';
+import { useRef } from 'react';
 
 interface ToolbarButtonProps {
     onClick: () => void;
@@ -40,13 +43,38 @@ interface EditorToolbarProps {
 
 export function EditorToolbar({ editor, isFullScreen, onToggleFullScreen }: EditorToolbarProps) {
     const { isOptimizing, handleAIOptimize } = useAIOptimizer(editor);
+    const { isUploading, handleUpload } = useImageUpload(editor);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!editor) return null;
+
+    const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleUpload(file);
+            e.target.value = ''; // Reset
+        }
+    };
 
     return (
         <div className="flex justify-between items-center bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 pr-2 transition-colors">
             <div className="flex-1 overflow-x-auto">
                 <div className="p-2 flex flex-wrap gap-2 sticky top-0 bg-white dark:bg-slate-900 z-10 transition-colors">
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().undo().run()}
+                        disabled={!editor.can().chain().focus().undo().run()}
+                        icon={<Undo size={18} />}
+                        title="復原 (Ctrl+Z)"
+                    />
+                    <ToolbarButton
+                        onClick={() => editor.chain().focus().redo().run()}
+                        disabled={!editor.can().chain().focus().redo().run()}
+                        icon={<Redo size={18} />}
+                        title="重做 (Ctrl+Y)"
+                    />
+
+                    <Divider />
+
                     <ToolbarButton
                         onClick={() => editor.chain().focus().toggleBold().run()}
                         disabled={!editor.can().chain().focus().toggleBold().run()}
@@ -139,6 +167,22 @@ export function EditorToolbar({ editor, isFullScreen, onToggleFullScreen }: Edit
 
                     <Divider />
 
+                    <ToolbarButton
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        icon={isUploading ? <Loader2 size={18} className="animate-spin text-indigo-500" /> : <ImageIcon size={18} />}
+                        title="插入圖片或附件 (Google Drive)"
+                    />
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={onFileSelect}
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx"
+                    />
+
+                    <Divider />
+
                     {/* Table Controls */}
                     <ToolbarButton
                         onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -149,8 +193,9 @@ export function EditorToolbar({ editor, isFullScreen, onToggleFullScreen }: Edit
                     <ToolbarButton
                         onClick={() => editor.chain().focus().deleteTable().run()}
                         disabled={!editor.isActive('table')}
-                        icon={<TableIcon size={18} className="rotate-45" />}
-                        title="刪除表格"
+                        icon={<Trash2 size={18} />}
+                        title="刪除整個表格"
+                        className={editor.isActive('table') ? 'text-red-500 hover:bg-red-50' : ''}
                     />
                     <ToolbarButton
                         onClick={() => editor.chain().focus().addRowAfter().run()}

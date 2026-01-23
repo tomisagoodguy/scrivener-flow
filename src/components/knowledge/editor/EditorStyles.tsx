@@ -63,6 +63,32 @@ export function EditorStyles() {
                 margin-top: 0.25rem !important;
                 margin-bottom: 0.25rem !important;
             }
+            .ProseMirror a {
+                color: #6366f1;
+                text-decoration: underline;
+                font-weight: 600;
+                padding: 2px 4px;
+                background: #f5f3ff;
+                border-radius: 4px;
+                transition: all 0.2s;
+            }
+            .dark .ProseMirror a {
+                color: #818cf8;
+                background: #1e1b4b;
+            }
+            .ProseMirror a:hover {
+                background: #ede9fe;
+            }
+            .dark .ProseMirror a:hover {
+                background: #312e81;
+            }
+            .ProseMirror img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+                margin: 1rem 0;
+            }
         `;
         document.head.appendChild(style);
         return () => {

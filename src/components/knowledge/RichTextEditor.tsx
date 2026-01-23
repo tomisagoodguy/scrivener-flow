@@ -11,9 +11,12 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
-import { useState, useEffect } from 'react';
+import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
+import { useState, useEffect, useRef } from 'react';
 import { EditorToolbar } from './editor/EditorToolbar';
 import { EditorStyles } from './editor/EditorStyles';
+import { uploadImageAndInsert } from './editor/useImageUpload';
 
 interface RichTextEditorProps {
     value: string;
@@ -23,6 +26,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const editorRef = useRef<any>(null);
 
     const editor = useEditor({
         extensions: [
@@ -44,6 +48,18 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             Highlight.configure({
                 multicolor: true,
             }),
+            Image.configure({
+                allowBase64: true,
+                HTMLAttributes: {
+                    class: 'rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 my-4 max-w-full h-auto',
+                },
+            }),
+            Link.configure({
+                openOnClick: false,
+                HTMLAttributes: {
+                    class: 'text-indigo-600 dark:text-indigo-400 font-bold underline cursor-pointer hover:text-indigo-500',
+                },
+            }),
         ],
         content: value,
         immediatelyRender: false,
@@ -54,8 +70,24 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             attributes: {
                 class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-slate-900 dark:text-slate-100',
             },
+            handleDrop: (view, event, slice, moved) => {
+                if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+                    const file = event.dataTransfer.files[0];
+                    if (editorRef.current) {
+                        uploadImageAndInsert(file, editorRef.current);
+                    }
+                    return true;
+                }
+                return false;
+            },
         },
     });
+
+    useEffect(() => {
+        if (editor) {
+            editorRef.current = editor;
+        }
+    }, [editor]);
 
     // Sync active note content when switching tabs
     useEffect(() => {

@@ -15,9 +15,9 @@ export async function getAccessToken() {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
-    // 檢查是否為管理員
-    if (session?.user?.email !== 'tom890108159@gmail.com') {
-        throw new Error('存取受限：僅限管理員執行');
+    // 移除管理員 Email 限制，支援多使用者各自儲存模式 (Option 1)
+    if (!session?.user) {
+        throw new Error('請先登入系統');
     }
 
     return session?.provider_token || null;
@@ -30,11 +30,6 @@ export async function getOrCreateDriveFolder(folderName: string, parentId?: stri
     try {
         const token = await getAccessToken();
         if (!token) return { success: false, error: '未取得 Google 授權，請重新登入' };
-
-        // 如果是主資料夾，直接使用使用者提供的固定 ID
-        if (folderName === 'ScrivenerFlow_Attachments') {
-            return { success: true, data: '1pC9YvdIIVLMPD6TFje0Lvuo2RnWMUdki' };
-        }
 
         let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
         if (parentId) {
@@ -137,7 +132,7 @@ export async function uploadFileToServerAction(
         const parentFolderName = 'ScrivenerFlow_Attachments';
         const targetFolderName = (caseId && caseNumber)
             ? `${caseNumber}_${caseId}`
-            : '公司資料';
+            : 'Unsorted';
 
         // 確保父資料夾存在 (此時會固定返回 1pC9...dki)
         const parentRes = await getOrCreateDriveFolder(parentFolderName);
@@ -199,4 +194,13 @@ export async function getDriveFileDetails(fileId: string): Promise<DriveActionRe
     } catch (error: any) {
         return { success: false, error: error.message };
     }
+}
+
+/**
+ * 方便前端呼叫的快捷函式
+ */
+export async function uploadToDrive(file: File, folderName: string = 'ScrivenerFlow_Attachments'): Promise<DriveActionResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return uploadFileToServerAction(formData);
 }
