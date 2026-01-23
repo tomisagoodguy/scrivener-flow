@@ -80,156 +80,113 @@ export function useNewCaseForm() {
     };
 
     /**
+     * 核心儲存邏輯：單一案件儲存
+     */
+    const saveCaseData = async (data: CaseFormData) => {
+        const formatDate = (val: string) => (val ? val : null);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // 1. 建立或更新 Case
+        const casePayload = {
+            case_number: data.case_number,
+            buyer_name: data.buyer_name,
+            buyer_phone: data.buyer_phone || null,
+            seller_name: data.seller_name,
+            seller_phone: data.seller_phone || null,
+            escrow_account: data.escrow_account,
+            registrant_name: data.registrant_name,
+            registrant_phone: data.registrant_phone,
+            agent_name: data.agent_name,
+            agent_phone: data.agent_phone,
+            status: data.status,
+            city: data.city,
+            district: data.district,
+            notes: data.notes,
+            tax_type: data.tax_type,
+            user_id: user?.id,
+        };
+
+        const { data: existingCase } = await supabase
+            .from('cases')
+            .select('id')
+            .eq('case_number', data.case_number)
+            .maybeSingle();
+
+        let targetCase;
+        if (existingCase) {
+            const { data: updatedCase, error: caseError } = await supabase
+                .from('cases')
+                .update(casePayload)
+                .eq('id', existingCase.id)
+                .select()
+                .single();
+            if (caseError) throw caseError;
+            targetCase = updatedCase;
+        } else {
+            const { data: insertedCase, error: caseError } = await supabase
+                .from('cases')
+                .insert([casePayload])
+                .select()
+                .single();
+            if (caseError) throw caseError;
+            targetCase = insertedCase;
+        }
+
+        // 2. Upsert Milestones
+        const milestonePayload = {
+            case_id: targetCase.id,
+            contract_date: formatDate(data.contract_date),
+            seal_date: formatDate(data.seal_date),
+            tax_payment_date: formatDate(data.tax_payment_date),
+            transfer_date: formatDate(data.transfer_date),
+            balance_payment_date: formatDate(data.balance_payment_date),
+            redemption_date: formatDate(data.redemption_date),
+            handover_date: formatDate(data.handover_date),
+            transfer_note: data.transfer_note || null,
+            contract_amount: data.contract_amount ? Number(data.contract_amount) : null,
+            sign_diff_date: formatDate(data.sign_diff_date),
+            sign_diff_amount: data.sign_diff_amount ? Number(data.sign_diff_amount) : null,
+            seal_amount: data.seal_amount ? Number(data.seal_amount) : null,
+            tax_amount: data.tax_amount ? Number(data.tax_amount) : null,
+            balance_amount: data.balance_amount ? Number(data.balance_amount) : null,
+        };
+
+        const { data: existingMilestone } = await supabase.from('milestones').select('id').eq('case_id', targetCase.id).maybeSingle();
+        const milestoneResult = existingMilestone
+            ? await supabase.from('milestones').update(milestonePayload).eq('id', existingMilestone.id)
+            : await supabase.from('milestones').insert([milestonePayload]);
+        if (milestoneResult.error) throw milestoneResult.error;
+
+        // 3. Upsert Financials
+        const financialsPayload = {
+            case_id: targetCase.id,
+            total_price: data.total_price ? Number(data.total_price) : null,
+            buyer_bank: data.buyer_loan_bank || null,
+            seller_bank: data.seller_loan_bank || null,
+        };
+
+        const { data: existingFin } = await supabase.from('financials').select('id').eq('case_id', targetCase.id).maybeSingle();
+        const finResult = existingFin
+            ? await supabase.from('financials').update(financialsPayload).eq('id', existingFin.id)
+            : await supabase.from('financials').insert([financialsPayload]);
+        if (finResult.error) throw finResult.error;
+
+        return targetCase;
+    };
+
+    /**
      * 處理表單提交
      */
     const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        console.log('>>> handleSubmit triggered with state:', formData);
-
         try {
             setLoading(true);
-            const formatDate = (val: string) => (val ? val : null);
-
-            console.log('Preparing insert payload...');
-
-            // 1. 建立或更新 Case
-            const casePayload = {
-                case_number: formData.case_number,
-                buyer_name: formData.buyer_name,
-                buyer_phone: formData.buyer_phone || null,
-                seller_name: formData.seller_name,
-                seller_phone: formData.seller_phone || null,
-                escrow_account: formData.escrow_account,
-                registrant_name: formData.registrant_name,
-                registrant_phone: formData.registrant_phone,
-                agent_name: formData.agent_name,
-                agent_phone: formData.agent_phone,
-                status: formData.status,
-                city: formData.city,
-                district: formData.district,
-                notes: formData.notes,
-                tax_type: formData.tax_type,
-                user_id: (await supabase.auth.getUser()).data.user?.id,
-            };
-
-            if (!casePayload.user_id) {
-                console.warn('⚠️ Creating case without user_id (Not logged in)');
-            }
-
-            console.log('Inserting Case Payload:', casePayload);
-
-            const { data: existingCase } = await supabase
-                .from('cases')
-                .select('id')
-                .eq('case_number', formData.case_number)
-                .maybeSingle();
-
-            let newCase;
-            if (existingCase) {
-                console.log('Case already exists, updating instead of inserting...', existingCase.id);
-                const { data: updatedCase, error: caseError } = await supabase
-                    .from('cases')
-                    .update(casePayload)
-                    .eq('id', existingCase.id)
-                    .select()
-                    .single();
-                if (caseError) throw caseError;
-                newCase = updatedCase;
-            } else {
-                const { data: insertedCase, error: caseError } = await supabase
-                    .from('cases')
-                    .insert([casePayload])
-                    .select()
-                    .single();
-
-                if (caseError) {
-                    console.error('Supabase Case Error (Raw):', JSON.stringify(caseError, null, 2));
-
-                    const errorTitle = '資料庫建立失敗';
-                    let displayMsg = '';
-
-                    if (caseError.code === '23505') {
-                        displayMsg = `❌ 案號 「${formData.case_number}」 已經存在，請更換一個案號。`;
-                    } else {
-                        const errMsg = caseError.message || '未知錯誤 (Unknown Error)';
-                        displayMsg = `${errorTitle}:\n[${caseError.code || 'NULL'}] ${errMsg}`;
-                    }
-
-                    setErrorMsg(displayMsg);
-                    setLoading(false);
-                    return;
-                }
-                newCase = insertedCase;
-            }
-
-            if (!newCase) throw new Error('案件建立或更新後無回傳資料');
-
-            // 2. Upsert Milestones
-            const milestonePayload = {
-                case_id: newCase.id,
-                contract_date: formatDate(formData.contract_date),
-                seal_date: formatDate(formData.seal_date),
-                tax_payment_date: formatDate(formData.tax_payment_date),
-                transfer_date: formatDate(formData.transfer_date),
-                balance_payment_date: formatDate(formData.balance_payment_date),
-                redemption_date: formatDate(formData.redemption_date),
-                handover_date: formatDate(formData.handover_date),
-                transfer_note: formData.transfer_note || null,
-                contract_amount: formData.contract_amount ? Number(formData.contract_amount) : null,
-                sign_diff_date: formatDate(formData.sign_diff_date),
-                sign_diff_amount: formData.sign_diff_amount ? Number(formData.sign_diff_amount) : null,
-                seal_amount: formData.seal_amount ? Number(formData.seal_amount) : null,
-                tax_amount: formData.tax_amount ? Number(formData.tax_amount) : null,
-                balance_amount: formData.balance_amount ? Number(formData.balance_amount) : null,
-            };
-
-            console.log('Upserting Milestone Payload:', milestonePayload);
-
-            const { data: existingMilestone } = await supabase.from('milestones').select('id').eq('case_id', newCase.id).maybeSingle();
-
-            const milestoneResult = existingMilestone
-                ? await supabase.from('milestones').update(milestonePayload).eq('id', existingMilestone.id)
-                : await supabase.from('milestones').insert([milestonePayload]);
-
-            if (milestoneResult.error) {
-                console.error('Milestone Error:', milestoneResult.error);
-                const mDetails = JSON.stringify(milestoneResult.error, Object.getOwnPropertyNames(milestoneResult.error));
-                setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '里程碑資料儲存失敗 (Milestone Error):\n' + mDetails
-                );
-                setLoading(false);
-                return;
-            }
-
-            // 3. Upsert Financials
-            const financialsPayload = {
-                case_id: newCase.id,
-                total_price: formData.total_price ? Number(formData.total_price) : null,
-                buyer_bank: formData.buyer_loan_bank || null,
-                seller_bank: formData.seller_loan_bank || null,
-            };
-
-            console.log('Upserting Financials Payload:', financialsPayload);
-            const { data: existingFin } = await supabase.from('financials').select('id').eq('case_id', newCase.id).maybeSingle();
-
-            const finResult = existingFin
-                ? await supabase.from('financials').update(financialsPayload).eq('id', existingFin.id)
-                : await supabase.from('financials').insert([financialsPayload]);
-
-            if (finResult.error) {
-                console.error('Financial Error', finResult.error);
-                setErrorMsg(
-                    (prev) => (prev ? prev + '\n\n' : '') + '財務資料儲存失敗 (Financial Error):\n' + finResult.error.message
-                );
-                setLoading(false);
-                return;
-            }
-
+            await saveCaseData(formData);
             router.push('/cases?status=Processing');
             router.refresh();
         } catch (error: any) {
-            console.error('Catch Error:', error);
-            setErrorMsg('發生未預期的錯誤 (Catch):\n' + (error.message || JSON.stringify(error)));
+            console.error('Submit Error:', error);
+            setErrorMsg('發生錯誤：' + (error.message || JSON.stringify(error)));
             setLoading(false);
         }
     }, [formData, router]);
@@ -246,5 +203,6 @@ export function useNewCaseForm() {
         handleChange,
         checkDuplicate,
         handleSubmit,
+        saveCaseData,
     };
 }

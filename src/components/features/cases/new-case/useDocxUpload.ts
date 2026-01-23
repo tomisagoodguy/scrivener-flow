@@ -4,31 +4,41 @@ import { CaseFormData } from './types';
 
 /**
  * useDocxUpload Hook
- * 處理 DOCX 檔案上傳與自動填寫表單
+ * 處理 DOCX 檔案上傳與自動填寫表單 (支援單一與批量)
  */
 export function useDocxUpload(
     setFormData: React.Dispatch<React.SetStateAction<CaseFormData>>,
     checkDuplicate: (caseNum: string) => void
 ) {
     const [loading, setLoading] = useState(false);
+    const [batchResults, setBatchResults] = useState<any[]>([]);
+
+    const clearBatch = () => setBatchResults([]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
+        setLoading(true);
+        const results: any[] = [];
 
         try {
-            setLoading(true);
-            const parsedData = await parseDocx(uploadFormData);
-            console.log('Parsed Data:', parsedData);
+            for (const file of files) {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', file);
 
-            const rawDebug = (parsedData as any).debug_text || '';
+                const parsedData = await parseDocx(uploadFormData);
+                results.push({
+                    id: crypto.randomUUID(),
+                    fileName: file.name,
+                    data: parsedData,
+                    status: (parsedData as any).case_number || (parsedData as any).buyer_name ? 'success' : 'error'
+                });
+            }
 
-            if (!parsedData.case_number && !parsedData.buyer_name) {
-                alert('⚠️ 無法識別資料！請確認檔案內容格式。\n\n讀取到的文字預覽:\n' + rawDebug);
-            } else {
+            if (files.length === 1 && results[0].status === 'success') {
+                // 如果只有一個檔案，且解析成功，保持原有行為：填入單一表單
+                const parsedData = results[0].data;
                 setFormData(prev => ({
                     ...prev,
                     case_number: parsedData.case_number || prev.case_number,
@@ -65,8 +75,13 @@ export function useDocxUpload(
                 if (parsedData.case_number) {
                     checkDuplicate(parsedData.case_number);
                 }
-
-                alert('✅ 自動填寫完成！\n物件編號: ' + (parsedData.case_number || '未找到'));
+                alert('✅ 自動填寫完成！');
+            } else if (files.length > 1) {
+                // 批量上傳，更新結果列表供 UI 顯示
+                setBatchResults(results);
+                alert(`✅ 已解析 ${results.length} 個檔案！請確認內容後批量建立。`);
+            } else if (results[0].status === 'error') {
+                alert('⚠️ 無法識別資料！請確認檔案內容格式。');
             }
         } catch (err: any) {
             console.error(err);
@@ -77,5 +92,5 @@ export function useDocxUpload(
         }
     };
 
-    return { loading, handleFileUpload };
+    return { loading, batchResults, handleFileUpload, clearBatch };
 }
