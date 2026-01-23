@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Edit2, Trash2, Heart, MessageCircle, Eye, Tag, Calendar, User } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Heart, MessageCircle, Eye, Tag, Calendar, User, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import { TeamNote } from './NoteCard';
+import { useWordExport } from '@/hooks/useWordExport';
 
 interface NoteDetailProps {
     noteId: string;
@@ -19,6 +20,24 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    // Word 匯出功能
+    const { exportToWord, isExporting, error: exportError, progress } = useWordExport();
+
+    const handleExportWord = async () => {
+        if (!note) return;
+
+        const result = await exportToWord({
+            title: note.title,
+            htmlContent: note.content || '',
+        });
+
+        if (result.success) {
+            alert('✅ Word 文件已下載！');
+        } else {
+            alert(`⚠️ 匯出失敗: ${result.error || '未知錯誤'}`);
+        }
+    };
 
     useEffect(() => {
         loadNote();
@@ -177,6 +196,14 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
                             >
                                 <Edit2 size={16} />
                                 編輯
+                            </button>
+                            <button
+                                onClick={handleExportWord}
+                                disabled={isExporting}
+                                className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Download size={16} className={isExporting ? 'animate-bounce' : ''} />
+                                {isExporting ? `匯出中 ${progress}%` : '📥 匯出 Word'}
                             </button>
                             <button
                                 onClick={handleDelete}
