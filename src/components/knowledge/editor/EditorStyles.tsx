@@ -94,58 +94,48 @@ export function EditorStyles() {
             /* Drag Handle Styles - High Visibility Mode */
             .drag-handle {
                 position: absolute;
-                width: 20px !important;
-                height: 28px !important;
+                width: 1.5rem !important;
+                height: 2rem !important;
                 cursor: grab;
-                /* Use a much clearer WHITE icon on a BLUE background */
+                /* Clear white dots on indigo background */
                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1.5'/%3E%3Ccircle cx='9' cy='5' r='1.5'/%3E%3Ccircle cx='9' cy='19' r='1.5'/%3E%3Ccircle cx='15' cy='12' r='1.5'/%3E%3Ccircle cx='15' cy='5' r='1.5'/%3E%3Ccircle cx='15' cy='19' r='1.5'/%3E%3C/svg%3E") !important;
                 background-repeat: no-repeat;
                 background-position: center;
-                background-color: #6366f1; /* Indigo Blue */
-                z-index: 50;
+                background-color: #6366f1 !important; /* Indigo Blue */
+                z-index: 100 !important;
+                opacity: 0.85 !important; /* Force high visibility */
+                border-radius: 6px;
+                left: 0.5rem !important; /* Inside the white padding area */
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                 transition: all 0.1s;
-                opacity: 0.7 !important; /* High base visibility (70%) */
-                border-radius: 4px;
-                left: 6px !important;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             
-            /* Even larger hit area expansion */
+            .drag-handle:hover {
+                opacity: 1 !important;
+                background-color: #4f46e5 !important;
+                transform: scale(1.1);
+            }
+
+            /* Fix hit area expansion */
             .drag-handle::before {
                 content: "";
                 position: absolute;
                 top: -10px;
                 bottom: -10px;
-                left: -15px; 
-                right: -25px; /* Touches text to prevent flicker */
-                z-index: -1;
+                left: -10px; 
+                right: -20px;
             }
 
-            .drag-handle:hover, .drag-handle-active {
-                opacity: 1 !important;
-                background-color: #4f46e5 !important; /* Darker blue */
-                transform: scale(1.1);
-            }
-            
-            /* Keep it visible when hovering the block */
-            .ProseMirror > *:hover .drag-handle {
-                opacity: 0.9 !important;
-            }
-
-            .dark .drag-handle {
-                 background-color: #818cf8;
-            }
-
-            /* Ensure editor has room for the handle */
+            /* Ensure editor has room and positioning context */
             .ProseMirror {
                 padding-left: 0 !important;
-                position: relative;
+                position: relative !important;
             }
-            /* Add padding to direct children instead so they "own" the gutter space */
+            
             .ProseMirror > * {
-                padding-left: 2.8rem !important; /* Slightly more space */
+                padding-left: 3rem !important; /* Give more gutter space */
                 margin-left: 0 !important;
-                position: relative; 
+                position: relative !important;
             }
         `;
         document.head.appendChild(style);

@@ -108,7 +108,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
     }, [value, editor]);
 
     return (
-        <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
+        <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
             <EditorStyles />
             <EditorToolbar
                 editor={editor}
