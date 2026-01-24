@@ -91,69 +91,61 @@ export function EditorStyles() {
                 margin: 1rem 0;
             }
             
-            /* Drag Handle Styles */
-            /* Drag Handle Styles */
+            /* Drag Handle Styles - High Visibility Mode */
             .drag-handle {
                 position: absolute;
-                width: 1.5rem;
-                height: 1.5rem;
+                width: 20px !important;
+                height: 28px !important;
                 cursor: grab;
-                /* Six dots icon (Notion style) - Darker color */
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
+                /* Use a much clearer WHITE icon on a BLUE background */
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1.5'/%3E%3Ccircle cx='9' cy='5' r='1.5'/%3E%3Ccircle cx='9' cy='19' r='1.5'/%3E%3Ccircle cx='15' cy='12' r='1.5'/%3E%3Ccircle cx='15' cy='5' r='1.5'/%3E%3Ccircle cx='15' cy='19' r='1.5'/%3E%3C/svg%3E") !important;
                 background-repeat: no-repeat;
                 background-position: center;
+                background-color: #6366f1; /* Indigo Blue */
                 z-index: 50;
-                transition: opacity 0.2s, background-color 0.1s;
-                opacity: 0.2; /* Less visible by default to reduce noise */
+                transition: all 0.1s;
+                opacity: 0.7 !important; /* High base visibility (70%) */
                 border-radius: 4px;
-                left: 0.5rem; /* Position inside the block's new left padding */
+                left: 6px !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             
-            /* Invisible hit area expansion */
+            /* Even larger hit area expansion */
             .drag-handle::before {
                 content: "";
                 position: absolute;
-                top: -4px;
-                bottom: -4px;
-                left: -10px;    /* Extend left drastically */
-                right: -20px;   /* Extend right to touch text content */
+                top: -10px;
+                bottom: -10px;
+                left: -15px; 
+                right: -25px; /* Touches text to prevent flicker */
                 z-index: -1;
             }
 
             .drag-handle:hover, .drag-handle-active {
-                opacity: 1;
-                background-color: #f1f5f9;
-                transition-delay: 0s; /* Instant show */
+                opacity: 1 !important;
+                background-color: #4f46e5 !important; /* Darker blue */
+                transform: scale(1.1);
             }
             
-            /* Only show full opacity when hovering the block or the handle itself */
-            .ProseMirror > *:hover .drag-handle,
-            .drag-handle:hover {
-                opacity: 1;
+            /* Keep it visible when hovering the block */
+            .ProseMirror > *:hover .drag-handle {
+                opacity: 0.9 !important;
             }
 
             .dark .drag-handle {
-                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
-            }
-            .dark .drag-handle:hover, .dark .drag-handle-active {
-                background-color: #1e293b;
+                 background-color: #818cf8;
             }
 
             /* Ensure editor has room for the handle */
             .ProseMirror {
-                /* Remove container padding to allow gutter hover to be part of the block */
                 padding-left: 0 !important;
                 position: relative;
             }
             /* Add padding to direct children instead so they "own" the gutter space */
             .ProseMirror > * {
-                padding-left: 2.5rem;
+                padding-left: 2.8rem !important; /* Slightly more space */
                 margin-left: 0 !important;
-                position: relative; /* Needed for handle positioning context if changed */
-            }
-            /* Adjust lists specially since they have internal structure */
-            .ProseMirror ul, .ProseMirror ol {
-                padding-left: 3.5rem !important; /* Base padding + list inset */
+                position: relative; 
             }
         `;
         document.head.appendChild(style);

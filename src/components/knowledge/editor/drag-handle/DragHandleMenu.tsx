@@ -77,20 +77,19 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
 
     if (!menuOpen) return <div ref={menuRef} className="hidden" />;
 
-    const runCommand = (fn: () => void) => {
+    const runCommand = (fn: (chain: any) => any) => {
         if (targetNodePos !== null) {
-            // Select the node first to ensure command applies to correct block
-            const node = editor.state.doc.nodeAt(targetNodePos);
-            if (node) {
-                // Create a transaction to select the node
-                const tr = editor.state.tr.setSelection(
-                    editor.state.selection.constructor.create(editor.state.doc, targetNodePos, targetNodePos + node.nodeSize)
-                );
-                editor.view.dispatch(tr);
+            // Use the editor's state to resolve the position
+            const $pos = editor.state.doc.resolve(targetNodePos);
 
-                // Run the command
-                fn();
-            }
+            // Find the start and end of the current block (depth 1 for top-level blocks)
+            // This ensures we select the entire paragraph/heading correctly
+            const start = $pos.before(1);
+            const end = $pos.after(1);
+
+            // Focus first, then set selection, then run the requested command
+            const chain = editor.chain().focus().setTextSelection({ from: start, to: end });
+            fn(chain).run();
         }
         tippyInstance.current?.hide();
         setMenuOpen(false);
@@ -98,11 +97,12 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
 
     const duplicateNode = () => {
         if (targetNodePos !== null) {
-            const node = editor.state.doc.nodeAt(targetNodePos);
-            if (node) {
-                const json = node.toJSON();
-                editor.chain().insertContentAt(targetNodePos + node.nodeSize, json).run();
-            }
+            const $pos = editor.state.doc.resolve(targetNodePos);
+            const start = $pos.before(1);
+            const end = $pos.after(1);
+            const content = editor.state.doc.slice(start, end).content;
+
+            editor.chain().focus().insertContentAt(end, content).run();
         }
         tippyInstance.current?.hide();
         setMenuOpen(false);
@@ -110,10 +110,10 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
 
     const deleteNode = () => {
         if (targetNodePos !== null) {
-            const node = editor.state.doc.nodeAt(targetNodePos);
-            if (node) {
-                editor.chain().deleteRange({ from: targetNodePos, to: targetNodePos + node.nodeSize }).run();
-            }
+            const $pos = editor.state.doc.resolve(targetNodePos);
+            const start = $pos.before(1);
+            const end = $pos.after(1);
+            editor.chain().focus().deleteRange({ from: start, to: end }).run();
         }
         tippyInstance.current?.hide();
         setMenuOpen(false);
@@ -121,26 +121,26 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
 
     return (
         <div ref={menuRef} className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg py-1 w-48 flex flex-col z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-            <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
                 Turn Into
             </div>
 
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().setParagraph().run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.setParagraph())}>
                 <Type size={16} className="mr-2" /> Text
             </button>
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.toggleHeading({ level: 1 }))}>
                 <Heading1 size={16} className="mr-2" /> Heading 1
             </button>
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.toggleHeading({ level: 2 }))}>
                 <Heading2 size={16} className="mr-2" /> Heading 2
             </button>
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleBulletList().run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.toggleBulletList())}>
                 <List size={16} className="mr-2" /> Bullet List
             </button>
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleOrderedList().run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.toggleOrderedList())}>
                 <ListOrdered size={16} className="mr-2" /> Numbered List
             </button>
-            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleBlockquote().run())}>
+            <button className="menu-item" onClick={() => runCommand((c) => c.toggleBlockquote())}>
                 <Quote size={16} className="mr-2" /> Quote
             </button>
 
