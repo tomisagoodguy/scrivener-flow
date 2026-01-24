@@ -50,6 +50,7 @@ export function EditorStyles() {
                 background-color: #854d0e;
                 color: #fef9c3;
             }
+            /* Drag Handle Styles */
             /* Make AI content even tighter */
             .ProseMirror ul, .ProseMirror ol {
                 margin-top: 0.25rem !important;
@@ -89,33 +90,41 @@ export function EditorStyles() {
                 box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
                 margin: 1rem 0;
             }
+            
             /* Drag Handle Styles */
             .drag-handle {
                 position: absolute;
-                width: 1.2rem;
+                width: 1.5rem;
                 height: 1.5rem;
                 cursor: grab;
-                background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16"><path fillOpacity="0.2" d="M4 10h2v2H4v-2zm0-4h2v2H4V6zm0-4h2v2H4V2z"/></svg>');
+                /* Six dots icon (Notion style) - Darker color */
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
                 background-repeat: no-repeat;
-                background-size: contain;
+                background-position: center;
                 z-index: 50;
-                transition: opacity 0.2s;
-                opacity: 0;
+                transition: all 0.2s;
+                opacity: 0.4; /* Slightly visible by default */
                 border-radius: 4px;
+                left: -1.5rem; /* Pull into the gutter */
             }
             .drag-handle:hover, .drag-handle-active {
                 opacity: 1;
                 background-color: #f1f5f9;
+                stroke: #475569;
+            }
+            .dark .drag-handle {
+                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
             }
             .dark .drag-handle:hover, .dark .drag-handle-active {
                 background-color: #1e293b;
             }
             .ProseMirror:hover .drag-handle {
-                opacity: 0.5;
+                opacity: 0.6;
             }
-            /* Indent content slightly to make room for handle */
+            /* Ensure editor has room for the handle */
             .ProseMirror {
-                padding-left: 2rem !important; 
+                padding-left: 2.5rem !important;
+                position: relative;
             }
         `;
         document.head.appendChild(style);
