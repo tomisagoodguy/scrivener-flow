@@ -72,7 +72,10 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
         content: value,
         immediatelyRender: false,
         onUpdate: ({ editor }) => {
-            onChange(editor.getHTML());
+            // Mitigate flushSync warning by deferring state update
+            requestAnimationFrame(() => {
+                onChange(editor.getHTML());
+            });
         },
         editorProps: {
             attributes: {
