@@ -21,8 +21,6 @@ import { uploadImageAndInsert } from './editor/useImageUpload';
 import { configureSlashCommand } from './editor/slash-command';
 
 import { EditorBubbleMenu } from './editor/EditorBubbleMenu';
-import { DragHandleMenu } from './editor/drag-handle/DragHandleMenu';
-import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
 interface RichTextEditorProps {
     value: string;
@@ -64,10 +62,6 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                     class: 'text-indigo-600 dark:text-indigo-400 font-bold underline cursor-pointer hover:text-indigo-500',
                 },
             }),
-            GlobalDragHandle.configure({
-                dragHandleWidth: 20,
-                scrollTreshold: 100,
-            }),
         ],
         content: value,
         immediatelyRender: false,
@@ -108,7 +102,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
     }, [value, editor]);
 
     return (
-        <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
+        <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
             <EditorStyles />
             <EditorToolbar
                 editor={editor}
@@ -116,7 +110,6 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
             />
             {editor && <EditorBubbleMenu editor={editor} />}
-            {editor && <DragHandleMenu editor={editor} />}
             <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
         </div>
     );

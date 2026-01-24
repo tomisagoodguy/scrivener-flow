@@ -90,52 +90,34 @@ export function EditorStyles() {
                 box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
                 margin: 1rem 0;
             }
-            
-            /* Drag Handle Styles - High Visibility Mode */
-            .drag-handle {
-                position: absolute;
-                width: 1.5rem !important;
-                height: 2rem !important;
-                cursor: grab;
-                /* Clear white dots on indigo background */
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1.5'/%3E%3Ccircle cx='9' cy='5' r='1.5'/%3E%3Ccircle cx='9' cy='19' r='1.5'/%3E%3Ccircle cx='15' cy='12' r='1.5'/%3E%3Ccircle cx='15' cy='5' r='1.5'/%3E%3Ccircle cx='15' cy='19' r='1.5'/%3E%3C/svg%3E") !important;
-                background-repeat: no-repeat;
-                background-position: center;
-                background-color: #6366f1 !important; /* Indigo Blue */
-                z-index: 100 !important;
-                opacity: 0.85 !important; /* Force high visibility */
-                border-radius: 6px;
-                left: 0.5rem !important; /* Inside the white padding area */
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                transition: all 0.1s;
-            }
-            
-            .drag-handle:hover {
-                opacity: 1 !important;
-                background-color: #4f46e5 !important;
-                transform: scale(1.1);
-            }
-
-            /* Fix hit area expansion */
-            .drag-handle::before {
-                content: "";
-                position: absolute;
-                top: -10px;
-                bottom: -10px;
-                left: -10px; 
-                right: -20px;
-            }
-
-            /* Ensure editor has room and positioning context */
+            /* Editor Content Styles */
             .ProseMirror {
-                padding-left: 0 !important;
-                position: relative !important;
+                padding: 1rem !important;
+                outline: none !important;
             }
-            
-            .ProseMirror > * {
-                padding-left: 3rem !important; /* Give more gutter space */
-                margin-left: 0 !important;
-                position: relative !important;
+            .ProseMirror > * + * {
+                margin-top: 0.75em;
+            }
+            .ProseMirror p {
+                margin: 0.5rem 0;
+            }
+            .ProseMirror ul, .ProseMirror ol {
+                padding-left: 1.5rem;
+                margin: 0.5rem 0;
+            }
+            .ProseMirror li {
+                margin: 0.25rem 0;
+            }
+            .ProseMirror a {
+                color: #6366f1;
+                text-decoration: underline;
+                font-weight: 500;
+            }
+            .ProseMirror img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 0.5rem;
+                margin: 1rem 0;
             }
         `;
         document.head.appendChild(style);
