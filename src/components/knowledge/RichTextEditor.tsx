@@ -19,7 +19,7 @@ import { EditorToolbar } from './editor/EditorToolbar';
 import { EditorStyles } from './editor/EditorStyles';
 import { uploadImageAndInsert } from './editor/useImageUpload';
 import { configureSlashCommand } from './editor/slash-command';
-import { configureSlashCommand } from './editor/slash-command';
+
 import { EditorBubbleMenu } from './editor/EditorBubbleMenu';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
@@ -57,60 +57,62 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 allowBase64: true,
             }),
             configureSlashCommand(),
-            HTMLAttributes: {
-                class: 'text-indigo-600 dark:text-indigo-400 font-bold underline cursor-pointer hover:text-indigo-500',
-            },
+            Link.configure({
+                openOnClick: false,
+                HTMLAttributes: {
+                    class: 'text-indigo-600 dark:text-indigo-400 font-bold underline cursor-pointer hover:text-indigo-500',
+                },
             }),
-        GlobalDragHandle.configure({
-            dragHandleWidth: 20,
-            scrollTreshold: 100,
-        }),
+            GlobalDragHandle.configure({
+                dragHandleWidth: 20,
+                scrollTreshold: 100,
+            }),
         ],
-    content: value,
+        content: value,
         immediatelyRender: false,
-            onUpdate: ({ editor }) => {
-                onChange(editor.getHTML());
+        onUpdate: ({ editor }) => {
+            onChange(editor.getHTML());
+        },
+        editorProps: {
+            attributes: {
+                class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-slate-900 dark:text-slate-100',
             },
-                editorProps: {
-        attributes: {
-            class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-slate-900 dark:text-slate-100',
-            },
-        handleDrop: (view, event, slice, moved) => {
-            if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
-                const file = event.dataTransfer.files[0];
-                if (editorRef.current) {
-                    uploadImageAndInsert(file, editorRef.current);
+            handleDrop: (view, event, slice, moved) => {
+                if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+                    const file = event.dataTransfer.files[0];
+                    if (editorRef.current) {
+                        uploadImageAndInsert(file, editorRef.current);
+                    }
+                    return true;
                 }
-                return true;
-            }
-            return false;
+                return false;
+            },
         },
-        },
-});
+    });
 
-useEffect(() => {
-    if (editor) {
-        editorRef.current = editor;
-    }
-}, [editor]);
+    useEffect(() => {
+        if (editor) {
+            editorRef.current = editor;
+        }
+    }, [editor]);
 
-// Sync active note content when switching tabs
-useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-        editor.commands.setContent(value);
-    }
-}, [value, editor]);
+    // Sync active note content when switching tabs
+    useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value);
+        }
+    }, [value, editor]);
 
-return (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
-        <EditorStyles />
-        <EditorToolbar
-            editor={editor}
-            isFullScreen={isFullScreen}
-            onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-        />
-        {editor && <EditorBubbleMenu editor={editor} />}
-        <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
-    </div>
-);
+    return (
+        <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full ${isFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
+            <EditorStyles />
+            <EditorToolbar
+                editor={editor}
+                isFullScreen={isFullScreen}
+                onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+            />
+            {editor && <EditorBubbleMenu editor={editor} />}
+            <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
+        </div>
+    );
 }
