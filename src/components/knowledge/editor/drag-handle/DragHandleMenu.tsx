@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/react';
-import { Copy, Trash2, GripVertical } from 'lucide-react';
+import { Copy, Trash2, GripVertical, Heading1, Heading2, List, ListOrdered, Quote, Type, CheckSquare } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import tippy, { Instance } from 'tippy.js';
 
@@ -46,6 +46,8 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
                             trigger: 'manual',
                             interactive: true,
                             appendTo: document.body,
+                            maxWidth: 300,
+                            offset: [0, 10],
                             onClickOutside: () => {
                                 setMenuOpen(false);
                             },
@@ -60,7 +62,6 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
         };
 
         // Attach listener to editor element properly
-        const editorDom = editor.view.dom;
         // The handle is appended to the editor logic shell usually, but actually strictly it might be best to listen on document
         // because the handle might be outside the editor content editable div depending on implementation.
         // The extension appends drag-handle usually as a sibling or child of the block.
@@ -76,17 +77,35 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
 
     if (!menuOpen) return <div ref={menuRef} className="hidden" />;
 
+    const runCommand = (fn: () => void) => {
+        if (targetNodePos !== null) {
+            // Select the node first to ensure command applies to correct block
+            const node = editor.state.doc.nodeAt(targetNodePos);
+            if (node) {
+                // Create a transaction to select the node
+                const tr = editor.state.tr.setSelection(
+                    editor.state.selection.constructor.create(editor.state.doc, targetNodePos, targetNodePos + node.nodeSize)
+                );
+                editor.view.dispatch(tr);
+
+                // Run the command
+                fn();
+            }
+        }
+        tippyInstance.current?.hide();
+        setMenuOpen(false);
+    };
+
     const duplicateNode = () => {
         if (targetNodePos !== null) {
             const node = editor.state.doc.nodeAt(targetNodePos);
             if (node) {
-                // Simplified duplicate: set selection and copy-paste behavior manually
-                // Or gets JSON and insert
                 const json = node.toJSON();
                 editor.chain().insertContentAt(targetNodePos + node.nodeSize, json).run();
             }
         }
         tippyInstance.current?.hide();
+        setMenuOpen(false);
     };
 
     const deleteNode = () => {
@@ -97,24 +116,64 @@ export const DragHandleMenu = ({ editor }: DragHandleMenuProps) => {
             }
         }
         tippyInstance.current?.hide();
+        setMenuOpen(false);
     };
 
     return (
-        <div ref={menuRef} className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg py-1 w-40 flex flex-col z-50 overflow-hidden">
-            <button
-                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-left transition-colors"
-                onClick={duplicateNode}
-            >
-                <Copy size={16} className="text-slate-500" />
-                Duplicate
+        <div ref={menuRef} className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg py-1 w-48 flex flex-col z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Turn Into
+            </div>
+
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().setParagraph().run())}>
+                <Type size={16} className="mr-2" /> Text
             </button>
-            <button
-                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 text-left transition-colors"
-                onClick={deleteNode}
-            >
-                <Trash2 size={16} />
-                Delete
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}>
+                <Heading1 size={16} className="mr-2" /> Heading 1
             </button>
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}>
+                <Heading2 size={16} className="mr-2" /> Heading 2
+            </button>
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleBulletList().run())}>
+                <List size={16} className="mr-2" /> Bullet List
+            </button>
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleOrderedList().run())}>
+                <ListOrdered size={16} className="mr-2" /> Numbered List
+            </button>
+            <button className="menu-item" onClick={() => runCommand(() => editor.chain().focus().toggleBlockquote().run())}>
+                <Quote size={16} className="mr-2" /> Quote
+            </button>
+
+            <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
+
+            <button className="menu-item" onClick={duplicateNode}>
+                <Copy size={16} className="mr-2" /> Duplicate
+            </button>
+            <button className="menu-item text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={deleteNode}>
+                <Trash2 size={16} className="mr-2" /> Delete
+            </button>
+
+            <style jsx>{`
+                .menu-item {
+                    display: flex;
+                    align-items: center;
+                    width: 100%;
+                    padding: 0.5rem 0.75rem;
+                    font-size: 0.875rem;
+                    color: #334155;
+                    text-align: left;
+                    transition: background-color 0.1s;
+                }
+                .dark .menu-item {
+                    color: #e2e8f0;
+                }
+                .menu-item:hover {
+                    background-color: #f1f5f9;
+                }
+                .dark .menu-item:hover {
+                    background-color: #1e293b;
+                }
+            `}</style>
         </div>
     );
 };
