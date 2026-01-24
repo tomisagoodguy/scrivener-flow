@@ -17,6 +17,8 @@ import { useState, useEffect, useRef } from 'react';
 import { EditorToolbar } from './editor/EditorToolbar';
 import { EditorStyles } from './editor/EditorStyles';
 import { uploadImageAndInsert } from './editor/useImageUpload';
+import { configureSlashCommand } from './editor/slash-command';
+import { EditorBubbleMenu } from './editor/EditorBubbleMenu';
 
 interface RichTextEditorProps {
     value: string;
@@ -51,6 +53,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             ResizableImage.configure({
                 allowBase64: true,
             }),
+            configureSlashCommand(),
             Link.configure({
                 openOnClick: false,
                 HTMLAttributes: {
@@ -101,6 +104,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 isFullScreen={isFullScreen}
                 onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
             />
+            {editor && <EditorBubbleMenu editor={editor} />}
             <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
         </div>
     );

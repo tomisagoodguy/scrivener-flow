@@ -178,6 +178,7 @@ export function EditorToolbar({ editor, isFullScreen, onToggleFullScreen }: Edit
                         ref={fileInputRef}
                         onChange={onFileSelect}
                         className="hidden"
+                        id="hidden-image-upload"
                         accept="image/*,.pdf,.doc,.docx"
                     />
 
