@@ -105,7 +105,7 @@ export function EditorStyles() {
                 transition: all 0.2s;
                 opacity: 0.4; /* Slightly visible by default */
                 border-radius: 4px;
-                left: -1.5rem; /* Pull into the gutter */
+                left: 0.5rem; /* Position inside the block's new left padding */
             }
             .drag-handle:hover, .drag-handle-active {
                 opacity: 1;
@@ -122,9 +122,20 @@ export function EditorStyles() {
                 opacity: 0.6;
             }
             /* Ensure editor has room for the handle */
+            /* Ensure editor has room for the handle */
             .ProseMirror {
-                padding-left: 2.5rem !important;
+                /* Remove container padding to allow gutter hover to be part of the block */
+                padding-left: 0 !important;
                 position: relative;
+            }
+            /* Add padding to direct children instead so they "own" the gutter space */
+            .ProseMirror > * {
+                padding-left: 2.5rem;
+                margin-left: 0 !important;
+            }
+            /* Adjust lists specially since they have internal structure */
+            .ProseMirror ul, .ProseMirror ol {
+                padding-left: 3.5rem !important; /* Base padding + list inset */
             }
         `;
         document.head.appendChild(style);
