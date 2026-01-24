@@ -14,6 +14,7 @@ import Highlight from '@tiptap/extension-highlight';
 import { ResizableImage } from './editor/ResizableImageExtension';
 import Link from '@tiptap/extension-link';
 import { useState, useEffect, useRef } from 'react';
+import 'tippy.js/dist/tippy.css';
 import { EditorToolbar } from './editor/EditorToolbar';
 import { EditorStyles } from './editor/EditorStyles';
 import { uploadImageAndInsert } from './editor/useImageUpload';
