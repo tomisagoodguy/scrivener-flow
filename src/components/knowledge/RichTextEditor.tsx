@@ -11,7 +11,7 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
-import Image from '@tiptap/extension-image';
+import { ResizableImage } from './editor/ResizableImageExtension';
 import Link from '@tiptap/extension-link';
 import { useState, useEffect, useRef } from 'react';
 import { EditorToolbar } from './editor/EditorToolbar';
@@ -48,11 +48,8 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
             Highlight.configure({
                 multicolor: true,
             }),
-            Image.configure({
+            ResizableImage.configure({
                 allowBase64: true,
-                HTMLAttributes: {
-                    class: 'rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 my-4 max-w-full h-auto',
-                },
             }),
             Link.configure({
                 openOnClick: false,
