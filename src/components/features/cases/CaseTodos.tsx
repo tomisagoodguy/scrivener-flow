@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-
+import { useState } from 'react';
+import { useCaseTodos } from '@/hooks/useCaseTodos';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Check } from 'lucide-react';
 
@@ -25,179 +24,37 @@ export default function CaseTodos({
     prefix = '',
     catchUncategorized = false
 }: CaseTodosProps) {
-    // console.log(`[CaseTodos] Render caseId=${caseId} prefix=${prefix}`);
+    const { todos, loadingItem, toggleTodo, addTodo, deleteTodo } = useCaseTodos(caseId, initialTodos, prefix);
     const router = useRouter();
-    // Helper to normalize todos (handle transparent migration if DB has Array instead of Object)
-    const normalizeTodos = (data: any): Record<string, boolean> => {
-        if (Array.isArray(data)) {
-            // Assume array of strings means ["Task1", "Task2"] are completed tasks
-            return data.reduce((acc, key) => {
-                if (typeof key === 'string') acc[key] = true;
-                return acc;
-            }, {} as Record<string, boolean>);
-        }
-        return data || {};
-    };
 
-    const [todos, setTodos] = useState<Record<string, boolean>>(normalizeTodos(initialTodos));
-    const [loading, setLoadingState] = useState<string | null>(null);
-    const loadingRef = useRef<string | null>(null);
 
-    const setLoading = (val: string | null) => {
-        setLoadingState(val);
-        loadingRef.current = val;
-    };
-
-    // fetchLatestTodos to ensure we have the absolute latest data on mount, bypassing Next.js cache
-    const fetchLatestTodos = async () => {
-        const { data, error } = await supabase
-            .from('cases')
-            .select('todos')
-            .eq('id', caseId)
-            .single();
-
-        if (data && !error) {
-            console.log('[CaseTodos] Fetched fresh data on mount:', data.todos);
-            setTodos(normalizeTodos(data.todos));
-        }
-    };
-
-    // Sync state when initialTodos updates (e.g. router.refresh causes re-render with new data)
-    useEffect(() => {
-        setTodos(normalizeTodos(initialTodos));
-    }, [initialTodos]);
-
-    // Initial Fetch & Real-time Subscription
-    useEffect(() => {
-        // Fetch immediately on mount
-        fetchLatestTodos();
-
-        const channel = supabase
-            .channel(`case-todos-${caseId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'cases',
-                    filter: `id=eq.${caseId}`,
-                },
-                (payload) => {
-                    const newCase = payload.new as any;
-                    // Only update if we are not currently updating locally (checked via Ref to avoid dependency change)
-                    if (newCase && newCase.todos && !loadingRef.current) {
-                        setTodos(normalizeTodos(newCase.todos));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [caseId]);
 
     // New State for adding tasks
     const [isAdding, setIsAdding] = useState(false);
     const [newTaskName, setNewTaskName] = useState('');
 
-    const toggleTodo = async (e: React.MouseEvent, item: string) => {
+    const handleToggle = (e: React.MouseEvent, item: string) => {
         e.preventDefault();
         e.stopPropagation();
-
-        if (loading) return;
-
-        const newValue = !todos[item];
-        const updatedTodos = { ...todos, [item]: newValue };
-
-        // Optimistic Update: Change UI immediately
-        setTodos(updatedTodos);
-        setLoading(item);
-
-        try {
-            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
-
-            const existingTodos = normalizeTodos(currentData?.todos);
-            const mergedTodos = { ...existingTodos, [item]: newValue };
-
-            const { error } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
-
-            if (error) {
-                setTodos(todos);
-                throw error;
-            }
-            // Removed router.refresh() to prevent stale data overwriting optimistic state. Realtime handles sync.
-        } catch (error: any) {
-            console.error('Error updating todo:', error);
-            // Log full error details for debugging
-            if (error?.message) console.error('Error Message:', error.message);
-            if (error?.details) console.error('Error Details:', error.details);
-            if (error?.hint) console.error('Error Hint:', error.hint);
-
-            alert(`更新狀態失敗: ${error.message || '未知錯誤 (Check Console)'}`);
-            setTodos(todos);
-        } finally {
-            setLoading(null);
-        }
+        toggleTodo(item);
     };
 
     const handleAddTask = async () => {
         if (!newTaskName.trim()) return;
-        const rawTaskName = newTaskName.trim();
-        // Prepend prefix if it doesn't exist (prevent double prefix if user typed it)
-        const taskKey = prefix && !rawTaskName.startsWith(prefix) ? `${prefix}${rawTaskName}` : rawTaskName;
-
-        // Optimistic update
-        setTodos((prev) => ({
-            ...prev,
-            [taskKey]: false,
-        }));
-        setIsAdding(false);
-        setNewTaskName('');
-
         try {
-            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
-
-            const existingTodos = normalizeTodos(currentData?.todos);
-            const mergedTodos = { ...existingTodos, [taskKey]: false };
-
-            const { error } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
-
-            if (error) throw error;
-            // Removed router.refresh()
-        } catch (error: any) {
-            console.error('Error adding task:', error);
-            alert('新增失敗');
-            // Revert changes if needed
+            await addTodo(newTaskName);
+            setIsAdding(false);
+            setNewTaskName('');
+        } catch (e) {
+            // Error handled in hook
         }
     };
 
-    const handleDeleteTask = async (e: React.MouseEvent, keyToDelete: string) => {
+    const handleDeleteTask = async (e: React.MouseEvent, key: string) => {
         e.preventDefault();
         e.stopPropagation();
-
-        if (!confirm('確定要刪除此事項嗎？')) return;
-
-        // Optimistic update
-        const newTodos = { ...todos };
-        delete newTodos[keyToDelete];
-        setTodos(newTodos);
-
-        try {
-            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
-            const currentTodos = (currentData?.todos as Record<string, boolean>) || {};
-
-            const updatedTodos = { ...currentTodos };
-            delete updatedTodos[keyToDelete];
-
-            const { error } = await supabase.from('cases').update({ todos: updatedTodos }).eq('id', caseId);
-
-            if (error) throw error;
-            // Removed router.refresh()
-        } catch (error: any) {
-            console.error('Error deleting task:', error);
-            alert('刪除失敗');
-            // Revert (reload page or re-fetch would be better, but simpler to just leave as is for now)
+        if (confirm('確定要刪除此事項嗎？')) {
+            deleteTodo(key);
         }
     };
 
@@ -245,8 +102,6 @@ export default function CaseTodos({
 
 
     // Debug logging
-    // console.log(`[CaseTodos ${caseId}] Initial Todos:`, todos);
-    // console.log(`[CaseTodos ${caseId}] Prefix:`, prefix);
 
     return (
         <div className="flex flex-wrap gap-2 py-2 items-center">
@@ -266,8 +121,8 @@ export default function CaseTodos({
                         <div key={item} className="relative group flex items-center">
                             <button
                                 type="button"
-                                onClick={(e) => toggleTodo(e, item)}
-                                disabled={loading === item}
+                                onClick={(e) => handleToggle(e, item)}
+                                disabled={loadingItem === item}
                                 className={`
                                     px-3 py-1.5 rounded-full text-[12px] font-bold transition-all
                                     border-2 flex items-center gap-1.5
@@ -275,7 +130,7 @@ export default function CaseTodos({
                                         ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
                                         : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
                                     }
-                                    ${loading === item ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
+                                    ${loadingItem === item ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
                                     ${isCustom ? 'pr-7' : ''} 
                                 `}
                             >

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState } from 'react';
+import { useCaseTodos } from '@/hooks/useCaseTodos';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Check } from 'lucide-react';
 
@@ -18,180 +18,33 @@ export default function CaseCompactTodoList({
     allTasks,
     hideCompleted = false,
 }: CaseCompactTodoListProps) {
-    // console.log(`[CaseCompactTodoList] Render caseId=${caseId}`);
     const router = useRouter();
-
-    // Helper to normalize todos
-    const normalizeTodos = (data: any): Record<string, boolean> => {
-        if (Array.isArray(data)) {
-            return data.reduce((acc, key) => {
-                if (typeof key === 'string') acc[key] = true;
-                return acc;
-            }, {} as Record<string, boolean>);
-        }
-        return data || {};
-    };
-
-    const [localTodos, setLocalTodos] = useState(normalizeTodos(todos));
-    const [updating, setUpdatingState] = useState<string | null>(null);
-    const updatingRef = useRef<string | null>(null);
-
-    const setUpdating = (val: string | null) => {
-        setUpdatingState(val);
-        updatingRef.current = val;
-    };
+    const { todos: localTodos, loadingItem: updating, toggleTodo, addTodo, deleteTodo } = useCaseTodos(caseId, todos, '');
 
     // New State for adding tasks
     const [isAdding, setIsAdding] = useState(false);
     const [newTaskName, setNewTaskName] = useState('');
 
-    const fetchLatestTodos = async () => {
-        const { data, error } = await supabase
-            .from('cases')
-            .select('todos')
-            .eq('id', caseId)
-            .single();
-
-        if (data && !error) {
-            setLocalTodos(normalizeTodos(data.todos));
-        }
-    };
-
-    useEffect(() => {
-        setLocalTodos(normalizeTodos(todos));
-    }, [todos]);
-
-    // Real-time Subscription & Initial Fetch
-    useEffect(() => {
-        fetchLatestTodos();
-
-        const channel = supabase
-            .channel(`case-compact-list-${caseId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'cases',
-                    filter: `id=eq.${caseId}`,
-                },
-                (payload) => {
-                    const newCase = payload.new as any;
-                    // Only update if we are not currently updating ourselves (to avoid race conditions/jitter)
-                    if (newCase && newCase.todos && !updatingRef.current) {
-                        setLocalTodos(normalizeTodos(newCase.todos));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [caseId]);
-
-    const toggleTodo = async (task: string) => {
-        if (updating) return; // Prevent double clicks
-
-        const newValue = !localTodos[task];
-        setUpdating(task);
-
-        // Optimistic update
-        setLocalTodos((prev) => ({
-            ...prev,
-            [task]: newValue,
-        }));
-
-        try {
-            // Fetch current latest to avoid race conditions
-            const { data: currentData, error: fetchError } = await supabase
-                .from('cases')
-                .select('todos')
-                .eq('id', caseId)
-                .single();
-
-            if (fetchError) {
-                console.error('Error fetching current todos:', fetchError);
-            }
-
-            const existingTodos = normalizeTodos(currentData?.todos) || localTodos || {};
-            const mergedTodos = { ...existingTodos, [task]: newValue };
-
-            // console.log(`Updating case ${caseId} todo [${task}] to ${newValue}`);
-
-            const { error: updateError } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
-
-            if (updateError) {
-                console.error('Supabase Update Error Detailed:', JSON.stringify(updateError, null, 2));
-                throw updateError;
-            }
-
-            // Removed router.refresh() to rely on Realtime
-        } catch (error: any) {
-            console.error('Error updating todo:', error);
-            // Revert
-            setLocalTodos((prev) => ({
-                ...prev,
-                [task]: !newValue,
-            }));
-            alert(`更新失敗: ${error.message || '未知錯誤'}`);
-        } finally {
-            setUpdating(null);
-        }
+    const onToggle = (task: string) => {
+        toggleTodo(task);
     };
 
     const handleAddTask = async () => {
         if (!newTaskName.trim()) return;
-        const taskName = newTaskName.trim();
-
-        // Optimistic update
-        setLocalTodos((prev) => ({
-            ...prev,
-            [taskName]: false,
-        }));
-        setIsAdding(false);
-        setNewTaskName('');
-
         try {
-            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
-
-            const existingTodos = normalizeTodos(currentData?.todos) || localTodos || {};
-            const mergedTodos = { ...existingTodos, [taskName]: false };
-
-            const { error } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
-            if (error) throw error;
-            // Removed router.refresh()
-        } catch (error: any) {
-            console.error('Error adding task:', error);
-            alert('新增失敗');
+            await addTodo(newTaskName);
+            setIsAdding(false);
+            setNewTaskName('');
+        } catch (e) {
+            // Hook handles alerts
         }
     };
 
     const handleDeleteTask = async (e: React.MouseEvent, keyToDelete: string) => {
         e.preventDefault();
         e.stopPropagation();
-
-        if (!confirm('確定要刪除此事項嗎？')) return;
-
-        // Optimistic update
-        const newTodos = { ...localTodos };
-        delete newTodos[keyToDelete];
-        setLocalTodos(newTodos);
-
-        try {
-            const { data: currentData } = await supabase.from('cases').select('todos').eq('id', caseId).single();
-            const currentTodos = normalizeTodos(currentData?.todos) || {};
-
-            const updatedTodos = { ...currentTodos };
-            delete updatedTodos[keyToDelete];
-
-            const { error } = await supabase.from('cases').update({ todos: updatedTodos }).eq('id', caseId);
-
-            if (error) throw error;
-            // Removed router.refresh()
-        } catch (error: any) {
-            console.error('Error deleting task:', error);
-            alert('刪除失敗');
+        if (confirm('確定要刪除此事項嗎？')) {
+            deleteTodo(keyToDelete);
         }
     };
 
@@ -218,7 +71,7 @@ export default function CaseCompactTodoList({
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    toggleTodo(task);
+                                    onToggle(task);
                                 }}
                                 disabled={!!updating}
                                 className={`
