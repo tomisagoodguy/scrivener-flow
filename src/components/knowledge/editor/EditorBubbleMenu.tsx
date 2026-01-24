@@ -1,4 +1,5 @@
-import { BubbleMenu, Editor } from '@tiptap/react';
+import { Editor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { Bold, Italic, Strikethrough, Link, Code, Highlighter } from 'lucide-react';
 import { useCallback, useState } from 'react';
 

@@ -2437,6 +2437,11 @@
     "@tiptap/extensions" "^3.17.0"
     "@tiptap/pm" "^3.17.0"
 
+"@tiptap/suggestion@^3.17.0":
+  version "3.17.0"
+  resolved "https://registry.yarnpkg.com/@tiptap/suggestion/-/suggestion-3.17.0.tgz#474c8aa8d441444ade4354f25db35caf12674024"
+  integrity sha512-e3UdftauhzO0CgW2Rqnm61z7U8mou//t+1AA4MyKfBmQrlQxDGMmsZTzvpLp6lMxGL3bsiJ9+n7REpRmHWxdrw==
+
 "@tybys/wasm-util@^0.10.0", "@tybys/wasm-util@^0.10.1":
   version "0.10.1"
   resolved "https://registry.yarnpkg.com/@tybys/wasm-util/-/wasm-util-0.10.1.tgz#ecddd3205cf1e2d5274649ff0eedd2991ed7f414"
