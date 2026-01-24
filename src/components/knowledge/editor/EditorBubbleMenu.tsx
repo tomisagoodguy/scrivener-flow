@@ -33,7 +33,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
     return (
         <BubbleMenu
             editor={editor}
-            tippyOptions={{ duration: 100 }}
+
             className="flex items-center gap-1 p-1 rounded-lg bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700"
         >
             {isLinkOpen ? (
