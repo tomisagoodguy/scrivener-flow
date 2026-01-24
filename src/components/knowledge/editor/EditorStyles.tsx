@@ -92,6 +92,7 @@ export function EditorStyles() {
             }
             
             /* Drag Handle Styles */
+            /* Drag Handle Styles */
             .drag-handle {
                 position: absolute;
                 width: 1.5rem;
@@ -102,26 +103,42 @@ export function EditorStyles() {
                 background-repeat: no-repeat;
                 background-position: center;
                 z-index: 50;
-                transition: all 0.2s;
-                opacity: 0.4; /* Slightly visible by default */
+                transition: opacity 0.2s, background-color 0.1s;
+                opacity: 0.2; /* Less visible by default to reduce noise */
                 border-radius: 4px;
                 left: 0.5rem; /* Position inside the block's new left padding */
             }
+            
+            /* Invisible hit area expansion */
+            .drag-handle::before {
+                content: "";
+                position: absolute;
+                top: -4px;
+                bottom: -4px;
+                left: -10px;    /* Extend left drastically */
+                right: -20px;   /* Extend right to touch text content */
+                z-index: -1;
+            }
+
             .drag-handle:hover, .drag-handle-active {
                 opacity: 1;
                 background-color: #f1f5f9;
-                stroke: #475569;
+                transition-delay: 0s; /* Instant show */
             }
+            
+            /* Only show full opacity when hovering the block or the handle itself */
+            .ProseMirror > *:hover .drag-handle,
+            .drag-handle:hover {
+                opacity: 1;
+            }
+
             .dark .drag-handle {
                  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='12' r='1'/%3E%3Ccircle cx='9' cy='5' r='1'/%3E%3Ccircle cx='9' cy='19' r='1'/%3E%3Ccircle cx='15' cy='12' r='1'/%3E%3Ccircle cx='15' cy='5' r='1'/%3E%3Ccircle cx='15' cy='19' r='1'/%3E%3C/svg%3E");
             }
             .dark .drag-handle:hover, .dark .drag-handle-active {
                 background-color: #1e293b;
             }
-            .ProseMirror:hover .drag-handle {
-                opacity: 0.6;
-            }
-            /* Ensure editor has room for the handle */
+
             /* Ensure editor has room for the handle */
             .ProseMirror {
                 /* Remove container padding to allow gutter hover to be part of the block */
@@ -132,6 +149,7 @@ export function EditorStyles() {
             .ProseMirror > * {
                 padding-left: 2.5rem;
                 margin-left: 0 !important;
+                position: relative; /* Needed for handle positioning context if changed */
             }
             /* Adjust lists specially since they have internal structure */
             .ProseMirror ul, .ProseMirror ol {
