@@ -21,6 +21,7 @@ import { uploadImageAndInsert } from './editor/useImageUpload';
 import { configureSlashCommand } from './editor/slash-command';
 
 import { EditorBubbleMenu } from './editor/EditorBubbleMenu';
+import { DragHandleMenu } from './editor/drag-handle/DragHandleMenu';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
 interface RichTextEditorProps {
@@ -112,6 +113,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
             />
             {editor && <EditorBubbleMenu editor={editor} />}
+            {editor && <DragHandleMenu editor={editor} />}
             <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
         </div>
     );
