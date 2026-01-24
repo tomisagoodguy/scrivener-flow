@@ -63,7 +63,7 @@ export default function NewCasePage() {
                 </div>
                 <div className="flex gap-4">
                     <label className="bg-primary hover:bg-primary-deep text-white px-4 py-2 rounded-full cursor-pointer transition-colors text-sm flex items-center gap-2 shadow-sm font-bold">
-                        <span>📄 讀取案件單 (.docx)</span>
+                        <span>📄 讀取多筆代書備忘錄(.docx)</span>
                         <input
                             type="file"
                             accept=".docx"

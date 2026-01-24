@@ -34,7 +34,10 @@ const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '�
 export function CaseTableRow({ caseData }: CaseTableRowProps) {
     const milestones = (caseData.milestones?.[0] || {}) as any;
     const financials = (caseData.financials?.[0] || {}) as any;
-    const allTasks = [...SIGNING_TODOS, ...TRANSFER_TODOS];
+    const allTasks = [
+        ...SIGNING_TODOS.map((t) => `S_${t}`),
+        ...TRANSFER_TODOS.map((t) => `T_${t}`),
+    ];
 
     return (
         <tr className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">

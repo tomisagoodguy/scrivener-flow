@@ -21,7 +21,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-bold text-primary border-l-4 border-primary pl-3">基本資料</h3>
                 <label className="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg cursor-pointer transition-all text-xs font-bold border border-primary/20">
-                    <span>📄 重新讀取案件單 (.docx)</span>
+                    <span>📄 重新讀取代書備忘錄(.docx)</span>
                     <input
                         type="file"
                         accept=".docx"
