@@ -89,6 +89,34 @@ export function EditorStyles() {
                 box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
                 margin: 1rem 0;
             }
+            /* Drag Handle Styles */
+            .drag-handle {
+                position: absolute;
+                width: 1.2rem;
+                height: 1.5rem;
+                cursor: grab;
+                background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16"><path fillOpacity="0.2" d="M4 10h2v2H4v-2zm0-4h2v2H4V6zm0-4h2v2H4V2z"/></svg>');
+                background-repeat: no-repeat;
+                background-size: contain;
+                z-index: 50;
+                transition: opacity 0.2s;
+                opacity: 0;
+                border-radius: 4px;
+            }
+            .drag-handle:hover, .drag-handle-active {
+                opacity: 1;
+                background-color: #f1f5f9;
+            }
+            .dark .drag-handle:hover, .dark .drag-handle-active {
+                background-color: #1e293b;
+            }
+            .ProseMirror:hover .drag-handle {
+                opacity: 0.5;
+            }
+            /* Indent content slightly to make room for handle */
+            .ProseMirror {
+                padding-left: 2rem !important; 
+            }
         `;
         document.head.appendChild(style);
         return () => {
