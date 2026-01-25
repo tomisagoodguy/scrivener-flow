@@ -9,10 +9,16 @@ from main import scan_image  # 重用之前的分析邏輯
 
 app = FastAPI(title="Identity Card OCR Service")
 
-# 1. 啟動時先初始化模型
-print("[系統] 正在啟動 OCR 常駐引擎 (2-CPU 並行優化版)...")
-# cpu_threads=1 配合多請求併發，能最大化利用 2 核心
-ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True, cpu_threads=1)
+# 1. 啟動時先初始化模型 (極度優化參數)
+print("[系統] 正在啟動 OCR 常駐引擎 (分身啟動中)...")
+ocr = PaddleOCR(
+    use_textline_orientation=True, 
+    use_angle_cls=False,         # 關閉角度分類加速
+    lang='ch', 
+    enable_mkldnn=True, 
+    cpu_threads=1,               # 每個分身佔 1 執行緒
+    det_limit_side_len=480       # 縮減檢測範圍
+)
 print("[系統] 引擎已就緒")
 
 @app.post("/identify")
@@ -54,5 +60,6 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    # 這裡埠號要對應 Dockerfile 和 Hugging Face 要求
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    # 這裡啟動 2 個 Workers，每個 Worker 會有獨立的 ocr 實例
+    # 剛好利用 2 個 CPU 核心與豐富的 16GB RAM
+    uvicorn.run("server:app", host="0.0.0.0", port=7860, workers=2)
