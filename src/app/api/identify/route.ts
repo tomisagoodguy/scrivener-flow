@@ -29,28 +29,31 @@ export async function POST(request: NextRequest) {
         const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL;
 
         if (OCR_SERVICE_URL) {
-            console.log(`[OCR] 偵測到雲端服務，正在請求: ${OCR_SERVICE_URL}`);
-            // --- 模式 A: 呼叫雲端 AI 伺服器 (快) ---
+            const targetUrl = OCR_SERVICE_URL.endsWith('/') ? OCR_SERVICE_URL.slice(0, -1) : OCR_SERVICE_URL;
+            console.log(`[OCR] 偵測到雲端服務，正在請求: ${targetUrl}/identify`);
+
             for (const file of files) {
                 const cloudFormData = new FormData();
                 cloudFormData.append('file', file);
 
                 try {
-                    const response = await fetch(`${OCR_SERVICE_URL}/identify`, {
+                    const response = await fetch(`${targetUrl}/identify`, {
                         method: 'POST',
                         body: cloudFormData,
                     });
 
                     if (response.ok) {
                         const result = await response.json();
+                        console.log(`[OCR] 雲端回應成功，取得 ${result.data?.length || 0} 筆資料`);
                         if (result.success && result.data) {
                             allParsedData.push(...result.data);
                         }
                     } else {
-                        console.error(`[OCR] 雲端辨識請求失敗，狀態碼: ${response.status}`);
+                        const errorText = await response.text();
+                        console.error(`[OCR] 雲端伺服器報錯 (${response.status}): ${errorText}`);
                     }
-                } catch (err) {
-                    console.error("[OCR] 雲端辨識網路請求失敗:", err);
+                } catch (err: any) {
+                    console.error("[OCR] 無法連線至雲端服務 (網路錯誤):", err.message);
                 }
             }
         } else {
