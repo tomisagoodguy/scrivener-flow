@@ -87,10 +87,10 @@ export default function IdentifyPage() {
         setResults(null);
 
         try {
-            // Resize & Enhance images before uploading (Smart Auto-Crop Enabled)
+            // Resize images before uploading (Back to Basic for stability)
             const processedFiles = await Promise.all(
                 files.map(file => file.type.startsWith('image/')
-                    ? resizeImage(file, { maxDimension: 1024, enhanceForOCR: true, autoCrop: true })
+                    ? resizeImage(file, { maxDimension: 1024 })
                     : file)
             );
 
