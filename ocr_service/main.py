@@ -282,9 +282,9 @@ def main():
 
     try:
         # 1. 初始化模型 (只做一次!) - 這是加速的關鍵
-        print("[系統] 正在初始化 OCR 模型 (請稍候)...")
+        print("[系統] 正在初始化 OCR 模型 (使用 MKLDNN 加速)...")
         # 修正: 移除不被支援的 show_log 參數
-        ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=False)
+        ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True)
         print("[系統] 模型初始化完成")
 
         # 2. 遍歷所有檔案並處理

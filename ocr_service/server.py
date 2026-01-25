@@ -10,8 +10,8 @@ from main import scan_image  # 重用之前的分析邏輯
 app = FastAPI(title="Identity Card OCR Service")
 
 # 1. 啟動時先初始化模型
-print("[系統] 正在啟動 OCR 常駐引擎...")
-ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=False)
+print("[系統] 正在啟動 OCR 常駐引擎 (已優化 MKLDNN 加速)...")
+ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True)
 print("[系統] 引擎已就緒")
 
 @app.post("/identify")
