@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { resizeImage } from '@/utils/imageUtils';
 
 type ParsedPerson = {
     name: string | null;
@@ -85,12 +86,17 @@ export default function IdentifyPage() {
         setError(null);
         setResults(null);
 
-        const formData = new FormData();
-        files.forEach(file => {
-            formData.append('file', file);
-        });
-
         try {
+            // Resize images before uploading
+            const processedFiles = await Promise.all(
+                files.map(file => file.type.startsWith('image/') ? resizeImage(file, 1024) : file)
+            );
+
+            const formData = new FormData();
+            processedFiles.forEach(file => {
+                formData.append('file', file);
+            });
+
             const response = await fetch('/api/identify', {
                 method: 'POST',
                 body: formData,

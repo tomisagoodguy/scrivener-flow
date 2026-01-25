@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { DriveFile, GoogleDriveService } from '@/lib/google/drive';
 import { Upload, File, CheckCircle2, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { resizeImage } from '@/utils/imageUtils';
 
 interface GoogleDriveUploadProps {
     caseId?: string;
@@ -18,11 +19,16 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+        let file = e.target.files?.[0];
         if (!file) return;
 
         setUploading(true);
         try {
+            // Resize images before uploading
+            if (file.type.startsWith('image/')) {
+                file = await resizeImage(file, 1024);
+            }
+
             const isSmallFile = file.size < 4 * 1024 * 1024; // 4MB Limit for Vercel Serverless
 
             if (isSmallFile) {

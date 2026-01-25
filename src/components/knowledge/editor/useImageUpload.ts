@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { toast } from 'sonner';
 import { uploadToDrive } from '@/app/actions/googleDrive';
+import { resizeImage } from '@/utils/imageUtils';
 
 export async function uploadImageAndInsert(file: File, editor: Editor | null) {
     if (!editor) return;
@@ -19,7 +20,12 @@ export async function uploadImageAndInsert(file: File, editor: Editor | null) {
     const toastId = toast.loading(`正在上傳 ${file.name}...`);
 
     try {
-        const result = await uploadToDrive(file, 'ScrivenerFlow_Attachments');
+        // Resize images if it's an image
+        const processedFile = file.type.startsWith('image/')
+            ? await resizeImage(file, 1024)
+            : file;
+
+        const result = await uploadToDrive(processedFile, 'ScrivenerFlow_Attachments');
 
         if (result.success && result.data) {
             const driveFile = result.data;
