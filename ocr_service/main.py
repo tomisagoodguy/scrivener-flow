@@ -1,6 +1,7 @@
 import cv2
 import sys
 import os
+import re
 from paddleocr import PaddleOCR
 
 # 設置 logger 級別以減少警告輸出
@@ -28,10 +29,8 @@ def scan_image(file_path: str, ocr_instance):
         try:
             import fitz  # PyMuPDF
             doc = fitz.open(file_path)
-            print(f"[PDF] 檔案共有 {len(doc)} 頁")
             
             for page_num, page in enumerate(doc):
-                print(f"[PDF] 正在掃描第 {page_num + 1} 頁 ...")
                 mat = fitz.Matrix(2, 2) 
                 pix = page.get_pixmap(matrix=mat)
                 
@@ -48,9 +47,6 @@ def scan_image(file_path: str, ocr_instance):
                 result = ocr_instance.ocr(img)
                 process_ocr_result(result, all_recognized_texts, page_index=page_num+1)
                 
-        except ImportError:
-            print("[錯誤] 尚未安裝 pymupdf")
-            return None
         except Exception as e:
             print(f"[錯誤] PDF 處理失敗: {e}")
             return None
@@ -77,34 +73,10 @@ def process_ocr_result(result, full_results_list, page_index=None):
     except ImportError:
         cc = None
 
-    # 遍歷每一頁的結果
     for i, page_data in enumerate(result):
         if not page_data: continue
         
-        # 新版 PaddleOCR 字典結構
-        if isinstance(page_data, dict):
-            texts = page_data.get('rec_texts', [])
-            scores = page_data.get('rec_scores', [])
-            boxes = page_data.get('det_polygons', []) # 嘗試取得座標
-            
-            # Fallback for boxes
-            if len(boxes) != len(texts):
-                boxes = [None] * len(texts)
-
-            for idx, (text, score, box) in enumerate(zip(texts, scores, boxes)):
-                if score > 0.5: # Lowered threshold
-                     # 簡轉繁
-                     if cc: text = cc.convert(text)
-                     
-                     full_results_list.append({
-                         "text": text,
-                         "score": score,
-                         "box": box,
-                         "page": page_index or 1
-                     })
-                     
-        elif isinstance(page_data, list):
-            # 標準結構 List of [box, (text, score)]
+        if isinstance(page_data, list):
             for idx, line in enumerate(page_data):
                 try:
                     if len(line) >= 2 and isinstance(line[1], (list, tuple)):
@@ -112,9 +84,11 @@ def process_ocr_result(result, full_results_list, page_index=None):
                         text = line[1][0]
                         confidence = line[1][1]
                         
-                        if confidence > 0.5: # Lowered threshold
-                            # 簡轉繁
+                        if confidence > 0.4: # 稍微調低門檻以備結構化修正
                             if cc: text = cc.convert(text)
+                            
+                            # 初步清洗文字
+                            text = text.replace(" ", "").replace("|", "").replace("!", "")
                             
                             full_results_list.append({
                                 "text": text,
@@ -122,29 +96,41 @@ def process_ocr_result(result, full_results_list, page_index=None):
                                 "box": box,
                                 "page": page_index or 1
                             })
-                except Exception as e:
-                    continue
-        else:
-             pass
+                except: continue
+
+def format_minguo_date(text):
+    """
+    智慧修正民國日期格式
+    """
+    # 嘗試提取數字
+    digits = re.findall(r'\d+', text)
+    if len(digits) >= 3:
+        year = digits[0]
+        month = digits[1]
+        day = digits[2]
+        return f"民國 {year} 年 {month} 月 {day} 日"
+    
+    # 如果只有年份或格式不全，嘗試正規表達式
+    match = re.search(r'(\d+)[年.\-/](\d+)[月.\-/](\d+)', text)
+    if match:
+        return f"民國 {match.group(1)} 年 {match.group(2)} 月 {match.group(3)} 日"
+        
+    return text
+
+def clean_address(text):
+    """
+    清理地址中的 OCR 雜訊
+    """
+    # 移除地址常見的 OCR 錯誤字
+    text = text.replace("住址", "").replace(";", "").replace(":", "").strip()
+    return text
 
 def analyze_file_data(file_path, full_results):
-    # 此函式原本是 analyze_and_save，現在改為只負責分析並回傳資料結構
-    # 不再直接寫檔，改由 main 統一收集後寫入或個別寫入
-    
-    # ... (原有分析邏輯保留，變數名稱微調) ...
-    # 為了節省 tokens 與修改幅度，我們保留原有的 analyze_and_save 邏輯，
-    # 但將其重構為 return data dict，而不是 print to console only.
-    
-    # 這裡直接複製原有核心邏輯，稍作去蕪存菁
-    
-    # ... (中間邏輯省略，直接重寫一個乾淨的版本) ...
-    
     found_names = []
     found_dobs = []
     found_id_numbers = []
     possible_addresses = []
     
-    # 暫存邏輯 (複製自之前的 analyze_and_save)
     num_texts = len(full_results)
     skip_indices = set()
     
@@ -154,176 +140,87 @@ def analyze_file_data(file_path, full_results):
         text = item['text']
         score = item.get('score', 0.0)
         
+        # 1. 識別姓名
         if "姓名" in text:
-            clean_name = text.replace("姓名", "").strip()
-            name_score = score
+            name_text = text.replace("姓名", "").strip()
+            # 如果姓名標籤後沒字，看下一行
+            if not name_text and i + 1 < num_texts:
+                next_item = full_results[i+1]
+                name_text = next_item['text']
+                skip_indices.add(i+1)
             
-            if not clean_name and i + 1 < num_texts:
-                 next_item = full_results[i+1]
-                 clean_name = next_item['text']
-                 name_score = (score + next_item.get('score', 0)) / 2
-                 skip_indices.add(i+1)
-            elif i + 1 < num_texts:
-                 next_item = full_results[i+1]
-                 if len(next_item['text']) <= 3 and not any(k in next_item['text'] for k in ["出生", "性別", "身分"]):
-                     clean_name += next_item['text']
-                     name_score = (score + next_item.get('score', 0)) / 2
-                     skip_indices.add(i+1)
-            found_names.append({"text": clean_name.replace(" ", ""), "index": i, "score": name_score})
+            # 過濾掉可能的身分證標號或是其他標籤
+            if name_text and len(name_text) <= 4 and not any(k in name_text for k in ["出生", "性別", "統一"]):
+                found_names.append({"text": name_text, "score": score})
             
-        if "民國" in text and ("年" in text or "月" in text):
+        # 2. 識別生日 (民國格式)
+        if ("民國" in text and "年" in text) or re.search(r'\d{2,3}年\d{1,2}月', text):
             if "發證" not in text and "初發" not in text:
-                clean_dob = text.replace("出生", "").replace("年月日", "").strip()
-                found_dobs.append({"text": clean_dob, "index": i, "score": score})
+                formatted_dob = format_minguo_date(text.replace("出生", "").replace("日期", ""))
+                found_dobs.append({"text": formatted_dob, "score": score})
                 
-        if len(text) >= 10:
-            clean_text_id = text.replace(" ", "").upper()
-            if len(clean_text_id) == 10 and clean_text_id[0].isalpha() and clean_text_id[1:].isdigit():
-                found_id_numbers.append({"text": clean_text_id, "index": i, "score": score})
+        # 3. 識別身分證號
+        id_match = re.search(r'[A-Z][12]\d{8}', text.upper())
+        if id_match:
+            found_id_numbers.append({"text": id_match.group(0), "score": score})
             
+        # 4. 識別住址
         if "住址" in text:
-            clean_addr = text.replace("住址", "").strip()
-            addr_scores = [score]
-            
+            addr_text = clean_address(text)
+            # 如果地址行沒結束，繼續往後抓直到遇到其他欄位
             curr_idx = i + 1
             while curr_idx < num_texts:
                 next_item = full_results[curr_idx]
                 next_text = next_item['text']
-                next_text_clean = next_text.replace(" ", "").upper()
+                if any(k in next_text for k in ["姓名", "出生", "編號", "配偶", "父母"]): break
+                if re.search(r'[A-Z][12]\d{8}', next_text.upper()): break
                 
-                # Stop conditions
-                if any(k in next_text for k in ["姓名", "出生", "性別", "統一編號", "父母", "配偶", "役別"]): break
-                if len(next_text_clean) == 10 and next_text_clean[0].isalpha() and next_text_clean[1:].isdigit(): break
-                if next_text_clean.isdigit() and len(next_text_clean) > 6: break
-                
-                address_keywords = ["縣", "市", "區", "鄉", "鎮", "村", "里", "裏", "鄰", "路", "街", "段", "巷", "弄", "號", "樓", "室", "之", "F", "f", "B1"]
-                if not any(k in next_text for k in address_keywords): break
-                
-                clean_addr += next_text
-                addr_scores.append(next_item.get('score', 0))
+                addr_text += next_text
                 skip_indices.add(curr_idx)
                 curr_idx += 1
-            
-            avg_addr_score = sum(addr_scores) / len(addr_scores) if addr_scores else 0
-            possible_addresses.append({"text": clean_addr, "index": i, "score": avg_addr_score})
+            possible_addresses.append({"text": addr_text, "score": score})
 
-    # 組合
-    extracted_people = []
+    # 組合資料
+    results = []
     
-    # 策略: 以 ID 為主
-    used_addresses = set()
+    # 只要有抓到任何資訊就組合
+    main_name = found_names[0]['text'] if found_names else None
+    main_dob = found_dobs[0]['text'] if found_dobs else None
+    main_id = found_id_numbers[0]['text'] if found_id_numbers else None
+    main_addr = possible_addresses[0]['text'] if possible_addresses else None
     
-    for id_info in found_id_numbers:
-        person = {
-            "id_number": id_info['text'], 
-            "name": None, 
-            "dob": None, 
-            "address": None,
-            "confidence": 0.0
-        }
-        id_idx = id_info['index']
-        
-        scores = [id_info.get('score', 0)]
-        
-        # 配對姓名
-        min_dist = float('inf')
-        for name_info in found_names:
-            dist = id_idx - name_info['index']
-            if 0 < dist < min_dist:
-                min_dist = dist
-                person['name'] = name_info['text']
-                scores.append(name_info.get('score', 0))
-        
-        # 配對生日
-        min_dist = float('inf')
-        for dob_info in found_dobs:
-            dist = id_idx - dob_info['index']
-            if 0 < dist < min_dist:
-                min_dist = dist
-                person['dob'] = dob_info['text']
-                scores.append(dob_info.get('score', 0))
-        
-        # 配對住址 (只取最近的)
-        min_dist_abs = float('inf')
-        best_addr_idx = -1
-        
-        for idx, addr_info in enumerate(possible_addresses):
-            dist = abs(id_idx - addr_info['index'])
-            if dist < min_dist_abs:
-                min_dist_abs = dist
-                person['address'] = addr_info['text']
-                best_addr_score = addr_info.get('score', 0)
-                best_addr_idx = idx
-        
-        if best_addr_idx != -1:
-            used_addresses.add(best_addr_idx)
-            scores.append(possible_addresses[best_addr_idx].get('score', 0))
-            
-        # 計算平均信心度
-        person['confidence'] = round(sum(scores) / len(scores), 2)
-            
-        extracted_people.append(person)
+    if main_name or main_dob or main_id or main_addr:
+        results.append({
+            "name": main_name,
+            "dob": main_dob,
+            "id_number": main_id,
+            "address": main_addr,
+            "confidence": 0.85 # 基本信心度
+        })
 
-    # 補漏: 只有住址的 (反面)
-    for idx, addr_info in enumerate(possible_addresses):
-        if idx not in used_addresses:
-            extracted_people.append({
-                "name": None, "dob": None, "id_number": None, 
-                "address": addr_info['text'],
-                "confidence": round(addr_info.get('score', 0), 2)
-            })
-
-    return extracted_people
+    return results
 
 def main():
     if len(sys.argv) < 2:
-        print("請提供至少一個圖片或 PDF 路徑作為參數")
         return
 
     try:
-        # 1. 初始化模型 (只做一次!) - 這是加速的關鍵
-        print("[系統] 正在初始化 OCR 模型 (使用 MKLDNN 加速)...")
-        # 修正: 移除不被支援的 show_log 參數
-        ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True)
-        print("[系統] 模型初始化完成")
+        # 這裡的啟動參數會被 server.py 覆蓋，但保留 CLI 模式的加速
+        ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True, use_angle_cls=False)
 
-        # 2. 遍歷所有檔案並處理
-        input_files = sys.argv[1:]
-        import json
-        
-        for file_path in input_files:
-            if not os.path.exists(file_path): 
-                continue
-                
-            print(f"\n>> 開始處理: {os.path.basename(file_path)}")
-            base_name = os.path.basename(file_path)
-            json_filename = f"ocr_result_{base_name}.json"
+        for file_path in sys.argv[1:]:
+            if not os.path.exists(file_path): continue
+            parsed_data = scan_image(file_path, ocr)
             
-            try:
-                # 呼叫 scan_image (傳入 ocr 實例)
-                parsed_people = scan_image(file_path, ocr)
-                
-                # 如果 scan_image 回傳 None (失敗)，給空陣列
-                if parsed_people is None:
-                    parsed_people = []
-                
-                output_data = {
-                    "file": file_path,
-                    "parsed_data": parsed_people
-                }
-                
-                with open(json_filename, 'w', encoding='utf-8') as f:
-                    json.dump(output_data, f, ensure_ascii=False, indent=2)
-                print(f"[系統] 儲存結果: {json_filename}")
-                
-            except Exception as e:
-                print(f"[錯誤] 處理檔案 {file_path} 時發生例外: {e}")
-                # 發生錯誤也要寫一個空的 JSON，避免 API 讀不到檔而報錯
-                with open(json_filename, 'w', encoding='utf-8') as f:
-                    json.dump({"file": file_path, "parsed_data": [], "error": str(e)}, f)
+            # 輸出 JSON
+            import json
+            output = {"file": file_path, "parsed_data": parsed_data}
+            base_name = os.path.basename(file_path)
+            with open(f"ocr_result_{base_name}.json", 'w', encoding='utf-8') as f:
+                json.dump(output, f, ensure_ascii=False, indent=2)
                     
-    except Exception as ie:
-        print(f"[系統] 致命錯誤: {ie}")
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
