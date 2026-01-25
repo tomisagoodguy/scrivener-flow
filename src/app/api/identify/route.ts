@@ -30,27 +30,44 @@ export async function POST(request: NextRequest) {
 
         if (OCR_SERVICE_URL) {
             const targetUrl = OCR_SERVICE_URL.endsWith('/') ? OCR_SERVICE_URL.slice(0, -1) : OCR_SERVICE_URL;
-            console.log(`[OCR] 偵測到雲端服務，啟動並行辨識模式...`);
+            console.log(`[OCR] 偵測到雲端服務，啟動 2-核心併發節流模式...`);
 
-            const uploadPromises = files.map(async (file) => {
-                const cloudFormData = new FormData();
-                cloudFormData.append('file', file);
-                try {
-                    const response = await fetch(`${targetUrl}/identify`, {
-                        method: 'POST',
-                        body: cloudFormData,
-                    });
-                    if (response.ok) {
-                        const result = await response.json();
-                        return result.success && result.data ? result.data : [];
-                    }
-                } catch (err: any) {
-                    console.error("[OCR] 單一檔案辨識失敗:", err.message);
+            // --- 併發節流控制器 (Concurrency: 2) ---
+            const CONCURRENCY_LIMIT = 2; // 對應 2 CPU
+            const resultsArray: any[][] = [];
+            const queue = [...files];
+
+            async function processQueue() {
+                const workers = [];
+                for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
+                    workers.push((async () => {
+                        while (queue.length > 0) {
+                            const file = queue.shift();
+                            if (!file) break;
+
+                            const cloudFormData = new FormData();
+                            cloudFormData.append('file', file);
+                            try {
+                                const response = await fetch(`${targetUrl}/identify`, {
+                                    method: 'POST',
+                                    body: cloudFormData,
+                                });
+                                if (response.ok) {
+                                    const result = await response.json();
+                                    if (result.success && result.data) {
+                                        resultsArray.push(result.data);
+                                    }
+                                }
+                            } catch (err: any) {
+                                console.error("[OCR] 單一請求失敗:", err.message);
+                            }
+                        }
+                    })());
                 }
-                return [];
-            });
+                await Promise.all(workers);
+            }
 
-            const resultsArray = await Promise.all(uploadPromises);
+            await processQueue();
             resultsArray.forEach(res => allParsedData.push(...res));
         } else {
             console.log("[OCR] 使用地端 CLI 辨識模式 (開發模式)");
