@@ -39,6 +39,8 @@ export default function IdentifyPage() {
     // Progress state
     const [progress, setProgress] = useState(0);
     const [stageText, setStageText] = useState('');
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [finalDuration, setFinalDuration] = useState<number | null>(null);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (acceptedFiles?.length > 0) {
@@ -48,25 +50,40 @@ export default function IdentifyPage() {
         }
     }, []);
 
-    // Simulated progress timer
+    // Simulated progress timer & Real clock
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let stageInterval: NodeJS.Timeout;
+        let clockInterval: NodeJS.Timeout;
+
         if (isUploading) {
+            setElapsedTime(0);
+            setFinalDuration(null);
+
+            // 1. Loading Stages
             let currentStage = 0;
             setProgress(LOADING_STAGES[0].progress);
             setStageText(LOADING_STAGES[0].text);
 
-            interval = setInterval(() => {
+            stageInterval = setInterval(() => {
                 currentStage++;
                 if (currentStage < LOADING_STAGES.length) {
                     setProgress(LOADING_STAGES[currentStage].progress);
                     setStageText(LOADING_STAGES[currentStage].text);
                 }
-            }, 3000); // Advance stage every 3 seconds
+            }, 3000);
+
+            // 2. Real-time Clock
+            const start = Date.now();
+            clockInterval = setInterval(() => {
+                setElapsedTime(Math.floor((Date.now() - start) / 1000));
+            }, 100);
         } else {
             setProgress(0);
         }
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(stageInterval);
+            clearInterval(clockInterval);
+        };
     }, [isUploading]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -85,9 +102,10 @@ export default function IdentifyPage() {
         setIsUploading(true);
         setError(null);
         setResults(null);
+        const uploadStart = Date.now();
 
         try {
-            // Resize images before uploading (Back to Basic for stability)
+            // ... (keep previous resize logic)
             const processedFiles = await Promise.all(
                 files.map(file => file.type.startsWith('image/')
                     ? resizeImage(file, { maxDimension: 1024 })
@@ -112,6 +130,7 @@ export default function IdentifyPage() {
             const data = await response.json();
             if (data.success && data.data) {
                 setResults(data.data);
+                setFinalDuration((Date.now() - uploadStart) / 1000);
             } else {
                 throw new Error('Invalid response format');
             }
@@ -199,7 +218,10 @@ export default function IdentifyPage() {
                                 <div className="w-full mt-6 space-y-2">
                                     <div className="flex justify-between text-xs font-bold text-blue-600 dark:text-blue-400 px-1">
                                         <span className="animate-pulse">{stageText}</span>
-                                        <span>{progress}%</span>
+                                        <div className="flex gap-3">
+                                            <span>⏱️ {elapsedTime}s</span>
+                                            <span>{progress}%</span>
+                                        </div>
                                     </div>
                                     <div className="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                         <div
@@ -257,6 +279,11 @@ export default function IdentifyPage() {
                             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
                                 辨識結果 ({results.length} 筆)
                             </h2>
+                            {finalDuration && (
+                                <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+                                    ⚡ 總耗時: {finalDuration.toFixed(1)} 秒
+                                </span>
+                            )}
                         </div>
 
                         {results.map((person, index) => {
