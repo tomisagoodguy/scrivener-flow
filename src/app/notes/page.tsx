@@ -5,8 +5,11 @@ import { supabase } from '@/lib/supabaseClient';
 import RichTextEditor from '@/components/knowledge/RichTextEditor';
 
 // Helper to strip HTML for preview
-const stripHtml = (html: string) => {
+const stripHtml = (html: string | any) => {
     if (!html) return '';
+    if (typeof html !== 'string') {
+        return '...';
+    }
     return html.replace(/<[^>]*>?/gm, '');
 };
 

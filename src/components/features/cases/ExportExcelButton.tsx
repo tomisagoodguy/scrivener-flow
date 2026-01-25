@@ -74,13 +74,38 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
 
                 const formatMoney = (val?: number) => (val ? val / 10000 : '');
 
-                let todoStr = '';
-                if (c.todos && typeof c.todos === 'object') {
-                    todoStr = Object.entries(c.todos)
-                        .filter(([_, done]) => !done)
-                        .map(([key]) => key)
-                        .join(', ');
-                }
+                const SIGNING_TODOS = [
+                    '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀印鑑',
+                    '授權', '解約排除', '規費', '設定', '稅單', '差額', '整過戶',
+                ];
+                const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥'];
+
+                const allStandardTasks = [
+                    ...SIGNING_TODOS.map((t) => `S_${t}`),
+                    ...TRANSFER_TODOS.map((t) => `T_${t}`),
+                ];
+
+                const existingTodos = (c.todos && typeof c.todos === 'object') ? (c.todos as Record<string, boolean>) : {};
+
+                // 1. Get all standard tasks that are NOT finished (i.e. not true)
+                const pendingStandard = allStandardTasks.filter(t => existingTodos[t] !== true);
+
+                // 2. Get all custom tasks (keys in existingTodos that are not standard) that are NOT finished
+                const pendingCustom = Object.keys(existingTodos).filter(key => {
+                    // Must not be a standard task
+                    if (allStandardTasks.includes(key)) return false;
+                    // Must be pending (false or undefined)
+                    if (existingTodos[key] === true) return false;
+                    // Must not be numeric (matching UI logic)
+                    if (!isNaN(Number(key))) return false;
+                    return true;
+                });
+
+                // 3. Combine and format
+                const allPending = [...pendingStandard, ...pendingCustom];
+                const todoStr = allPending
+                    .map(task => task.replace(/^(S_|T_)/, ''))
+                    .join(', ');
 
                 return {
                     case_number: c.case_number,
