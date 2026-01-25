@@ -20,9 +20,9 @@ export async function uploadImageAndInsert(file: File, editor: Editor | null) {
     const toastId = toast.loading(`正在上傳 ${file.name}...`);
 
     try {
-        // Resize images if it's an image
+        // Resize images if it's an image (WebP is default)
         const processedFile = file.type.startsWith('image/')
-            ? await resizeImage(file, 1024)
+            ? await resizeImage(file, { maxDimension: 1024 })
             : file;
 
         const result = await uploadToDrive(processedFile, 'ScrivenerFlow_Attachments');

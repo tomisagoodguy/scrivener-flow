@@ -24,9 +24,9 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
         setUploading(true);
         try {
-            // Resize images before uploading
+            // Resize images before uploading (WebP is default)
             if (file.type.startsWith('image/')) {
-                file = await resizeImage(file, 1024);
+                file = await resizeImage(file, { maxDimension: 1024 });
             }
 
             const isSmallFile = file.size < 4 * 1024 * 1024; // 4MB Limit for Vercel Serverless

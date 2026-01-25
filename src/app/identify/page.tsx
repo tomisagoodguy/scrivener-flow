@@ -87,9 +87,11 @@ export default function IdentifyPage() {
         setResults(null);
 
         try {
-            // Resize images before uploading
+            // Resize & Enhance images before uploading
             const processedFiles = await Promise.all(
-                files.map(file => file.type.startsWith('image/') ? resizeImage(file, 1024) : file)
+                files.map(file => file.type.startsWith('image/')
+                    ? resizeImage(file, { maxDimension: 1024, enhanceForOCR: true })
+                    : file)
             );
 
             const formData = new FormData();
