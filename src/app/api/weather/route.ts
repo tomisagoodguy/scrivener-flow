@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
     try {
         const res = await fetch(
-            'https://api.open-meteo.com/v1/forecast?latitude=25.0330&longitude=121.5654&current_weather=true',
+            'https://api.open-meteo.com/v1/forecast?latitude=25.0934&longitude=121.5242&current_weather=true',
             { next: { revalidate: 1800 } } // Cache for 30 minutes
         );
 

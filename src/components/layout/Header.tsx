@@ -7,12 +7,13 @@ import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { useWeather } from '@/hooks/useWeather';
 
+import { WeatherAnimation } from './WeatherAnimation';
+
 export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
     const weather = useWeather();
-
     useEffect(() => {
         setSearchTerm(searchParams.get('q') || '');
     }, [searchParams]);
@@ -56,8 +57,11 @@ export default function Header() {
         <>
             <header className="sticky top-0 z-50 w-full backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 relative overflow-hidden">
                 {/* Ambient Weather Background */}
-                <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${weather ? weather.bg : 'from-white to-slate-50'} transition-all duration-1000`} />
-                <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/80" />
+                <div className={`absolute inset-0 opacity-20 bg-gradient-to-r ${weather ? weather.bg : 'from-white to-slate-50'} transition-all duration-1000`} />
+                <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/70" />
+
+                {/* Weather Animation Layer */}
+                <WeatherAnimation />
 
                 <div className="relative z-10 max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4 md:gap-6">
@@ -94,7 +98,7 @@ export default function Header() {
                                     <span className="text-xl animate-pulse-slow">{weather.icon}</span>
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest leading-tight">
-                                            Taipei
+                                            士林區
                                         </span>
                                         <span className="text-[10px] font-bold text-slate-400 leading-tight">
                                             {weather.temp}°C {weather.label}
