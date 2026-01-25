@@ -31,80 +31,121 @@ export async function POST(request: NextRequest) {
             const fileName = `upload_${uniqueSuffix}_${originalName}`;
             const tempFilePath = path.join(tempDir, fileName);
 
-            await writeFile(tempFilePath, buffer);
-            tempFilePaths.push(tempFilePath);
+            // --- 核心邏輯：決定使用雲端還是地端辨識 ---
+            const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL;
 
-            // Python script naming convention for output: ocr_result_<filename>.json
-            const jsonFileName = `ocr_result_${fileName}.json`;
-            resultJsonPaths.push(path.join(ocrServiceDir, jsonFileName));
-        }
+            if (OCR_SERVICE_URL) {
+                console.log(`[OCR] 偵測到雲端服務，正在請求: ${OCR_SERVICE_URL}`);
+                // 模式 A: 呼叫雲端 AI 伺服器 (快)
+                for (const file of files) {
+                    const cloudFormData = new FormData();
+                    cloudFormData.append('file', file);
 
-        console.log(`[OCR API] Saved ${tempFilePaths.length} files. Starting Batch Processing...`);
+                    try {
+                        const response = await fetch(`${OCR_SERVICE_URL}/identify`, {
+                            method: 'POST',
+                            body: cloudFormData,
+                        });
 
-        // 2. Normalize all paths for command line
-        // Join with space, wrap each in quotes
-        const args = tempFilePaths.map(p => `"${p.split(path.sep).join('/')}"`).join(' ');
-
-        // 3. Execute Python script with ALL file paths
-        // Command: uv run main.py "file1" "file2" ...
-        const command = `uv run main.py ${args}`;
-
-        console.log(`[OCR API] Executing Batch Command: ${command}`);
-
-        try {
-            const { stdout, stderr } = await execAsync(command, {
-                cwd: ocrServiceDir,
-                env: {
-                    ...process.env,
-                    PYTHONIOENCODING: 'utf-8',
-                    DISABLE_MODEL_SOURCE_CHECK: 'True'
-                },
-                timeout: 120000 // Increase timeout for batch
-            });
-            console.log('[OCR API] Batch Stdout:', stdout.substring(0, 500) + '...');
-            if (stderr) console.error('[OCR API] Batch Stderr:', stderr.substring(0, 500) + '...');
-        } catch (error: any) {
-            console.error('[OCR API] Batch Execution Error:', error);
-            // Don't throw, check for results
-        }
-
-        // 4. Collect Results
-        let allParsedData: any[] = [];
-
-        for (const jsonPath of resultJsonPaths) {
-            try {
-                // Check exist and read
-                await stat(jsonPath);
-                const rawData = await readFile(jsonPath, 'utf-8');
-                if (rawData && rawData.trim() !== '') {
-                    const data = JSON.parse(rawData);
-                    if (data.parsed_data) {
-                        allParsedData = [...allParsedData, ...data.parsed_data];
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.success) {
+                                allParsedData.push(...result.data);
+                            }
+                        } else {
+                            console.error(`[OCR] 雲端辨識請求失敗，狀態碼: ${response.status}`);
+                            const errorText = await response.text();
+                            console.error(`[OCR] 錯誤詳情: ${errorText}`);
+                        }
+                    } catch (err) {
+                        console.error("[OCR] 雲端辨識請求失敗:", err);
                     }
                 }
-            } catch (e) {
-                console.warn(`[OCR API] Could not read result for ${jsonPath}`);
+            } else {
+                console.log("[OCR] 使用地端 CLI 辨識模式 (開發模式)");
+                // 模式 B: 原有的地端 Python CLI 模式 (穩)
+
+                // 1. Save all files to temp
+                for (const file of files) {
+                    const buffer = Buffer.from(await file.arrayBuffer());
+                    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_'); // Sanitize
+                    const fileName = `upload_${uniqueSuffix}_${originalName}`;
+                    const tempFilePath = path.join(tempDir, fileName);
+
+                    await writeFile(tempFilePath, buffer);
+                    tempFilePaths.push(tempFilePath);
+
+                    // Python script naming convention for output: ocr_result_<filename>.json
+                    const jsonFileName = `ocr_result_${fileName}.json`;
+                    resultJsonPaths.push(path.join(ocrServiceDir, jsonFileName));
+                }
+
+                console.log(`[OCR API] Saved ${tempFilePaths.length} files. Starting Batch Processing...`);
+
+                // 2. Normalize all paths for command line
+                // Join with space, wrap each in quotes
+                const args = tempFilePaths.map(p => `"${p.split(path.sep).join('/')}"`).join(' ');
+
+                // 3. Execute Python script with ALL file paths
+                // Command: uv run main.py "file1" "file2" ...
+                const command = `uv run main.py ${args}`;
+
+                console.log(`[OCR API] Executing Batch Command: ${command}`);
+
+                try {
+                    const { stdout, stderr } = await execAsync(command, {
+                        cwd: ocrServiceDir,
+                        env: {
+                            ...process.env,
+                            PYTHONIOENCODING: 'utf-8',
+                            DISABLE_MODEL_SOURCE_CHECK: 'True'
+                        },
+                        timeout: 120000 // Increase timeout for batch
+                    });
+                    console.log('[OCR API] Batch Stdout:', stdout.substring(0, 500) + '...');
+                    if (stderr) console.error('[OCR API] Batch Stderr:', stderr.substring(0, 500) + '...');
+                } catch (error: any) {
+                    console.error('[OCR API] Batch Execution Error:', error);
+                    // Don't throw, check for results
+                }
+
+                // 4. Collect Results
+                for (const jsonPath of resultJsonPaths) {
+                    try {
+                        // Check exist and read
+                        await stat(jsonPath);
+                        const rawData = await readFile(jsonPath, 'utf-8');
+                        if (rawData && rawData.trim() !== '') {
+                            const data = JSON.parse(rawData);
+                            if (data.parsed_data) {
+                                allParsedData = [...allParsedData, ...data.parsed_data];
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`[OCR API] Could not read result for ${jsonPath}`);
+                    }
+                }
+            }
+
+            console.log(`[OCR API] Batch processing complete. Total people found: ${allParsedData.length}`);
+
+            return NextResponse.json({
+                success: true,
+                data: allParsedData
+            });
+
+        } catch (error: any) {
+            console.error('[OCR API] Fatal Handler Error:', error);
+            return NextResponse.json({
+                error: 'Internal Server Error',
+                message: error.message
+            }, { status: 500 });
+        } finally {
+            // Cleanup all temp files
+            const allPathsToDelete = [...tempFilePaths, ...resultJsonPaths];
+            for (const p of allPathsToDelete) {
+                try { await unlink(p); } catch (e) { }
             }
         }
-
-        console.log(`[OCR API] Batch processing complete. Total people found: ${allParsedData.length}`);
-
-        return NextResponse.json({
-            success: true,
-            data: allParsedData
-        });
-
-    } catch (error: any) {
-        console.error('[OCR API] Fatal Handler Error:', error);
-        return NextResponse.json({
-            error: 'Internal Server Error',
-            message: error.message
-        }, { status: 500 });
-    } finally {
-        // Cleanup all temp files
-        const allPathsToDelete = [...tempFilePaths, ...resultJsonPaths];
-        for (const p of allPathsToDelete) {
-            try { await unlink(p); } catch (e) { }
-        }
     }
-}

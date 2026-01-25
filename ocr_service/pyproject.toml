@@ -10,4 +10,6 @@ dependencies = [
     "paddleocr>=3.3.3",
     "paddlepaddle>=3.3.0",
     "pymupdf>=1.26.7",
+    "fastapi",
+    "uvicorn",
 ]
