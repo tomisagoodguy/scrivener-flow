@@ -78,6 +78,22 @@ export function ModernLogin() {
                     transition={{ duration: 0.8 }}
                     className="flex-1 flex flex-col items-start text-left space-y-10"
                 >
+                    {/* Sad Cat Mascot */}
+                    <div className="relative">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur opacity-25 animate-pulse"></div>
+                        <div className="relative w-40 md:w-48 rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300 bg-white">
+                            {/* Standard HTML img tag for local assets in public folder usually works easier without imports if public path is correct */}
+                            <img
+                                src="/login-cat.png"
+                                alt="Monday Mood"
+                                className="w-full h-auto block"
+                            />
+                        </div>
+                        <div className="absolute -bottom-3 -right-2 bg-white px-3 py-1 rounded-full shadow-lg border border-slate-100 transform rotate-6 z-10">
+                            <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">今日值日生</span>
+                        </div>
+                    </div>
+
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-full">
                         <Sparkles className="w-3 h-3 text-blue-600" />
                         <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Next-Gen Legal Platform</span>
