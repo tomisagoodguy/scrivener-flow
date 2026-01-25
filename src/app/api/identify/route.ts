@@ -30,32 +30,28 @@ export async function POST(request: NextRequest) {
 
         if (OCR_SERVICE_URL) {
             const targetUrl = OCR_SERVICE_URL.endsWith('/') ? OCR_SERVICE_URL.slice(0, -1) : OCR_SERVICE_URL;
-            console.log(`[OCR] 偵測到雲端服務，正在請求: ${targetUrl}/identify`);
+            console.log(`[OCR] 偵測到雲端服務，啟動並行辨識模式...`);
 
-            for (const file of files) {
+            const uploadPromises = files.map(async (file) => {
                 const cloudFormData = new FormData();
                 cloudFormData.append('file', file);
-
                 try {
                     const response = await fetch(`${targetUrl}/identify`, {
                         method: 'POST',
                         body: cloudFormData,
                     });
-
                     if (response.ok) {
                         const result = await response.json();
-                        console.log(`[OCR] 雲端回應成功，取得 ${result.data?.length || 0} 筆資料`);
-                        if (result.success && result.data) {
-                            allParsedData.push(...result.data);
-                        }
-                    } else {
-                        const errorText = await response.text();
-                        console.error(`[OCR] 雲端伺服器報錯 (${response.status}): ${errorText}`);
+                        return result.success && result.data ? result.data : [];
                     }
                 } catch (err: any) {
-                    console.error("[OCR] 無法連線至雲端服務 (網路錯誤):", err.message);
+                    console.error("[OCR] 單一檔案辨識失敗:", err.message);
                 }
-            }
+                return [];
+            });
+
+            const resultsArray = await Promise.all(uploadPromises);
+            resultsArray.forEach(res => allParsedData.push(...res));
         } else {
             console.log("[OCR] 使用地端 CLI 辨識模式 (開發模式)");
             // --- 模式 B: 地端 Python CLI 模式 ---

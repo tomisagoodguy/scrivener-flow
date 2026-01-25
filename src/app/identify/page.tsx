@@ -105,10 +105,10 @@ export default function IdentifyPage() {
         const uploadStart = Date.now();
 
         try {
-            // ... (keep previous resize logic)
+            // Resize images before uploading (800px is sweet spot for 2-CPU OCR)
             const processedFiles = await Promise.all(
                 files.map(file => file.type.startsWith('image/')
-                    ? resizeImage(file, { maxDimension: 1024 })
+                    ? resizeImage(file, { maxDimension: 800 })
                     : file)
             );
 

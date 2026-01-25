@@ -47,10 +47,10 @@ export async function resizeImage(
         const ctx = canvas.getContext('2d');
         if (!ctx) return file;
 
-        let { width, height } = image;
+        const { width, height } = image;
 
         // 裁切座標 (預設全圖)
-        let cropCoords = { x: 0, y: 0, w: width, h: height };
+        const cropCoords = { x: 0, y: 0, w: width, h: height };
 
         // 如果開啟自動裁切且圖夠大，執行簡單分析
         if (autoCrop && width > 400 && height > 400) {

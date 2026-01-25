@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { DriveFile, GoogleDriveService } from '@/lib/google/drive';
-import { Upload, File, CheckCircle2, Loader2, ExternalLink, Trash2 } from 'lucide-react';
+import { Upload, File, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { resizeImage } from '@/utils/imageUtils';
 
