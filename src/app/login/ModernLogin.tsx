@@ -79,9 +79,9 @@ export function ModernLogin() {
                     className="flex-1 flex flex-col items-start text-left space-y-10"
                 >
                     {/* Sad Cat Mascot */}
-                    <div className="relative">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur opacity-25 animate-pulse"></div>
-                        <div className="relative w-40 md:w-48 rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300 bg-white">
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-25 animate-pulse"></div>
+                        <div className="relative w-56 md:w-64 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300 bg-white">
                             {/* Standard HTML img tag for local assets in public folder usually works easier without imports if public path is correct */}
                             <img
                                 src="/login-cat.png"
@@ -89,8 +89,8 @@ export function ModernLogin() {
                                 className="w-full h-auto block"
                             />
                         </div>
-                        <div className="absolute -bottom-3 -right-2 bg-white px-3 py-1 rounded-full shadow-lg border border-slate-100 transform rotate-6 z-10">
-                            <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">今日值日生</span>
+                        <div className="absolute -bottom-3 -right-2 bg-white px-4 py-1.5 rounded-full shadow-lg border border-slate-100 transform rotate-6 z-10 transition-transform group-hover:rotate-0">
+                            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">今日值日生</span>
                         </div>
                     </div>
 

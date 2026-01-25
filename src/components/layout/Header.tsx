@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FC, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
+import { useWeather } from '@/hooks/useWeather';
 
 export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
+    const weather = useWeather();
 
     useEffect(() => {
         setSearchTerm(searchParams.get('q') || '');
@@ -23,15 +25,6 @@ export default function Header() {
         return () => clearInterval(timer);
     }, []);
 
-    const getGreeting = (h: number) => {
-        if (h < 5) return '😴 熬夜修仙中...';
-        if (h < 9) return '🥯 早安！吃早餐沒？';
-        if (h < 12) return '☕ 精神百倍 衝衝衝';
-        if (h < 14) return '🍱 吃飽睡 睡飽吃';
-        if (h < 18) return '🔥 燃燒小宇宙';
-        if (h < 22) return '🌆 下班還不走？';
-        return '🍺 先喝一杯再說';
-    };
 
     const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -61,8 +54,12 @@ export default function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300">
-                <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+            <header className="sticky top-0 z-50 w-full backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 relative overflow-hidden">
+                {/* Ambient Weather Background */}
+                <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${weather ? weather.bg : 'from-white to-slate-50'} transition-all duration-1000`} />
+                <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/80" />
+
+                <div className="relative z-10 max-w-[1600px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4 md:gap-6">
                         {/* Mobile Menu Trigger */}
                         <button
@@ -71,15 +68,6 @@ export default function Header() {
                         >
                             <span className="text-xl">☰</span>
                         </button>
-
-                        <Link href="/" className="flex flex-col hover:opacity-80 transition-opacity">
-                            <h1 className="text-lg md:text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                                地政長工
-                            </h1>
-                            <p className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-black text-slate-500/80 dark:text-slate-400/80">
-                                Scrivener Flow
-                            </p>
-                        </Link>
                     </div>
 
                     {/* Desktop Navigation */}
@@ -96,19 +84,32 @@ export default function Header() {
                         ))}
                     </nav>
 
-                    {/* Live Clock Widget - Integrated in Flow */}
+                    {/* Live Clock & Weather Widget */}
                     {now && (
-                        <div className="hidden 2xl:flex items-center gap-3 px-4 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 mx-auto select-none hover:bg-white dark:hover:bg-slate-800 transition-colors shadow-sm">
-                            <div className="text-xl font-black font-mono text-blue-600 dark:text-blue-400 tracking-widest tabular-nums">
+                        <div className="hidden 2xl:flex items-center gap-3 px-4 py-1.5 bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 mx-auto select-none hover:bg-white/80 dark:hover:bg-slate-800 transition-colors shadow-sm backdrop-blur-sm">
+
+                            {/* Weather Icon (if loaded) */}
+                            {weather && (
+                                <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-700">
+                                    <span className="text-xl animate-pulse-slow">{weather.icon}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest leading-tight">
+                                            Taipei
+                                        </span>
+                                        <span className="text-[10px] font-bold text-slate-400 leading-tight">
+                                            {weather.temp}°C {weather.label}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="text-xl font-black font-mono text-blue-600 dark:text-blue-400 tracking-widest tabular-nums pl-1">
                                 {format(now, 'HH:mm')}
                             </div>
                             <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
                                     {format(now, 'MM/dd EEEE', { locale: zhTW })}
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400 leading-tight">
-                                    {getGreeting(now.getHours())}
                                 </span>
                             </div>
                         </div>
@@ -207,4 +208,4 @@ export default function Header() {
             )}
         </>
     );
-};
+}
