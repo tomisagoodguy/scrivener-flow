@@ -164,19 +164,36 @@ def analyze_file_data(file_path, full_results):
         if id_match:
             found_id_numbers.append({"text": id_match.group(0), "score": score})
             
-        # 4. 識別住址
+        # 4. 識別住址 (精確結尾模式)
         if "住址" in text:
             addr_text = clean_address(text)
-            # 如果地址行沒結束，繼續往後抓直到遇到其他欄位
+            
+            # 如果這一行已經包含「號」或「樓」，可能已經結束
+            if any(end_key in addr_text for end_key in ["號", "樓", "室", "F", "f"]):
+                possible_addresses.append({"text": addr_text, "score": score})
+                continue
+
+            # 如果沒結束，繼續往後抓，直到遇到結尾關鍵字或下一個欄位標籤
             curr_idx = i + 1
+            address_keywords = ["縣", "市", "區", "鄉", "鎮", "村", "里", "鄰", "路", "街", "段", "巷", "弄", "之"]
             while curr_idx < num_texts:
                 next_item = full_results[curr_idx]
-                next_text = next_item['text']
-                if any(k in next_text for k in ["姓名", "出生", "編號", "配偶", "父母"]): break
-                if re.search(r'[A-Z][12]\d{8}', next_text.upper()): break
+                next_text = next_item['text'].replace(" ", "")
                 
-                addr_text += next_text
-                skip_indices.add(curr_idx)
+                # 如果遇到其他欄位標籤，強制停止
+                if any(k in next_text for k in ["姓名", "出生", "編號", "配偶", "父母"]): break
+                
+                # 只有包含地址關鍵字或是純數字(可能是號碼)才繼續
+                if any(k in next_text for k in address_keywords) or next_text.isdigit() or "-" in next_text:
+                    addr_text += next_text
+                    skip_indices.add(curr_idx)
+                    
+                    # 關鍵：如果這行出現了結尾字，抓完這行就收工
+                    if any(end_key in next_text for end_key in ["號", "樓", "室", "F", "f"]):
+                        break
+                else:
+                    # 不符合地址特徵，停止
+                    break
                 curr_idx += 1
             possible_addresses.append({"text": addr_text, "score": score})
 
