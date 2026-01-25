@@ -10,12 +10,13 @@ from main import scan_image  # 重用之前的分析邏輯
 app = FastAPI(title="Identity Card OCR Service")
 
 # 1. 啟動時先初始化模型
-print("[系統] 正在啟動 OCR 常駐引擎 (已優化 MKLDNN 加速)...")
-ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True)
+print("[系統] 正在啟動 OCR 常駐引擎 (2-CPU 並行優化版)...")
+# cpu_threads=1 配合多請求併發，能最大化利用 2 核心
+ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True, cpu_threads=1)
 print("[系統] 引擎已就緒")
 
 @app.post("/identify")
-async def identify_id_cards(file: UploadFile = File(...)):
+def identify_id_cards(file: UploadFile = File(...)):
     # 使用系統 /tmp 目錄 (Hugging Face 確保可寫)
     temp_dir = "/tmp/temp_uploads"
     os.makedirs(temp_dir, exist_ok=True)
