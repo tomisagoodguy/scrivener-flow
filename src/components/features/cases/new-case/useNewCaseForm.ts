@@ -177,6 +177,7 @@ export function useNewCaseForm() {
             total_price: data.total_price ? Number(data.total_price) : null,
             buyer_bank: data.buyer_loan_bank || null,
             seller_bank: data.seller_loan_bank || null,
+            seller_redemption_amount: data.seller_redemption_amount ? Number(data.seller_redemption_amount) : null,
         };
 
         const { data: existingFin } = await supabase.from('financials').select('id').eq('case_id', targetCase.id).maybeSingle();

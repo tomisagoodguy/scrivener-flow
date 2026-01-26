@@ -52,6 +52,7 @@ export function useDocxUpload(
                     agent_phone: parsedData.agent_phone || prev.agent_phone,
                     escrow_account: parsedData.escrow_account || prev.escrow_account,
                     seller_loan_bank: parsedData.seller_loan_bank || prev.seller_loan_bank,
+                    seller_redemption_amount: parsedData.seller_redemption_amount?.toString() || prev.seller_redemption_amount,
                     total_price: parsedData.total_price?.toString() || prev.total_price,
 
                     contract_date: parsedData.contract_date || prev.contract_date,

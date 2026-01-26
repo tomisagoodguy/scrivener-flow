@@ -127,15 +127,29 @@ export function BasicInfoSection({
                         placeholder="請輸入或選取..."
                     />
                 </div>
-                <div className="space-y-2">
-                    <label className="text-sm text-orange-600 font-bold">賣方代償銀行</label>
-                    <input
-                        name="seller_loan_bank"
-                        type="text"
-                        className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                        value={formData.seller_loan_bank}
-                        onChange={handleChange}
-                    />
+                <div className="space-y-2 col-span-1">
+                    <label className="text-sm text-orange-600 font-bold">賣方代償銀行 & 設定金額</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            name="seller_loan_bank"
+                            type="text"
+                            placeholder="銀行名稱"
+                            className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                            value={formData.seller_loan_bank}
+                            onChange={handleChange}
+                        />
+                        <div className="relative">
+                            <input
+                                name="seller_redemption_amount"
+                                type="text"
+                                placeholder="設定額 (萬)"
+                                className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold pr-8"
+                                value={formData.seller_redemption_amount}
+                                onChange={handleChange}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-foreground/50 font-bold">萬</span>
+                        </div>
+                    </div>
                 </div>
                 <div className="space-y-2">
                     <label className="text-sm text-orange-600 font-bold">塗銷方式</label>

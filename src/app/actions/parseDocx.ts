@@ -13,7 +13,8 @@ interface ParsedCaseData {
     agent_name?: string;
     agent_phone?: string;
     escrow_account?: string;
-    seller_loan_bank?: string; // 新增欄位
+    seller_loan_bank?: string;
+    seller_redemption_amount?: number; // 新增設定金額欄位
     total_price?: number;
 
     contract_date?: string;
@@ -421,18 +422,18 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
         }
 
         if (foundBank || foundRedemptionAmount > 0) {
-            // Format: "Bank Name $Amount萬" or just Bank / Amount
-            // Field mapping: We map to 'seller_loan_bank' (text input)
-            // We can combine them or just put the bank. User requested "賣方代償銀行"
-            // Usually the user puts "BankName" in the input, amount might go to notes/financials?
-            // Let's combine them for now so user sees both: "玉山銀行 (設定600萬)"
-            let resultStr = foundBank;
-            if (foundRedemptionAmount > 0) {
-                resultStr += ` (設定${foundRedemptionAmount}萬)`;
+            // Format: Split into Bank and Amount
+            // Field mapping: 
+            // - seller_loan_bank: Bank Name
+            // - seller_redemption_amount: Amount
+
+            if (foundBank) {
+                parsedData.seller_loan_bank = foundBank.trim();
             }
-            parsedData.seller_loan_bank = resultStr.trim();
-            // We could also add a semantic field later if needed
-            // parsedData.redemption_amount = foundRedemptionAmount; 
+
+            if (foundRedemptionAmount > 0) {
+                parsedData.seller_redemption_amount = foundRedemptionAmount;
+            }
         }
 
         return parsedData;

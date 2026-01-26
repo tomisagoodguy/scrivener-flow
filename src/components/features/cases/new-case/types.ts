@@ -11,6 +11,7 @@ export interface CaseFormData {
     tax_type: string;
     buyer_loan_bank: string;
     seller_loan_bank: string;
+    seller_redemption_amount: string; // 設定金額
     cancellation_type: string;
     escrow_account: string;
     buyer_name: string;
@@ -48,6 +49,7 @@ export const initialFormData: CaseFormData = {
     tax_type: '一般',
     buyer_loan_bank: '',
     seller_loan_bank: '',
+    seller_redemption_amount: '',
     cancellation_type: '代書塗銷',
     escrow_account: '',
     buyer_name: '',

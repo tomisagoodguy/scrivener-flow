@@ -117,14 +117,27 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                         placeholder="請輸入或從下方選取..."
                     />
                 </div>
-                <div className="space-y-1">
-                    <label className="text-xs font-bold text-orange-600 uppercase">賣方代償銀行</label>
-                    <input
-                        name="seller_loan_bank"
-                        defaultValue={financials?.seller_bank}
-                        type="text"
-                        className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all font-bold"
-                    />
+                <div className="space-y-1 col-span-1">
+                    <label className="text-xs font-bold text-orange-600 uppercase">賣方代償銀行 & 設定金額</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            name="seller_loan_bank"
+                            defaultValue={financials?.seller_bank}
+                            type="text"
+                            placeholder="銀行名稱"
+                            className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all font-bold"
+                        />
+                        <div className="relative">
+                            <input
+                                name="seller_redemption_amount"
+                                defaultValue={financials?.seller_redemption_amount}
+                                type="text"
+                                placeholder="設定額"
+                                className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all font-bold pr-8"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-foreground/50 font-bold">萬</span>
+                        </div>
+                    </div>
                 </div>
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-orange-600 uppercase">塗銷方式</label>
