@@ -1,0 +1,12 @@
+{
+  "file": "id_test.pdf",
+  "parsed_data": [
+    {
+      "name": "崔",
+      "dob": "民國 54 年 4 月 19 日",
+      "id_number": "F222115624",
+      "address": null,
+      "confidence": 0.85
+    }
+  ]
+}

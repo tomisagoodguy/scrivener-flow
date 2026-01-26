@@ -7,24 +7,26 @@ from paddleocr import PaddleOCR
 import json
 from main import scan_image  # 重用之前的分析邏輯
 
+import tempfile
+
 app = FastAPI(title="Identity Card OCR Service")
 
-# 1. 啟動時先初始化模型 (極度優化參數)
-print("[系統] 正在啟動 OCR 常駐引擎 (分身啟動中)...")
+# 1. 啟動時先初始化模型 (使用更穩定的參數)
+print("[系統] 正在啟動 OCR 常駐引擎...")
 ocr = PaddleOCR(
-    use_textline_orientation=True, 
-    use_angle_cls=True,          # 修正: 啟用角度分類以識別歪斜照片
+    use_textline_orientation=True,  # 使用新參數處理方向
+    # use_angle_cls=True,        # 已棄用且與 use_textline_orientation 互斥
     lang='ch', 
-    enable_mkldnn=True, 
-    cpu_threads=1,               # 每個分身佔 1 執行緒
-    det_limit_side_len=480       # 縮減檢測範圍
+    enable_mkldnn=False,         # 關閉 mkldnn 以避免 Windows 相容性問題
+    cpu_threads=4,               # 提高執行緒數以利用效能
+    det_limit_side_len=960       # 恢復標準檢測範圍
 )
 print("[系統] 引擎已就緒")
 
 @app.post("/identify")
 def identify_id_cards(file: UploadFile = File(...)):
-    # 使用系統 /tmp 目錄 (Hugging Face 確保可寫)
-    temp_dir = "/tmp/temp_uploads"
+    # 使用系統暫存目錄 (跨平台相容)
+    temp_dir = os.path.join(tempfile.gettempdir(), "ocr_uploads")
     os.makedirs(temp_dir, exist_ok=True)
     
     file_path = os.path.join(temp_dir, f"{uuid.uuid4()}_{file.filename}")
@@ -60,6 +62,5 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    # 這裡啟動 2 個 Workers，每個 Worker 會有獨立的 ocr 實例
-    # 剛好利用 2 個 CPU 核心與豐富的 16GB RAM
-    uvicorn.run("server:app", host="0.0.0.0", port=7860, workers=2)
+    # Windows 下建議 workers=1 避免多行程模型載入衝突，或需確保記憶體充足
+    uvicorn.run("server:app", host="0.0.0.0", port=7860, workers=1)

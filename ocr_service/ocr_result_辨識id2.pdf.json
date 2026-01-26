@@ -1,0 +1,12 @@
+{
+  "file": "辨識id2.pdf",
+  "parsed_data": [
+    {
+      "name": "張秀珠",
+      "dob": "民國 51 年 4 月 5 日",
+      "id_number": "A222236169",
+      "address": null,
+      "confidence": 0.85
+    }
+  ]
+}

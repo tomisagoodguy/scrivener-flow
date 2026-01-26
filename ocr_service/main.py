@@ -44,6 +44,7 @@ def scan_image(file_path: str, ocr_instance):
                 else: # Grayscale
                     img = img_data
 
+                print(f"[Debug] Page {page_num+1} Image Shape: {img.shape}")
                 result = ocr_instance.ocr(img)
                 process_ocr_result(result, all_recognized_texts, page_index=page_num+1)
                 
@@ -60,6 +61,9 @@ def scan_image(file_path: str, ocr_instance):
             return None
 
     # Analyze specifically for this file
+    print(f"[Debug] Found {len(all_recognized_texts)} text blocks in {os.path.basename(file_path)}")
+    if len(all_recognized_texts) > 0:
+        print(f"[Debug] First 5 blocks: {[t['text'] for t in all_recognized_texts[:5]]}")
     return analyze_file_data(file_path, all_recognized_texts)
 
 def process_ocr_result(result, full_results_list, page_index=None):
@@ -76,6 +80,7 @@ def process_ocr_result(result, full_results_list, page_index=None):
     for i, page_data in enumerate(result):
         if not page_data: continue
         
+        # 🟢 CASE 1: Standard PaddleOCR format (List of Lists)
         if isinstance(page_data, list):
             for idx, line in enumerate(page_data):
                 try:
@@ -84,19 +89,56 @@ def process_ocr_result(result, full_results_list, page_index=None):
                         text = line[1][0]
                         confidence = line[1][1]
                         
-                        if confidence > 0.4: # 稍微調低門檻以備結構化修正
-                            if cc: text = cc.convert(text)
-                            
-                            # 初步清洗文字
-                            text = text.replace(" ", "").replace("|", "").replace("!", "")
-                            
-                            full_results_list.append({
-                                "text": text,
-                                "score": confidence,
-                                "box": box,
-                                "page": page_index or 1
-                            })
+                        _append_text_result(full_results_list, text, confidence, box, page_index, cc)
                 except: continue
+
+        # 🟢 CASE 2: New PaddleX/OCRResult format (Dict-like object)
+        # Check for dict-like behavior and specific keys
+        elif hasattr(page_data, 'keys') or isinstance(page_data, dict):
+            try:
+                # Convert to dict if it's a custom object but subscriptable
+                data_dict = page_data
+                if not isinstance(page_data, dict) and hasattr(page_data, '__dict__'):
+                   data_dict = page_data.__dict__
+                
+                # Try to find keys for boxes, text, scores
+                boxes = None
+                texts = None
+                scores = None
+
+                # Common key variations
+                keys = data_dict.keys() if hasattr(data_dict, 'keys') else []
+                
+                if 'rec_boxes' in str(keys) or 'dt_boxes' in str(keys):
+                     boxes = data_dict.get('rec_boxes') if 'rec_boxes' in keys else data_dict.get('dt_boxes')
+                
+                if 'rec_text' in str(keys) or 'rec_texts' in str(keys):
+                     texts = data_dict.get('rec_text') if 'rec_text' in keys else data_dict.get('rec_texts')
+
+                if 'rec_score' in str(keys) or 'rec_scores' in str(keys):
+                     scores = data_dict.get('rec_score') if 'rec_score' in keys else data_dict.get('rec_scores')
+
+                if boxes is not None and texts is not None:
+                    count = len(boxes)
+                    for k in range(count):
+                        box = boxes[k]
+                        text = texts[k]
+                        score = scores[k] if scores is not None and k < len(scores) else 0.99
+                        _append_text_result(full_results_list, text, score, box, page_index, cc)
+            except Exception as e:
+                print(f"[Warning] Failed to parse OCRResult object: {e}")
+                continue
+
+def _append_text_result(full_results_list, text, confidence, box, page_index, cc):
+    if confidence > 0.4: 
+        if cc: text = cc.convert(text)
+        text = text.replace(" ", "").replace("|", "").replace("!", "")
+        full_results_list.append({
+            "text": text,
+            "score": confidence,
+            "box": box,
+            "page": page_index or 1
+        })
 
 def format_minguo_date(text):
     """
@@ -234,8 +276,13 @@ def main():
 
     try:
         # 這裡的啟動參數會被 server.py 覆蓋，但保留 CLI 模式的加速
-        # 使用者回報照片有歪斜，開啟 use_angle_cls=True
-        ocr = PaddleOCR(use_textline_orientation=True, use_angle_cls=True, lang='ch', enable_mkldnn=True)
+        # 注意: use_angle_cls 與 use_textline_orientation 互斥
+        ocr = PaddleOCR(
+            use_textline_orientation=True, 
+            lang='ch', 
+            enable_mkldnn=False, 
+            det_limit_side_len=960
+        )
 
         for file_path in sys.argv[1:]:
             if not os.path.exists(file_path): continue
