@@ -155,8 +155,10 @@ def analyze_file_data(file_path, full_results):
             
         # 2. 識別生日 (民國格式)
         if ("民國" in text and "年" in text) or re.search(r'\d{2,3}年\d{1,2}月', text):
-            if "發證" not in text and "初發" not in text:
-                formatted_dob = format_minguo_date(text.replace("出生", "").replace("日期", ""))
+            # 排除發證日期相關關鍵字
+            if not any(k in text for k in ["發證", "初發", "補發", "換發"]):
+                raw_dob = text.replace("出生", "").replace("日期", "")
+                formatted_dob = format_minguo_date(raw_dob)
                 found_dobs.append({"text": formatted_dob, "score": score})
                 
         # 3. 識別身分證號
@@ -164,38 +166,36 @@ def analyze_file_data(file_path, full_results):
         if id_match:
             found_id_numbers.append({"text": id_match.group(0), "score": score})
             
-        # 4. 識別住址 (精確結尾模式)
+        # 4. 識別住址 (支援多行目前針對 身分證 背面)
+        # 邏輯: 第一行通常到 <鄰> 或 <段>，第二行到 <號> 或 <樓>
         if "住址" in text:
             addr_text = clean_address(text)
             
-            # 如果這一行已經包含「號」或「樓」，可能已經結束
-            if any(end_key in addr_text for end_key in ["號", "樓", "室", "F", "f"]):
-                possible_addresses.append({"text": addr_text, "score": score})
-                continue
-
-            # 如果沒結束，繼續往後抓，直到遇到結尾關鍵字或下一個欄位標籤
+            # 檢查是否需要換行合併
+            # 如果這行以 "鄰" 結尾，或者包含 "縣/市" 但沒結束
+            needs_merge = False
+            if "鄰" in addr_text and not any(k in addr_text for k in ["號", "樓", "F", "f"]):
+                needs_merge = True
+            
             curr_idx = i + 1
-            address_keywords = ["縣", "市", "區", "鄉", "鎮", "村", "里", "鄰", "路", "街", "段", "巷", "弄", "之"]
-            while curr_idx < num_texts:
-                next_item = full_results[curr_idx]
-                next_text = next_item['text'].replace(" ", "")
-                
-                # 如果遇到其他欄位標籤，強制停止
-                if any(k in next_text for k in ["姓名", "出生", "編號", "配偶", "父母"]): break
-                
-                # 只有包含地址關鍵字或是純數字(可能是號碼)才繼續
-                if any(k in next_text for k in address_keywords) or next_text.isdigit() or "-" in next_text:
-                    addr_text += next_text
-                    skip_indices.add(curr_idx)
-                    
-                    # 關鍵：如果這行出現了結尾字，抓完這行就收工
-                    if any(end_key in next_text for end_key in ["號", "樓", "室", "F", "f"]):
-                        break
-                else:
-                    # 不符合地址特徵，停止
-                    break
-                curr_idx += 1
-            possible_addresses.append({"text": addr_text, "score": score})
+            if needs_merge and curr_idx < num_texts:
+                 next_item = full_results[curr_idx]
+                 next_text = next_item['text'].replace(" ", "")
+                 # 簡單防呆: 下一行不能是其他欄位
+                 if not any(k in next_text for k in ["姓名", "出生", "編號", "配偶", "父母"]):
+                     addr_text += next_text
+                     skip_indices.add(curr_idx)
+
+            # 最終檢查: 住址必須以 <號> 或 <樓> 或 <室> 結尾才算完整
+            # 稍微放寬: 有包含 "號" 就算抓到了
+            if any(end_key in addr_text for end_key in ["號", "樓", "室", "F", "f"]):
+                 # 去除可能的雜訊 (例如郵遞區號 3+2 碼在前面)
+                 # 簡單做: 抓取 "縣" 或 "市" 開頭的部分 (粗略)
+                 match_start = re.search(r'(.{0,3}[縣市].+)', addr_text)
+                 if match_start:
+                     addr_text = match_start.group(1)
+                 
+                 possible_addresses.append({"text": addr_text, "score": score})
 
     # 組合資料
     results = []
@@ -204,7 +204,8 @@ def analyze_file_data(file_path, full_results):
     main_name = found_names[0]['text'] if found_names else None
     main_dob = found_dobs[0]['text'] if found_dobs else None
     main_id = found_id_numbers[0]['text'] if found_id_numbers else None
-    main_addr = possible_addresses[0]['text'] if possible_addresses else None
+    # 取最長的地址當作最佳解
+    main_addr = sorted(possible_addresses, key=lambda x: len(x['text']), reverse=True)[0]['text'] if possible_addresses else None
     
     if main_name or main_dob or main_id or main_addr:
         results.append({
@@ -212,7 +213,7 @@ def analyze_file_data(file_path, full_results):
             "dob": main_dob,
             "id_number": main_id,
             "address": main_addr,
-            "confidence": 0.85 # 基本信心度
+            "confidence": 0.85 
         })
 
     return results
@@ -223,7 +224,8 @@ def main():
 
     try:
         # 這裡的啟動參數會被 server.py 覆蓋，但保留 CLI 模式的加速
-        ocr = PaddleOCR(use_textline_orientation=True, lang='ch', enable_mkldnn=True, use_angle_cls=False)
+        # 使用者回報照片有歪斜，開啟 use_angle_cls=True
+        ocr = PaddleOCR(use_textline_orientation=True, use_angle_cls=True, lang='ch', enable_mkldnn=True)
 
         for file_path in sys.argv[1:]:
             if not os.path.exists(file_path): continue

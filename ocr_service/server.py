@@ -13,7 +13,7 @@ app = FastAPI(title="Identity Card OCR Service")
 print("[系統] 正在啟動 OCR 常駐引擎 (分身啟動中)...")
 ocr = PaddleOCR(
     use_textline_orientation=True, 
-    use_angle_cls=False,         # 關閉角度分類加速
+    use_angle_cls=True,          # 修正: 啟用角度分類以識別歪斜照片
     lang='ch', 
     enable_mkldnn=True, 
     cpu_threads=1,               # 每個分身佔 1 執行緒

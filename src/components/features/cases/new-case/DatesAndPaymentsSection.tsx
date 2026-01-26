@@ -42,12 +42,13 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                     <div className="p-3 bg-amber-500/5 rounded-xl border border-dashed border-amber-500/30 space-y-3">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-amber-600 uppercase">補差額日</label>
-                            <input
-                                name="sign_diff_date"
-                                type="date"
-                                className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
-                                value={formData.sign_diff_date}
-                                onChange={handleChange}
+                            name="sign_diff_date"
+                            type="number"
+                            step="1"
+                            placeholder="找補天數 (例如: 3)"
+                            className="w-full bg-background/50 border border-border rounded-xl px-4 py-3.5 text-[11px] text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                            value={formData.sign_diff_date}
+                            onChange={handleChange}
                             />
                         </div>
                         <div className="space-y-1">
