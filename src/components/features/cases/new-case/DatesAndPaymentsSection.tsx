@@ -41,7 +41,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                     </div>
                     <div className="p-3 bg-amber-500/5 rounded-xl border border-dashed border-amber-500/30 space-y-3">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-amber-600 uppercase">補差額日</label>
+                            <label className="text-[10px] font-bold text-amber-600 uppercase">補差額 (天數)</label>
                             name="sign_diff_date"
                             type="number"
                             step="1"

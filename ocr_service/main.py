@@ -187,14 +187,24 @@ def analyze_file_data(file_path, full_results):
                      skip_indices.add(curr_idx)
 
             # 最終檢查: 住址必須以 <號> 或 <樓> 或 <室> 結尾才算完整
-            # 稍微放寬: 有包含 "號" 就算抓到了
-            if any(end_key in addr_text for end_key in ["號", "樓", "室", "F", "f"]):
+            # 根據規則：住址最後一個字一定是 <號> 或 <樓> (或 F/室)
+            valid_endings = ["號", "樓", "室", "F", "f"]
+            if any(end_key in addr_text for end_key in valid_endings):
                  # 去除可能的雜訊 (例如郵遞區號 3+2 碼在前面)
-                 # 簡單做: 抓取 "縣" 或 "市" 開頭的部分 (粗略)
                  match_start = re.search(r'(.{0,3}[縣市].+)', addr_text)
                  if match_start:
                      addr_text = match_start.group(1)
                  
+                 # 強制截斷於最後一個有效結尾字元
+                 last_idx = -1
+                 for k in valid_endings:
+                     idx = addr_text.rfind(k)
+                     if idx > last_idx:
+                         last_idx = idx
+                         
+                 if last_idx != -1:
+                     addr_text = addr_text[:last_idx+1]
+
                  possible_addresses.append({"text": addr_text, "score": score})
 
     # 組合資料
