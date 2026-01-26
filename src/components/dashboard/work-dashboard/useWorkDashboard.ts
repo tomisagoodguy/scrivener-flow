@@ -122,7 +122,15 @@ export function useWorkDashboard() {
         const channel = supabase.channel('dashboard_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTasks)
             .subscribe();
-        return () => { supabase.removeChannel(channel); };
+
+        // 監聽跨元件同步事件
+        const handleSync = () => fetchTasks();
+        window.addEventListener('todo-updated', handleSync);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('todo-updated', handleSync);
+        };
     }, [fetchTasks]);
 
     /**
@@ -136,6 +144,9 @@ export function useWorkDashboard() {
                 .eq('id', taskId);
             if (error) throw error;
             setTasks(prev => prev.filter(t => t.id !== taskId));
+
+            // 觸發跨元件同步
+            window.dispatchEvent(new CustomEvent('todo-updated'));
         } catch (err) {
             console.error('Failed to complete task:', err);
         }

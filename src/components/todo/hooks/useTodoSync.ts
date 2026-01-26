@@ -65,7 +65,15 @@ export function useTodoSync() {
         const channel = supabase.channel('todos-main-sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => fetchAndSyncTodos())
             .subscribe();
-        return () => { supabase.removeChannel(channel); };
+
+        // 跨元件同步
+        const handleSync = () => fetchAndSyncTodos();
+        window.addEventListener('todo-updated', handleSync);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('todo-updated', handleSync);
+        };
     }, [fetchAndSyncTodos]);
 
     const toggleTask = async (id: string) => {
@@ -74,12 +82,14 @@ export function useTodoSync() {
         const newVal = !task.isCompleted;
         setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, isCompleted: newVal } : t)));
         await supabase.from('todos').update({ is_completed: newVal }).eq('id', id);
+        window.dispatchEvent(new CustomEvent('todo-updated'));
     };
 
     const deleteTodo = async (id: string) => {
         setTasks((prev) => prev.filter((t) => t.id !== id));
         const { error } = await supabase.from('todos').update({ is_deleted: true }).eq('id', id);
         if (error) await supabase.from('todos').delete().eq('id', id);
+        window.dispatchEvent(new CustomEvent('todo-updated'));
     };
 
     const addManualTodo = async (content: string, dueDate: string) => {
@@ -96,7 +106,10 @@ export function useTodoSync() {
             source_type: 'manual',
         }]).select().single();
 
-        if (data && !error) fetchAndSyncTodos();
+        if (data && !error) {
+            fetchAndSyncTodos();
+            window.dispatchEvent(new CustomEvent('todo-updated'));
+        }
     };
 
     return { tasks, loading, toggleTask, deleteTodo, addManualTodo, refreshTodos: fetchAndSyncTodos };
