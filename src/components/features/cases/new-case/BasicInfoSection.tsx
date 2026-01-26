@@ -144,7 +144,7 @@ export function BasicInfoSection({
                                 type="text"
                                 placeholder="設定額 (萬)"
                                 className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3.5 text-foreground focus:ring-2 focus:ring-primary/20 transition-all font-bold pr-8"
-                                value={formData.seller_redemption_amount}
+                                value={formData.seller_redemption_amount || ''}
                                 onChange={handleChange}
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-foreground/50 font-bold">萬</span>
