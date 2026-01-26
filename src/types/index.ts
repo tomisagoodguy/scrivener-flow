@@ -100,7 +100,7 @@ export interface DemoCase {
 
     has_keyed_overtime: boolean; // 加班費申報狀態
     todos?: Record<string, boolean>; // 固定代辦事項
-    cancellation_type?: '代書塗銷' | '賣方自辦' | '無'; // 塗銷方式
+    cancellation_type?: string; // 塗銷方式 (now supports custom values)
     tax_type?: '一般' | '自用'; // 增值稅類型 (稅單性質)
     is_on_hold?: boolean;
     on_hold_reason?: string;
