@@ -23,8 +23,8 @@ export const PipelineStatus: React.FC<PipelineStatusProps> = ({ initialData }) =
     ];
 
     return (
-        <div className="bg-secondary/30 border border-border-color rounded-2xl p-6 mb-8">
-            <div className="flex justify-between items-center mb-6">
+        <div className="bg-secondary/30 border border-border-color rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-black text-foreground/60 flex items-center gap-2 tracking-widest uppercase">
                     <Flag className="w-4 h-4 text-primary" /> 案件流程進度 (Pipeline Status)
                 </h3>

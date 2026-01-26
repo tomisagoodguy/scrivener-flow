@@ -397,7 +397,7 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
 
                     // B. Extract Bank Name
                     // Exclude keywords
-                    const isKeyword = ['清', '償', '代償', '設定額', '私人', '二胎', 'OK', '異常', '塗銷', '方式'].some(k => part.includes(k));
+                    const isKeyword = ['清', '償', '代償', '設定額', '私人', '二胎', 'OK', '異常', '塗銷', '方式', '用印', '提醒'].some(k => part.includes(k));
                     const cleanPart = part.replace(/[^\w\u4e00-\u9fa5]/g, ''); // Remove punctuation
 
                     if (!isKeyword && cleanPart.length > 2) {
@@ -421,19 +421,12 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
             }
         }
 
-        if (foundBank || foundRedemptionAmount > 0) {
-            // Format: Split into Bank and Amount
-            // Field mapping: 
-            // - seller_loan_bank: Bank Name
-            // - seller_redemption_amount: Amount
-
+        // Only populate if we found a valid amount (as requested by user)
+        if (foundRedemptionAmount > 0) {
             if (foundBank) {
                 parsedData.seller_loan_bank = foundBank.trim();
             }
-
-            if (foundRedemptionAmount > 0) {
-                parsedData.seller_redemption_amount = foundRedemptionAmount;
-            }
+            parsedData.seller_redemption_amount = foundRedemptionAmount;
         }
 
         return parsedData;

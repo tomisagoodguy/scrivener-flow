@@ -57,7 +57,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
     return (
         <form
             onSubmit={handleSubmit}
-            className="bg-card glass-card p-8 rounded shadow-sm animate-slide-up space-y-8 border border-card-border"
+            className="bg-card glass-card p-5 rounded shadow-sm animate-slide-up space-y-5 border border-card-border"
         >
             {/* 錯誤與狀態提示區 */}
             {(errorMsg || loading) && (

@@ -24,7 +24,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
     cancellationType
 }) => {
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                     <h4 className="text-sm font-bold text-rose-500">⚠️ 應注意 (Attention)</h4>

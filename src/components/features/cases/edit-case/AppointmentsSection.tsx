@@ -9,14 +9,14 @@ interface AppointmentsSectionProps {
 
 export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milestones }) => {
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
             <h3 className="text-lg font-bold text-indigo-600 border-l-4 border-indigo-500 pl-3">
                 與客戶約定時間 (Appointments)
             </h3>
             <p className="text-xs text-foreground/50">
                 請設定與客戶見面的具體時間 (精確到分)，系統將於前 3 天提醒。
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-indigo-600">用印約定</label>
                     <input

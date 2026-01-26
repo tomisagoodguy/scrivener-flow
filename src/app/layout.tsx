@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         <div className="min-h-screen bg-slate-50 flex transition-colors duration-500">
                             <Toaster richColors position="top-center" />
                             <SideNav />
-                            <main className="flex-1 lg:pl-32 min-h-screen relative">
+                            <main className="flex-1 lg:pl-[108px] min-h-screen relative">
                                 {/* Decorative Background Elements */}
                                 <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse-slow"></div>
                                 <div
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                                 >
                                     <Header />
                                 </Suspense>
-                                <div className="max-w-[1600px] mx-auto p-4 md:p-8 animate-fade-in relative z-10">
+                                <div className="w-full pr-4 md:pr-8 py-4 md:py-6 animate-fade-in relative z-10">
                                     {children}
                                 </div>
                             </main>
