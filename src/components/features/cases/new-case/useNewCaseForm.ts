@@ -54,7 +54,7 @@ export function useNewCaseForm() {
     };
 
     /**
-     * 檢查案號是否重複
+     * 檢查案號是否重複 (僅針對當前使用者)
      */
     const checkDuplicate = async (caseNum: string) => {
         if (!caseNum) {
@@ -63,15 +63,18 @@ export function useNewCaseForm() {
             return;
         }
         setIsChecking(true);
+        const { data: { user } } = await supabase.auth.getUser();
+
         const { data, error } = await supabase
             .from('cases')
             .select('id')
             .eq('case_number', caseNum)
+            .eq('user_id', user?.id) // 關鍵：加入 user_id 隔離
             .maybeSingle();
 
         if (data) {
             setIsDuplicate(true);
-            setErrorMsg(`❌ 案號 「${caseNum}」 已經存在，請更換一個案號。`);
+            setErrorMsg(`❌ 案號 「${caseNum}」 您已經建立過，請更換。`);
         } else {
             setIsDuplicate(false);
             if (!errorMsg.includes('資料庫建立失敗')) setErrorMsg('');
@@ -87,6 +90,16 @@ export function useNewCaseForm() {
         const { data: { user } } = await supabase.auth.getUser();
 
         // 1. 建立或更新 Case
+        let finalNotes = data.notes;
+        if (data.loan_estimates_json) {
+            try {
+                const attributes = { loan_estimates: JSON.parse(data.loan_estimates_json) };
+                finalNotes = `${data.notes}\n\n[[ATTR:${JSON.stringify(attributes)}]]`.trim();
+            } catch (e) {
+                console.error('[NewCaseForm] Failed to parse loan_estimates_json', e);
+            }
+        }
+
         const casePayload = {
             case_number: data.case_number,
             buyer_name: data.buyer_name,
@@ -101,7 +114,7 @@ export function useNewCaseForm() {
             status: data.status,
             city: data.city,
             district: data.district,
-            notes: data.notes,
+            notes: finalNotes,
             tax_type: data.tax_type,
             user_id: user?.id,
         };
@@ -110,6 +123,7 @@ export function useNewCaseForm() {
             .from('cases')
             .select('id')
             .eq('case_number', data.case_number)
+            .eq('user_id', user?.id) // 關鍵：加入 user_id 條件
             .maybeSingle();
 
         let targetCase;
@@ -185,8 +199,9 @@ export function useNewCaseForm() {
             router.push('/cases?status=Processing');
             router.refresh();
         } catch (error: any) {
-            console.error('Submit Error:', error);
-            setErrorMsg('發生錯誤：' + (error.message || JSON.stringify(error)));
+            console.error('Submit Error Detailed:', error);
+            const msg = error.message || (typeof error === 'string' ? error : JSON.stringify(error));
+            setErrorMsg(`儲存失敗: ${msg}`);
             setLoading(false);
         }
     }, [formData, router]);

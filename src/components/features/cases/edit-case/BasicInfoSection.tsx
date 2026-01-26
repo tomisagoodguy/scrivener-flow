@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { DemoCase } from '@/types';
+import { LoanComparisonTracker } from '../shared/LoanComparisonTracker';
 
 interface BasicInfoSectionProps {
     initialData: DemoCase;
@@ -78,7 +79,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-foreground/50 uppercase">成交總價 (萬)</label>
                     <input
@@ -108,10 +109,12 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-foreground/50 uppercase">買方貸款銀行</label>
                     <input
+                        id="buyer_loan_bank_input"
                         name="buyer_loan_bank"
                         defaultValue={financials?.buyer_bank}
                         type="text"
-                        className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                        placeholder="請輸入或從下方選取..."
                     />
                 </div>
                 <div className="space-y-1">
@@ -120,8 +123,48 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                         name="seller_loan_bank"
                         defaultValue={financials?.seller_bank}
                         type="text"
-                        className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all"
+                        className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 border-orange-200 focus:ring-2 focus:ring-orange-200 transition-all font-bold"
                     />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-orange-600 uppercase">塗銷方式</label>
+                    <div className="flex flex-col gap-2">
+                        <select
+                            defaultValue={['代書塗銷', '賣方自辦', '無', '先塗二胎'].includes(initialData.cancellation_type) ? initialData.cancellation_type : 'CUSTOM'}
+                            onChange={(e) => {
+                                const input = document.getElementById('cancellation_type_input') as HTMLInputElement;
+                                const val = e.target.value;
+                                if (val === 'CUSTOM') {
+                                    if (input) {
+                                        input.style.display = 'block';
+                                        input.value = '';
+                                        input.focus();
+                                    }
+                                } else {
+                                    if (input) {
+                                        input.style.display = 'none';
+                                        input.value = val;
+                                    }
+                                }
+                            }}
+                            className="w-full bg-secondary/50 border border-border-color rounded-lg px-3 py-2 cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all font-bold text-sm"
+                        >
+                            <option value="代書塗銷">代書塗銷</option>
+                            <option value="賣方自辦">賣方自辦</option>
+                            <option value="無">無</option>
+                            <option value="先塗二胎">先塗二胎</option>
+                            <option value="CUSTOM">其他 (手動輸入...)</option>
+                        </select>
+                        <input
+                            id="cancellation_type_input"
+                            name="cancellation_type"
+                            defaultValue={initialData.cancellation_type}
+                            type="text"
+                            style={{ display: ['代書塗銷', '賣方自辦', '無', '先塗二胎'].includes(initialData.cancellation_type) ? 'none' : 'block' }}
+                            className="w-full bg-primary/5 border-2 border-primary/20 rounded-lg px-3 py-2 text-foreground font-black focus:ring-2 focus:ring-primary/40 transition-all text-sm"
+                            placeholder="請輸入塗銷方式..."
+                        />
+                    </div>
                 </div>
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-foreground/50 uppercase">稅單性質</label>
@@ -138,6 +181,18 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                         <option value="一生一屋+道路用地">一生一屋+道路用地</option>
                     </select>
                 </div>
+            </div>
+
+            {/* 買方貸款追蹤區塊 - 獨立展開 */}
+            <div className="mt-2">
+                <LoanComparisonTracker
+                    initialValue={JSON.stringify(initialData.custom_fields?.loan_estimates || [])}
+                    onFinalBankSelect={(bankName) => {
+                        const el = document.getElementById('buyer_loan_bank_input') as HTMLInputElement;
+                        if (el) el.value = bankName;
+                    }}
+                    fieldName="loan_estimates_json"
+                />
             </div>
         </div>
     );

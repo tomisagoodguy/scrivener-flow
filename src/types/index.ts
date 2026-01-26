@@ -104,6 +104,7 @@ export interface DemoCase {
     tax_type?: '一般' | '自用'; // 增值稅類型 (稅單性質)
     is_on_hold?: boolean;
     on_hold_reason?: string;
+    custom_fields?: any;
 
     // Joined Tables
     milestones?: Milestone[];

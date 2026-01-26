@@ -51,6 +51,17 @@ export const caseService = {
         privateNotes: string
     ) {
         // 1. 更新案件主體
+        let finalNotes = notes;
+        if (data.loan_estimates_json) {
+            try {
+                // 如果已有屬性，則合併；否則新建。這裡簡化處理，直接覆蓋屬性區塊
+                const attributes = { loan_estimates: JSON.parse(data.loan_estimates_json as string) };
+                finalNotes = `${notes.replace(/\[\[ATTR:.*?\]\]/g, '')}\n\n[[ATTR:${JSON.stringify(attributes)}]]`.trim();
+            } catch (e) {
+                console.error('[CaseService] Failed to parse loan_estimates_json', e);
+            }
+        }
+
         const { error: caseError } = await supabase
             .from('cases')
             .update({
@@ -60,7 +71,7 @@ export const caseService = {
                 buyer_name: data.buyer,
                 seller_name: data.seller,
                 status: data.status,
-                notes,
+                notes: finalNotes,
                 private_notes: privateNotes,
                 pending_tasks: data.pending_tasks,
                 is_back_rent: data.is_back_rent === 'on',
@@ -70,7 +81,10 @@ export const caseService = {
             })
             .eq('id', caseId);
 
-        if (caseError) throw caseError;
+        if (caseError) {
+            console.error('[CaseService] Case update failed:', caseError);
+            throw caseError;
+        }
 
         // 2. 更新或插入進度 (milestones)
         const milestoneData = this._formatMilestoneData(caseId, data);

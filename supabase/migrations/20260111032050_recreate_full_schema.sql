@@ -23,7 +23,8 @@ CREATE TABLE cases (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- 1.1 Identity & Status
-    case_number TEXT NOT NULL UNIQUE, -- e.g., "AA12345678"
+    case_number TEXT NOT NULL, -- 移除 UNIQUE
+    user_id UUID REFERENCES auth.users(id), -- 加入使用者關聯
     legacy_id TEXT, -- e.g., for migration
     status TEXT NOT NULL CHECK (status IN ('辦理中', '結案', '解約', 'Processing', 'Closed', 'Cancelled', 'Pending')),
     handler TEXT, -- e.g., "子翔"
@@ -62,7 +63,10 @@ CREATE TABLE cases (
     -- Legacy/Frontend compatibility columns (if needed directly in cases)
     tax_type TEXT, 
     buyer_loan_bank TEXT, 
-    seller_loan_bank TEXT
+    seller_loan_bank TEXT,
+
+    -- 建立複合唯一索引
+    UNIQUE (user_id, case_number)
 );
 
 -- 3. Milestones Table (1:1 with Cases)

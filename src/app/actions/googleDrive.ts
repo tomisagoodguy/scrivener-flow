@@ -9,18 +9,87 @@ interface DriveActionResponse {
 }
 
 /**
- * 取得當前使用者的 Google Access Token (從伺服器端取得)
+ * 取得當前使用者的 Google Access Token
+ * 具備自動刷新機制 (Refresh Token Rotation)
  */
 export async function getAccessToken() {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
-    // 移除管理員 Email 限制，支援多使用者各自儲存模式 (Option 1)
     if (!session?.user) {
         throw new Error('請先登入系統');
     }
 
-    return session?.provider_token || null;
+    const userId = session.user.id;
+
+    // 1. 優先查看 Session (最快，但每小時會過期)
+    let token = session?.provider_token;
+
+    // 2. 從資料庫讀取備份與 Refresh Token
+    const { data: settings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+    // 如果 Session 沒有，或是我們有更好的持久化 Token
+    if (!token) {
+        token = settings?.google_access_token;
+    }
+
+    // 3. 檢查 Token 是否確實可用 (或是嘗試刷新)
+    // 如果沒有 refresh_token，我們也沒轍，只能叫使用者重登
+    const refreshToken = settings?.google_refresh_token;
+
+    if (!refreshToken) {
+        return token || null;
+    }
+
+    // 這裡我們實作一個主動預判：如果最後更新時間超過 55 分鐘就刷新
+    const lastUpdate = settings?.last_token_update ? new Date(settings.last_token_update).getTime() : 0;
+    const now = Date.now();
+    const refreshThreshold = 55 * 60 * 1000;
+
+    if (!token || (now - lastUpdate > refreshThreshold)) {
+        console.log('[GoogleAuth] Token 可能已過期，正在執行自動刷新...');
+        try {
+            const response = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: process.env.GOOGLE_CLIENT_ID!,
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+                    refresh_token: refreshToken,
+                    grant_type: 'refresh_token',
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[GoogleAuth] 刷新請求失敗:', response.status, errorText);
+                return token || null;
+            }
+
+            const data = await response.json();
+
+            if (data.access_token) {
+                console.log('[GoogleAuth] Token 刷新成功');
+                const updatedToken = data.access_token;
+                await supabase.from('user_settings').update({
+                    google_access_token: updatedToken,
+                    last_token_update: new Date().toISOString(),
+                }).eq('user_id', userId);
+
+                return updatedToken;
+            } else {
+                console.error('[GoogleAuth] 刷新失敗:', data);
+            }
+        } catch (e) {
+            console.error('[GoogleAuth] 刷新過程發生致命錯誤:', e);
+        }
+    }
+
+    return token || null;
 }
 
 /**

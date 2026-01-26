@@ -80,18 +80,6 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
                 />
             </div>
 
-            <div className="space-y-2">
-                <h4 className="text-sm font-bold text-foreground/40">塗銷方式</h4>
-                <select
-                    name="cancellation_type"
-                    defaultValue={cancellationType || '代書塗銷'}
-                    className="w-full bg-secondary/40 border border-border-color rounded-xl p-3 text-sm cursor-pointer"
-                >
-                    <option value="代書塗銷">代書塗銷</option>
-                    <option value="賣方自辦">賣方自辦</option>
-                    <option value="無">無</option>
-                </select>
-            </div>
         </div>
     );
 };

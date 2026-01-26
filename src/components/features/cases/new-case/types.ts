@@ -36,6 +36,7 @@ export interface CaseFormData {
     balance_amount: string;
     balance_payment_date: string;
     notes: string;
+    loan_estimates_json?: string;
 }
 
 export const initialFormData: CaseFormData = {

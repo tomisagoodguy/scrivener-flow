@@ -138,6 +138,13 @@ export class SecureApi {
                 }
 
                 // 6. 解析回應
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('API 回傳了非 JSON 內容:', text.slice(0, 200));
+                    throw new Error(`伺服器回傳了無效內容 (非 JSON)。狀態碼: ${response.status}`);
+                }
+
                 const encryptedResponse = await response.json();
 
                 // 7. 解密回應

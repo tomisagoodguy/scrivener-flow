@@ -8,15 +8,17 @@ export async function GET() {
         );
 
         if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`[Weather API] Open-Meteo failed: ${res.status}`, errorText);
             throw new Error(`Weather API Error: ${res.status}`);
         }
 
         const data = await res.json();
         return NextResponse.json(data);
-    } catch (error) {
-        console.error('Weather Proxy Error:', error);
+    } catch (error: any) {
+        console.error('[Weather API] Internal Error:', error.message);
         return NextResponse.json(
-            { error: 'Failed to fetch weather data' },
+            { error: 'Failed to fetch weather data', details: error.message },
             { status: 500 }
         );
     }
