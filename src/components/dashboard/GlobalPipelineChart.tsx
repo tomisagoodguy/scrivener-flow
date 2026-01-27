@@ -112,16 +112,28 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                             </Link>
 
                             {!isLast && (
-                                <div className="flex-grow flex items-center justify-center px-1 md:px-2 -mt-6 md:-mt-8 opacity-30 min-w-[20px]">
-                                    <div
-                                        className={`h-1 w-full rounded-full transition-colors ${count > 0 ? 'bg-slate-300' : 'bg-slate-100'}`}
-                                    >
+                                <div className="flex-grow flex flex-col items-center justify-center px-1 md:px-2 -mt-6 md:-mt-8 min-w-[20px] relative">
+                                    <div className="flex items-center w-full opacity-30">
                                         <div
-                                            className={`h-full rounded-full ${stage.color}`}
-                                            style={{ width: count > 0 ? '100%' : '0%' }}
-                                        ></div>
+                                            className={`h-1 w-full rounded-full transition-colors ${count > 0 ? 'bg-slate-300' : 'bg-slate-100'
+                                                }`}
+                                        >
+                                            <div
+                                                className={`h-full rounded-full ${stage.color}`}
+                                                style={{ width: count > 0 ? '100%' : '0%' }}
+                                            ></div>
+                                        </div>
+                                        <span className="text-slate-300 font-black ml-1 text-xs md:text-sm">
+                                            →
+                                        </span>
                                     </div>
-                                    <span className="text-slate-300 font-black ml-1 text-xs md:text-sm">→</span>
+                                    {stage.id === 'contract' && (
+                                        <div className="absolute top-4 md:top-5 w-[140px] flex justify-center pointer-events-none">
+                                            <div className="text-[10px] md:text-[11px] font-bold text-slate-400 bg-slate-50/90 backdrop-blur-[2px] border border-slate-200/60 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
+                                                請謄本、預估、請現值
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </React.Fragment>

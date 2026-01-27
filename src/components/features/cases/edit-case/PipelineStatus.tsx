@@ -62,12 +62,24 @@ export const PipelineStatus: React.FC<PipelineStatusProps> = ({ initialData }) =
                             </div>
 
                             {!isLast && (
-                                <div className="flex-grow mx-2 h-1 bg-secondary/50 rounded-full relative -mt-6">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-1000 ${stages[idx].color}`}
-                                        style={{ width: isCompleted ? '100%' : '0%' }}
-                                    />
-                                    <ChevronRight className={`absolute top-1/2 -translate-y-1/2 right-0 w-4 h-4 ${isCompleted ? 'text-primary' : 'text-foreground/10'}`} />
+                                <div className="flex-grow mx-2 relative -mt-6">
+                                    <div className="h-1 bg-secondary/50 rounded-full relative">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-1000 ${stages[idx].color}`}
+                                            style={{ width: isCompleted ? '100%' : '0%' }}
+                                        />
+                                        <ChevronRight
+                                            className={`absolute top-1/2 -translate-y-1/2 right-0 w-4 h-4 ${isCompleted ? 'text-primary' : 'text-foreground/10'
+                                                }`}
+                                        />
+                                    </div>
+                                    {stage.id === 'contract' && (
+                                        <div className="absolute top-3 w-full flex justify-center pointer-events-none">
+                                            <div className="text-[10px] md:text-[11px] font-bold text-slate-400 bg-slate-50/90 backdrop-blur-[2px] border border-slate-200/60 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
+                                                請謄本、預估、請現值
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </React.Fragment>
