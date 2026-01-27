@@ -34,7 +34,7 @@ export function ClauseEditModal({ initialClause, onClose, onSave, onDelete }: Cl
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h2 className="text-lg font-bold text-slate-800">
                         {currentClause.id ? '編輯條文' : '新增常用條文'}
@@ -45,7 +45,7 @@ export function ClauseEditModal({ initialClause, onClose, onSave, onDelete }: Cl
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700">
@@ -132,7 +132,7 @@ export function ClauseEditModal({ initialClause, onClose, onSave, onDelete }: Cl
                             required
                             value={currentClause.content || ''}
                             onChange={(e) => setCurrentClause({ ...currentClause, content: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[200px] text-sm leading-relaxed"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[300px] bg-white resize-y text-sm leading-relaxed"
                             placeholder="輸入完整的合約條文..."
                         />
                     </div>

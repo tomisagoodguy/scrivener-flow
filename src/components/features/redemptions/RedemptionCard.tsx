@@ -62,8 +62,8 @@ export function RedemptionCard({ item, setCurrentData, setIsEditing }: Redemptio
                 )}
 
                 {item.notes && (
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                        <p className="text-sm text-slate-500 leading-relaxed">{item.notes}</p>
+                    <div className="mt-4 pt-4 border-t border-slate-100 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                        <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-wrap">{item.notes}</p>
                     </div>
                 )}
             </div>

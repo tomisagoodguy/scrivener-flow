@@ -25,8 +25,8 @@ export function RedemptionEditModal({
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                     <h2 className="text-lg font-bold text-slate-800">
                         {currentData.id ? '編輯代償資訊' : '新增代償資訊'}
                     </h2>
@@ -36,7 +36,7 @@ export function RedemptionEditModal({
                     </button>
                 </div>
 
-                <form onSubmit={handleSave} className="p-6 space-y-4">
+                <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">銀行名稱</label>
                         <div className="relative">
@@ -80,7 +80,7 @@ export function RedemptionEditModal({
                         <textarea
                             value={currentData.account_info || ''}
                             onChange={(e) => setCurrentData({ ...currentData, account_info: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[120px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-y"
                             placeholder="銀行代碼、帳號等..."
                         />
                     </div>
@@ -90,7 +90,7 @@ export function RedemptionEditModal({
                         <textarea
                             value={currentData.notes || ''}
                             onChange={(e) => setCurrentData({ ...currentData, notes: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-y"
                         />
                     </div>
 
