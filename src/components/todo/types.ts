@@ -16,4 +16,6 @@ export interface TodoTask {
     caseName?: string;
     caseId?: string;
     notes?: string;
+    endDate?: Date;
+    isAllDay?: boolean;
 }

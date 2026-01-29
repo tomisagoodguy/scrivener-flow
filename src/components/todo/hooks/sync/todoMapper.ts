@@ -41,6 +41,8 @@ export const mapTodosToState = (todos: any[], cases: any[], activeCaseIds: Set<s
                 caseName: relatedCase ? relatedCase.buyer_name : undefined,
                 caseId: t.case_id,
                 notes: t.source_type === 'system' ? '系統自動提醒' : undefined,
+                endDate: t.end_date ? new Date(t.end_date) : undefined,
+                isAllDay: t.is_all_day || false,
             };
         });
 };

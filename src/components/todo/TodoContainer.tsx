@@ -14,13 +14,31 @@ const TodoContainer = () => {
     const [viewMode, setViewMode] = useState<'list' | 'matrix' | 'calendar' | 'week'>('list');
     const [showAdd, setShowAdd] = useState(false);
     const [newTodoContent, setNewTodoContent] = useState('');
-    const [newTodoDate, setNewTodoDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    const [newTodoDate, setNewTodoDate] = useState('');
+    const [newTodoEndDate, setNewTodoEndDate] = useState('');
+    const [isAllDay, setIsAllDay] = useState(false);
 
     const { tasks, loading, toggleTask, deleteTodo, addManualTodo } = useTodoSync();
 
     const handleAddTodo = async () => {
-        await addManualTodo(newTodoContent, newTodoDate);
+        // Prepare output dates
+        // If All Day, append T00:00:00 and T23:59:59 behavior conceptually, but backend just stores ISO
+        let startIso = newTodoDate;
+        let endIso = newTodoEndDate;
+
+        if (isAllDay) {
+            // If inputs are date only (yyyy-MM-dd), append default time or keep as is if backend handles dates
+            // Assuming backend expects ISO-8601
+            startIso = new Date(newTodoDate).toISOString();
+            if (newTodoEndDate) {
+                endIso = new Date(newTodoEndDate).toISOString();
+            }
+        }
+
+        await addManualTodo(newTodoContent, newTodoDate, newTodoEndDate || undefined, isAllDay);
         setNewTodoContent('');
+        setNewTodoEndDate('');
+        setIsAllDay(false);
         setShowAdd(false);
     };
 
@@ -145,13 +163,38 @@ const TodoContainer = () => {
                                 placeholder="輸入待辦事項... (可多行)"
                                 className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                             />
-                            <div className="relative">
-                                <input
-                                    type="datetime-local"
-                                    value={newTodoDate}
-                                    onChange={(e) => setNewTodoDate(e.target.value)}
-                                    className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-40"
-                                />
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isAllDay"
+                                        checked={isAllDay}
+                                        onChange={(e) => setIsAllDay(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="isAllDay" className="text-xs text-slate-600 cursor-pointer select-none">全天</label>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-500 w-6">開始</span>
+                                        <input
+                                            type={isAllDay ? "date" : "datetime-local"}
+                                            value={newTodoDate}
+                                            onChange={(e) => setNewTodoDate(e.target.value)}
+                                            className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-500 w-6">結束</span>
+                                        <input
+                                            type={isAllDay ? "date" : "datetime-local"}
+                                            value={newTodoEndDate}
+                                            onChange={(e) => setNewTodoEndDate(e.target.value)}
+                                            className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
+                                            placeholder="選填"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">

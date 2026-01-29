@@ -32,7 +32,25 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    const getDayTasks = (day: Date) => tasks.filter((t) => isSameDay(t.date, day));
+    const getDayTasks = (day: Date) => tasks.filter((t) => {
+        // If it's single day
+        if (!t.endDate) {
+            return isSameDay(t.date, day);
+        }
+
+        // It is a range
+        // Normalize to YYYY-MM-DD strings for safe comparison or use date-fns startOfDay
+        const taskStart = new Date(t.date);
+        taskStart.setHours(0, 0, 0, 0);
+
+        const taskEnd = new Date(t.endDate);
+        taskEnd.setHours(23, 59, 59, 999);
+
+        const current = new Date(day);
+        current.setHours(12, 0, 0, 0); // pick middle of day to avoid edge case
+
+        return current >= taskStart && current <= taskEnd;
+    });
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -96,14 +114,14 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                 {holiday && isCurrentMonth && (
                                     <div
                                         className={`text-[8px] px-1 py-0.5 rounded font-black ${holiday.category === 'spring-festival'
-                                                ? 'bg-red-100 text-red-600'
-                                                : holiday.category === 'national'
-                                                    ? 'bg-blue-100 text-blue-600'
-                                                    : holiday.category === 'traditional'
-                                                        ? 'bg-orange-100 text-orange-600'
-                                                        : holiday.category === 'memorial'
-                                                            ? 'bg-purple-100 text-purple-600'
-                                                            : 'bg-green-100 text-green-600'
+                                            ? 'bg-red-100 text-red-600'
+                                            : holiday.category === 'national'
+                                                ? 'bg-blue-100 text-blue-600'
+                                                : holiday.category === 'traditional'
+                                                    ? 'bg-orange-100 text-orange-600'
+                                                    : holiday.category === 'memorial'
+                                                        ? 'bg-purple-100 text-purple-600'
+                                                        : 'bg-green-100 text-green-600'
                                             }`}
                                         title={holiday.name}
                                     >
@@ -120,8 +138,8 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                 )}
                                 <div
                                     className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${isTodayDate
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'text-slate-700 dark:text-slate-300'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'text-slate-700 dark:text-slate-300'
                                         }`}
                                 >
                                     {format(day, 'd')}
@@ -133,14 +151,14 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                 {holiday && isCurrentMonth && dayTasks.length === 0 && (
                                     <div
                                         className={`text-[9px] px-1 py-0.5 rounded font-bold truncate text-center ${holiday.category === 'spring-festival'
-                                                ? 'bg-red-50 text-red-700 border border-red-100'
-                                                : holiday.category === 'national'
-                                                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                                                    : holiday.category === 'traditional'
-                                                        ? 'bg-orange-50 text-orange-700 border border-orange-100'
-                                                        : holiday.category === 'memorial'
-                                                            ? 'bg-purple-50 text-purple-700 border border-purple-100'
-                                                            : 'bg-green-50 text-green-700 border border-green-100'
+                                            ? 'bg-red-50 text-red-700 border border-red-100'
+                                            : holiday.category === 'national'
+                                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                                : holiday.category === 'traditional'
+                                                    ? 'bg-orange-50 text-orange-700 border border-orange-100'
+                                                    : holiday.category === 'memorial'
+                                                        ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                                                        : 'bg-green-50 text-green-700 border border-green-100'
                                             }`}
                                         title={holiday.name}
                                     >
@@ -155,6 +173,7 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                         className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${task.isCompleted
                                             ? 'line-through opacity-50 bg-gray-100 text-gray-400'
                                             : (() => {
+                                                if (task.isAllDay) return 'bg-purple-50 text-purple-700 border-purple-200 font-bold';
                                                 switch (task.type) {
                                                     case 'legal':
                                                         return 'bg-red-50 text-red-700 border-red-100';
@@ -169,7 +188,8 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                             }`}
                                     >
                                         {/* Original Mini View */}
-                                        <div onClick={() => onToggle(task.id)} className="truncate">
+                                        <div onClick={() => onToggle(task.id)} className="truncate flex items-center gap-1">
+                                            {task.isAllDay && <span className="text-[9px] text-purple-600 font-extrabold mr-0.5" title="全天">A</span>}
                                             <span className={onDelete ? 'group-hover:pr-3' : ''}>{task.title}</span>
                                         </div>
 
@@ -187,7 +207,20 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                             <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
                                                 <div className="flex items-center gap-1">
                                                     <span>📅</span>
-                                                    <span>{format(task.date, 'yyyy/MM/dd HH:mm')}</span>
+                                                    <span>
+                                                        {task.isAllDay ? (
+                                                            <>
+                                                                {format(task.date, 'yyyy/MM/dd')}
+                                                                {task.endDate && ` - ${format(task.endDate, 'yyyy/MM/dd')}`}
+                                                                {' (全天)'}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {format(task.date, 'yyyy/MM/dd HH:mm')}
+                                                                {task.endDate && ` - ${format(task.endDate, 'HH:mm')}`}
+                                                            </>
+                                                        )}
+                                                    </span>
                                                 </div>
                                                 {task.caseName && (
                                                     <div className="flex items-center gap-1">

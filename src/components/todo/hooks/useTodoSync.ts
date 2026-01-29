@@ -51,8 +51,21 @@ export function useTodoSync() {
             if (todosToUpdate.length > 0) await supabase.from('todos').upsert(todosToUpdate);
             if (todosToInsert.length > 0) await supabase.from('todos').insert(todosToInsert);
 
+            // Fetch all todos again after sync to get the latest state, including new fields
+            const { data: allTodos, error: fetchError } = await supabase
+                .from('todos')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('is_deleted', false)
+                .order('due_date', { ascending: true });
+
+            if (fetchError) {
+                console.error('Error fetching todos after sync:', fetchError);
+                return;
+            }
+
             const activeCaseIds = new Set(activeCases?.map(c => c.id) || []);
-            setTasks(mapTodosToState(cleanExistingTodos, activeCases || [], activeCaseIds));
+            setTasks(mapTodosToState(allTodos || [], activeCases || [], activeCaseIds));
         } catch (err) {
             console.error('Todo Sync Error:', err);
         } finally {
@@ -92,7 +105,7 @@ export function useTodoSync() {
         window.dispatchEvent(new CustomEvent('todo-updated'));
     };
 
-    const addManualTodo = async (content: string, dueDate: string) => {
+    const addManualTodo = async (content: string, dueDate: string, endDate?: string, isAllDay: boolean = false) => {
         if (!content.trim()) return;
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -103,6 +116,8 @@ export function useTodoSync() {
             is_completed: false,
             priority: 'not-urgent-important',
             due_date: new Date(dueDate).toISOString(),
+            end_date: endDate ? new Date(endDate).toISOString() : null,
+            is_all_day: isAllDay,
             source_type: 'manual',
         }]).select().single();
 
