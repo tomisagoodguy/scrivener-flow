@@ -1,0 +1,42 @@
+import os
+import sys
+from dotenv import load_dotenv
+import sqlalchemy
+from sqlalchemy import create_engine
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_db_engine():
+    """
+    Create and return SQLAlchemy engine for Supabase
+    """
+    # Load env
+    if os.path.exists('.env.local'):
+        load_dotenv('.env.local')
+    else:
+        load_dotenv()
+
+    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    db_password = os.getenv("SUPABASE_DB_PASSWORD")
+    
+    if not supabase_url or not db_password:
+        logger.error("Missing Supabase credentials in .env.local")
+        raise ValueError("Missing Supabase Credentials")
+
+    try:
+        project_ref = supabase_url.split("//")[1].split(".")[0]
+        
+        DB_HOST = f"db.{project_ref}.supabase.co"
+        DB_PORT = "5432"
+        DB_USER = "postgres"
+        DB_NAME = "postgres"
+        
+        # Use db_password variable correctly
+        DATABASE_URL = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        return engine
+    except Exception as e:
+        logger.error(f"Failed to create DB engine: {e}")
+        raise

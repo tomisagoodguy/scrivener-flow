@@ -1,3 +1,32 @@
+# Work Log - 2026-01-31
+
+## 📌 Pending Tasks (Resume From Here next time)
+
+**[Next Action]** 討論並設計新功能。
+
+### **
+
+```
+/resume-work
+```
+
+**
+
+**[Workflow]** 使用 `/openspec-proposal` 建立新功能提案。
+
+**[Context]** 專案環境已修復（`.env.local` 補齊，重複子目錄 `my-case-tracker` 已刪除）。
+
+**[Status]** 目前主專案版本為 `ee1656e` (feat: calendar ...)。
+
+## Completed Tasks (Recent)
+
+1. **Resolved Git Confusion**: Deleted redundant `my-case-tracker` subdirectory and unified all code in the root repository.
+2. **Environment Fix**: Restored missing `.env.local` variables in the root directory to fix Supabase 401 and "URL/Key required" errors.
+3. **Dependency Cleanup**: Ran `yarn install` in the root to ensure `tailwindcss` and other devDependencies are properly resolved.
+4. **Git Sync**: Completed a forced push to `origin master` to ensure remote matches the stable local version.
+
+---
+
 # Work Log - 2026-01-14
 
 ## Completed Tasks
@@ -5,16 +34,16 @@
 1. **Resolved Build Errors**: Fixed JSX parsing errors in `TodoContainer.tsx` and `TodoListView.tsx`.
 2. **Schema Alignment**: Fixed `cases_status_check` error by switching default status to 'Processing'.
 3. **Enhanced Todo System**:
-    - Implemented `TodoContainer` with List, Matrix, and Calendar views.
-    - Added "System Todos" for automatic legal date and tax deadline reminders.
-    - Added "Personal Todos" with due dates.
-    - Implemented "Soft Delete" (`is_deleted`) to allow deletion without losing history or causing instant respawn of system tasks.
-    - Added "Smart Resurrection" to bring back system tasks if case dates change.
-    - Added Magnified Info Card (Tooltip) for calendar view tasks.
-    - Added dedicated Delete button (Trash icon) without annoying confirm dialogs.
+   - Implemented `TodoContainer` with List, Matrix, and Calendar views.
+   - Added "System Todos" for automatic legal date and tax deadline reminders.
+   - Added "Personal Todos" with due dates.
+   - Implemented "Soft Delete" (`is_deleted`) to allow deletion without losing history or causing instant respawn of system tasks.
+   - Added "Smart Resurrection" to bring back system tasks if case dates change.
+   - Added Magnified Info Card (Tooltip) for calendar view tasks.
+   - Added dedicated Delete button (Trash icon) without annoying confirm dialogs.
 4. **Homepage Layout**:
-    - Restored `DashboardQuickNotes` to the right column, stacked below Date Calculator.
-    - Expanded "Smart Agency Center" (Todo) to 750px height for better visibility.
+   - Restored `DashboardQuickNotes` to the right column, stacked below Date Calculator.
+   - Expanded "Smart Agency Center" (Todo) to 750px height for better visibility.
 
 ## Mistakes & Lessons Learned (Self-Reflection)
 
