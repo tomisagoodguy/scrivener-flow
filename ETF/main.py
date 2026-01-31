@@ -23,32 +23,6 @@ from ETF.database.storage import ETFStorage
 from ETF.processors.diff_engine import compute_diff
 from ETF.notifiers.line_notifier import LineNotifier
 
-def git_commit_history(filepath: pathlib.Path, message: str):
-    """
-    Commit the specific file to git history via subprocess.
-    """
-    try:
-        if not filepath.exists():
-            return
-            
-        # Check if file changed behavior is needed?
-        # git add will determine
-        subprocess.run(["git", "add", str(filepath)], check=True)
-        
-        # Check status
-        status = subprocess.run(["git", "status", "--porcelain", str(filepath)], capture_output=True, text=True)
-        if not status.stdout.strip():
-            logger.info("No changes in file, skipping commit.")
-            return
-
-        subprocess.run(["git", "commit", "-m", message], check=True)
-        logger.info(f"Git committed: {filepath}")
-        
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Git commit failed: {e}")
-    except Exception as e:
-        logger.error(f"Git operation error: {e}")
-
 def main():
     parser = argparse.ArgumentParser(description="ETF Tracker Main Process")
     parser.add_argument("--dry-run", action="store_true", help="Do not save to DB")
@@ -106,14 +80,12 @@ def main():
         # E. Update Snapshot (Always update to latest)
         storage.save_snapshot(df, etf_code, date_str)
         
-        # F. CSV Archive & Git
+        # F. CSV Archive
         csv_filename = f"{etf_code}_{date_str}.csv"
         csv_path = output_dir / csv_filename
         df.to_csv(csv_path, index=False, encoding='utf-8-sig')
         logger.info(f"Saved CSV archive: {csv_path}")
         
-        git_commit_history(csv_path, f"data(etf): auto archive {etf_code} for {date_str}")
-
         logger.info("✅ ETF Tracker finished successfully.")
         
     except Exception as e:

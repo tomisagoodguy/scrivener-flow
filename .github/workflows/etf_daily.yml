@@ -45,19 +45,18 @@ jobs:
         run: uv run python ETF/main.py
 
       - name: Commit and Push History
-        # Only commit if there are changes in ETF/history
         run: |
           git config --global user.name "ETF Tracker Bot"
           git config --global user.email "bot@scrivener-flow.com"
           
-          # Check for changes in history directory
-          if [[ -n $(git status --porcelain ETF/history) ]]; then
-            git add ETF/history/*.csv
+          # Add only CSV files, ignore others
+          git add ETF/history/*.csv || true
+          
+          # Commit only if there are changes staged
+          if ! git diff --cached --quiet; then
             git commit -m "data(etf): auto archive 00981A [skip ci]"
-            
-            # Pull before push to avoid conflicts
-            git pull --rebase origin ${GITHUB_REF#refs/heads/}
-            git push origin ${GITHUB_REF#refs/heads/}
+            git pull --rebase origin master
+            git push origin master
           else
-            echo "No changes to commit."
+            echo "No CSV changes to commit. Skipping."
           fi
