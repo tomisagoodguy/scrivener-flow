@@ -47,6 +47,7 @@ export default function Header() {
         { name: '法規條文', href: '/clauses', icon: '⚖️' },
         { name: '辦案指南', href: '/guidelines', icon: '🧭' },
         { name: '工作筆記', href: '/notes', icon: '📝' },
+        { name: '投資監控', href: '/investment', icon: '📈' },
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
     ];
