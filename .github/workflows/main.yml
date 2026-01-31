@@ -1,0 +1,57 @@
+name: "ETF Tracker: 00981A"
+
+on:
+  schedule:
+    # 每天台灣時間 20:00 執行 (UTC 12:00)
+    - cron: '0 12 * * *'
+  workflow_dispatch: # 允許手動觸發
+
+permissions:
+  contents: write
+
+jobs:
+  track-etf:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
+      - name: Run ETF Tracker
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: uv run python ETF/main.py
+
+      - name: Commit and Push History
+        # 若有新資料則自動 Commit
+        run: |
+          git config --global user.name "ETF Tracker Bot"
+          git config --global user.email "bot@scrivener-flow.com"
+          
+          # Check for changes in history directory
+          if [[ -n $(git status --porcelain ETF/history) ]]; then
+            git add ETF/history/*.csv
+            git commit -m "data(etf): auto archive 00981A [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
