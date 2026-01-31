@@ -20,9 +20,14 @@ def get_db_engine():
     supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
     db_password = os.getenv("SUPABASE_DB_PASSWORD")
     
-    if not supabase_url or not db_password:
-        logger.error("Missing Supabase credentials in .env.local")
-        raise ValueError("Missing Supabase Credentials")
+    missing = []
+    if not supabase_url: missing.append("NEXT_PUBLIC_SUPABASE_URL")
+    if not db_password: missing.append("SUPABASE_DB_PASSWORD")
+    
+    if missing:
+        msg = f"Missing Supabase credentials: {', '.join(missing)}. Please check your .env.local or GitHub Secrets."
+        logger.error(msg)
+        raise ValueError(msg)
 
     try:
         project_ref = supabase_url.split("//")[1].split(".")[0]
