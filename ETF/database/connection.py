@@ -37,6 +37,8 @@ def get_db_engine():
         DB_USER = "postgres"
         DB_NAME = "postgres"
         
+        logger.info(f"Connecting to DB at {DB_HOST}:{DB_PORT} (sslmode=require)")
+        
         # 使用連接池 host 並加入 sslmode=require
         DATABASE_URL = f"postgresql://{DB_USER}.{project_ref}:{db_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
         
