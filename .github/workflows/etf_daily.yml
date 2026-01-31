@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Fetch all history so we can push back
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -23,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: ".python-version"
+          python-version: "3.13" 
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
@@ -51,7 +54,10 @@ jobs:
           if [[ -n $(git status --porcelain ETF/history) ]]; then
             git add ETF/history/*.csv
             git commit -m "data(etf): auto archive 00981A [skip ci]"
-            git push
+            
+            # Pull before push to avoid conflicts
+            git pull --rebase origin ${GITHUB_REF#refs/heads/}
+            git push origin ${GITHUB_REF#refs/heads/}
           else
             echo "No changes to commit."
           fi
