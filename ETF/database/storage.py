@@ -1,143 +1,144 @@
 import logging
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import text
+import requests
+import os
 from typing import List, Dict, Any, Optional
-from .connection import get_db_engine
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
 class ETFStorage:
     def __init__(self):
-        self.engine = get_db_engine()
+        # Load env
+        if os.path.exists('.env.local'):
+            load_dotenv('.env.local')
+        else:
+            load_dotenv()
+
+        self.supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+        self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        
+        if not self.supabase_url or not self.service_role_key:
+            logger.error("Missing Supabase REST credentials.")
+            raise ValueError("Missing Supabase REST credentials (URL or Service Role Key)")
+
+        self.headers = {
+            "apikey": self.service_role_key,
+            "Authorization": f"Bearer {self.service_role_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
 
     def get_latest_snapshot(self, etf_code: str) -> pd.DataFrame:
         """
-        Get the current snapshot from DB to compare with new data.
+        Get the current snapshot from Supabase REST API.
         """
-        query = text("""
-            SELECT stock_code as code, stock_name as name, shares, weight, data_date
-            FROM public.etf_holdings_snapshot
-            WHERE etf_code = :etf_code
-        """)
+        url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
+        params = {
+            "etf_code": f"eq.{etf_code}",
+            "select": "stock_code,stock_name,shares,weight,data_date"
+        }
         
         try:
-            df = pd.read_sql(query, self.engine, params={"etf_code": etf_code})
-            if not df.empty:
-                # Ensure data types for comparison
-                df['shares'] = df['shares'].astype(int)
-                df['weight'] = df['weight'].astype(float)
+            response = requests.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            if not data:
+                return pd.DataFrame()
+                
+            df = pd.DataFrame(data)
+            # Rename columns to match what the processor expects
+            df = df.rename(columns={
+                "stock_code": "code",
+                "stock_name": "name"
+            })
+            df['shares'] = df['shares'].astype(int)
+            df['weight'] = df['weight'].astype(float)
             return df
         except Exception as e:
-            logger.error(f"Error fetching snapshot: {e}")
+            logger.error(f"Error fetching snapshot via REST: {e}")
             return pd.DataFrame()
 
     def save_snapshot(self, df: pd.DataFrame, etf_code: str, data_date: str):
         """
-        Overwrite snapshot with new data.
-        Transactional: Delete old for this ETF -> Insert new.
+        Overwrite snapshot via REST API (Delete then Upsert).
         """
         if df.empty:
             return
 
-        # Prepare records
-        records = df.copy()
-        records['etf_code'] = etf_code
-        records['data_date'] = data_date
-        records['stock_code'] = records['code'] # map back
-        records['stock_name'] = records['name']
-        
-        # Keep only table columns
-        cols = ['etf_code', 'stock_code', 'stock_name', 'shares', 'weight', 'data_date']
-        records = records[cols]
-
+        # 1. Delete old
+        delete_url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         try:
-            with self.engine.begin() as conn:
-                # 1. Delete existing snapshot for this ETF
-                conn.execute(
-                    text("DELETE FROM public.etf_holdings_snapshot WHERE etf_code = :etf_code"),
-                    {"etf_code": etf_code}
-                )
-                
-                # 2. Insert new
-                records.to_sql(
-                    'etf_holdings_snapshot', 
-                    conn, 
-                    if_exists='append', 
-                    index=False,
-                    schema='public'
-                )
-            logger.info(f"Snapshot updated for {etf_code} on {data_date}")
+            requests.delete(delete_url, headers=self.headers, params={"etf_code": f"eq.{etf_code}"})
+            
+            # 2. Insert new
+            records = []
+            for _, row in df.iterrows():
+                records.append({
+                    "etf_code": etf_code,
+                    "stock_code": str(row['code']),
+                    "stock_name": row['name'],
+                    "shares": int(row['shares']),
+                    "weight": float(row['weight']),
+                    "data_date": data_date
+                })
+            
+            requests.post(f"{self.supabase_url}/rest/v1/etf_holdings_snapshot", headers=self.headers, json=records).raise_for_status()
+            logger.info(f"Successfully saved {len(records)} snapshot records via REST.")
         except Exception as e:
-            logger.error(f"Failed to save snapshot: {e}")
+            logger.error(f"Failed to save snapshot via REST: {e}")
             raise
 
     def save_diff_logs(self, diffs: List[Dict[str, Any]]):
         """
-        Save diff events to etf_diff_logs
+        Save diff events via REST API.
         """
         if not diffs:
             return
-
-        df = pd.DataFrame(diffs)
-        # Ensure columns match DB
-        # required: etf_code, data_date, change_type, stock_code, stock_name, diff_shares, diff_weight, description
         
         try:
-            df.to_sql(
-                'etf_diff_logs',
-                self.engine,
-                if_exists='append',
-                index=False,
-                schema='public'
-            )
-            logger.info(f"Saved {len(df)} diff logs.")
+            url = f"{self.supabase_url}/rest/v1/etf_diff_logs"
+            requests.post(url, headers=self.headers, json=diffs).raise_for_status()
+            logger.info(f"Saved {len(diffs)} diff logs via REST.")
         except Exception as e:
-            logger.error(f"Failed to save diff logs: {e}")
+            logger.error(f"Failed to save diff logs via REST: {e}")
             raise
 
     def update_holding_periods(self, diffs: List[Dict[str, Any]]):
         """
-        Update etf_holding_periods based on IN/OUT events.
+        Update holding periods via REST API.
+        Note: This is a bit more complex via REST without RPC, but we can do it with simple logic.
         """
         if not diffs:
             return
 
-        with self.engine.begin() as conn:
-            for d in diffs:
-                ctype = d.get('change_type')
-                etf = d.get('etf_code')
-                code = d.get('stock_code')
-                date = d.get('data_date')
-                name = d.get('stock_name')
+        for d in diffs:
+            ctype = d.get('change_type')
+            etf = d.get('etf_code')
+            code = d.get('stock_code')
+            date = d.get('data_date')
+            name = d.get('stock_name')
+            
+            url = f"{self.supabase_url}/rest/v1/etf_holding_periods"
+            
+            if ctype == 'IN':
+                # Close active periods
+                requests.patch(url, headers=self.headers, 
+                             params={"etf_code": f"eq.{etf}", "stock_code": f"eq.{code}", "is_active": "eq.true"},
+                             json={"is_active": False, "end_date": date})
                 
-                if ctype == 'IN':
-                    # Close any previous active period just in case (sanity check)
-                    conn.execute(
-                        text("""
-                        UPDATE public.etf_holding_periods 
-                        SET is_active = false, end_date = :date 
-                        WHERE etf_code = :etf AND stock_code = :code AND is_active = true
-                        """),
-                        {"date": date, "etf": etf, "code": code}
-                    )
-                    
-                    # Insert new active period
-                    conn.execute(
-                        text("""
-                        INSERT INTO public.etf_holding_periods (etf_code, stock_code, stock_name, start_date, is_active)
-                        VALUES (:etf, :code, :name, :date, true)
-                        """),
-                        {"etf": etf, "code": code, "name": name, "date": date}
-                    )
-                    
-                elif ctype == 'OUT':
-                    # Close period
-                    conn.execute(
-                        text("""
-                        UPDATE public.etf_holding_periods 
-                        SET is_active = false, end_date = :date 
-                        WHERE etf_code = :etf AND stock_code = :code AND is_active = true
-                        """),
-                        {"date": date, "etf": etf, "code": code}
-                    )
+                # Insert new
+                requests.post(url, headers=self.headers, json={
+                    "etf_code": etf,
+                    "stock_code": code,
+                    "stock_name": name,
+                    "start_date": date,
+                    "is_active": True
+                })
+                
+            elif ctype == 'OUT':
+                # Close periods
+                requests.patch(url, headers=self.headers, 
+                             params={"etf_code": f"eq.{etf}", "stock_code": f"eq.{code}", "is_active": "eq.true"},
+                             json={"is_active": False, "end_date": date})
