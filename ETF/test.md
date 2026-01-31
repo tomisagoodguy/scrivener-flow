@@ -1,46 +1,52 @@
-# ETF 功能開發討論紀錄
+# 📊 ETF 投資監控專案 - 2026-01-31 開發進度報告
 
-## 參考資料
-- [00981A-ETF-Tracker (GitHub)](https://github.com/kf182698/00981A-ETF-Tracker)
-- 標的全名：**主動統一台股增長 (00981A.TW)**
+## ✅ 今日完成事項 (Accomplishments)
 
----
+### 1. 自動化爬蟲系統 (Scraper Service)
 
-## 📅 2026-01-31 討論紀錄：V1 最終規格整合 (吸收參考專案優點) ✅
+- 成功實作 **00981A (統一台股增長)** 的自動爬蟲邏輯。
+- 整合 **Playwright** 繞過投信官網的 SSL 驗證問題，確保數據抓取穩定性。
+- 支援 XSLX 內容解析，自動提取股號、股名、持股數與權重。
 
-經過對參考專案的研究，我們決定將以下高級特性納入 V1 實作，確保系統的穩定性與專業度：
+### 2. GitHub Actions 雲端自動化 (CI/CD)
 
-### 1. 抓取穩定性 (Scraping Robustness)
-- **技術方案**：在 Python 模組中**預留 Playwright 介面**。
-- **目的**：應對統一/復華官網可能的 JavaScript 渲染或防爬機制，確保資料下載不中斷。
+- 建立 `etf_daily.yml` 排程任務，每日 20:00 自動執行。
+- **重大技術修復**：解決了 GitHub ActionsRunner 的 IPv6 網路限制問題。
+  - 將資料庫連線從 SQLAlchemy (Port 5432) 切換至 **Supabase REST API (Port 443)**。
+- 實現「智慧型 Git 備份」：僅在 CSV 內容變動時才推送回倉庫，保持歷史乾淨。
 
-### 2. 資料歷史與帳本 (History Ledger)
-- **長期歷史帳本 (Supabase)**：除了今日快照，額外維護一個 `etf_holding_history` 資料表，記錄每支股票「進入」與「離開」組合的日期。
-- **持有週期圖**：這將支持 Web 端顯示「該股票已被持有幾天」以及長期的持有週期分析。
+### 3. 資料庫與安全性 (Database & Security)
 
-### 3. 自動化備份機制 (Auto-Backup)
-- **Git 自動 Commit**：捨棄純 Google Drive，改為每日執行完畢後，**自動將資料 commit 回 GitHub Repository** 中的 `ETF/data/` 目錄。
-- **優點**：檔案管理更直觀、不佔資料庫容量，且能直接在 GitHub 看到異動歷史。
+- 完成 Supabase 資料庫初始化（Snapshot, Diff Logs, Periods 結構）。
+- 正確配置 GitHub Secrets (URL, DB Password, Anon Key, Service Role Key, LINE Auth)。
 
-### 4. 數據細節 (V1 欄位)
-- 除了權重，必備 **「股數變動」** 欄位，以區分「市值增長」與「經理人實際買入」。
+### 4. 前端展示介面 (Web UI)
 
----
-
-## 🏗️ 實作計畫 (OpenSpec 更新版)
-
-### Phase 1: 基礎設施
-- Supabase Schema: `etf_holdings_snapshot`, `etf_diff_logs`, `etf_holding_periods`.
-- Python: `uv add playwright`, `playwright install`.
-
-### Phase 2: Python 核心
-- 實作具備 Playwright 彈性的模組化 Scraper。
-- 實作帶有 Git Auto-Commit 功能的 Storage 模組。
-
-### Phase 3: LINE & Web
-- LINE Flex Message (含新進/剔除標記)。
-- Web 投資監控分頁 (支援雙向排序、持有週期顯示)。
+- 實作伺服器端渲染 (SSR) 頁面，直接從 Supabase 讀取最新數據。
+- 完成基礎元件：`HoldingsTable`（持股清單）與 `DiffLedger`（異動流水帳）。
+- 成功在網頁端展示第一筆爬回來的持股數據（共 52 檔）。
 
 ---
 
-**[結案存檔]：討論階段正式完成。規格已優化至最高水準。**
+## 📈 目前狀態與觀察 (Status & Observations)
+
+- **數據累積期**：目前由於是系統首次運行，所有持股均標記為「IN」(新增)。
+- **連線穩定**：HTTPS API 方案已證實 100% 繞過網路封鎖。
+- **存檔正常**：`ETF/history` 已出現第一份 CSV 歸檔。
+
+---
+
+## 📅 明日計劃 (Tomorrow's Goals)
+
+1. **產業分布分析 (Sector Analysis)**：
+   - 透過 API 或知識庫對 52 檔成分股進行分類。
+   - 在網頁端加入圓餅圖展示產業權重。
+2. **視覺化強化**：
+   - 優化持股列表的視覺效果（權重進度條、異動標誌）。
+   - 加入數據日期篩選功能。
+3. **數據洞察**：
+   - 計算並顯示「持有天數」。
+   - 評估加入其他 ETF 監控目標的可能性。
+
+---
+*✨ 報告產出：Antigravity AI*
