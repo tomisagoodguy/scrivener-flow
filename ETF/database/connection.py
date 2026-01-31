@@ -33,12 +33,12 @@ def get_db_engine():
         project_ref = supabase_url.split("//")[1].split(".")[0]
         
         DB_HOST = f"db.{project_ref}.supabase.co"
-        DB_PORT = "5432"
+        DB_PORT = "6543"  # 使用 Transaction Pooler 埠號 (更適合 CI/CD 環境)
         DB_USER = "postgres"
         DB_NAME = "postgres"
         
-        # Use db_password variable correctly
-        DATABASE_URL = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        # 使用連接池 host 並加入 sslmode=require
+        DATABASE_URL = f"postgresql://{DB_USER}.{project_ref}:{db_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
         
         engine = create_engine(DATABASE_URL, pool_pre_ping=True)
         return engine
