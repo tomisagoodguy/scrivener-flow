@@ -59,6 +59,7 @@ export const SideNav = () => {
         { name: '工作筆記', href: '/notes', icon: '📝' },
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
+        { name: '投資監控', href: '/investment', icon: '📈' },
     ];
 
     const handleLogout = async () => {
