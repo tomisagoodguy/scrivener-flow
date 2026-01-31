@@ -17,7 +17,7 @@ interface HoldingsTableProps {
     initialData: Holding[];
 }
 
-type SortField = 'weight' | 'shares' | 'change'; // change is tricky without history in same table, ignore for now
+type SortField = 'weight' | 'shares'; // change is tricky without history in same table, ignore for now
 type SortOrder = 'asc' | 'desc';
 
 export function HoldingsTable({ initialData }: HoldingsTableProps) {
