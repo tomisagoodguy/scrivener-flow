@@ -1,71 +1,39 @@
-name: "ETF Tracker: 00981A"
+name: Daily ETF Tracker
 
 on:
   schedule:
-    # Run daily at 20:00 CST (12:00 UTC)
-    - cron: '0 12 * * *'
-  workflow_dispatch: # Allow manual trigger
-
-permissions:
-  contents: write
+    # 每天執行兩次：
+    # 1. 台灣時間 22:00 (UTC 14:00): 確保取得當日盤後完整資料
+    # 2. 台灣時間 08:00 (UTC 00:00): 隔日開盤前再次確認 (Double Check)
+    - cron: '0 0,14 * * *'
+  workflow_dispatch: # 允許手動觸發
 
 jobs:
-  track-etf:
+  run-tracker:
     runs-on: ubuntu-latest
     
+    env:
+      # 設定環境變數，對應 GitHub Secrets
+      FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+      # 確保時區正確
+      TZ: 'Asia/Taipei'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          # Fetch all history so we can push back
-          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Cache Finlab Data
-        uses: actions/cache@v4
         with:
-          path: ~/.finlab
-          key: ${{ runner.os }}-finlab-${{ hashFiles('**/ETF/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-finlab-
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13" 
+          python-version: "3.13"
+          enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Install Playwright browsers
-        run: uv run playwright install --with-deps chromium
+        run: uv sync
 
       - name: Run ETF Tracker
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-          FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
-        run: uv run python ETF/main.py
-
-      - name: Commit and Push History
         run: |
-          git config --global user.name "ETF Tracker Bot"
-          git config --global user.email "bot@scrivener-flow.com"
-          
-          # Add only CSV files, ignore others
-          git add ETF/history/*.csv || true
-          
-          # Commit only if there are changes staged
-          if ! git diff --cached --quiet; then
-            git commit -m "data(etf): auto archive 00981A [skip ci]"
-            git pull --rebase origin master
-            git push origin master
-          else
-            echo "No CSV changes to commit. Skipping."
-          fi
+          uv run python ETF/main.py
