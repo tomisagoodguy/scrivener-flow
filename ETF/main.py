@@ -22,6 +22,7 @@ from ETF.scrapers.fhtrust_scraper import FhTrustScraper
 from ETF.database.storage import ETFStorage
 from ETF.processors.diff_engine import compute_diff
 from ETF.notifiers.line_notifier import LineNotifier
+from ETF.services.finlab_service import FinlabService
 
 def main():
     parser = argparse.ArgumentParser(description="ETF Tracker Main Process")
@@ -53,8 +54,55 @@ def main():
     # 3. Connection Components
     storage = ETFStorage()
     notifier = LineNotifier()
+    finlab_srv = FinlabService(stock_list=df['code'].tolist())
 
-    # 4. Logic
+    # 4. Fetch Prices from Finlab (Only if Taiwan Stocks)
+    try:
+        # Check if codes look like TW stocks (numeric and 4-5 chars)
+        # Be more lenient: if majority are numeric
+        numeric_codes = [c for c in df['code'].head(20).tolist() if str(c).strip().isdigit()]
+        is_tw_stocks = len(numeric_codes) > 10
+        
+        if is_tw_stocks:
+            logger.info(f"Detected Taiwan stocks ({len(numeric_codes)}/20 numeric). Fetching prices from Finlab...")
+            # Use Finlab to get prices
+            if finlab_srv.login():
+                from finlab import data
+                price_df = data.get('price:收盤價')
+                # Get the latest price for each stock
+                # Normalize date_str to YYYY-MM-DD
+                clean_date = date_str.replace("-", "").replace("/", "")
+                try:
+                    target_date = datetime.strptime(clean_date, "%Y%m%d").strftime("%Y-%m-%d")
+                except:
+                    logger.warning(f"Could not parse date_str '{date_str}'. Using current date.")
+                    target_date = datetime.today().strftime("%Y-%m-%d")
+                
+                if target_date in price_df.index:
+                    latest_prices = price_df.loc[target_date]
+                    logger.info(f"Using prices from target date: {target_date}")
+                else:
+                    logger.warning(f"Target date {target_date} not in Finlab. Using the most recent available price.")
+                    latest_prices = price_df.iloc[-1]
+                
+                # Cleanup symbols in index just in case
+                latest_prices.index = latest_prices.index.astype(str).str.strip()
+                
+                df['price'] = df['code'].str.strip().map(latest_prices)
+                df['currency'] = 'TWD'
+                
+                valid_prices = df['price'].notnull().sum()
+                logger.info(f"Successfully attached {valid_prices} prices from Finlab.")
+            else:
+                logger.warning("Finlab login failed. Proceeding without prices.")
+        else:
+            logger.info("Codes do not look like Taiwan stocks. Skipping Finlab price fetch.")
+            df['price'] = None
+            df['currency'] = None
+    except Exception as e:
+        logger.error(f"Error fetching Finlab prices: {e}")
+
+    # 5. Logic
     try:
         # A. Previous Snapshot
         prev_df = storage.get_latest_snapshot(etf_code)
@@ -78,6 +126,8 @@ def main():
             logger.info("No significant changes found.")
 
         # E. Update Snapshot (Always update to latest)
+        logger.info(f"Columns in DF: {df.columns.tolist()}")
+        logger.info(f"Sample data:\n{df[['code', 'name', 'price']].head()}")
         storage.save_snapshot(df, etf_code, date_str)
         
         # F. CSV Archive

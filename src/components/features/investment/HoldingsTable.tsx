@@ -11,6 +11,7 @@ interface Holding {
     shares: number;
     weight: number;
     data_date: string;
+    price?: number;
 }
 
 interface HoldingsTableProps {
@@ -63,6 +64,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                     )}
                                 </div>
                             </th>
+                            <th className="px-6 py-3 text-right">收盤價</th>
                             <th 
                                 className="px-6 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                                 onClick={() => handleSort('weight')}
@@ -94,6 +96,9 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                 </td>
                                 <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400 text-right">
                                     {item.shares.toLocaleString()}
+                                </td>
+                                <td className="px-6 py-4 font-mono text-slate-900 dark:text-slate-100 text-right">
+                                    {item.price ? `${item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">

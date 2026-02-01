@@ -36,7 +36,7 @@ class ETFStorage:
         url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         params = {
             "etf_code": f"eq.{etf_code}",
-            "select": "stock_code,stock_name,shares,weight,data_date"
+            "select": "stock_code,stock_name,shares,weight,data_date,price,currency"
         }
         
         try:
@@ -55,6 +55,8 @@ class ETFStorage:
             })
             df['shares'] = df['shares'].astype(int)
             df['weight'] = df['weight'].astype(float)
+            if 'price' in df.columns:
+                df['price'] = pd.to_numeric(df['price'], errors='coerce')
             return df
         except Exception as e:
             logger.error(f"Error fetching snapshot via REST: {e}")
@@ -81,7 +83,9 @@ class ETFStorage:
                     "stock_name": row['name'],
                     "shares": int(row['shares']),
                     "weight": float(row['weight']),
-                    "data_date": data_date
+                    "data_date": data_date,
+                    "price": float(row['price']) if 'price' in df.columns and pd.notnull(row['price']) else None,
+                    "currency": row['currency'] if 'currency' in df.columns else 'TWD'
                 })
             
             requests.post(f"{self.supabase_url}/rest/v1/etf_holdings_snapshot", headers=self.headers, json=records).raise_for_status()
