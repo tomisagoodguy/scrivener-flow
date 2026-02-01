@@ -30,7 +30,7 @@ interface HoldingsTableProps {
     initialData: Holding[];
 }
 
-type SortField = 'weight' | 'shares' | 'amount' | 'margin_ratio' | 'change_percent' | 'volatility' | 'market_cap' | 'monthly_revenue' | 'revenue_yoy' | 'revenue_mom' | 'revenue_momentum_rank';
+type SortField = 'weight' | 'shares' | 'amount' | 'margin_ratio' | 'change_percent' | 'volatility' | 'market_cap' | 'monthly_revenue' | 'revenue_yoy' | 'revenue_mom' | 'revenue_momentum_rank' | 'price';
 type SortOrder = 'asc' | 'desc';
 
 export function HoldingsTable({ initialData }: HoldingsTableProps) {
