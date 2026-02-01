@@ -36,7 +36,7 @@ class ETFStorage:
         url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         params = {
             "etf_code": f"eq.{etf_code}",
-            "select": "stock_code,stock_name,shares,weight,data_date,price,currency"
+            "select": "stock_code,stock_name,shares,weight,data_date,price,currency,amount,margin_ratio,change_percent,volatility,market_cap,is_high_5d,is_high_20d,is_high_200d,monthly_revenue,revenue_yoy,revenue_mom,revenue_momentum_rank"
         }
         
         try:
@@ -85,6 +85,18 @@ class ETFStorage:
                     "weight": float(row['weight']),
                     "data_date": data_date,
                     "price": float(row['price']) if 'price' in df.columns and pd.notnull(row['price']) else None,
+                    "amount": float(row['amount']) if 'amount' in df.columns and pd.notnull(row['amount']) else None,
+                    "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in df.columns and pd.notnull(row['margin_ratio']) else 0,
+                    "change_percent": float(row['change_percent']) if 'change_percent' in df.columns and pd.notnull(row['change_percent']) else 0,
+                    "volatility": float(row['volatility']) if 'volatility' in df.columns and pd.notnull(row['volatility']) else None,
+                    "market_cap": float(row['market_cap']) if 'market_cap' in df.columns and pd.notnull(row['market_cap']) else None,
+                    "is_high_5d": bool(row['is_high_5d']) if 'is_high_5d' in df.columns and pd.notnull(row['is_high_5d']) else False,
+                    "is_high_20d": bool(row['is_high_20d']) if 'is_high_20d' in df.columns and pd.notnull(row['is_high_20d']) else False,
+                    "is_high_200d": bool(row['is_high_200d']) if 'is_high_200d' in df.columns and pd.notnull(row['is_high_200d']) else False,
+                    "monthly_revenue": float(row['monthly_revenue']) if 'monthly_revenue' in df.columns and pd.notnull(row['monthly_revenue']) else None,
+                    "revenue_yoy": float(row['revenue_yoy']) if 'revenue_yoy' in df.columns and pd.notnull(row['revenue_yoy']) else None,
+                    "revenue_mom": float(row['revenue_mom']) if 'revenue_mom' in df.columns and pd.notnull(row['revenue_mom']) else None,
+                    "revenue_momentum_rank": float(row['revenue_momentum_rank']) if 'revenue_momentum_rank' in df.columns and pd.notnull(row['revenue_momentum_rank']) else None,
                     "currency": row['currency'] if 'currency' in df.columns else 'TWD'
                 })
             
@@ -115,7 +127,9 @@ class ETFStorage:
                 "high": float(row['high']) if pd.notnull(row['high']) else None,
                 "low": float(row['low']) if pd.notnull(row['low']) else None,
                 "close": float(row['close']) if pd.notnull(row['close']) else None,
-                "volume": int(row['volume']) if pd.notnull(row['volume']) else 0
+                "volume": int(row['volume']) if pd.notnull(row['volume']) else 0,
+                "amount": float(row['amount']) if 'amount' in row and pd.notnull(row['amount']) else None,
+                "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in row and pd.notnull(row['margin_ratio']) else 0
             })
 
         # Batch insert to avoid URL length issues

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Fetch daily prices for the stock
     const { data, error } = await supabase
         .from('stock_prices_daily')
-        .select('data_date, open, high, low, close, volume')
+        .select('data_date, open, high, low, close, volume, amount, margin_ratio')
         .eq('stock_code', code)
         .order('data_date', { ascending: true });
 
@@ -27,9 +27,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Format for lightweight-charts
-    // Candlestick expects { time: 'YYYY-MM-DD', open: X, high: Y, low: Z, close: W }
-    // Volume expects { time: 'YYYY-MM-DD', value: V, color: '...' }
-    
     const formattedData = data.map((item) => {
         const time = new Date(item.data_date).toISOString().split('T')[0];
         return {
@@ -38,7 +35,9 @@ export async function GET(request: NextRequest) {
             high: Number(item.high),
             low: Number(item.low),
             close: Number(item.close),
-            value: Number(item.volume)
+            value: Number(item.volume),
+            amount: item.amount ? Number(item.amount) : 0,
+            margin_ratio: item.margin_ratio ? Number(item.margin_ratio) : 0
         };
     });
 

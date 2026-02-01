@@ -2,7 +2,6 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
     /* config options here */
-    turbopack: {},
 
     // 🔒 Security Headers - 提升網站安全性評分
     // 注意：Content-Security-Policy (CSP) 已移至 src/middleware.ts 以支援動態 Nonce

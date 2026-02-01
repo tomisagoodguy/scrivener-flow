@@ -56,101 +56,68 @@ def main():
     notifier = LineNotifier()
     finlab_srv = FinlabService(stock_list=df['code'].tolist())
 
-    # 4. Fetch Prices from Finlab (Only if Taiwan Stocks)
+    # 4. Fetch/Attach Prices
     try:
-        # Check if codes look like TW stocks (numeric and 4-5 chars)
-        # Be more lenient: if majority are numeric
+        # Check if codes look like TW stocks
         numeric_codes = [c for c in df['code'].head(20).tolist() if str(c).strip().isdigit()]
-        is_tw_stocks = len(numeric_codes) > 10
-        
-        if is_tw_stocks:
-            logger.info(f"Detected Taiwan stocks ({len(numeric_codes)}/20 numeric). Fetching prices from Finlab...")
-            # Use Finlab to get prices
-            if finlab_srv.login():
-                from finlab import data
-                price_df = data.get('price:收盤價')
-                # Get the latest price for each stock
-                # Normalize date_str to YYYY-MM-DD
-                clean_date = date_str.replace("-", "").replace("/", "")
-                try:
-                    target_date = datetime.strptime(clean_date, "%Y%m%d").strftime("%Y-%m-%d")
-                except:
-                    logger.warning(f"Could not parse date_str '{date_str}'. Using current date.")
-                    target_date = datetime.today().strftime("%Y-%m-%d")
-                
-                if target_date in price_df.index:
-                    latest_prices = price_df.loc[target_date]
-                    logger.info(f"Using prices from target date: {target_date}")
-                else:
-                    logger.warning(f"Target date {target_date} not in Finlab. Using the most recent available price.")
-                    latest_prices = price_df.iloc[-1]
-                
-                # Cleanup symbols in index just in case
-                latest_prices.index = latest_prices.index.astype(str).str.strip()
-                
-                df['price'] = df['code'].str.strip().map(latest_prices)
-                df['currency'] = 'TWD'
-                
-                valid_prices = df['price'].notnull().sum()
-                logger.info(f"Successfully attached {valid_prices} prices from Finlab.")
-                
-                # --- NEW: Sync Historical OHLCV for Charts ---
-                try:
-                    logger.info("Syncing historical OHLCV data for K-line charts...")
-                    ohlcv_df = finlab_srv.get_ohlcv(df['code'].tolist(), days=250)
-                    if not ohlcv_df.empty:
-                        storage.save_stock_prices(ohlcv_df)
-                except Exception as ex:
-                    logger.error(f"Failed to sync OHLCV: {ex}")
-                # ---------------------------------------------
-            else:
-                logger.warning("Finlab login failed. Proceeding without prices.")
+        if len(numeric_codes) > 10:
+            logger.info("Detected Taiwan stocks. Fetching prices, amounts and margins...")
+            df = finlab_srv.attach_prices(df, date_str)
         else:
             logger.info("Codes do not look like Taiwan stocks. Skipping Finlab price fetch.")
             df['price'] = None
+            df['amount'] = None
+            df['margin_ratio'] = 0
             df['currency'] = None
     except Exception as e:
-        logger.error(f"Error fetching Finlab prices: {e}")
+        logger.error(f"Error during price attachment: {e}")
 
-    # 5. Logic
+    # 5. Business Logic (Save Snapshot & Diffs)
     try:
         # A. Previous Snapshot
         prev_df = storage.get_latest_snapshot(etf_code)
         
-        # B. Compute Diff
-        if prev_df.empty:
-            logger.info("No previous snapshot found (First Run?). Treating all as IN.")
-            # We can fake prev_df as empty, diff engine handles it.
-        
         diff_logs = compute_diff(prev_df, df, etf_code, date_str)
         
-        # C. Save Diff & Periods
+        # B. Save Diff & Periods
         if diff_logs:
             logger.info(f"Found {len(diff_logs)} diff events.")
             storage.save_diff_logs(diff_logs)
             storage.update_holding_periods(diff_logs)
             
-            # D. Notify (Only if IN/OUT)
+            # C. Notify
             notifier.notify_diffs(diff_logs, etf_code, date_str)
         else:
             logger.info("No significant changes found.")
 
-        # E. Update Snapshot (Always update to latest)
-        logger.info(f"Columns in DF: {df.columns.tolist()}")
-        logger.info(f"Sample data:\n{df[['code', 'name', 'price']].head()}")
+        # D. Update Snapshot (Essential for List UI)
         storage.save_snapshot(df, etf_code, date_str)
+        logger.info("Snapshot updated successfully.")
         
-        # F. CSV Archive
+    except Exception as e:
+        logger.error(f"Error in business logic: {e}")
+
+    # 6. Historical Data Sync (Slow - for K-line charts)
+    try:
+        if len(numeric_codes) > 10:
+            logger.info("Syncing historical OHLCV for charts (this may take a while)...")
+            ohlcv_df = finlab_srv.get_ohlcv(df['code'].tolist(), days=250)
+            if not ohlcv_df.empty:
+                storage.save_stock_prices(ohlcv_df)
+                logger.info("OHLCV sync completed.")
+    except Exception as e:
+        logger.error(f"Error during OHLCV sync: {e}")
+
+    # 7. CSV Archive
+    try:
         csv_filename = f"{etf_code}_{date_str}.csv"
         csv_path = output_dir / csv_filename
         df.to_csv(csv_path, index=False, encoding='utf-8-sig')
         logger.info(f"Saved CSV archive: {csv_path}")
-        
-        logger.info("✅ ETF Tracker finished successfully.")
-        
     except Exception as e:
-        logger.error(f"Critical Error in Main Process: {e}")
-        sys.exit(1)
+        logger.error(f"Error saving CSV: {e}")
+
+    logger.info("✅ ETF Tracker pipeline finished.")
 
 if __name__ == "__main__":
     main()
