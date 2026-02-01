@@ -168,3 +168,33 @@ class FinlabService:
                 'shareholder_ratio_diff2': empty_df, 
                 'shareholder_distribution': pd.DataFrame()
             })
+
+    def get_ohlcv(self, stock_list: List[str], days: int = 250) -> pd.DataFrame:
+        """
+        Fetch OHLCV data for a list of stocks.
+        Returns a long-format DataFrame with cols: [stock_id, date, open, high, low, close, volume]
+        """
+        if not self.login():
+            return pd.DataFrame()
+
+        try:
+            logger.info(f"Fetching OHLCV for {len(stock_list)} stocks, last {days} days...")
+            
+            # Use valid stocks only
+            all_close = data.get('price:收盤價')
+            valid_list = [s for s in stock_list if s in all_close.columns]
+            
+            o = data.get('price:開盤價')[valid_list].tail(days).stack()
+            h = data.get('price:最高價')[valid_list].tail(days).stack()
+            l = data.get('price:最低價')[valid_list].tail(days).stack()
+            c = data.get('price:收盤價')[valid_list].tail(days).stack()
+            v = data.get('price:成交股數')[valid_list].tail(days).stack()
+
+            df = pd.concat([o, h, l, c, v], axis=1)
+            df.columns = ['open', 'high', 'low', 'close', 'volume']
+            df.index.names = ['date', 'stock_id']
+            
+            return df.reset_index()
+        except Exception as e:
+            logger.error(f"Error fetching OHLCV from Finlab: {e}")
+            return pd.DataFrame()

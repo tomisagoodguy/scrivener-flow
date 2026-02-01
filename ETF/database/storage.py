@@ -94,6 +94,45 @@ class ETFStorage:
             logger.error(f"Failed to save snapshot via REST: {e}")
             raise
 
+    def save_stock_prices(self, df_prices: pd.DataFrame):
+        """
+        Save OHLCV data using Upsert (POST with Prefer: resolution=merge).
+        df_prices columns: [stock_id, date, open, high, low, close, volume]
+        """
+        if df_prices.empty:
+            return
+
+        url = f"{self.supabase_url}/rest/v1/stock_prices_daily"
+        headers = self.headers.copy()
+        headers["Prefer"] = "resolution=merge-duplicates"
+
+        records = []
+        for _, row in df_prices.iterrows():
+            records.append({
+                "stock_code": str(row['stock_id']),
+                "data_date": row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else str(row['date']),
+                "open": float(row['open']) if pd.notnull(row['open']) else None,
+                "high": float(row['high']) if pd.notnull(row['high']) else None,
+                "low": float(row['low']) if pd.notnull(row['low']) else None,
+                "close": float(row['close']) if pd.notnull(row['close']) else None,
+                "volume": int(row['volume']) if pd.notnull(row['volume']) else 0
+            })
+
+        # Batch insert to avoid URL length issues
+        batch_size = 500
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i+batch_size]
+            try:
+                resp = requests.post(url, headers=headers, json=batch)
+                resp.raise_for_status()
+            except Exception as e:
+                logger.error(f"Failed to save price batch: {e}")
+                # Log response text if available for clearer error
+                if hasattr(e, 'response') and e.response:
+                    logger.error(f"Response: {e.response.text}")
+        
+        logger.info(f"Successfully synced {len(records)} price records.")
+
     def save_diff_logs(self, diffs: List[Dict[str, Any]]):
         """
         Save diff events via REST API.

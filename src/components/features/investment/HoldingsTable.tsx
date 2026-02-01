@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon, TrendingUp } from 'lucide-react';
+import { PriceChartModal } from './PriceChartModal';
 
 interface Holding {
     etf_code: string;
@@ -25,6 +26,15 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
     const [data, setData] = useState(initialData);
     const [sortField, setSortField] = useState<SortField>('weight');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+    // Chart Modal State
+    const [selectedStock, setSelectedStock] = useState<{ code: string; name: string } | null>(null);
+    const [isChartOpen, setIsChartOpen] = useState(false);
+
+    const handleRowClick = (item: Holding) => {
+        setSelectedStock({ code: item.stock_code, name: item.stock_name });
+        setIsChartOpen(true);
+    };
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -82,13 +92,17 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                         {data.map((item) => (
                             <tr 
                                 key={item.stock_code}
-                                className="border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                                className="border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer group"
+                                onClick={() => handleRowClick(item)}
                             >
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="font-mono font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs">
-                                            {item.stock_code}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs">
+                                                {item.stock_code}
+                                            </span>
+                                            <TrendingUp className="w-3 h-3 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                                        </div>
                                         <span className="font-medium text-slate-900 dark:text-slate-100">
                                             {item.stock_name}
                                         </span>
@@ -119,6 +133,19 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 text-center">
                 資料日期: {data.length > 0 ? data[0].data_date : 'N/A'} • 共 {data.length} 檔成分股
             </div>
+            
+            <p className="mt-4 text-xs text-slate-400 text-right">
+                💡 點選任一持股列可查看互動式 K 線圖
+            </p>
+
+            {selectedStock && (
+                <PriceChartModal 
+                    isOpen={isChartOpen}
+                    onClose={() => setIsChartOpen(false)}
+                    stockCode={selectedStock.code}
+                    stockName={selectedStock.name}
+                />
+            )}
         </div>
     );
 }

@@ -93,6 +93,16 @@ def main():
                 
                 valid_prices = df['price'].notnull().sum()
                 logger.info(f"Successfully attached {valid_prices} prices from Finlab.")
+                
+                # --- NEW: Sync Historical OHLCV for Charts ---
+                try:
+                    logger.info("Syncing historical OHLCV data for K-line charts...")
+                    ohlcv_df = finlab_srv.get_ohlcv(df['code'].tolist(), days=250)
+                    if not ohlcv_df.empty:
+                        storage.save_stock_prices(ohlcv_df)
+                except Exception as ex:
+                    logger.error(f"Failed to sync OHLCV: {ex}")
+                # ---------------------------------------------
             else:
                 logger.warning("Finlab login failed. Proceeding without prices.")
         else:
