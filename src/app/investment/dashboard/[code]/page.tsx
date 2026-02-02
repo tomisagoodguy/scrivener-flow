@@ -34,14 +34,11 @@ interface ShareholderData {
 }
 
 interface BrokerTransactionData {
-    date: string;
-    broker_name: string;
-    buy_shares: number;
-    sell_shares: number;
-    net_shares: number;
-    buy_amount: number;
-    sell_amount: number;
-    net_amount: number;
+    data_date: string;
+    net_volume: number;
+    force_metric: number | null;
+    buy_amount?: number;
+    sell_amount?: number;
 }
 
 /**
