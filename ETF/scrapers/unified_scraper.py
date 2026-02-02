@@ -21,7 +21,8 @@ def download_file_requests(url: str, output_path: pathlib.Path) -> bool:
         
         # 00981A special handling: Official site often redirects or checks cookies.
         # We try a direct GET first.
-        resp = requests.get(url, headers=headers, stream=True, timeout=30)
+        # Disable SSL verification for legacy financial sites
+        resp = requests.get(url, headers=headers, stream=True, timeout=30, verify=False)
         resp.raise_for_status()
         
         # Basic content type check
