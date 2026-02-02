@@ -88,7 +88,7 @@ export function BrokerChart({ data }: BrokerChartProps) {
                 borderRadius: '8px',
                 padding: '10px',
             }}
-            formatter={(value: any, name: string) => {
+            formatter={(value: any, name?: string) => {
                 if (name === '淨買賣超') return [formatVolume(value), name];
                 if (name === '主力動能') return [value?.toFixed(2), name];
                 return [value, name];

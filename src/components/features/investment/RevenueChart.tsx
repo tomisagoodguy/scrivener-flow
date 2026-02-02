@@ -128,7 +128,7 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
             borderRadius: '8px',
             padding: '10px',
           }}
-          formatter={(value: any, name: string, props: any) => {
+          formatter={(value: any, name?: string, props: any) => {
             if (name === 'revenue' || name === '營收') {
               const yoy = props.payload.revenue_yoy;
               const yoyText = yoy !== null ? ` (YoY ${yoy > 0 ? '+' : ''}${yoy.toFixed(1)}%)` : '';
