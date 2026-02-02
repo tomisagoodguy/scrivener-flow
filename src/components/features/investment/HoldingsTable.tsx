@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowUp, ArrowDown, ChevronRight, TrendingUp, Activity, BarChart3, DollarSign, Percent } from 'lucide-react';
-import { PriceChartModal } from './PriceChartModal';
 
 export interface Holding {
     stock_id: string;
@@ -34,11 +34,10 @@ type SortField = 'weight' | 'shares' | 'amount' | 'margin_ratio' | 'change_perce
 type SortOrder = 'asc' | 'desc';
 
 export function HoldingsTable({ initialData }: HoldingsTableProps) {
+    const router = useRouter();
     const [data, setData] = useState(initialData);
     const [sortField, setSortField] = useState<SortField>('weight');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-    const [selectedStock, setSelectedStock] = useState<{ code: string; name: string } | null>(null);
-    const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
     const handleSort = (field: SortField) => {
         const newOrder = sortField === field && sortOrder === 'desc' ? 'asc' : 'desc';
@@ -58,8 +57,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
     };
 
     const handleRowClick = (stock: Holding) => {
-        setSelectedStock({ code: stock.stock_code, name: stock.stock_name });
-        setIsChartModalOpen(true);
+        router.push(`/investment/dashboard/${stock.stock_code}`);
     };
 
     const SortIndicator = ({ field }: { field: SortField }) => {
@@ -305,13 +303,6 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                     </tbody>
                 </table>
             </div>
-            
-            <PriceChartModal 
-                isOpen={isChartModalOpen}
-                onClose={() => setIsChartModalOpen(false)}
-                holdings={initialData}
-                initialIndex={selectedStock && initialData ? initialData.findIndex(h => h.stock_code === selectedStock.code) : 0}
-            />
         </div>
     );
 }

@@ -4,7 +4,7 @@ import pandas as pd
 import finlab
 from finlab import data
 from typing import List, Dict, Any, Optional
-from ETF.services.indicators import calculate_new_highs, calculate_volatility, calculate_revenue_momentum
+from .indicators import calculate_new_highs, calculate_volatility, calculate_revenue_momentum
 
 logger = logging.getLogger(__name__)
 

@@ -160,7 +160,7 @@ export default function Header() {
                         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
                         onClick={() => setIsMenuOpen(false)}
                     />
-                    <div className="absolute left-0 top-0 bottom-0 w-3/4 max-w-xs bg-white dark:bg-slate-900 shadow-2xl p-6 flex flex-col gap-6 animate-slide-in-from-left">
+                    <div className="absolute left-0 top-0 bottom-0 w-3/4 max-w-xs bg-white dark:bg-slate-900 shadow-2xl p-6 flex flex-col gap-6 animate-slide-in-from-left overflow-y-auto">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-black text-slate-900 dark:text-white">選單</h2>
                             <button
