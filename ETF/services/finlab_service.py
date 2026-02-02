@@ -77,6 +77,28 @@ class FinlabService:
             logger.error(f"Finlab login failed: {e}")
             return False
 
+    def get_revenue_data(self):
+        """Fetch raw revenue data"""
+        return (
+            self._get_data('monthly_revenue'),
+            self._get_data('monthly_revenue_yoy'),
+            self._get_data('revenue_mom')
+        )
+
+    def get_shareholder_data(self):
+        """Fetch raw shareholder data"""
+        from finlab import data
+        return data.get('inventory')
+
+    def get_broker_data(self):
+        """Fetch raw broker transaction data"""
+        return (
+            self._get_data('top15_buy'),
+            self._get_data('top15_sell'),
+            self._get_data('close')
+        )
+
+
     def preload_market_data(self):
         """
         [v9.1.1 當沖佔比修正版]

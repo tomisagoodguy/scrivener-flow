@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
             .from('stock_broker_transactions')
             .select('*')
             .eq('stock_code', code)
-            .order('data_date', { ascending: true })
-            .limit(600); // 獲取足夠長的歷史數據以顯示趨勢
+            .order('data_date', { ascending: false }) // Get latest dates first
+            .limit(240); // User requested recent 240 days
 
         if (error) {
             console.error('Error fetching broker transactions:', error);
@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        return NextResponse.json(data || []);
+        // Reverse to chronological order (oldest to newest) for the chart
+        const sortedData = data ? [...data].reverse() : [];
+
+        return NextResponse.json(sortedData);
     } catch (error) {
         console.error('Unexpected error:', error);
         return NextResponse.json(

@@ -15,6 +15,7 @@ import { StockChart } from "./StockChart";
 import { RevenueChart } from "./RevenueChart";
 import { ChipsChart } from "./ChipsChart";
 import { ShareholderFlowChart } from "./ShareholderFlowChart";
+import { BrokerChart } from "./BrokerChart";
 import { PriceData } from "@/lib/investment/indicators";
 
 interface PriceChartModalProps {
@@ -44,6 +45,12 @@ interface ShareholderData {
     custody_ratio: number | null;
 }
 
+interface BrokerData {
+    data_date: string;
+    net_volume: number;
+    force_metric: number | null;
+}
+
 /**
  * PriceChartModal (全頁版)
  * 垂直滾動佈局，一次顯示所有分析圖表
@@ -67,6 +74,11 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
     const [chipsLoading, setChipsLoading] = useState(false);
     const [chipsError, setChipsError] = useState<string | null>(null);
 
+    // 券商籌碼數據 (Top 15)
+    const [brokerData, setBrokerData] = useState<BrokerData[]>([]);
+    const [brokerLoading, setBrokerLoading] = useState(false);
+    const [brokerError, setBrokerError] = useState<string | null>(null);
+
     const currentStock = holdings[currentIndex];
 
     // Reset index when modal opens
@@ -89,6 +101,7 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
             fetchPriceData(code),
             fetchRevenueData(code),
             fetchChipsData(code),
+            fetchBrokerData(code),
         ]);
     };
 
@@ -155,6 +168,35 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
             setChipsData([]);
         } finally {
             setChipsLoading(false);
+        }
+    };
+
+    const fetchBrokerData = async (code: string) => {
+        setBrokerLoading(true);
+        setBrokerError(null);
+        try {
+            const response = await fetch(`/api/investment/broker-transactions?code=${code}`);
+            
+            if (!response.ok) {
+                // 如果是 404 或其他錯誤，可能代表無數據
+                const resText = await response.text();
+                // 嘗試解析 JSON 錯誤訊息
+                try {
+                    const errObj = JSON.parse(resText);
+                    if (errObj.error) throw new Error(errObj.error);
+                } catch (e) {
+                    // ignore
+                }
+                throw new Error('無法獲取券商數據');
+            }
+
+            const data: BrokerData[] = await response.json();
+            setBrokerData(data);
+        } catch (err: any) {
+            setBrokerError(err.message);
+            setBrokerData([]);
+        } finally {
+            setBrokerLoading(false);
         }
     };
 
@@ -297,6 +339,36 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
 
                             <p className="mt-4 text-xs text-slate-400 uppercase tracking-wider">
                                 三合一籌碼分析 • 股權分散 (48週) + 大戶流向 (10週) + 散戶流向 (10週)
+                            </p>
+                        </section>
+
+                        {/* 4. 主力券商籌碼分析 (Top 15) */}
+                        <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
+                            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                🏦 主力券商籌碼分析 (Top 15)
+                            </h2>
+                            
+                            <div className="relative h-[450px]">
+                                {brokerLoading && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px]">
+                                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                                    </div>
+                                )}
+                                
+                                {brokerError ? (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 text-red-500 font-medium">
+                                        {brokerError}
+                                    </div>
+                                ) : brokerData.length > 0 ? (
+                                    <BrokerChart data={brokerData} />
+                                ) : !brokerLoading ? (
+                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                                        無券商數據
+                                    </div>
+                                ) : null}
+                            </div>
+                            <p className="mt-2 text-xs text-slate-400 uppercase tracking-wider">
+                                淨買賣超 (Bar) & 主力動能指標 (Line) • 追蹤前 15 大分點動作
                             </p>
                         </section>
                     </div>

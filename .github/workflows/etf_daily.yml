@@ -44,3 +44,4 @@ jobs:
       - name: Run ETF Tracker
         run: |
           uv run python ETF/main.py
+          uv run python ETF/sync_stock_financials.py

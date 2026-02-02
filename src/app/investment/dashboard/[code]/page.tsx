@@ -242,7 +242,7 @@ export default function StockDashboardPage() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => router.back()}
+                        onClick={() => router.push('/investment')}
                         className="flex items-center gap-2"
                     >
                         <ArrowLeft className="w-4 h-4" />
