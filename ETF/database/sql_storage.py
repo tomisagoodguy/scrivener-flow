@@ -13,16 +13,23 @@ class SQLStorage:
         # Load env
         load_dotenv('.env.local')
         
-        supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-        if not supabase_url:
-            raise ValueError("NEXT_PUBLIC_SUPABASE_URL not found")
-        
-        project_ref = supabase_url.split("//")[1].split(".")[0]
-        db_password = os.getenv("SUPABASE_DB_PASSWORD")
-        if not db_password:
-            raise ValueError("SUPABASE_DB_PASSWORD not found")
-        
-        self.db_url = f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres"
+        # Try to use full DB URL first (Best for GitHub Actions / Production)
+        full_url = os.getenv("SUPABASE_DB_URL")
+        if full_url:
+            self.db_url = full_url
+        else:
+            # Fallback to constructing it (Old way)
+            supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+            if not supabase_url:
+                raise ValueError("NEXT_PUBLIC_SUPABASE_URL or SUPABASE_DB_URL not found")
+            
+            project_ref = supabase_url.split("//")[1].split(".")[0]
+            db_password = os.getenv("SUPABASE_DB_PASSWORD")
+            if not db_password:
+                raise ValueError("SUPABASE_DB_PASSWORD not found")
+            
+            self.db_url = f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres"
+            
         self.engine = sqlalchemy.create_engine(self.db_url)
 
     def get_target_stocks(self, etf_code: str) -> list:
