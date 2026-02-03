@@ -10,6 +10,7 @@ Investment Dashboard Enhancement - Stock Financials Sync
 """
 import sys
 import logging
+import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -36,10 +37,10 @@ class FinancialsSync:
         self.finlab = FinlabService()
         self.storage = SQLStorage()
     
-    def run(self):
+    def run(self, days=300):
         """執行完整同步流程"""
         logger.info("=" * 60)
-        logger.info("開始同步個股財務與籌碼數據 (Refactored)")
+        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days})")
         logger.info("=" * 60)
         
         try:
@@ -60,7 +61,7 @@ class FinancialsSync:
             # 2. 同步券商數據 (Priority)
             logger.info("--- 同步券商交易數據 ---")
             raw_buy, raw_sell, raw_close = self.finlab.get_broker_data()
-            broker_records = BrokerProcessor.process(raw_buy, raw_sell, raw_close, stock_list)
+            broker_records = BrokerProcessor.process(raw_buy, raw_sell, raw_close, stock_list, days=days)
             self.storage.upsert_broker_transactions(broker_records)
 
             # 3. 同步營收
@@ -87,5 +88,9 @@ class FinancialsSync:
             raise
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Financials Sync Process")
+    parser.add_argument("--days", type=int, default=300, help="Number of days for broker data sync (default: 300)")
+    args = parser.parse_args()
+    
     sync = FinancialsSync()
-    sync.run()
+    sync.run(days=args.days)

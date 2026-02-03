@@ -28,6 +28,7 @@ from ETF.database.sql_storage import SQLStorage
 def main():
     parser = argparse.ArgumentParser(description="ETF Tracker Main Process")
     parser.add_argument("--dry-run", action="store_true", help="Do not save to DB")
+    parser.add_argument("--days", type=int, default=250, help="Number of days for OHLCV sync (default: 250)")
     args = parser.parse_args()
 
     logger.info("🚀 Starting ETF Tracker V1...")
@@ -106,8 +107,8 @@ def main():
     # 6. Historical Data Sync (Slow - for K-line charts)
     try:
         if len(numeric_codes) > 10:
-            logger.info("Syncing historical OHLCV for charts (this may take a while)...")
-            ohlcv_df = finlab_srv.get_ohlcv(df['code'].tolist(), days=250)
+            logger.info(f"Syncing historical OHLCV for charts ({args.days} days, this may take a while)...")
+            ohlcv_df = finlab_srv.get_ohlcv(df['code'].tolist(), days=args.days)
             if not ohlcv_df.empty:
                 storage.save_stock_prices(ohlcv_df)
                 logger.info("OHLCV sync completed.")

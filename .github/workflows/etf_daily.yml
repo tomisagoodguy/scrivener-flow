@@ -40,17 +40,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.finlab
-          key: ${{ runner.os }}-finlab-${{ hashFiles('**/finlab_service.py') }}
+          # 採用更穩定的 Key，避免因服務程式碼微調就重新下載數百 MB 資料
+          key: ${{ runner.os }}-finlab-v1
           restore-keys: |
             ${{ runner.os }}-finlab-
 
       - name: Install dependencies
         run: uv sync
 
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-v1
+
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: uv run playwright install chromium
 
       - name: Run ETF Tracker
         run: |
-          uv run python ETF/main.py
-          uv run python ETF/sync_stock_financials.py
+          # 預設同步最近 30 天數據即可，節省每日執行時間
+          uv run python ETF/main.py --days 30
+          uv run python ETF/sync_stock_financials.py --days 30

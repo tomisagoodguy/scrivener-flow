@@ -6,12 +6,12 @@ logger = logging.getLogger(__name__)
 
 class BrokerProcessor:
     @staticmethod
-    def process(buy_vol: pd.DataFrame, sell_vol: pd.DataFrame, close: pd.DataFrame, stock_list: list) -> list:
+    def process(buy_vol: pd.DataFrame, sell_vol: pd.DataFrame, close: pd.DataFrame, stock_list: list, days: int = 300) -> list:
         """
         處理券商買賣超數據，計算主力動能指標
         Returns: List of records ready for DB insertion
         """
-        logger.info("Processing broker transactions...")
+        logger.info(f"Processing broker transactions for {days} days...")
         
         if buy_vol.empty or sell_vol.empty:
             logger.warning("No broker data to process")
@@ -24,12 +24,15 @@ class BrokerProcessor:
         if buy_vol.empty:
             return []
         
-        # Align dates (Last 600 days)
+        # Align dates
         all_dates = buy_vol.index.intersection(sell_vol.index)
         if not close.empty:
             all_dates = all_dates.intersection(close.index)
         
-        target_dates = all_dates[-300:]
+        # 我們需要足夠的歷史數據來計算 60 天滾動指標 (Force Metric)
+        # 所以實際處理的天數 = 請求的天數 + 60（如果是計算滾動數據的話）
+        process_days = days + 60 if days < 300 else days
+        target_dates = all_dates[-process_days:]
         
         if len(target_dates) > 0:
             logger.info(f"Target Date Range: {target_dates[0]} to {target_dates[-1]}")
@@ -56,6 +59,11 @@ class BrokerProcessor:
         
         merged = pd.concat([buy_s, sell_s, net_vol_s, force_s], axis=1)
         
+        # 只保留請求的天數 (切除為了計算 rolling 而多抓的部分)
+        if days < 300:
+            final_dates = all_dates[-days:]
+            merged = merged.loc[final_dates]
+
         records = []
         for (date, stock), row in merged.iterrows():
             if row['buy_amount'] == 0 and row['sell_amount'] == 0 and pd.isna(row['force_metric']):
