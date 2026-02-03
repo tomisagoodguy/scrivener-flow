@@ -40,7 +40,7 @@ class FinlabService:
 
     def __init__(self, stock_list: List[str] = None):
         self.api_key = os.getenv("FINLAB_API_KEY")
-        self.stock_list = stock_list or ["0050", "00981"] # Default if none provided
+        self.stock_list = stock_list or ["00981"] # Default if none provided
         self.all_data = {} # For preload_market_data results
         self.raw_cache = {} # Cache for raw finlab downloads
         self.params = {
