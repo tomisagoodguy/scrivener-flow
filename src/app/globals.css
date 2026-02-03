@@ -87,6 +87,111 @@ html.dark select:focus {
     outline-offset: 2px;
 }
 
+/* ========================================
+   🎨 一致深色風格 - 全面覆蓋
+   確保所有元素都用深灰色調
+   ======================================== */
+
+/* 所有淺色背景都改成深灰 */
+html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html.dark .bg-slate-200,
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-gray-200 {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* 更深的淺色背景改成更深的灰 */
+html.dark .bg-slate-300,
+html.dark .bg-gray-300 {
+    background-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 圓角卡片 */
+html.dark .rounded-lg,
+html.dark .rounded-xl,
+html.dark .rounded-2xl {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* Shadow 元素（通常是卡片） */
+html.dark .shadow,
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3) !important;
+}
+
+/* 通用卡片 class */
+html.dark [class*="card"],
+html.dark [class*="Card"] {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+/* 通用容器 */
+html.dark [class*="container"],
+html.dark [class*="Container"] {
+    background-color: transparent !important;
+}
+
+/* 通用 panel/section */
+html.dark [class*="panel"],
+html.dark [class*="Panel"],
+html.dark [class*="section"],
+html.dark [class*="Section"] {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* Header/Footer */
+html.dark header,
+html.dark footer {
+    background-color: #0f172a !important;
+    /* slate-950 */
+    border-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 淺色邊框都改深 */
+html.dark .border,
+html.dark .border-t,
+html.dark .border-b,
+html.dark .border-l,
+html.dark .border-r {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 分隔線 */
+html.dark hr,
+html.dark .divider {
+    border-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 按鈕 */
+html.dark button:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: #334155 !important;
+    /* slate-800 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: #475569 !important;
+    /* slate-700 */
+}
+
 /* Custom Scrollbar for Dashboard Widgets */
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
