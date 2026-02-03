@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 /* ========================================
+   🔥 Tailwind v4 Dark Mode Variant
+   啟用 class-based dark: prefix
+   ======================================== */
+
+/* 定義 dark variant - 當 HTML 有 .dark class 時啟用 */
+@variant dark (&:where(.dark, .dark *));
+
+/* ========================================
    🔥 CRITICAL: Manual Dark Mode CSS Override
    手動深色模式 CSS 覆寫（繞過 Tailwind variants 問題）
    ======================================== */
