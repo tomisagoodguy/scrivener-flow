@@ -53,16 +53,38 @@ html.dark .border-slate-300 {
     /* slate-600 */
 }
 
-/* 強制深色輸入框 */
+/* 強制深色輸入框 - 改善可讀性 */
 html.dark input,
 html.dark textarea,
 html.dark select {
-    background-color: #0f172a !important;
-    /* slate-950 */
+    background-color: #1e293b !important;
+    /* slate-900 較淺 */
     color: #f8fafc !important;
-    /* slate-50 */
-    border-color: #475569 !important;
-    /* slate-600 */
+    /* slate-50 白色文字 */
+    border: 1px solid #64748b !important;
+    /* slate-500 明顯邊框 */
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #64748b !important;
+    /* slate-500 */
+}
+
+/* 深色模式下的 Select 下拉選單 */
+html.dark select option {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+
+/* 深色模式的焦點狀態 */
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+    border-color: #3b82f6 !important;
+    /* blue-500 */
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: 2px;
 }
 
 /* Custom Scrollbar for Dashboard Widgets */
