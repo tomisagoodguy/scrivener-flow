@@ -132,6 +132,12 @@ def main():
     except Exception as e:
         logger.error(f"Error during capacity cleanup: {e}")
 
+    # 9. Global Completion Notify
+    try:
+        notifier.send_text(f"✅ ETF 數據同步完成\n📅 日期: {date_str}\n📊 ETF: {etf_code}\n⚙️ 同步圍: {args.days} 天")
+    except Exception as e:
+        logger.error(f"Final notification failed: {e}")
+
     logger.info("✅ ETF Tracker pipeline finished.")
 
 if __name__ == "__main__":

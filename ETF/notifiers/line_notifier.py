@@ -16,6 +16,35 @@ class LineNotifier:
         if not self.channel_token or not self.user_id:
             logger.warning("LINE credentials missing. Notification disabled.")
 
+    def send_text(self, text: str):
+        """發送簡單純文字訊息"""
+        if not self.channel_token or not self.user_id:
+            return
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.channel_token}"
+        }
+        
+        payload = {
+            "to": self.user_id,
+            "messages": [
+                {
+                    "type": "text",
+                    "text": text
+                }
+            ]
+        }
+        
+        try:
+            resp = requests.post(self.api_url, headers=headers, json=payload, timeout=10)
+            if resp.status_code == 200:
+                logger.info("LINE text message sent successfully.")
+            else:
+                logger.error(f"Failed to send LINE text: {resp.text}")
+        except Exception as e:
+            logger.error(f"Error sending LINE text: {e}")
+
     def send_flex_message(self, alt_text: str, contents: Dict[str, Any]):
         if not self.channel_token or not self.user_id:
             return
