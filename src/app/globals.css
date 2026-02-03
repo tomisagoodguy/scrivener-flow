@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
 /* ========================================
-   Tailwind v4 Dark Mode Configuration
-   啟用 class-based 深色模式
+   🔥 CRITICAL: Manual Dark Mode CSS Override
+   手動深色模式 CSS 覆寫（繞過 Tailwind variants 問題）
    ======================================== */
 
-@theme {
-    /* 🔥 Critical: Enable class-based dark mode */
-    --dark-mode: class;
+/* 當 HTML 元素有 .dark class 時，強制套用深色樣式 */
+html.dark {
+    color-scheme: dark;
 }
 
-/* ========================================
-   Fintech Dark Mode - Using Tailwind Slate Colors
-   深色模式使用 Tailwind 內建的 Slate 調色板
-   ======================================== */
+/* 強制深色背景 */
+html.dark body,
+html.dark body>div {
+    background-color: #020617 !important;
+    /* slate-950 */
+}
 
-/*
-   配色方案:
-   - 淺色模式: bg-slate-50 (背景), bg-white (卡片), text-slate-900 (文字)
-   - 深色模式: bg-slate-950 (背景), bg-slate-900 (卡片), text-slate-50 (文字)
-   - 強調色: amber-500 (主色), violet-500 (CTA), emerald-500/red-500 (正負值)
-*/
+/* 強制深色主容器 */
+html.dark .min-h-screen {
+    background-color: #020617 !important;
+    /* slate-950 */
+}
+
+/* 強制深色卡片 */
+html.dark .bg-white {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+/* 強制深色文字 */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+/* 強制深色邊框 */
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 強制深色輸入框 */
+html.dark input,
+html.dark textarea,
+html.dark select {
+    background-color: #0f172a !important;
+    /* slate-950 */
+    color: #f8fafc !important;
+    /* slate-50 */
+    border-color: #475569 !important;
+    /* slate-600 */
+}
 
 /* Custom Scrollbar for Dashboard Widgets */
 .custom-scrollbar::-webkit-scrollbar {
