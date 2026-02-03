@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /* ========================================
+   Tailwind v4 Dark Mode Configuration
+   啟用 class-based 深色模式
+   ======================================== */
+
+@theme {
+    /* 🔥 Critical: Enable class-based dark mode */
+    --dark-mode: class;
+}
+
+/* ========================================
    Fintech Dark Mode - Using Tailwind Slate Colors
    深色模式使用 Tailwind 內建的 Slate 調色板
    ======================================== */

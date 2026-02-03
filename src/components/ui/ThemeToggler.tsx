@@ -6,13 +6,23 @@ import { useTheme } from '@/components/providers/ThemeProvider';
 export function ThemeToggler() {
     const { theme, toggleTheme } = useTheme();
 
+    console.log('🎨 Current theme:', theme);
+
+    const handleClick = () => {
+        console.log('🌙 Toggle button clicked! Current:', theme);
+        toggleTheme();
+        setTimeout(() => {
+            console.log('✅ After toggle:', theme, '| HTML class:', document.documentElement.className);
+        }, 100);
+    };
+
     return (
         <button
-            onClick={toggleTheme}
+            onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    toggleTheme();
+                    handleClick();
                 }
             }}
             aria-label={theme === 'dark' ? '切換至淺色模式' : '切換至深色模式'}

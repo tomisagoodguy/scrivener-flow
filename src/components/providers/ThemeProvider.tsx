@@ -22,32 +22,38 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const stored = localStorage.getItem('theme') as Theme | null;
         if (stored && (stored === 'light' || stored === 'dark')) {
             setThemeState(stored);
-            applyTheme(stored);
-        } else {
-            // 預設淺色模式
-            applyTheme('light');
         }
     }, []);
 
-    const applyTheme = (newTheme: Theme) => {
-        if (newTheme === 'dark') {
+    // 🔥 關鍵修復：當 theme 狀態改變時，立即同步到 DOM
+    useEffect(() => {
+        if (!mounted) return;
+
+        console.log('🔄 Applying theme to DOM:', theme);
+        
+        if (theme === 'dark') {
             document.documentElement.classList.add('dark');
             document.documentElement.setAttribute('data-theme', 'dark');
         } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.setAttribute('data-theme', 'light');
         }
-    };
+
+        // 同步到 localStorage
+        localStorage.setItem('theme', theme);
+        
+        console.log('✅ DOM updated. HTML classes:', document.documentElement.className);
+    }, [theme, mounted]);
 
     const setTheme = (newTheme: Theme) => {
+        console.log('📝 setTheme called:', newTheme);
         setThemeState(newTheme);
-        localStorage.setItem('theme', newTheme);
-        applyTheme(newTheme);
     };
 
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
+        console.log('🔀 toggleTheme:', theme, '→', newTheme);
+        setThemeState(newTheme);
     };
 
     // 避免 hydration mismatch：首次渲染時不顯示會受主題影響的內容
