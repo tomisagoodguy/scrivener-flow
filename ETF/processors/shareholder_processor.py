@@ -6,12 +6,12 @@ logger = logging.getLogger(__name__)
 
 class ShareholderProcessor:
     @staticmethod
-    def process(inv_df: pd.DataFrame, stock_list: list) -> list:
+    def process(inv_df: pd.DataFrame, stock_list: list, weeks: int = 48) -> list:
         """
         處理股權分散數據
         Returns: List of records ready for DB insertion
         """
-        logger.info("Processing shareholder data...")
+        logger.info(f"Processing shareholder data for {weeks} weeks...")
         
         if inv_df.empty:
             return []
@@ -22,9 +22,9 @@ class ShareholderProcessor:
         if inv_df.empty:
             return []
         
-        # Last 48 weeks
+        # Last N weeks
         inv_df['date'] = pd.to_datetime(inv_df['date'])
-        recent_dates = sorted(inv_df['date'].unique())[-48:]
+        recent_dates = sorted(inv_df['date'].unique())[-weeks:]
         inv_df = inv_df[inv_df['date'].isin(recent_dates)]
         
         records = []

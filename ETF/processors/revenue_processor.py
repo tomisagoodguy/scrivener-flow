@@ -6,22 +6,22 @@ logger = logging.getLogger(__name__)
 
 class RevenueProcessor:
     @staticmethod
-    def process(revenue_df: pd.DataFrame, revenue_yoy_df: pd.DataFrame, revenue_mom_df: pd.DataFrame, stock_list: list) -> list:
+    def process(revenue_df: pd.DataFrame, revenue_yoy_df: pd.DataFrame, revenue_mom_df: pd.DataFrame, stock_list: list, months: int = 24) -> list:
         """
         處理月營收數據
         Returns: List of records ready for DB insertion
         """
-        logger.info("Processing revenue data...")
+        logger.info(f"Processing revenue data for {months} months...")
         
         if revenue_df.empty:
             return []
             
         valid_stocks = [s for s in stock_list if s in revenue_df.columns]
         
-        # Last 24 months
-        revenue_df = revenue_df[valid_stocks].tail(24)
-        revenue_yoy_df = revenue_yoy_df[valid_stocks].tail(24) if not revenue_yoy_df.empty else pd.DataFrame()
-        revenue_mom_df = revenue_mom_df[valid_stocks].tail(24) if not revenue_mom_df.empty else pd.DataFrame()
+        # Last N months
+        revenue_df = revenue_df[valid_stocks].tail(months)
+        revenue_yoy_df = revenue_yoy_df[valid_stocks].tail(months) if not revenue_yoy_df.empty else pd.DataFrame()
+        revenue_mom_df = revenue_mom_df[valid_stocks].tail(months) if not revenue_mom_df.empty else pd.DataFrame()
         
         records = []
         for date in revenue_df.index:

@@ -67,13 +67,15 @@ class FinancialsSync:
             # 3. 同步營收
             logger.info("--- 同步月營收數據 ---")
             raw_rev, raw_yoy, raw_mom = self.finlab.get_revenue_data()
-            rev_records = RevenueProcessor.process(raw_rev, raw_yoy, raw_mom, stock_list)
+            months = max(3, days // 30) # 至少同步 3 個月
+            rev_records = RevenueProcessor.process(raw_rev, raw_yoy, raw_mom, stock_list, months=months)
             self.storage.upsert_revenue_data(rev_records)
             
             # 4. 同步股權分散
             logger.info("--- 同步股權分散數據 ---")
             raw_inv = self.finlab.get_shareholder_data()
-            inv_records = ShareholderProcessor.process(raw_inv, stock_list)
+            weeks = max(4, days // 7) # 至少同步 4 週
+            inv_records = ShareholderProcessor.process(raw_inv, stock_list, weeks=weeks)
             self.storage.upsert_shareholder_data(inv_records)
             
             # 5. 清除舊資料 (自動維護)
