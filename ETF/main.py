@@ -74,8 +74,13 @@ def main():
 
     # 5. Business Logic (Save Snapshot & Diffs)
     try:
-        # A. Previous Snapshot
-        prev_df = storage.get_latest_snapshot(etf_code)
+        # A. Previous Snapshot (Try to get snapshot from 5 days ago)
+        prev_df = storage.get_snapshot_days_ago(etf_code, days_ago=5)
+        
+        # If no historical data found (first runs), fallback to latest
+        if prev_df.empty:
+            logger.info("No 5-day history found, falling back to latest snapshot.")
+            prev_df = storage.get_latest_snapshot(etf_code)
         
         diff_logs = compute_diff(prev_df, df, etf_code, date_str)
         

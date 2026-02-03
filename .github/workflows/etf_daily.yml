@@ -36,6 +36,14 @@ jobs:
           python-version: "3.13"
           enable-cache: true
 
+      - name: Cache Finlab Data
+        uses: actions/cache@v4
+        with:
+          path: ~/.finlab
+          key: ${{ runner.os }}-finlab-${{ hashFiles('**/finlab_service.py') }}
+          restore-keys: |
+            ${{ runner.os }}-finlab-
+
       - name: Install dependencies
         run: uv sync
 

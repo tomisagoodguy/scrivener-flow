@@ -31,11 +31,66 @@ class ETFStorage:
 
     def get_latest_snapshot(self, etf_code: str) -> pd.DataFrame:
         """
-        Get the current snapshot from Supabase REST API.
+        Get the most recent snapshot available in DB.
+        """
+        # 1. Get the latest date
+        url_dates = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
+        params_dates = {
+            "etf_code": f"eq.{etf_code}",
+            "select": "data_date",
+            "order": "data_date.desc",
+            "limit": "1"
+        }
+        try:
+            resp = requests.get(url_dates, headers=self.headers, params=params_dates)
+            resp.raise_for_status()
+            date_data = resp.json()
+            if not date_data:
+                return pd.DataFrame()
+            
+            latest_date = date_data[0]['data_date']
+            return self.get_snapshot_from_date(etf_code, latest_date)
+        except Exception as e:
+            logger.error(f"Error finding latest date: {e}")
+            return pd.DataFrame()
+
+    def get_snapshot_days_ago(self, etf_code: str, days_ago: int = 5) -> pd.DataFrame:
+        """
+        Get a snapshot from approximately N data-days ago.
+        """
+        url_dates = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
+        params_dates = {
+            "etf_code": f"eq.{etf_code}",
+            "select": "data_date",
+            "order": "data_date.desc"
+        }
+        try:
+            resp = requests.get(url_dates, headers=self.headers, params=params_dates)
+            resp.raise_for_status()
+            # Get unique dates
+            all_dates = sorted(list(set([r['data_date'] for r in resp.json()])), reverse=True)
+            
+            if not all_dates:
+                return pd.DataFrame()
+            
+            # Target is the Nth date back (0-indexed, so days_ago 1 is yesterday)
+            target_idx = min(len(all_dates) - 1, days_ago)
+            target_date = all_dates[target_idx]
+            
+            logger.info(f"Comparing with snapshot from {target_date} ({target_idx} records ago)")
+            return self.get_snapshot_from_date(etf_code, target_date)
+        except Exception as e:
+            logger.error(f"Error finding historical date: {e}")
+            return pd.DataFrame()
+
+    def get_snapshot_from_date(self, etf_code: str, target_date: str) -> pd.DataFrame:
+        """
+        Fetch holdings for a specific date.
         """
         url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         params = {
             "etf_code": f"eq.{etf_code}",
+            "data_date": f"eq.{target_date}",
             "select": "stock_code,stock_name,shares,weight,data_date,price,currency,amount,margin_ratio,change_percent,volatility,market_cap,is_high_5d,is_high_20d,is_high_200d,monthly_revenue,revenue_yoy,revenue_mom,revenue_momentum_rank"
         }
         
@@ -48,33 +103,30 @@ class ETFStorage:
                 return pd.DataFrame()
                 
             df = pd.DataFrame(data)
-            # Rename columns to match what the processor expects
-            df = df.rename(columns={
-                "stock_code": "code",
-                "stock_name": "name"
-            })
+            df = df.rename(columns={"stock_code": "code", "stock_name": "name"})
             df['shares'] = df['shares'].astype(int)
             df['weight'] = df['weight'].astype(float)
             if 'price' in df.columns:
                 df['price'] = pd.to_numeric(df['price'], errors='coerce')
             return df
         except Exception as e:
-            logger.error(f"Error fetching snapshot via REST: {e}")
+            logger.error(f"Error fetching snapshot for {target_date}: {e}")
             return pd.DataFrame()
 
     def save_snapshot(self, df: pd.DataFrame, etf_code: str, data_date: str):
         """
-        Overwrite snapshot via REST API (Delete then Upsert).
+        Save snapshot to DB. Uses UPSERT logic based on (etf_code, stock_code, data_date).
         """
         if df.empty:
             return
 
-        # 1. Delete old
-        delete_url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         try:
-            requests.delete(delete_url, headers=self.headers, params={"etf_code": f"eq.{etf_code}"})
+            # POST with merge-duplicates prefer header for upsert
+            url = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
+            headers = self.headers.copy()
+            headers["Prefer"] = "resolution=merge-duplicates"
             
-            # 2. Insert new
+            # 2. Insert/Upsert new
             records = []
             for _, row in df.iterrows():
                 records.append({

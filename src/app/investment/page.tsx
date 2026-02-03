@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { ClockIcon } from 'lucide-react';
 import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Assuming shadcn/ui tabs exist
@@ -7,10 +8,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 // Fetch data on server
 async function getHoldings() {
     const supabase = await createClient();
+    
+    // First, get the latest available date
+    const { data: latestDateData } = await supabase
+        .from('etf_holdings_snapshot')
+        .select('data_date')
+        .order('data_date', { ascending: false })
+        .limit(1);
+    
+    const latestDate = latestDateData?.[0]?.data_date;
+    if (!latestDate) return [];
+
     const { data } = await supabase
         .from('etf_holdings_snapshot')
         .select('*')
         .eq('etf_code', '00981A')
+        .eq('data_date', latestDate)
         .order('weight', { ascending: false });
     return data || [];
 }
@@ -92,8 +105,13 @@ export default async function InvestmentPage() {
                 </TabsContent>
                 
                 <TabsContent value="ledger">
-                    <div className="max-w-3xl">
-                        <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">近期異動紀錄</h3>
+                    <div className="w-full">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <ClockIcon className="w-5 h-5 text-indigo-500" />
+                                近期異動紀錄
+                            </h3>
+                        </div>
                         <DiffLedger logs={logs} />
                     </div>
                 </TabsContent>
