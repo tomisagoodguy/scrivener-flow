@@ -5,6 +5,13 @@ import argparse
 import pathlib
 import subprocess
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load env for local development
+if os.path.exists('.env.local'):
+    load_dotenv('.env.local')
+else:
+    load_dotenv()
 
 # Setup paths
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent
@@ -104,7 +111,17 @@ def main():
     except Exception as e:
         logger.error(f"Error in business logic: {e}")
 
-    # 6. Historical Data Sync (Slow - for K-line charts)
+    # 6. Company Info Sync (Industry, Full Name)
+    try:
+        logger.info("Syncing company basic info and industry categories...")
+        company_df = finlab_srv.get_company_info(df['code'].tolist())
+        if not company_df.empty:
+            storage.save_company_info(company_df)
+            logger.info("Company info sync completed.")
+    except Exception as e:
+        logger.error(f"Error during company info sync: {e}")
+
+    # 7. Historical Data Sync (Slow - for K-line charts)
     try:
         if len(numeric_codes) > 10:
             logger.info(f"Syncing historical OHLCV for charts ({args.days} days, this may take a while)...")

@@ -1,42 +1,27 @@
-"use client";
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-    ArrowUp, ArrowDown, ChevronRight, TrendingUp, Activity, 
-    BarChart3, DollarSign, Percent, Zap, Trophy, Flame, 
-    Ship, Rocket, Target, Filter, XCircle, Search
+    ArrowUp, ArrowDown, TrendingUp, Activity, 
+    Zap, Trophy, Flame, Rocket, Target, XCircle, Search
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
-export interface Holding {
-    stock_id: string;
-    stock_code: string;
-    stock_name: string;
-    shares: number;
-    weight: number;
-    price: number | null;
-    change_percent: number | null;
-    amount: number | null;
-    currency: string | null;
-    margin_ratio?: number;
-    volatility?: number;
-    market_cap?: number;
-    is_high_5d?: boolean;
-    is_high_20d?: boolean;
-    is_high_200d?: boolean;
-    monthly_revenue?: number;
-    revenue_yoy?: number;
-    revenue_mom?: number;
-    revenue_momentum_rank?: number;
-}
+import { motion } from 'framer-motion';
+import { 
+    Holding 
+} from '@/types/investment';
+import { 
+    filterAndSortHoldings, 
+    FILTER_DEFINITIONS, 
+    SortField, 
+    SortOrder,
+    getRankedHoldings
+} from '@/lib/investment/holdingFilters';
+import { HoldingRow } from './HoldingRow';
 
 interface HoldingsTableProps {
     initialData: Holding[];
 }
-
-type SortField = 'weight' | 'shares' | 'amount' | 'margin_ratio' | 'change_percent' | 'volatility' | 'market_cap' | 'monthly_revenue' | 'revenue_yoy' | 'revenue_mom' | 'revenue_momentum_rank' | 'price';
-type SortOrder = 'asc' | 'desc';
 
 export function HoldingsTable({ initialData }: HoldingsTableProps) {
     const router = useRouter();
@@ -45,72 +30,51 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Pre-calculate filter results
-    const filterOptions = useMemo(() => {
-        const topWeightThreshold = [...initialData].sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, 10).map(d => d.stock_code);
-        const topAmountThreshold = [...initialData].sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 10).map(d => d.stock_code);
-        const topMarginThreshold = [...initialData].sort((a, b) => (b.margin_ratio || 0) - (a.margin_ratio || 0)).slice(0, 10).map(d => d.stock_code);
-        const bottomMarginThreshold = [...initialData].sort((a, b) => (a.margin_ratio || 0) - (b.margin_ratio || 0)).slice(0, 10).map(d => d.stock_code);
-
-        const baseFilters = [
-            { id: 'high', label: '創新高', icon: Rocket, color: 'emerald', filter: (d: Holding) => !!d.is_high_5d },
-            { id: 'weight', label: '權重前10', icon: Trophy, color: 'indigo', filter: (d: Holding) => topWeightThreshold.includes(d.stock_code) },
-            { id: 'amount', label: '成交前10', icon: Zap, color: 'amber', filter: (d: Holding) => topAmountThreshold.includes(d.stock_code) },
-            { id: 'yoy', label: 'YoY >20%', icon: TrendingUp, color: 'rose', filter: (d: Holding) => (d.revenue_yoy || 0) > 20 },
-            { id: 'momentum', label: 'PR > 80', icon: Flame, color: 'purple', filter: (d: Holding) => (d.revenue_momentum_rank || 0) > 0.8 },
-            { id: 'low_vol', label: '低波動 <12%', icon: Activity, color: 'teal', filter: (d: Holding) => (d.volatility || 0) > 0 && (d.volatility || 0) < 12 },
-            { id: 'high_margin', label: '高資前10', icon: ArrowUp, color: 'orange', filter: (d: Holding) => topMarginThreshold.includes(d.stock_code) },
-            { id: 'low_margin', label: '低資前10', icon: ArrowDown, color: 'blue', filter: (d: Holding) => bottomMarginThreshold.includes(d.stock_code) },
-        ];
-
-        return baseFilters.map(opt => {
-            // Calculate dynamic count: if this filter were applied to the CURRENT selection
-            // We want to show how many stocks satisfy (current filters + this filter)
-            // But to keep it intuitive, we show how many stocks satisfy (all OTHER active filters + this filter)
-            const otherActiveFilters = activeFilters.filter(id => id !== opt.id);
-            let currentPool = initialData;
-            
-            otherActiveFilters.forEach(fid => {
-                const otherOpt = baseFilters.find(o => o.id === fid);
-                if (otherOpt) currentPool = currentPool.filter(otherOpt.filter);
-            });
-
-            const matchCount = currentPool.filter(opt.filter).length;
-            const totalCount = initialData.filter(opt.filter).length;
-
-            return { ...opt, matchCount, totalCount };
-        });
-    }, [initialData, activeFilters]);
+    // Prepare data with ranks for fitler counting logic
+    const dataWithRank = useMemo(() => getRankedHoldings(initialData), [initialData]);
 
     const filteredData = useMemo(() => {
-        let result = initialData;
-        
-        // Search filter
-        if (searchTerm) {
-            result = result.filter(d => 
-                d.stock_name.includes(searchTerm) || d.stock_code.includes(searchTerm)
-            );
-        }
+        return filterAndSortHoldings(initialData, activeFilters, searchTerm, sortField, sortOrder);
+    }, [initialData, activeFilters, searchTerm, sortField, sortOrder]);
 
-        // Active metrics intersection
-        if (activeFilters.length > 0) {
-            activeFilters.forEach(filterId => {
-                const opt = filterOptions.find(o => o.id === filterId);
-                if (opt) {
-                    result = result.filter(opt.filter);
-                }
+    // Pre-calculate filter UI counts
+    const filterOptions = useMemo(() => {
+        // Map icon/color from local map to shared definitions
+        const uiConfig: Record<string, { icon: any, color: string }> = {
+            high: { icon: Rocket, color: 'emerald' },
+            weight: { icon: Trophy, color: 'indigo' },
+            amount: { icon: Zap, color: 'amber' },
+            yoy: { icon: TrendingUp, color: 'rose' },
+            momentum: { icon: Flame, color: 'purple' },
+            low_vol: { icon: Activity, color: 'teal' },
+            high_margin: { icon: ArrowUp, color: 'orange' },
+            low_margin: { icon: ArrowDown, color: 'blue' },
+        };
+
+        return FILTER_DEFINITIONS.map(def => {
+            const config = uiConfig[def.id] || { icon: Target, color: 'indigo' };
+            
+            // Logic to calculate counts (same as before)
+            const otherActiveFilters = activeFilters.filter(id => id !== def.id);
+            
+            // Base pool is all data (filtered by others)
+            let currentPool = dataWithRank;
+            otherActiveFilters.forEach(fid => {
+                const otherDef = FILTER_DEFINITIONS.find(d => d.id === fid);
+                if (otherDef) currentPool = currentPool.filter(d => otherDef.filter(d, d));
             });
-        }
 
-        // Sorting
-        return result.sort((a, b) => {
-            const valA = a[sortField] ?? -Infinity;
-            const valB = b[sortField] ?? -Infinity;
-            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-            return 0;
+            const matchCount = currentPool.filter(d => def.filter(d, d)).length;
+            const totalCount = dataWithRank.filter(d => def.filter(d, d)).length;
+
+            return { 
+                ...def, 
+                ...config,
+                matchCount, 
+                totalCount 
+            };
         });
-    }, [initialData, activeFilters, sortField, sortOrder, filterOptions, searchTerm]);
+    }, [dataWithRank, activeFilters]);
 
     const handleSort = (field: SortField) => {
         const newOrder = sortField === field && sortOrder === 'desc' ? 'asc' : 'desc';
@@ -125,42 +89,18 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
     };
 
     const handleRowClick = (stock: Holding) => {
-        router.push(`/investment/dashboard/${stock.stock_code}`);
+        const params = new URLSearchParams();
+        if (activeFilters.length > 0) params.set('filters', activeFilters.join(','));
+        if (searchTerm) params.set('search', searchTerm);
+        params.set('sort', sortField);
+        params.set('order', sortOrder);
+        
+        router.push(`/investment/dashboard/${stock.stock_code}?${params.toString()}`);
     };
 
     const SortIndicator = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <span className="w-4" />;
         return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />;
-    };
-
-    const formatNumber = (num: number | null | undefined, decimals = 2) => {
-        if (num === null || num === undefined) return '-';
-        return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    };
-
-    const formatBillions = (num: number | null | undefined) => {
-        if (!num) return '-';
-        return (num / 100000000).toFixed(1);
-    };
-
-    const getNewHighBadge = (item: Holding) => {
-        const badges = [];
-        if (item.is_high_200d) {
-             badges.push(<span key="200" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">200H</span>);
-        } else if (item.is_high_20d) {
-             badges.push(<span key="20" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shadow-sm">20H</span>);
-        } else if (item.is_high_5d) {
-             badges.push(<span key="5" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">5H</span>);
-        }
-        return badges;
-    };
-
-    const getMomentumColor = (rank: number) => {
-        if (rank >= 0.8) return 'from-indigo-500 to-purple-600';
-        if (rank >= 0.6) return 'from-blue-400 to-indigo-500';
-        if (rank >= 0.4) return 'from-teal-400 to-blue-400';
-        if (rank >= 0.2) return 'from-yellow-400 to-orange-400';
-        return 'from-slate-300 to-slate-400';
     };
 
     // Calculate max amount for identifying capital concentration
@@ -272,8 +212,13 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                 <div className="overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-sm text-left relative border-collapse">
                         <thead className="text-[10px] text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 sticky top-0 z-20 backdrop-blur-xl shadow-sm">
-                        <tr>
-                            <th scope="col" className="px-4 py-3 font-semibold tracking-wider text-slate-600 dark:text-slate-300">股票</th>
+                        <tr className="bg-slate-50 dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <th scope="col" className="sticky left-0 w-12 px-4 py-3 bg-slate-50 dark:bg-slate-800 z-20">
+                                #
+                            </th>
+                            <th scope="col" className="sticky left-[48px] px-4 py-3 bg-slate-50 dark:bg-slate-800 z-20 border-r border-slate-100 dark:border-slate-800">
+                                成分股
+                            </th>
                             
                             <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('price')}>
                                 <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
@@ -287,17 +232,19 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                 </div>
                             </th>
 
+                            <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('volatility')}>
+                                <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
+                                    波動率 <SortIndicator field="volatility" />
+                                </div>
+                            </th>
+
                             <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('amount')}>
                                 <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
                                     成交(億) <SortIndicator field="amount" />
                                 </div>
                             </th>
 
-                            <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('monthly_revenue')}>
-                                <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
-                                    營收(億) <SortIndicator field="monthly_revenue" />
-                                </div>
-                            </th>
+
 
                            <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('revenue_yoy')}>
                                 <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
@@ -338,139 +285,12 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredData.map((item) => (
-                            <motion.tr 
-                                layout
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                key={item.stock_code} 
-                                onClick={() => handleRowClick(item)}
-                                className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group border-b border-slate-50 dark:border-slate-800/50"
-                            >
-                                {/* Stock Code & Name */}
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex flex-col min-w-[60px]">
-                                            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-blue-600 transition-colors">{item.stock_name}</span>
-                                            <span className="text-xs text-slate-500 font-mono tracking-tight">{item.stock_code}</span>
-                                        </div>
-                                        <div className="flex flex-col justify-center gap-1">
-                                            {getNewHighBadge(item)}
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {/* Price */}
-                                <td className="px-2 py-3 text-right">
-                                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
-                                        {formatNumber(item.price)}
-                                    </span>
-                                </td>
-
-                                {/* Change % */}
-                                <td className="px-2 py-3 text-right">
-                                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[60px] justify-end ${
-                                        (item.change_percent || 0) > 0 
-                                            ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
-                                            : (item.change_percent || 0) < 0 
-                                                ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' 
-                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                    }`}>
-                                        {(item.change_percent || 0) > 0 ? '+' : ''}{item.change_percent?.toFixed(2)}%
-                                    </span>
-                                </td>
-
-                                {/* Amount - Capital Concentration */}
-                                <td className="px-2 py-3 text-right">
-                                    <div className="flex flex-col items-end gap-1">
-                                        <span className={`font-mono text-sm font-bold ${(item.amount || 0) > (maxAmount * 0.5) ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                                            {item.amount ? (item.amount / 100000000).toFixed(1) : '-'}
-                                        </span>
-                                        <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-gradient-to-r from-yellow-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
-                                                style={{ width: `${Math.min(((item.amount || 0) / maxAmount) * 100, 100)}%` }} 
-                                            />
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {/* Revenue */}
-                                <td className="px-2 py-3 text-right">
-                                    <span className="font-mono text-sm text-slate-700 dark:text-slate-300 font-medium tracking-tight">
-                                        {formatBillions(item.monthly_revenue)}
-                                    </span>
-                                </td>
-
-                                {/* YoY */}
-                                <td className="px-2 py-3 text-right">
-                                    <div className="flex justify-end">
-                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[56px] justify-end ${
-                                            (item.revenue_yoy || 0) > 20 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
-                                            (item.revenue_yoy || 0) > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                                            (item.revenue_yoy || 0) < -20 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-200' :
-                                            (item.revenue_yoy || 0) < 0 ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
-                                            'text-slate-400'
-                                        }`}>
-                                            {(item.revenue_yoy !== undefined && item.revenue_yoy !== null) ? `${item.revenue_yoy > 0 ? '+' : ''}${item.revenue_yoy.toFixed(1)}%` : '-'}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                {/* MoM */}
-                                <td className="px-2 py-3 text-right">
-                                    <div className="flex justify-end">
-                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[56px] justify-end ${
-                                             (item.revenue_mom || 0) > 20 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
-                                             (item.revenue_mom || 0) > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                                             (item.revenue_mom || 0) < -20 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-200' :
-                                             (item.revenue_mom || 0) < 0 ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
-                                             'text-slate-400'
-                                         }`}>
-                                            {(item.revenue_mom !== undefined && item.revenue_mom !== null) ? `${item.revenue_mom > 0 ? '+' : ''}${item.revenue_mom.toFixed(1)}%` : '-'}
-                                         </span>
-                                    </div>
-                                </td>
-
-                                {/* Momentum Bar */}
-                                <td className="px-4 py-3 align-middle">
-                                    <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full bg-gradient-to-r ${getMomentumColor(item.revenue_momentum_rank || 0)}`} 
-                                            style={{ width: `${(item.revenue_momentum_rank || 0) * 100}%` }}
-                                        />
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 mt-1 font-mono">
-                                        {item.revenue_momentum_rank ? `PR ${(item.revenue_momentum_rank * 100).toFixed(0)}` : 'N/A'}
-                                    </div>
-                                </td>
-
-                                {/* Margin Usage - Leverage Appetite */}
-                                <td className="px-2 py-3 text-right">
-                                     <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${
-                                         (item.margin_ratio || 0) > 40 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
-                                         (item.margin_ratio || 0) > 20 ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
-                                         (item.margin_ratio || 0) > 10 ? 'text-blue-600 dark:text-blue-400' :
-                                         'text-slate-400'
-                                     }`}>
-                                        {item.margin_ratio ? `${item.margin_ratio.toFixed(1)}%` : '-'}
-                                    </span>
-                                </td>
-
-                                {/* Shares */}
-                                <td className="px-2 py-3 text-right font-mono text-xs text-slate-500">
-                                    {item.shares?.toLocaleString()}
-                                </td>
-
-                                {/* Weight */}
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex flex-col items-end gap-1">
-                                        <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">{item.weight}%</span>
-                                        <div className="w-16 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${Math.min(item.weight * 5, 100)}%` }} />
-                                        </div>
-                                    </div>
-                                </td>
-                            </motion.tr>
+                            <HoldingRow
+                                key={item.stock_code}
+                                item={item}
+                                maxAmount={maxAmount}
+                                onClick={handleRowClick}
+                            />
                         ))}
                     </tbody>
                 </table>

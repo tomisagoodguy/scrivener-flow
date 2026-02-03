@@ -31,6 +31,21 @@ class SQLStorage:
             self.db_url = f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres"
             
         self.engine = sqlalchemy.create_engine(self.db_url)
+        self._ensure_tables()
+
+    def _ensure_tables(self):
+        """確保所有必要的資料表都已建立"""
+        with self.engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS stock_basic_info (
+                    stock_code TEXT PRIMARY KEY,
+                    name_short TEXT,
+                    name_full TEXT,
+                    industry TEXT,
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            """))
+            conn.commit()
 
     def get_target_stocks(self, etf_code: str) -> list:
         """從 etf_holdings_snapshot 取得目標股票清單"""
@@ -127,26 +142,37 @@ class SQLStorage:
         logger.info("✅ 券商交易數據寫入完成")
     
     def cleanup_old_data(self):
-        """清除過舊資料以節省 Supabase 空間"""
-        logger.info("開始執行數據庫容量自動優化...")
+        """清除過舊資料以節省 Supabase 空間 (只保留約 260 天)"""
+        logger.info("開始執行數據庫容量自動優化 (Retention: ~260 days)...")
         try:
             with self.engine.connect() as conn:
-                # 1. 持股快照：保留 365 天 (約 1 年)
-                sql_snapshot = text("DELETE FROM etf_holdings_snapshot WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
+                # 1. 每日股價 (佔最大空間)
+                sql_prices = text("DELETE FROM stock_prices_daily WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
+                res_prices = conn.execute(sql_prices)
+
+                # 2. 持股快照
+                sql_snapshot = text("DELETE FROM etf_holdings_snapshot WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
                 res_snapshot = conn.execute(sql_snapshot)
                 
-                # 2. 券商分點：配合圖表顯示，保留 365 天 (1 年)
-                sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
+                # 3. 券商分點
+                sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
                 res_broker = conn.execute(sql_broker)
                 
-                # 3. 集保數據：保留 2 年 (730 天) 用於長期觀察
-                sql_chips = text("DELETE FROM stock_shareholder_weekly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'")
+                # 4. 集保數據 (週資料，可保留稍長一點，但統一策略也好)
+                sql_chips = text("DELETE FROM stock_shareholder_weekly WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
                 res_chips = conn.execute(sql_chips)
+
+                # 5. 營收數據 (月資料)
+                sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'") # 營收年增率需要比較久，保留2年
+                res_revenue = conn.execute(sql_revenue)
                 
                 conn.commit()
                 logger.info(f"✅ 自動優化完成！")
+                logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
                 logger.info(f"   - 持股快照已清理: {res_snapshot.rowcount} 筆")
                 logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
                 logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
+                logger.info(f"   - 營收數據已清理: {res_revenue.rowcount} 筆")
+
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")

@@ -8,6 +8,12 @@ logger = logging.getLogger(__name__)
 
 class LineNotifier:
     def __init__(self):
+        from dotenv import load_dotenv
+        if os.path.exists('.env.local'):
+            load_dotenv('.env.local')
+        else:
+            load_dotenv()
+
         # Load from env
         self.channel_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
         self.user_id = os.getenv("LINE_USER_ID")
@@ -86,7 +92,19 @@ class LineNotifier:
         out_stocks = [d for d in diff_logs if d['change_type'] == 'OUT']
         
         if not in_stocks and not out_stocks:
-            logger.info("No IN/OUT changes. Skipping notification.")
+            logger.info("No IN/OUT changes. Sending summary of BUY/SELL.")
+            # Send a simple text summary for BUY/SELL
+            buy_stocks = [d for d in diff_logs if d['change_type'] == 'BUY']
+            sell_stocks = [d for d in diff_logs if d['change_type'] == 'SELL']
+            
+            if buy_stocks or sell_stocks:
+                msg = f"📊 {etf_code} 持股權重調整 ({date_str})\n"
+                msg += "名單無異動，僅權重調整。\n"
+                if buy_stocks:
+                    msg += f"📈 增持: {', '.join([s['stock_name'] for s in buy_stocks[:5]])} 等 {len(buy_stocks)} 檔\n"
+                if sell_stocks:
+                    msg += f"📉 減持: {', '.join([s['stock_name'] for s in sell_stocks[:5]])} 等 {len(sell_stocks)} 檔"
+                self.send_text(msg)
             return
 
         # Construct Flex Message

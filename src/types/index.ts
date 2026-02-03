@@ -72,6 +72,10 @@ export interface DemoCase {
     seller_name: string;
     seller_phone?: string;
     agent_name?: string;
+    agent_phone?: string;
+    registrant_name?: string;
+    registrant_phone?: string;
+    escrow_account?: string;
 
     // 1.3 Property
     city: string;

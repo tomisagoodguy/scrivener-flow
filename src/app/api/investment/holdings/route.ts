@@ -11,11 +11,22 @@ export async function GET() {
     try {
         const supabase = await createClient();
         
-        // 獲取持股快照數據（與主頁面相同的查詢）
+        // 1. 先取得最新可用日期
+        const { data: latestDateData } = await supabase
+            .from('etf_holdings_snapshot')
+            .select('data_date')
+            .order('data_date', { ascending: false })
+            .limit(1);
+
+        const latestDate = latestDateData?.[0]?.data_date;
+        if (!latestDate) return NextResponse.json([]);
+
+        // 2. 獲取該日期的持股快照數據
         const { data, error } = await supabase
             .from('etf_holdings_snapshot')
             .select('*')
             .eq('etf_code', '00981A')
+            .eq('data_date', latestDate)
             .order('weight', { ascending: false });
 
         if (error) {

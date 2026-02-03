@@ -4,20 +4,25 @@ import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Assuming shadcn/ui tabs exist
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
+import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
+import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
 
 // Fetch data on server
 async function getHoldings() {
     const supabase = await createClient();
     
-    // First, get the latest available date
+    // First, get the latest available date and its real creation time
     const { data: latestDateData } = await supabase
         .from('etf_holdings_snapshot')
-        .select('data_date')
+        .select('data_date, updated_at')
         .order('data_date', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(1);
     
     const latestDate = latestDateData?.[0]?.data_date;
-    if (!latestDate) return [];
+    const updatedAt = latestDateData?.[0]?.updated_at;
+    if (!latestDate) return { holdings: [], updatedAt: null, dataDate: null };
 
     const { data } = await supabase
         .from('etf_holdings_snapshot')
@@ -25,28 +30,136 @@ async function getHoldings() {
         .eq('etf_code', '00981A')
         .eq('data_date', latestDate)
         .order('weight', { ascending: false });
+
+    // Fetch industry info
+    const { data: industryData } = await supabase
+        .from('stock_basic_info')
+        .select('stock_code, industry')
+        .in('stock_code', (data || []).map(h => h.stock_code));
+    
+    const industryMap: Record<string, string> = {};
+    industryData?.forEach(i => {
+        industryMap[i.stock_code] = i.industry;
+    });
+
+    // Fetch latest revenue data (including YoY, MoM)
+    const { data: revData } = await supabase
+        .from('stock_revenue_monthly')
+        .select('stock_code, data_date, revenue_yoy, revenue_mom')
+        .in('stock_code', (data || []).map(h => h.stock_code))
+        .order('data_date', { ascending: false });
+
+    // Map: Code -> { date, yoy, mom }
+    const revMap: Record<string, { date: string, yoy: number, mom: number }> = {};
+    
+    // Iterate and pick the first (latest) one for each code
+    revData?.forEach(r => {
+        if (!revMap[r.stock_code]) {
+            revMap[r.stock_code] = {
+                date: r.data_date.substring(0, 7),
+                yoy: r.revenue_yoy,
+                mom: r.revenue_mom
+            };
+        }
+    });
+
+    const formattedHoldings = (data || []).map(h => {
+        const revInfo = revMap[h.stock_code];
+        return {
+            ...h,
+            industry: industryMap[h.stock_code] || '未知',
+            revenue_month: revInfo?.date || null,
+            revenue_yoy: revInfo?.yoy ?? null,
+            revenue_mom: revInfo?.mom ?? null
+        };
+    });
+
+    return {
+        holdings: formattedHoldings,
+        updatedAt,
+        dataDate: latestDate
+    };
+}
+
+async function getRankingHistory() {
+    const supabase = await createClient();
+    const { data } = await supabase
+        .from('etf_holdings_snapshot')
+        .select('data_date, stock_code, stock_name, weight')
+        .eq('etf_code', '00981A')
+        .order('data_date', { ascending: true });
     return data || [];
 }
 
 async function getDiffLogs() {
     const supabase = await createClient();
-    const { data } = await supabase
+    
+    // 1. Fetch logs
+    const { data: logsData } = await supabase
         .from('etf_diff_logs')
         .select('*')
         .eq('etf_code', '00981A')
         .order('data_date', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(50); // Recent activity
-    return data || [];
+        .limit(50);
+    
+    if (!logsData) return [];
+
+    // 2. Fetch all snapshot data for these dates to calculate rank
+    const uniqueDates = [...new Set(logsData.map(l => l.data_date))];
+    const { data: snapshotData } = await supabase
+        .from('etf_holdings_snapshot')
+        .select('data_date, stock_code, weight')
+        .in('data_date', uniqueDates)
+        .eq('etf_code', '00981A');
+
+    // 3. Build ranking map: { date: { stock_code: rank } }
+    const dateRankMap: Record<string, Record<string, number>> = {};
+    uniqueDates.forEach(date => {
+        const dayHoldings = (snapshotData || [])
+            .filter(s => s.data_date === date)
+            .sort((a, b) => (b.weight || 0) - (a.weight || 0));
+        
+        dateRankMap[date] = {};
+        dayHoldings.forEach((h, index) => {
+            dateRankMap[date][h.stock_code] = index + 1;
+        });
+    });
+
+    // 4. Fetch industry info
+    const { data: industryData } = await supabase
+        .from('stock_basic_info')
+        .select('stock_code, industry')
+        .in('stock_code', logsData.map(l => l.stock_code));
+    
+    const industryMap: Record<string, string> = {};
+    industryData?.forEach(i => {
+        industryMap[i.stock_code] = i.industry;
+    });
+
+    return logsData.map(l => ({
+        ...l,
+        industry: industryMap[l.stock_code] || null,
+        rank: dateRankMap[l.data_date]?.[l.stock_code] || null
+    }));
 }
 
 export default async function InvestmentPage() {
-    const holdings = await getHoldings();
+    const { holdings, updatedAt, dataDate } = await getHoldings();
     const logs = await getDiffLogs();
+    const rankingHistory = await getRankingHistory();
     
-    // Calculate stats
-    const totalShares = holdings.reduce((sum, item) => sum + item.shares, 0);
-    const dataDate = holdings.length > 0 ? holdings[0].data_date : 'N/A';
+    // 顯示最新的資料日期
+    const displayDate = dataDate ? new Date(dataDate).toLocaleDateString('zh-TW', {
+        month: '2-digit',
+        day: '2-digit',
+    }) : 'N/A';
+
+    const updateTime = updatedAt ? new Date(updatedAt).toLocaleTimeString('zh-TW', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }) : '';
 
     return (
         <div className="container mx-auto py-8 space-y-8">
@@ -61,7 +174,7 @@ export default async function InvestmentPage() {
                 </div>
                 <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full text-sm font-medium">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    最新數據: {dataDate}
+                    資料日期: {displayDate} <span className="text-slate-400 text-xs ml-1">({updateTime})</span>
                 </div>
             </div>
 
@@ -73,12 +186,17 @@ export default async function InvestmentPage() {
                 </TabsList>
 
                 <TabsContent value="holdings">
-                    <div className="w-full">
+                    <div className="w-full space-y-6">
+                        <HoldingsOverview data={holdings} />
                         <HoldingsTable initialData={holdings} />
                     </div>
                 </TabsContent>
                 <TabsContent value="ledger">
-                    <div className="w-full">
+                    <div className="w-full space-y-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <RankingTrendChart data={rankingHistory} />
+                            <ChangeImpactChart logs={logs} />
+                        </div>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <ClockIcon className="w-5 h-5 text-indigo-500" />

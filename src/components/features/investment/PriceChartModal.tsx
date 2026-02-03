@@ -10,11 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Holding } from "./HoldingsTable";
+import { Holding } from "@/types/investment";
 import { StockChart } from "./StockChart";
 import { RevenueChart } from "./RevenueChart";
 import { ChipsChart } from "./ChipsChart";
 import { ShareholderFlowChart } from "./ShareholderFlowChart";
+import { InvestmentTrustChart } from './InvestmentTrustChart';
 import { BrokerChart } from "./BrokerChart";
 import { PriceData } from "@/lib/investment/indicators";
 
@@ -315,6 +316,18 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                                             股權分散疊圖
                                         </h3>
                                         <ChipsChart data={chipsData} />
+                                    </div>
+
+                                    {/* 3-2. 投信買賣超分析 */}
+                                    <div className="border-l-4 border-orange-500 pl-4">
+                                        <h3 className="text-sm font-semibold mb-3 text-slate-700 dark:text-slate-300">
+                                            投信買賣超 & 均線 (MA5/MA20)
+                                        </h3>
+                                        {/* Use priceData which contains the daily 'it_buy' info */}
+                                        <InvestmentTrustChart 
+                                            data={priceData} 
+                                            isDarkMode={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')}
+                                        />
                                     </div>
 
                                     <div className="border-t border-slate-200 dark:border-slate-700"></div>

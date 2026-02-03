@@ -12,6 +12,7 @@ export interface PriceData {
     value: number;
     amount: number;
     margin_ratio: number;
+    it_buy?: number; // 投信買賣超
 }
 
 export interface LinePoint {
@@ -21,15 +22,24 @@ export interface LinePoint {
 
 export class IndicatorService {
     /**
-     * Calculate Simple Moving Average (SMA)
+     * Calculate Simple Moving Average (SMA) for Close Price
      */
     static calculateSMA(data: PriceData[], period: number): LinePoint[] {
+        return this.calculateFieldSMA(data, 'close', period);
+    }
+
+    /**
+     * Calculate SMA for any numeric field
+     */
+    static calculateFieldSMA(data: any[], field: string, period: number): LinePoint[] {
         const smaData: LinePoint[] = [];
         for (let i = 0; i < data.length; i++) {
             if (i < period - 1) continue;
             let sum = 0;
             for (let j = 0; j < period; j++) {
-                sum += data[i - j].close;
+                // Ensure data exists and is number
+                const val = data[i - j][field];
+                sum += (typeof val === 'number') ? val : 0;
             }
             smaData.push({ 
                 time: data[i].time, 

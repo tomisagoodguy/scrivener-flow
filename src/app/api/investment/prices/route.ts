@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Fetch daily prices for the stock
     const { data, error } = await supabase
         .from('stock_prices_daily')
-        .select('data_date, open, high, low, close, volume, amount, margin_ratio')
+        .select('data_date, open, high, low, close, volume, amount, margin_ratio, it_buy')
         .eq('stock_code', code)
         .order('data_date', { ascending: true });
 
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
             close: Number(item.close),
             value: Number(item.volume),
             amount: item.amount ? Number(item.amount) : 0,
-            margin_ratio: item.margin_ratio ? Number(item.margin_ratio) : 0
+            margin_ratio: item.margin_ratio ? Number(item.margin_ratio) : 0,
+            it_buy: item.it_buy ? Number(item.it_buy) : 0
         };
     });
 

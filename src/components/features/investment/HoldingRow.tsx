@@ -1,0 +1,199 @@
+'use client';
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Holding } from '@/types/investment';
+
+interface HoldingRowProps {
+    item: Holding;
+    maxAmount: number;
+    onClick: (stock: Holding) => void;
+}
+
+export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
+
+    const formatNumber = (num: number | null | undefined, decimals = 2) => {
+        if (num === null || num === undefined) return '-';
+        return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    };
+
+    const formatBillions = (num: number | null | undefined) => {
+        if (!num) return '-';
+        return (num / 100000000).toFixed(1);
+    };
+
+    const getNewHighBadge = (item: Holding) => {
+        const badges = [];
+        if (item.is_high_200d) {
+             badges.push(<span key="200" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">200H</span>);
+        } else if (item.is_high_20d) {
+             badges.push(<span key="20" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shadow-sm">20H</span>);
+        } else if (item.is_high_5d) {
+             badges.push(<span key="5" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">5H</span>);
+        }
+        return badges;
+    };
+
+    const getMomentumColor = (rank: number) => {
+        if (rank >= 0.8) return 'from-indigo-500 to-purple-600';
+        if (rank >= 0.6) return 'from-blue-400 to-indigo-500';
+        if (rank >= 0.4) return 'from-teal-400 to-blue-400';
+        if (rank >= 0.2) return 'from-yellow-400 to-orange-400';
+        return 'from-slate-300 to-slate-400';
+    };
+
+    return (
+        <motion.tr 
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => onClick(item)}
+            className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group border-b border-slate-50 dark:border-slate-800/50"
+        >
+            {/* Rank */}
+            <td className="sticky left-0 w-12 px-4 py-3 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors z-20">
+                <span className={`font-mono text-xs font-bold ${(item.weightRank || 0) <= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}>
+                    {item.weightRank}
+                </span>
+            </td>
+
+            {/* Stock Code & Name - Fixed Column */}
+            <td className="sticky left-[48px] px-4 py-3 whitespace-nowrap bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors z-10 border-r border-slate-100 dark:border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col min-w-[70px]">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-blue-600 transition-colors tracking-tight">{item.stock_name}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-mono font-medium">{item.stock_code}</span>
+                            {item.industry && (
+                                <span className="text-[9px] px-1.5 py-0.25 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50">
+                                    {item.industry}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex flex-col justify-center gap-1">
+                        {getNewHighBadge(item)}
+                    </div>
+                </div>
+            </td>
+
+            {/* Price */}
+            <td className="px-2 py-3 text-right">
+                <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                    {formatNumber(item.price)}
+                </span>
+            </td>
+
+            {/* Change % */}
+            <td className="px-2 py-3 text-right">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[60px] justify-end ${
+                    (item.change_percent || 0) > 0 
+                        ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
+                        : (item.change_percent || 0) < 0 
+                            ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' 
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                    {(item.change_percent || 0) > 0 ? '+' : ''}{item.change_percent?.toFixed(2)}%
+                </span>
+            </td>
+
+            {/* Volatility */}
+            <td className="px-2 py-3 text-right">
+                <span className={`font-mono text-xs font-bold ${
+                    (item.volatility || 0) >= 12 ? 'text-rose-500' : 
+                    (item.volatility || 0) > 0 && (item.volatility || 0) < 8 ? 'text-emerald-500' : 
+                    'text-slate-600 dark:text-slate-400'
+                }`}>
+                    {item.volatility ? `${item.volatility.toFixed(1)}%` : '-'}
+                </span>
+            </td>
+
+            {/* Amount - Capital Concentration */}
+            <td className="px-2 py-3 text-right">
+                <div className="flex flex-col items-end gap-1">
+                    <span className={`font-mono text-sm font-bold ${(item.amount || 0) > (maxAmount * 0.5) ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                        {item.amount ? (item.amount / 100000000).toFixed(1) : '-'}
+                    </span>
+                    <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-gradient-to-r from-yellow-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
+                            style={{ width: `${Math.min(((item.amount || 0) / maxAmount) * 100, 100)}%` }} 
+                        />
+                    </div>
+                </div>
+            </td>
+
+
+
+            {/* YoY */}
+            <td className="px-2 py-3 text-right">
+                <div className="flex justify-end">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[56px] justify-end ${
+                        (item.revenue_yoy || 0) > 20 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
+                        (item.revenue_yoy || 0) > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
+                        (item.revenue_yoy || 0) < -20 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-200' :
+                        (item.revenue_yoy || 0) < 0 ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
+                        'text-slate-400'
+                    }`}>
+                        {(item.revenue_yoy !== undefined && item.revenue_yoy !== null) ? `${item.revenue_yoy > 0 ? '+' : ''}${item.revenue_yoy.toFixed(1)}%` : '-'}
+                    </span>
+                </div>
+            </td>
+
+            {/* MoM */}
+            <td className="px-2 py-3 text-right">
+                <div className="flex justify-end">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono min-w-[56px] justify-end ${
+                            (item.revenue_mom || 0) > 20 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
+                            (item.revenue_mom || 0) > 0 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
+                            (item.revenue_mom || 0) < -20 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border border-green-200' :
+                            (item.revenue_mom || 0) < 0 ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
+                            'text-slate-400'
+                        }`}>
+                        {(item.revenue_mom !== undefined && item.revenue_mom !== null) ? `${item.revenue_mom > 0 ? '+' : ''}${item.revenue_mom.toFixed(1)}%` : '-'}
+                        </span>
+                </div>
+            </td>
+
+            {/* Momentum Bar */}
+            <td className="px-4 py-3 align-middle">
+                <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                        className={`h-full bg-gradient-to-r ${getMomentumColor(item.revenue_momentum_rank || 0)}`} 
+                        style={{ width: `${(item.revenue_momentum_rank || 0) * 100}%` }}
+                    />
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-mono">
+                    {item.revenue_momentum_rank ? `PR ${(item.revenue_momentum_rank * 100).toFixed(0)}` : 'N/A'}
+                </div>
+            </td>
+
+            {/* Margin Usage - Leverage Appetite */}
+            <td className="px-2 py-3 text-right">
+                    <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${
+                        (item.margin_ratio || 0) > 40 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
+                        (item.margin_ratio || 0) > 20 ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
+                        (item.margin_ratio || 0) > 10 ? 'text-blue-600 dark:text-blue-400' :
+                        'text-slate-400'
+                    }`}>
+                    {item.margin_ratio ? `${item.margin_ratio.toFixed(1)}%` : '-'}
+                </span>
+            </td>
+
+            {/* Shares */}
+            <td className="px-2 py-3 text-right font-mono text-xs text-slate-500">
+                {item.shares?.toLocaleString()}
+            </td>
+
+            {/* Weight */}
+            <td className="px-4 py-3 text-right">
+                <div className="flex flex-col items-end gap-1">
+                    <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">{item.weight}%</span>
+                    <div className="w-16 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${Math.min(item.weight * 5, 100)}%` }} />
+                    </div>
+                </div>
+            </td>
+        </motion.tr>
+    );
+}

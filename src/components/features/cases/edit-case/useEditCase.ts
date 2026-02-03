@@ -140,8 +140,21 @@ export function useEditCase(initialData: DemoCase) {
                     }
                 };
                 if (parsedData.case_number) setVal('case_number', parsedData.case_number);
-                if (parsedData.buyer_name) setVal('buyer', parsedData.buyer_name);
-                if (parsedData.seller_name) setVal('seller', parsedData.seller_name);
+                if (parsedData.buyer_name) {
+                    setVal('buyer', parsedData.buyer_name);
+                    setVal('buyer_name', parsedData.buyer_name);
+                }
+                if (parsedData.buyer_phone) setVal('buyer_phone', parsedData.buyer_phone);
+                if (parsedData.seller_name) {
+                    setVal('seller', parsedData.seller_name);
+                    setVal('seller_name', parsedData.seller_name);
+                }
+                if (parsedData.seller_phone) setVal('seller_phone', parsedData.seller_phone);
+                if (parsedData.escrow_account) setVal('escrow_account', parsedData.escrow_account);
+                if (parsedData.registrant_name) setVal('registrant_name', parsedData.registrant_name);
+                if (parsedData.registrant_phone) setVal('registrant_phone', parsedData.registrant_phone);
+                if (parsedData.agent_name) setVal('agent_name', parsedData.agent_name);
+                if (parsedData.agent_phone) setVal('agent_phone', parsedData.agent_phone);
                 if (parsedData.contract_date) setVal('contract_date', parsedData.contract_date);
                 if (parsedData.total_price) setVal('total_price', parsedData.total_price);
                 if (parsedData.seal_date) setVal('seal_date', parsedData.seal_date);

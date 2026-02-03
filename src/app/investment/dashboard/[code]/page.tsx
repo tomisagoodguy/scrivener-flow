@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +9,11 @@ import { StockChart } from '@/components/features/investment/StockChart';
 import { RevenueChart } from '@/components/features/investment/RevenueChart';
 import { ChipsChart } from '@/components/features/investment/ChipsChart';
 import { ShareholderFlowChart } from '@/components/features/investment/ShareholderFlowChart';
+import { InvestmentTrustChart } from '@/components/features/investment/InvestmentTrustChart';
 import { BrokerChart } from '@/components/features/investment/BrokerChart';
 import { PriceData } from '@/lib/investment/indicators';
-import type { Holding } from '@/components/features/investment/HoldingsTable';
+import type { Holding } from '@/types/investment';
+import { filterAndSortHoldings, SortField, SortOrder } from '@/lib/investment/holdingFilters';
 
 interface RevenueData {
     data_date: string;
@@ -48,6 +50,7 @@ interface BrokerTransactionData {
 export default function StockDashboardPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const stockCode = params.code as string;
 
     // 持股列表與當前位置
@@ -81,7 +84,18 @@ export default function StockDashboardPage() {
             try {
                 const response = await fetch('/api/investment/holdings');
                 if (response.ok) {
-                    const data = await response.json();
+                    let data: Holding[] = await response.json();
+                    
+                    // Apply filters from URL Params if present to respect "Filtered View" navigation
+                    if (searchParams.toString()) {
+                         const filters = searchParams.get('filters')?.split(',') || [];
+                         const search = searchParams.get('search') || '';
+                         const sort = (searchParams.get('sort') as SortField) || 'weight';
+                         const order = (searchParams.get('order') as SortOrder) || 'desc';
+
+                         data = filterAndSortHoldings(data, filters, search, sort, order);
+                    }
+                    
                     setHoldings(data);
                     
                     // 找到當前股票的位置
@@ -90,13 +104,19 @@ export default function StockDashboardPage() {
                     
                     if (index >= 0) {
                         setStockName(data[index].stock_name);
+                    } else {
+                        // If current stock is screened out by filter but user navigated directly, 
+                        // we might want to fetch its basic info separately or just show 'Unknown'
+                        // For now let's just show code
+                        // Or we can append it to the list temporarily? No, that breaks navigation logic.
                     }
                     
                     console.log('🔍 Dashboard Debug:', {
                         totalHoldings: data.length,
                         currentStockCode: stockCode,
                         foundIndex: index,
-                        stockName: index >= 0 ? data[index].stock_name : 'Not found'
+                        stockName: index >= 0 ? data[index].stock_name : 'Not found',
+                        filters: searchParams.get('filters'),
                     });
                 }
             } catch (error) {
@@ -105,7 +125,7 @@ export default function StockDashboardPage() {
         };
 
         fetchHoldings();
-    }, [stockCode]);
+    }, [stockCode, searchParams]);
 
     useEffect(() => {
         if (stockCode) {
@@ -212,14 +232,14 @@ export default function StockDashboardPage() {
     const handlePrev = () => {
         if (currentIndex > 0 && holdings.length > 0) {
             const prevStock = holdings[currentIndex - 1];
-            router.push(`/investment/dashboard/${prevStock.stock_code}`);
+            router.push(`/investment/dashboard/${prevStock.stock_code}?${searchParams.toString()}`);
         }
     };
 
     const handleNext = () => {
         if (currentIndex < holdings.length - 1 && holdings.length > 0) {
             const nextStock = holdings[currentIndex + 1];
-            router.push(`/investment/dashboard/${nextStock.stock_code}`);
+            router.push(`/investment/dashboard/${nextStock.stock_code}?${searchParams.toString()}`);
         }
     };
 
@@ -367,40 +387,62 @@ export default function StockDashboardPage() {
                     </div>
                 </div>
 
-                {/* 右下：大戶與散戶流向（雙圖） */}
-                <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 flex flex-col gap-2">
-                    {/* 大戶流向 */}
-                    <div className="flex-1 overflow-hidden">
-                        <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">
-                            🔥 大戶籌碼流向
-                        </h2>
-                        <div className="h-[calc(100%-2rem)]">
-                            {chipsData.length > 0 ? (
-                                <ShareholderFlowChart data={chipsData} type="large" />
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                    無大戶流向數據
-                                </div>
-                            )}
-                        </div>
+                {/* 投信買賣超 (獨立區塊，接在籌碼分析下方) */}
+                <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4">
+                    <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">
+                        🏢 投信買賣超分析
+                    </h2>
+                    <div className="relative h-[calc(100%-2rem)]">
+                        {priceLoading ? (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10">
+                                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                            </div>
+                        ) : priceData.length > 0 ? (
+                            <InvestmentTrustChart 
+                                data={priceData} 
+                                isDarkMode={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')} 
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                無投信數據
+                            </div>
+                        )}
                     </div>
+                </div>
 
-                    {/* 分隔線 */}
-                    <div className="border-t border-slate-200 dark:border-slate-700"></div>
+                {/* 右下：大戶與散戶流向（水平排列） */}
+                <div className="col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
+                        {/* 大戶流向 */}
+                        <div className="flex flex-col h-full overflow-hidden">
+                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">
+                                🔥 大戶籌碼流向
+                            </h2>
+                            <div className="flex-1 min-h-0">
+                                {chipsData.length > 0 ? (
+                                    <ShareholderFlowChart data={chipsData} type="large" />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                        無大戶流向數據
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                    {/* 散戶流向 */}
-                    <div className="flex-1 overflow-hidden">
-                        <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">
-                            💎 散戶籌碼流向
-                        </h2>
-                        <div className="h-[calc(100%-2rem)]">
-                            {chipsData.length > 0 ? (
-                                <ShareholderFlowChart data={chipsData} type="retail" />
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                    無散戶流向數據
-                                </div>
-                            )}
+                        {/* 散戶流向 */}
+                        <div className="flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-4 md:pt-0 md:pl-6">
+                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">
+                                💎 散戶籌碼流向
+                            </h2>
+                            <div className="flex-1 min-h-0">
+                                {chipsData.length > 0 ? (
+                                    <ShareholderFlowChart data={chipsData} type="retail" />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                        無散戶流向數據
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

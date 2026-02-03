@@ -149,6 +149,21 @@ export function ChipsChart({ data }: ChipsChartProps) {
   const yAxisMin = Math.floor(minHolders - holderRange * 0.1);
   const yAxisMax = Math.ceil(maxHolders + holderRange * 0.1);
 
+  // 計算 Right Y 軸動態範圍（持股百分比）
+  const allPcts: number[] = [];
+  chartData.forEach(d => {
+    allPcts.push(d.retailPct);
+    allPcts.push(d.midPct);
+    allPcts.push(d.largePct);
+  });
+  const minPct = Math.min(...allPcts);
+  const maxPct = Math.max(...allPcts);
+  const pctRange = maxPct - minPct || 1;
+  // 上下預留 5% 緩衝空間，並不超過 0-100 限制
+  // 使用浮點數計算以確保微小變化也能呈現 (移除 floor/ceil)
+  const yAxisRightMin = Math.max(0, minPct - pctRange * 0.05);
+  const yAxisRightMax = Math.min(100, maxPct + pctRange * 0.05);
+
   return (
     <ResponsiveContainer width="100%" height={450}>
       <ComposedChart
@@ -183,8 +198,9 @@ export function ChipsChart({ data }: ChipsChartProps) {
         <YAxis
           yAxisId="right"
           orientation="right"
-          domain={[0, 100]}
+          domain={[yAxisRightMin, yAxisRightMax]}
           tick={{ fontSize: 11 }}
+          tickFormatter={(value) => pctRange < 5 ? value.toFixed(2) : value.toFixed(1)}
           label={{
             value: '持股百分比 (%)',
             angle: 90,

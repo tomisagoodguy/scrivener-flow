@@ -207,6 +207,121 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     fieldName="loan_estimates_json"
                 />
             </div>
+
+            <div className="border-t border-border-color pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1 md:col-span-2">
+                        <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
+                        <input
+                            name="escrow_account"
+                            defaultValue={initialData.escrow_account}
+                            type="text"
+                            className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-foreground font-bold focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-wider"
+                            placeholder="968282..."
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* 買賣雙方詳細資訊 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+                {/* Buyer Side */}
+                <div className="bg-secondary/30 p-4 rounded-xl space-y-3 border border-border">
+                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> 買方
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs text-foreground/50">姓名</label>
+                            <input
+                                name="buyer_name"
+                                type="text"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
+                                required
+                                defaultValue={initialData.buyer_name}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs text-foreground/50">電話</label>
+                            <input
+                                name="buyer_phone"
+                                type="text"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                defaultValue={initialData.buyer_phone}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-foreground/40 uppercase font-bold">登記名義人</label>
+                            <input
+                                name="registrant_name"
+                                type="text"
+                                className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
+                                placeholder="同買方"
+                                defaultValue={initialData.registrant_name}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-foreground/40 uppercase font-bold">登記人電話</label>
+                            <input
+                                name="registrant_phone"
+                                type="text"
+                                className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                defaultValue={initialData.registrant_phone}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Seller Side */}
+                <div className="bg-secondary/30 p-4 rounded-xl space-y-3 border border-border">
+                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span> 賣方
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs text-foreground/50">姓名</label>
+                            <input
+                                name="seller_name"
+                                type="text"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold"
+                                required
+                                defaultValue={initialData.seller_name}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs text-foreground/50">電話</label>
+                            <input
+                                name="seller_phone"
+                                type="text"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium"
+                                defaultValue={initialData.seller_phone}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人</label>
+                            <input
+                                name="agent_name"
+                                type="text"
+                                className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-bold"
+                                defaultValue={initialData.agent_name}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人電話</label>
+                            <input
+                                name="agent_phone"
+                                type="text"
+                                className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-xs font-medium"
+                                defaultValue={initialData.agent_phone}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

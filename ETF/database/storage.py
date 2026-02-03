@@ -152,8 +152,8 @@ class ETFStorage:
                     "currency": row['currency'] if 'currency' in df.columns else 'TWD'
                 })
             
-            requests.post(f"{self.supabase_url}/rest/v1/etf_holdings_snapshot", headers=self.headers, json=records).raise_for_status()
-            logger.info(f"Successfully saved {len(records)} snapshot records via REST.")
+            requests.post(f"{self.supabase_url}/rest/v1/etf_holdings_snapshot", headers=headers, json=records).raise_for_status()
+            logger.info(f"Successfully saved {len(records)} snapshot records via REST (UPSERT mode).")
         except Exception as e:
             logger.error(f"Failed to save snapshot via REST: {e}")
             raise
@@ -181,7 +181,8 @@ class ETFStorage:
                 "close": float(row['close']) if pd.notnull(row['close']) else None,
                 "volume": int(row['volume']) if pd.notnull(row['volume']) else 0,
                 "amount": float(row['amount']) if 'amount' in row and pd.notnull(row['amount']) else None,
-                "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in row and pd.notnull(row['margin_ratio']) else 0
+                "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in row and pd.notnull(row['margin_ratio']) else 0,
+                "it_buy": int(row['it_buy']) if 'it_buy' in row and pd.notnull(row['it_buy']) else 0
             })
 
         # Batch insert to avoid URL length issues
@@ -251,3 +252,34 @@ class ETFStorage:
                 requests.patch(url, headers=self.headers, 
                              params={"etf_code": f"eq.{etf}", "stock_code": f"eq.{code}", "is_active": "eq.true"},
                              json={"is_active": False, "end_date": date})
+    def save_company_info(self, df_info: pd.DataFrame):
+        """
+        Save company basic info (industry, full name) via REST API UPSERT.
+        """
+        if df_info.empty:
+            return
+
+        url = f"{self.supabase_url}/rest/v1/stock_basic_info"
+        headers = self.headers.copy()
+        headers["Prefer"] = "resolution=merge-duplicates"
+
+        records = []
+        for _, row in df_info.iterrows():
+            records.append({
+                "stock_code": str(row['stock_code']),
+                "name_short": row['name_short'],
+                "name_full": row['name_full'],
+                "industry": row['industry'],
+                "updated_at": datetime.now().isoformat()
+            })
+
+        try:
+            resp = requests.post(url, headers=headers, json=records)
+            resp.raise_for_status()
+            logger.info(f"Successfully synced {len(records)} company info records.")
+        except Exception as e:
+            logger.error(f"Failed to save company info: {e}")
+            if hasattr(e, 'response') and e.response:
+                logger.error(f"Response: {e.response.text}")
+
+from datetime import datetime

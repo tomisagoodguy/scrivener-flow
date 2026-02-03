@@ -33,7 +33,9 @@ class FinlabService:
         'gross_margin': 'fundamental_features:營業毛利率',
         'operating_margin': 'fundamental_features:營業利益率',
         'roe': 'fundamental_features:ROE稅後',
-        'eps': 'financial_statement:每股盈餘'
+        'eps': 'financial_statement:每股盈餘',
+        'company_info': 'company_basic_info',
+        'inventory': 'inventory'
     }
 
     def __init__(self, stock_list: List[str] = None):
@@ -169,13 +171,7 @@ class FinlabService:
         logger.info("正在計算新的股權結構指標...")
         try:
             # Use raw data for calculation, filtered by stocks
-            inv = self._get_data('inventory') # 'inventory' is not in DATA_MAP, but _get_data handles pass-through or we should add it
-            if inv.empty:
-                 # Try directly if not mapped
-                 try:
-                     inv = data.get('inventory')
-                 except:
-                     raise ValueError("Cannot fetch inventory data")
+            inv = self._get_data('inventory')
 
             inv_df = inv.reset_index()
             inv_filtered = inv_df[inv_df['stock_id'].isin(common_stocks)]
@@ -405,6 +401,44 @@ class FinlabService:
             df['currency'] = None
             return df
 
+    def get_company_info(self, stock_list: List[str]) -> pd.DataFrame:
+        """
+        Fetch company basic info (short name, full name, industry) from Finlab.
+        """
+        if not self.login():
+            return pd.DataFrame()
+
+        try:
+            logger.info(f"Fetching company info for {len(stock_list)} stocks...")
+            # company_basic_info is a special table that doesn't use the standard time-series data.get
+            # but in Finlab it's often accessed via data.get('company_basic_info')
+            df = self._get_data('company_info')
+            
+            if df.empty:
+                return pd.DataFrame()
+            
+            # Filter columns and stocks
+            # Columns in Finlab: ['stock_id', '公司簡稱', '公司名稱', '產業類別', ...]
+            target_cols = ["stock_id", "公司簡稱", "公司名稱", "產業類別"]
+            df = df[target_cols]
+            
+            # Map columns to our internal names
+            df = df.rename(columns={
+                "stock_id": "stock_code",
+                "公司簡稱": "name_short",
+                "公司名稱": "name_full",
+                "產業類別": "industry"
+            })
+            
+            # Filter by our stock list
+            df['stock_code'] = df['stock_code'].astype(str).str.strip()
+            df = df[df['stock_code'].isin([str(s).strip() for s in stock_list])]
+            
+            return df
+        except Exception as e:
+            logger.error(f"Error fetching company info from Finlab: {e}")
+            return pd.DataFrame()
+
     def get_ohlcv(self, stock_list: List[str], days: int = 250) -> pd.DataFrame:
         """
         Fetch OHLCV data for a list of stocks.
@@ -430,6 +464,15 @@ class FinlabService:
             v = self._get_data('volume')[valid_list].tail(days).stack()
             amt = self._get_data('amount')[valid_list].tail(days).stack()
             
+            # 投信買賣超 (Investment Trust Net Buy/Sell)
+            it = self._get_data('it_buy')
+            if not it.empty and not it.columns.empty:
+                # Filter valid stocks
+                valid_it_cols = [c for c in valid_list if c in it.columns]
+                it_stacked = it[valid_it_cols].tail(days).stack()
+            else:
+                 it_stacked = pd.Series(0, index=o.index)
+            
             # Use a safe fetch for margin ratio
             m_raw = self._get_data('margin_usage')
             if not m_raw.empty:
@@ -437,12 +480,13 @@ class FinlabService:
             else:
                 m_ratio = pd.Series(0, index=o.index)
 
-            df = pd.concat([o, h, l, c, v, amt, m_ratio], axis=1)
-            df.columns = ['open', 'high', 'low', 'close', 'volume', 'amount', 'margin_ratio']
+            df = pd.concat([o, h, l, c, v, amt, m_ratio, it_stacked], axis=1)
+            df.columns = ['open', 'high', 'low', 'close', 'volume', 'amount', 'margin_ratio', 'it_buy']
             df.index.names = ['date', 'stock_id']
             
-            # Fill NaN for margin_ratio
+            # Fill NaN
             df['margin_ratio'] = df['margin_ratio'].fillna(0)
+            df['it_buy'] = df['it_buy'].fillna(0)
             
             return df.reset_index()
         except Exception as e:
