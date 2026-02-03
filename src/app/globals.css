@@ -94,6 +94,25 @@ html.dark [class*="dark:text-slate-"] {
     /* slate-400 */
 }
 
+/* 品牌色系列 - blue */
+html.dark .text-blue-600,
+html.dark .text-blue-500 {
+    color: #60a5fa !important;
+    /* blue-400 亮藍色 */
+}
+
+html.dark .text-blue-700 {
+    color: #93c5fd !important;
+    /* blue-300 更亮的藍色 */
+}
+
+/* 確保 dark:text-blue-* 類別也生效 */
+html.dark [class*="dark:text-blue-400"],
+html.dark [class*="dark:text-blue-300"] {
+    color: #93c5fd !important;
+    /* blue-300 非常亮的藍色 */
+}
+
 /* 強制深色邊框 */
 html.dark .border-slate-200,
 html.dark .border-slate-300 {
