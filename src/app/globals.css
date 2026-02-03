@@ -192,6 +192,99 @@ html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([cl
     /* slate-700 */
 }
 
+/* ========================================
+   🎯 Shadcn UI Token - 語義化設計系統
+   覆寫 text-foreground, bg-card 等語義化類別
+   ======================================== */
+
+/* 前景文字（主要文字） */
+html.dark .text-foreground {
+    color: #f8fafc !important;
+    /* slate-50 白色 */
+}
+
+html.dark .text-foreground\/90 {
+    color: rgba(248, 250, 252, 0.9) !important;
+}
+
+html.dark .text-foreground\/80 {
+    color: rgba(248, 250, 252, 0.8) !important;
+}
+
+html.dark .text-foreground\/70 {
+    color: rgba(248, 250, 252, 0.7) !important;
+}
+
+html.dark .text-foreground\/60 {
+    color: rgba(248, 250, 252, 0.6) !important;
+}
+
+html.dark .text-foreground\/50 {
+    color: rgba(248, 250, 252, 0.5) !important;
+}
+
+html.dark .text-foreground\/40 {
+    color: rgba(248, 250, 252, 0.4) !important;
+}
+
+html.dark .text-foreground\/30 {
+    color: rgba(248, 250, 252, 0.3) !important;
+}
+
+/* 卡片背景 */
+html.dark .bg-card {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* 次要背景 */
+html.dark .bg-secondary,
+html.dark .bg-secondary\/30,
+html.dark .bg-secondary\/50 {
+    background-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 邊框 */
+html.dark .border-border,
+html.dark .border-border\/5 {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 主色文字（通常是品牌色） */
+html.dark .text-primary {
+    color: #a78bfa !important;
+    /* violet-400 亮紫色 */
+}
+
+html.dark .bg-primary {
+    background-color: #7c3aed !important;
+    /* violet-600 */
+}
+
+html.dark .bg-primary\/20 {
+    background-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+/* 靜音文字（較不重要的文字） */
+html.dark .text-muted,
+html.dark .text-muted-foreground {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+/* 破壞性操作（刪除、警告） */
+html.dark .text-destructive {
+    color: #f87171 !important;
+    /* red-400 */
+}
+
+html.dark .bg-destructive {
+    background-color: #dc2626 !important;
+    /* red-600 */
+}
+
 /* Custom Scrollbar for Dashboard Widgets */
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
