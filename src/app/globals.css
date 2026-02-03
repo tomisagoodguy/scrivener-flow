@@ -54,6 +54,46 @@ html.dark .text-slate-400 {
     /* slate-400 */
 }
 
+/* 強制 gray 系列深色模式文字 */
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+    color: #f8fafc !important;
+    /* 白色 */
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+    color: #e2e8f0 !important;
+    /* slate-200 */
+}
+
+html.dark .text-gray-500 {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+html.dark .text-gray-400 {
+    color: #64748b !important;
+    /* slate-500 */
+}
+
+/* 確保 dark:text-gray-* 類別也生效（雙重保險） */
+html.dark [class*="dark:text-gray-100"],
+html.dark [class*="dark:text-gray-200"] {
+    color: #f8fafc !important;
+    /* 白色 */
+}
+
+html.dark [class*="dark:text-gray-300"] {
+    color: #e2e8f0 !important;
+    /* slate-200 */
+}
+
+html.dark [class*="dark:text-slate-"] {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
 /* 強制深色邊框 */
 html.dark .border-slate-200,
 html.dark .border-slate-300 {
