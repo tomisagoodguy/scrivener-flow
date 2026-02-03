@@ -149,9 +149,44 @@ def main():
     except Exception as e:
         logger.error(f"Error during capacity cleanup: {e}")
 
-    # 9. Global Completion Notify
+
+    # 9. Global Completion Notify with Summary
     try:
-        notifier.send_text(f"✅ ETF 數據同步完成\n📅 日期: {date_str}\n📊 ETF: {etf_code}\n⚙️ 同步圍: {args.days} 天")
+        # 組裝摘要數據
+        summary = {
+            'etf_code': etf_code,
+            'data_date': date_str,
+            'total_holdings': len(df) if not df.empty else 0,
+            'sync_days': args.days,
+            'diff_stats': {
+                'total_changes': len(diff_logs) if diff_logs else 0,
+                'new_in': len([d for d in diff_logs if d['change_type'] == 'IN']) if diff_logs else 0,
+                'removed': len([d for d in diff_logs if d['change_type'] == 'OUT']) if diff_logs else 0,
+                'adjusted': len([d for d in diff_logs if d['change_type'] in ['BUY', 'SELL']]) if diff_logs else 0
+            },
+            'top_changes': []  # 將在下方填充
+        }
+        
+        # 計算 TOP 5 權重變化（按 diff_weight 絕對值排序）
+        if diff_logs:
+            sorted_changes = sorted(
+                diff_logs,
+                key=lambda x: abs(x.get('diff_weight', 0)),
+                reverse=True
+            )
+            summary['top_changes'] = [
+                {
+                    'stock_name': d.get('stock_name', 'N/A'),
+                    'stock_code': d.get('stock_code', 'N/A'),
+                    'diff_weight': d.get('diff_weight', 0),
+                    'change_type': d.get('change_type', 'ADJUST')
+                }
+                for d in sorted_changes[:5]
+            ]
+        
+        # 發送完成通知
+        notifier.notify_completion(summary)
+        logger.info("Completion notification sent with full summary.")
     except Exception as e:
         logger.error(f"Final notification failed: {e}")
 
