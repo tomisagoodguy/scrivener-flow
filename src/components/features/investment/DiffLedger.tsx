@@ -48,43 +48,88 @@ export function DiffLedger({ logs }: DiffLedgerProps) {
 
     const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
 
+    const getBehaviorTags = (stockCode: string, currentLog: DiffLog) => {
+        const tags: { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: any }[] = [];
+        
+        // 1. Action Types (IN/OUT)
+        if (currentLog.change_type === 'IN') {
+            tags.push({ label: '首次建倉', color: 'red', icon: RocketIcon });
+        }
+        if (currentLog.change_type === 'OUT') {
+            tags.push({ label: '全數清倉', color: 'green', icon: TrashIcon });
+        }
+
+        // 2. Aggressive Intensity (Weight Diff)
+        if (currentLog.diff_weight >= 0.5) {
+            tags.push({ label: '強力加碼', color: 'red', icon: TrendingUpIcon });
+        } else if (currentLog.diff_weight <= -0.5) {
+            tags.push({ label: '大筆調節', color: 'green', icon: TrendingDownIcon });
+        }
+
+        // 3. Streak Analysis (Using the logs we have)
+        // Sort all logs by date to check sequence for this specific stock
+        const stockLogs = [...logs]
+            .filter(l => l.stock_code === stockCode)
+            .sort((a, b) => b.data_date.localeCompare(a.data_date));
+        
+        let buyStreak = 0;
+        for (const l of stockLogs) {
+            if (l.change_type === 'BUY' || l.change_type === 'IN') buyStreak++;
+            else break;
+        }
+        if (buyStreak >= 3) {
+            tags.push({ label: `連 ${buyStreak} 買`, color: 'red' });
+        }
+
+        let sellStreak = 0;
+        for (const l of stockLogs) {
+            if (l.change_type === 'SELL' || l.change_type === 'OUT') sellStreak++;
+            else break;
+        }
+        if (sellStreak >= 3) {
+            tags.push({ label: `連 ${sellStreak} 賣`, color: 'green' });
+        }
+
+        return tags;
+    };
+
     const getStatusConfig = (type: string) => {
         switch (type) {
             case 'IN':
                 return {
                     icon: RocketIcon,
-                    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-                    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
-                    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                    bg: 'bg-rose-50 dark:bg-rose-950/40',
+                    iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
+                    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
                     label: '新增持股',
-                    color: 'text-emerald-600'
+                    color: 'text-rose-600'
                 };
             case 'OUT':
                 return {
                     icon: TrashIcon,
-                    bg: 'bg-rose-50 dark:bg-rose-950/40',
-                    iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
-                    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+                    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
+                    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                     label: '剔除持股',
-                    color: 'text-rose-600'
+                    color: 'text-emerald-600'
                 };
             case 'BUY':
                 return {
                     icon: TrendingUpIcon,
-                    bg: 'bg-blue-50 dark:bg-blue-950/40',
-                    iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-800/50 dark:text-blue-300',
-                    badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+                    bg: 'bg-rose-50 dark:bg-rose-950/40',
+                    iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
+                    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
                     label: '加碼',
-                    color: 'text-blue-600'
+                    color: 'text-rose-600'
                 };
             case 'SELL':
                 return {
                     icon: TrendingDownIcon,
-                    bg: 'bg-amber-50 dark:bg-amber-950/40',
-                    iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-800/50 dark:text-amber-300',
-                    badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+                    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
+                    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                     label: '減碼',
-                    color: 'text-amber-600'
+                    color: 'text-emerald-600'
                 };
             default:
                 return {
@@ -154,24 +199,43 @@ export function DiffLedger({ logs }: DiffLedgerProps) {
                                                     </span>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`
-                                                        text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter border
-                                                        ${config.badge}
-                                                    `}>
-                                                        {log.change_type}
-                                                    </span>
-                                                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                                        {log.change_type === 'IN' || log.change_type === 'OUT' 
-                                                            ? config.label 
-                                                            : `${config.label} ${Math.abs(log.diff_shares).toLocaleString()} 股`}
-                                                    </span>
-                                                </div>
+                                                 <div className="flex flex-wrap items-center gap-2">
+                                                     <span className={`
+                                                         text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter border
+                                                         ${config.badge}
+                                                     `}>
+                                                         {log.change_type}
+                                                     </span>
+                                                     <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                                         {log.change_type === 'IN' || log.change_type === 'OUT' 
+                                                             ? config.label 
+                                                             : `${config.label} ${Math.abs(log.diff_shares).toLocaleString()} 股`}
+                                                     </span>
+                                                 </div>
+
+                                                 {/* Manager Behavior Tags */}
+                                                 <div className="flex flex-wrap gap-1.5 pt-1">
+                                                     {getBehaviorTags(log.stock_code, log).map((tag, tIdx) => (
+                                                         <div 
+                                                            key={tIdx}
+                                                            className={`
+                                                                flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border
+                                                                ${tag.color === 'red' 
+                                                                    ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-800' 
+                                                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
+                                                                }
+                                                            `}
+                                                         >
+                                                             {tag.icon && <tag.icon size={10} />}
+                                                             {tag.label}
+                                                         </div>
+                                                     ))}
+                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="text-right">
-                                            <div className={`text-xl font-mono font-black ${log.diff_weight > 0 ? 'text-emerald-500' : log.diff_weight < 0 ? 'text-rose-500' : 'text-slate-500'}`}>
+                                            <div className={`text-xl font-mono font-black ${log.diff_weight > 0 ? 'text-rose-500' : log.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
                                                 {log.diff_weight > 0 ? '▲' : log.diff_weight < 0 ? '▼' : ''}
                                                 {Math.abs(log.diff_weight)}%
                                             </div>

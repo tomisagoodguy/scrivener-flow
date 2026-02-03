@@ -23,6 +23,7 @@ from ETF.database.storage import ETFStorage
 from ETF.processors.diff_engine import compute_diff
 from ETF.notifiers.line_notifier import LineNotifier
 from ETF.services.finlab_service import FinlabService
+from ETF.database.sql_storage import SQLStorage
 
 def main():
     parser = argparse.ArgumentParser(description="ETF Tracker Main Process")
@@ -121,6 +122,14 @@ def main():
         logger.info(f"Saved CSV archive: {csv_path}")
     except Exception as e:
         logger.error(f"Error saving CSV: {e}")
+
+    # 8. Capacity Cleanup (Prevent Database Overflow)
+    try:
+        logger.info("Running database capacity cleanup...")
+        sql_storage = SQLStorage()
+        sql_storage.cleanup_old_data()
+    except Exception as e:
+        logger.error(f"Error during capacity cleanup: {e}")
 
     logger.info("✅ ETF Tracker pipeline finished.")
 

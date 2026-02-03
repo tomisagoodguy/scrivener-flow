@@ -126,18 +126,27 @@ class SQLStorage:
                     continue
         logger.info("✅ 券商交易數據寫入完成")
     
-    def cleanup_old_data(self, retention_days: int = 730):
-        """清除過舊資料"""
-        logger.info(f"清除 {retention_days} 天前的過舊資料...")
+    def cleanup_old_data(self):
+        """清除過舊資料以節省 Supabase 空間"""
+        logger.info("開始執行數據庫容量自動優化...")
         try:
             with self.engine.connect() as conn:
-                sql_broker = text(f"DELETE FROM stock_broker_transactions WHERE data_date < NOW() - INTERVAL '{retention_days} days'")
+                # 1. 持股快照：保留 365 天 (約 1 年)
+                sql_snapshot = text("DELETE FROM etf_holdings_snapshot WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
+                res_snapshot = conn.execute(sql_snapshot)
+                
+                # 2. 券商分點：配合圖表顯示，保留 365 天 (1 年)
+                sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
                 res_broker = conn.execute(sql_broker)
                 
-                sql_chips = text(f"DELETE FROM stock_shareholder_weekly WHERE data_date < NOW() - INTERVAL '{retention_days} days'")
+                # 3. 集保數據：保留 2 年 (730 天) 用於長期觀察
+                sql_chips = text("DELETE FROM stock_shareholder_weekly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'")
                 res_chips = conn.execute(sql_chips)
                 
                 conn.commit()
-                logger.info(f"✅ 清除完成: 券商數據 {res_broker.rowcount} 筆, 集保數據 {res_chips.rowcount} 筆")
+                logger.info(f"✅ 自動優化完成！")
+                logger.info(f"   - 持股快照已清理: {res_snapshot.rowcount} 筆")
+                logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
+                logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
         except Exception as e:
-            logger.error(f"清除舊資料失敗: {e}")
+            logger.error(f"自動優化失敗: {e}")

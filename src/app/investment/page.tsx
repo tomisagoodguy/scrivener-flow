@@ -65,45 +65,18 @@ export default async function InvestmentPage() {
                 </div>
             </div>
 
-            {/* Overview Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardDescription>總持股數</CardDescription>
-                        <CardTitle className="text-2xl font-mono">
-                            {holdings.length} 檔
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardDescription>持有總股數</CardDescription>
-                        <CardTitle className="text-2xl font-mono">
-                            {(totalShares / 1000).toLocaleString()} <span className="text-sm font-normal text-slate-500">張</span>
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardDescription>最大持股</CardDescription>
-                        <CardTitle className="text-2xl truncate">
-                            {holdings.length > 0 ? holdings[0].stock_name : '-'}
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-            </div>
-
-            {/* Main Content */}
+            {/* Holdings Table Section */}
             <Tabs defaultValue="holdings" className="w-full">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="holdings">最新持股明細</TabsTrigger>
-                    <TabsTrigger value="ledger">異動流水帳</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                    <TabsTrigger value="holdings" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">持股明細</TabsTrigger>
+                    <TabsTrigger value="ledger" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">異動紀錄</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="holdings">
-                    <HoldingsTable initialData={holdings} />
+                    <div className="w-full">
+                        <HoldingsTable initialData={holdings} />
+                    </div>
                 </TabsContent>
-                
                 <TabsContent value="ledger">
                     <div className="w-full">
                         <div className="flex items-center justify-between mb-6">
