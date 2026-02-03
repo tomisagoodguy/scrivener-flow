@@ -146,9 +146,19 @@ html.dark .bg-slate-100,
 html.dark .bg-slate-200,
 html.dark .bg-gray-50,
 html.dark .bg-gray-100,
-html.dark .bg-gray-200 {
+html.dark .bg-gray-200,
+html.dark .bg-white {
     background-color: #1e293b !important;
-    /* slate-900 */
+    /* slate-900 深灰卡片 */
+}
+
+/* 半透明背景 */
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/30,
+html.dark .bg-white\/50,
+html.dark [class*="bg-slate-50/"] {
+    background-color: rgba(30, 41, 59, 0.5) !important;
+    /* slate-900 半透明 */
 }
 
 /* 更深的淺色背景改成更深的灰 */
