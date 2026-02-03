@@ -1,0 +1,361 @@
+/* ========================================
+   🔥 Tailwind v4 Dark Mode Variant
+   啟用 class-based dark: prefix
+   ======================================== */
+
+/* 定義 dark variant - 當 HTML 有 .dark class 時啟用 */
+@variant dark (&:where(.dark, .dark *));
+
+/* ========================================
+   🔥 CRITICAL: Manual Dark Mode CSS Override
+   手動深色模式 CSS 覆寫（繞過 Tailwind variants 問題）
+   ======================================== */
+
+/* 當 HTML 元素有 .dark class 時，強制套用深色樣式 */
+html.dark {
+    color-scheme: dark;
+}
+
+/* 強制深色背景 */
+html.dark body,
+html.dark body>div {
+    background-color: #020617 !important;
+    /* slate-950 */
+}
+
+/* 強制深色主容器 */
+html.dark .min-h-screen {
+    background-color: #020617 !important;
+    /* slate-950 */
+}
+
+/* 強制深色卡片 */
+html.dark .bg-white {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+/* 強制深色文字 */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+/* 強制 gray 系列深色模式文字 */
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+    color: #f8fafc !important;
+    /* 白色 */
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+    color: #e2e8f0 !important;
+    /* slate-200 */
+}
+
+html.dark .text-gray-500 {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+html.dark .text-gray-400 {
+    color: #64748b !important;
+    /* slate-500 */
+}
+
+/* 確保 dark:text-gray-* 類別也生效（雙重保險） */
+html.dark [class*="dark:text-gray-100"],
+html.dark [class*="dark:text-gray-200"] {
+    color: #f8fafc !important;
+    /* 白色 */
+}
+
+html.dark [class*="dark:text-gray-300"] {
+    color: #e2e8f0 !important;
+    /* slate-200 */
+}
+
+html.dark [class*="dark:text-slate-"] {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+/* 品牌色系列 - blue */
+html.dark .text-blue-600,
+html.dark .text-blue-500 {
+    color: #60a5fa !important;
+    /* blue-400 亮藍色 */
+}
+
+html.dark .text-blue-700 {
+    color: #93c5fd !important;
+    /* blue-300 更亮的藍色 */
+}
+
+/* 確保 dark:text-blue-* 類別也生效 */
+html.dark [class*="dark:text-blue-400"],
+html.dark [class*="dark:text-blue-300"] {
+    color: #93c5fd !important;
+    /* blue-300 非常亮的藍色 */
+}
+
+/* 強制深色邊框 */
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 強制深色輸入框 - 改善可讀性 */
+html.dark input,
+html.dark textarea,
+html.dark select {
+    background-color: #1e293b !important;
+    /* slate-900 較淺 */
+    color: #f8fafc !important;
+    /* slate-50 白色文字 */
+    border: 1px solid #64748b !important;
+    /* slate-500 明顯邊框 */
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #64748b !important;
+    /* slate-500 */
+}
+
+/* 深色模式下的 Select 下拉選單 */
+html.dark select option {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+
+/* 深色模式的焦點狀態 */
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+    border-color: #3b82f6 !important;
+    /* blue-500 */
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: 2px;
+}
+
+/* ========================================
+   🎨 一致深色風格 - 全面覆蓋
+   確保所有元素都用深灰色調
+   ======================================== */
+
+/* 所有淺色背景都改成深灰 */
+html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html.dark .bg-slate-200,
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-gray-200,
+html.dark .bg-white {
+    background-color: #1e293b !important;
+    /* slate-900 深灰卡片 */
+}
+
+/* 半透明背景 */
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/30,
+html.dark .bg-white\/50,
+html.dark [class*="bg-slate-50/"] {
+    background-color: rgba(30, 41, 59, 0.5) !important;
+    /* slate-900 半透明 */
+}
+
+/* 更深的淺色背景改成更深的灰 */
+html.dark .bg-slate-300,
+html.dark .bg-gray-300 {
+    background-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 圓角卡片 */
+html.dark .rounded-lg,
+html.dark .rounded-xl,
+html.dark .rounded-2xl {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* Shadow 元素（通常是卡片） */
+html.dark .shadow,
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3) !important;
+}
+
+/* 通用卡片 class */
+html.dark [class*="card"],
+html.dark [class*="Card"] {
+    background-color: #1e293b !important;
+    /* slate-900 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+/* 通用容器 */
+html.dark [class*="container"],
+html.dark [class*="Container"] {
+    background-color: transparent !important;
+}
+
+/* 通用 panel/section */
+html.dark [class*="panel"],
+html.dark [class*="Panel"],
+html.dark [class*="section"],
+html.dark [class*="Section"] {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* Header/Footer */
+html.dark header,
+html.dark footer {
+    background-color: #0f172a !important;
+    /* slate-950 */
+    border-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 淺色邊框都改深 */
+html.dark .border,
+html.dark .border-t,
+html.dark .border-b,
+html.dark .border-l,
+html.dark .border-r {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 分隔線 */
+html.dark hr,
+html.dark .divider {
+    border-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 按鈕 */
+html.dark button:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: #334155 !important;
+    /* slate-800 */
+    color: #f8fafc !important;
+    /* slate-50 */
+}
+
+html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+    background-color: #475569 !important;
+    /* slate-700 */
+}
+
+/* ========================================
+   🎯 Shadcn UI Token - 語義化設計系統
+   覆寫 text-foreground, bg-card 等語義化類別
+   ======================================== */
+
+/* 前景文字（主要文字） */
+html.dark .text-foreground {
+    color: #f8fafc !important;
+    /* slate-50 白色 */
+}
+
+html.dark .text-foreground\/90 {
+    color: rgba(248, 250, 252, 0.9) !important;
+}
+
+html.dark .text-foreground\/80 {
+    color: rgba(248, 250, 252, 0.8) !important;
+}
+
+html.dark .text-foreground\/70 {
+    color: rgba(248, 250, 252, 0.7) !important;
+}
+
+html.dark .text-foreground\/60 {
+    color: rgba(248, 250, 252, 0.6) !important;
+}
+
+html.dark .text-foreground\/50 {
+    color: rgba(248, 250, 252, 0.5) !important;
+}
+
+html.dark .text-foreground\/40 {
+    color: rgba(248, 250, 252, 0.4) !important;
+}
+
+html.dark .text-foreground\/30 {
+    color: rgba(248, 250, 252, 0.3) !important;
+}
+
+/* 卡片背景 */
+html.dark .bg-card {
+    background-color: #1e293b !important;
+    /* slate-900 */
+}
+
+/* 次要背景 */
+html.dark .bg-secondary,
+html.dark .bg-secondary\/30,
+html.dark .bg-secondary\/50 {
+    background-color: #334155 !important;
+    /* slate-800 */
+}
+
+/* 邊框 */
+html.dark .border-border,
+html.dark .border-border\/5 {
+    border-color: #475569 !important;
+    /* slate-600 */
+}
+
+/* 主色文字（通常是品牌色） */
+html.dark .text-primary {
+    color: #a78bfa !important;
+    /* violet-400 亮紫色 */
+}
+
+html.dark .bg-primary {
+    background-color: #7c3aed !important;
+    /* violet-600 */
+}
+
+html.dark .bg-primary\/20 {
+    background-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+/* 靜音文字（較不重要的文字） */
+html.dark .text-muted,
+html.dark .text-muted-foreground {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+/* 破壞性操作（刪除、警告） */
+html.dark .text-destructive {
+    color: #f87171 !important;
+    /* red-400 */
+}
+
+html.dark .bg-destructive {
+    background-color: #dc2626 !important;
+    /* red-600 */
+}
