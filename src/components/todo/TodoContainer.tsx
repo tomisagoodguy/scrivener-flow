@@ -161,7 +161,7 @@ const TodoContainer = () => {
                                 value={newTodoContent}
                                 onChange={(e) => setNewTodoContent(e.target.value)}
                                 placeholder="輸入待辦事項... (可多行)"
-                                className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                             />
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ const TodoContainer = () => {
                                         onChange={(e) => setIsAllDay(e.target.checked)}
                                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                     />
-                                    <label htmlFor="isAllDay" className="text-xs text-slate-600 cursor-pointer select-none">全天</label>
+                                    <label htmlFor="isAllDay" className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">全天</label>
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1">
@@ -181,7 +181,7 @@ const TodoContainer = () => {
                                             type={isAllDay ? "date" : "datetime-local"}
                                             value={newTodoDate}
                                             onChange={(e) => setNewTodoDate(e.target.value)}
-                                            className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
+                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
                                         />
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -190,7 +190,7 @@ const TodoContainer = () => {
                                             type={isAllDay ? "date" : "datetime-local"}
                                             value={newTodoEndDate}
                                             onChange={(e) => setNewTodoEndDate(e.target.value)}
-                                            className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
+                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none w-36"
                                             placeholder="選填"
                                         />
                                     </div>

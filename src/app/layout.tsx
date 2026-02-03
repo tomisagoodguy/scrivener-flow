@@ -29,19 +29,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={`${inter.variable} ${outfit.variable} antialiased selection:bg-blue-500/20`} suppressHydrationWarning>
                 <ThemeProvider>
                     <AuthGateProvider>
-                        <div className="min-h-screen bg-slate-50 flex transition-colors duration-500">
+                        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-500">
                             <Toaster richColors position="top-center" />
                             <SideNav />
                             <main className="flex-1 lg:pl-[108px] min-h-screen relative">
                                 {/* Decorative Background Elements */}
-                                <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse-slow"></div>
+                                <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 dark:bg-violet-500/5 rounded-full blur-[120px] pointer-events-none -z-10 animate-pulse-slow"></div>
                                 <div
-                                    className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse-slow"
+                                    className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 dark:bg-violet-500/3 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse-slow"
                                     style={{ animationDelay: '2s' }}
                                 ></div>
 
                                 <Suspense
-                                    fallback={<div className="h-16 w-full animate-pulse bg-slate-100" />}
+                                    fallback={<div className="h-16 w-full animate-pulse bg-slate-100 dark:bg-slate-800" />}
                                 >
                                     <Header />
                                 </Suspense>

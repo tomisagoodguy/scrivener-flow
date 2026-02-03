@@ -168,7 +168,7 @@ export default async function InvestmentPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                         00981A 投資監控
                     </h1>
-                    <p className="text-slate-500 mt-1">
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">
                         主動統一台股增長 • 即時追蹤持股異動與投資策略
                     </p>
                 </div>

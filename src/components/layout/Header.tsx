@@ -8,6 +8,7 @@ import { zhTW } from 'date-fns/locale';
 import { useWeather } from '@/hooks/useWeather';
 
 import { WeatherAnimation } from './WeatherAnimation';
+import { ThemeToggler } from '@/components/ui/ThemeToggler';
 
 export default function Header() {
     const router = useRouter();
@@ -140,6 +141,9 @@ export default function Header() {
                         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden md:block"></div>
 
                         <div className="flex items-center gap-2 md:gap-3">
+                            {/* Theme Toggler */}
+                            <ThemeToggler />
+                            
                             <Link
                                 href="/cases/new"
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2"

@@ -1,20 +1,16 @@
 @import "tailwindcss";
 
-/* 強制禁用深色模式 - 確保手機瀏覽器使用淺色主題 */
-:root {
-    color-scheme: light only;
-}
+/* ========================================
+   Fintech Dark Mode - Using Tailwind Slate Colors
+   深色模式使用 Tailwind 內建的 Slate 調色板
+   ======================================== */
 
-html {
-    color-scheme: light;
-}
-
-/* 明確禁用所有深色模式樣式 */
-@media (prefers-color-scheme: dark) {
-    :root {
-        color-scheme: light only;
-    }
-}
+/*
+   配色方案:
+   - 淺色模式: bg-slate-50 (背景), bg-white (卡片), text-slate-900 (文字)
+   - 深色模式: bg-slate-950 (背景), bg-slate-900 (卡片), text-slate-50 (文字)
+   - 強調色: amber-500 (主色), violet-500 (CTA), emerald-500/red-500 (正負值)
+*/
 
 /* Custom Scrollbar for Dashboard Widgets */
 .custom-scrollbar::-webkit-scrollbar {
