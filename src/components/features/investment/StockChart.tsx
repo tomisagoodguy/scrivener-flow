@@ -5,6 +5,7 @@ import {
     createChart, 
     ColorType, 
     IChartApi, 
+    ISeriesApi,
     CandlestickSeries, 
     HistogramSeries, 
     LineSeries 
@@ -22,6 +23,8 @@ interface StockChartProps {
  * Isolated from navigation and data-fetching logic.
  */
 export function StockChart({ data, isDarkMode = false }: StockChartProps) {
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const maSeriesRefs = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
@@ -101,6 +104,23 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
 
         window.addEventListener('resize', handleResize);
 
+        // Initial Data Set
+        if (data.length > 0) {
+            candleSeries.setData(data);
+            volumeSeries.setData(data.map(d => ({
+                time: d.time,
+                value: d.value,
+                color: d.close >= d.open ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'
+            })));
+            maConfigs.forEach(config => {
+                const series = maSeriesRefs.current.get(config.period);
+                if (series) {
+                    series.setData(IndicatorService.calculateSMA(data, config.period));
+                }
+            });
+            chart.timeScale().fitContent();
+        }
+
         return () => {
             window.removeEventListener('resize', handleResize);
             chart.remove();
@@ -134,6 +154,10 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             series.setData(IndicatorService.calculateSMA(data, period));
         });
 
+        // Optional: Reset time scale on data switch mostly useful for switching stocks
+        // chartRef.current.timeScale().fitContent(); 
+        // We comment this out if we want to preserve zoom during tiny updates, 
+        // but for stock switching, we probably want to fit content.
         chartRef.current.timeScale().fitContent();
 
     }, [data]);
