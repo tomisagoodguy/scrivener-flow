@@ -10,8 +10,13 @@ import { ChipsChart } from "./ChipsChart";
 import { ShareholderFlowChart } from "./ShareholderFlowChart";
 import { InvestmentTrustChart } from './InvestmentTrustChart';
 import { BrokerChart } from "./BrokerChart";
-import { PriceData } from "@/lib/investment/indicators";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { 
+    usePriceData, 
+    useRevenueData, 
+    useChipsData, 
+    useBrokerData 
+} from "@/hooks/investment";
 
 interface PriceChartModalProps {
     isOpen: boolean;
@@ -20,34 +25,10 @@ interface PriceChartModalProps {
     initialIndex: number;
 }
 
-interface RevenueData {
-    data_date: string;
-    revenue: number;
-    revenue_yoy: number | null;
-    revenue_mom: number | null;
-}
-
-interface MonthlyPrice {
-    month: string;
-    avg_price: number;
-}
-
-interface ShareholderData {
-    data_date: string;
-    shareholder_tier: number;
-    holder_count: number | null;
-    shares_held: number | null;
-    custody_ratio: number | null;
-}
-
-interface BrokerData {
-    data_date: string;
-    net_volume: number;
-    force_metric: number | null;
-}
-
 /**
- * PriceChartModal (全頁版)
+ * PriceChartModal (重構版)
+ * 
+ * 使用 Custom Hooks 管理資料獲取邏輯
  * 垂直滾動佈局，一次顯示所有分析圖表
  */
 export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: PriceChartModalProps) {
@@ -55,29 +36,14 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
     const isDarkMode = theme === 'dark';
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
-
-    // K線圖數據
-    const [priceData, setPriceData] = useState<PriceData[]>([]);
-    const [priceLoading, setPriceLoading] = useState(false);
-    const [priceError, setPriceError] = useState<string | null>(null);
-    
-    // 營收數據
-    const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
-    const [monthlyPriceData, setMonthlyPriceData] = useState<MonthlyPrice[]>([]);
-    const [revenueLoading, setRevenueLoading] = useState(false);
-    const [revenueError, setRevenueError] = useState<string | null>(null);
-
-    // 籌碼數據
-    const [chipsData, setChipsData] = useState<ShareholderData[]>([]);
-    const [chipsLoading, setChipsLoading] = useState(false);
-    const [chipsError, setChipsError] = useState<string | null>(null);
-
-    // 券商籌碼數據 (Top 15)
-    const [brokerData, setBrokerData] = useState<BrokerData[]>([]);
-    const [brokerLoading, setBrokerLoading] = useState(false);
-    const [brokerError, setBrokerError] = useState<string | null>(null);
-
     const currentStock = holdings[currentIndex];
+    const stockCode = currentStock?.stock_code || null;
+
+    // 使用 Custom Hooks 獲取資料
+    const { data: priceData, loading: priceLoading, error: priceError } = usePriceData(stockCode, isOpen);
+    const { revenueData, monthlyPriceData, loading: revenueLoading, error: revenueError } = useRevenueData(stockCode, isOpen);
+    const { data: chipsData, loading: chipsLoading, error: chipsError } = useChipsData(stockCode, 48, isOpen);
+    const { data: brokerData, loading: brokerLoading, error: brokerError } = useBrokerData(stockCode, isOpen);
 
     // Reset index when modal opens
     useEffect(() => {
@@ -85,118 +51,6 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
             setCurrentIndex(initialIndex);
         }
     }, [initialIndex, isOpen]);
-
-    // Fetch all data when stock changes
-    useEffect(() => {
-        if (isOpen && currentStock) {
-            fetchAllData(currentStock.stock_code);
-        }
-    }, [isOpen, currentIndex, currentStock?.stock_code]);
-
-    const fetchAllData = async (code: string) => {
-        // 並行取得所有數據
-        await Promise.all([
-            fetchPriceData(code),
-            fetchRevenueData(code),
-            fetchChipsData(code),
-            fetchBrokerData(code),
-        ]);
-    };
-
-    const fetchPriceData = async (code: string) => {
-        setPriceLoading(true);
-        setPriceError(null);
-        try {
-            const response = await fetch(`/api/investment/prices?code=${code}`);
-            if (!response.ok) throw new Error('無法獲取價格數據');
-            const data: PriceData[] = await response.json();
-            
-            if (data.length === 0) throw new Error('查無歷史數據');
-            setPriceData(data);
-        } catch (err: any) {
-            setPriceError(err.message);
-            setPriceData([]);
-        } finally {
-            setPriceLoading(false);
-        }
-    };
-
-    const fetchRevenueData = async (code: string) => {
-        setRevenueLoading(true);
-        setRevenueError(null);
-        try {
-            // 並行取得營收與月均價
-            const [revenueRes, priceRes] = await Promise.all([
-                fetch(`/api/investment/revenue?code=${code}`),
-                fetch(`/api/investment/price-monthly?code=${code}`),
-            ]);
-
-            if (!revenueRes.ok) {
-                throw new Error('無法獲取營收數據');
-            }
-
-            const revenue: RevenueData[] = await revenueRes.json();
-            const prices: MonthlyPrice[] = priceRes.ok ? await priceRes.json() : [];
-
-            setRevenueData(revenue);
-            setMonthlyPriceData(prices);
-        } catch (err: any) {
-            setRevenueError(err.message);
-            setRevenueData([]);
-            setMonthlyPriceData([]);
-        } finally {
-            setRevenueLoading(false);
-        }
-    };
-
-    const fetchChipsData = async (code: string) => {
-        setChipsLoading(true);
-        setChipsError(null);
-        try {
-            const response = await fetch(`/api/investment/chips?code=${code}&weeks=48`);
-            
-            if (!response.ok) {
-                throw new Error('無法獲取籌碼數據');
-            }
-
-            const data: ShareholderData[] = await response.json();
-            setChipsData(data);
-        } catch (err: any) {
-            setChipsError(err.message);
-            setChipsData([]);
-        } finally {
-            setChipsLoading(false);
-        }
-    };
-
-    const fetchBrokerData = async (code: string) => {
-        setBrokerLoading(true);
-        setBrokerError(null);
-        try {
-            const response = await fetch(`/api/investment/broker-transactions?code=${code}`);
-            
-            if (!response.ok) {
-                // 如果是 404 或其他錯誤，可能代表無數據
-                const resText = await response.text();
-                // 嘗試解析 JSON 錯誤訊息
-                try {
-                    const errObj = JSON.parse(resText);
-                    if (errObj.error) throw new Error(errObj.error);
-                } catch (e) {
-                    // ignore
-                }
-                throw new Error('無法獲取券商數據');
-            }
-
-            const data: BrokerData[] = await response.json();
-            setBrokerData(data);
-        } catch (err: any) {
-            setBrokerError(err.message);
-            setBrokerData([]);
-        } finally {
-            setBrokerLoading(false);
-        }
-    };
 
     const handleNext = () => setCurrentIndex((prev) => (prev + 1) % holdings.length);
     const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + holdings.length) % holdings.length);
@@ -233,61 +87,28 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                 <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                     <div className="p-4 space-y-6">
                         {/* 1. K線圖 */}
-                        <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                            <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                📈 技術分析 - K線圖
-                            </h2>
-                            <div className="relative h-[450px]">
-                                {priceLoading && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px]">
-                                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                    </div>
-                                )}
-                                
-                                {priceError ? (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 text-red-500 font-medium">
-                                        {priceError}
-                                    </div>
-                                ) : (
-                                    <StockChart 
-                                        data={priceData} 
-                                        isDarkMode={isDarkMode} 
-                                    />
-                                )}
-                            </div>
-                            <p className="mt-2 text-xs text-slate-400 uppercase tracking-wider">
-                                指標：5/20/60MA 均線 & 成交量 (最近 250 交易日)
-                            </p>
-                        </section>
+                        <ChartSection 
+                            title="📈 技術分析 - K線圖"
+                            description="指標：5/20/60MA 均線 & 成交量 (最近 250 交易日)"
+                            loading={priceLoading}
+                            error={priceError}
+                            hasData={priceData.length > 0}
+                            emptyMessage="查無歷史數據"
+                        >
+                            <StockChart data={priceData} isDarkMode={isDarkMode} />
+                        </ChartSection>
 
                         {/* 2. 營收 vs 股價 */}
-                        <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                            <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                💰 基本面分析 - 營收 vs 股價
-                            </h2>
-                            <div className="relative h-[450px]">
-                                {revenueLoading && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px]">
-                                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                    </div>
-                                )}
-                                
-                                {revenueError ? (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 text-red-500 font-medium">
-                                        {revenueError}
-                                    </div>
-                                ) : revenueData.length > 0 ? (
-                                    <RevenueChart revenueData={revenueData} priceData={monthlyPriceData} />
-                                ) : !revenueLoading ? (
-                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                                        無營收數據
-                                    </div>
-                                ) : null}
-                            </div>
-                            <p className="mt-2 text-xs text-slate-400 uppercase tracking-wider">
-                                近 24 個月營收 & MA(3)/MA(12) 均線 • YoY 動態顏色標示
-                            </p>
-                        </section>
+                        <ChartSection 
+                            title="💰 基本面分析 - 營收 vs 股價"
+                            description="近 24 個月營收 & MA(3)/MA(12) 均線 • YoY 動態顏色標示"
+                            loading={revenueLoading}
+                            error={revenueError}
+                            hasData={revenueData.length > 0}
+                            emptyMessage="無營收數據"
+                        >
+                            <RevenueChart revenueData={revenueData} priceData={monthlyPriceData} />
+                        </ChartSection>
 
                         {/* 3. 籌碼分析 */}
                         <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
@@ -320,7 +141,6 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                                         <h3 className="text-sm font-semibold mb-3 text-slate-700 dark:text-slate-300">
                                             投信買賣超 & 均線 (MA5/MA20)
                                         </h3>
-                                        {/* Use priceData which contains the daily 'it_buy' info */}
                                         <InvestmentTrustChart 
                                             data={priceData} 
                                             isDarkMode={isDarkMode}
@@ -352,38 +172,74 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                             </p>
                         </section>
 
-                        {/* 4. 主力券商籌碼分析 (Top 15) */}
-                        <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                                🏦 主力券商籌碼分析 (Top 15)
-                            </h2>
-                            
-                            <div className="relative h-[450px]">
-                                {brokerLoading && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px]">
-                                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                    </div>
-                                )}
-                                
-                                {brokerError ? (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10 text-red-500 font-medium">
-                                        {brokerError}
-                                    </div>
-                                ) : brokerData.length > 0 ? (
-                                    <BrokerChart data={brokerData} />
-                                ) : !brokerLoading ? (
-                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                                        無券商數據
-                                    </div>
-                                ) : null}
-                            </div>
-                            <p className="mt-2 text-xs text-slate-400 uppercase tracking-wider">
-                                淨買賣超 (Bar) & 主力動能指標 (Line) • 追蹤前 15 大分點動作
-                            </p>
-                        </section>
+                        {/* 4. 主力券商籌碼分析 */}
+                        <ChartSection 
+                            title="🏦 主力券商籌碼分析 (Top 15)"
+                            description="淨買賣超 (Bar) & 主力動能指標 (Line) • 追蹤前 15 大分點動作"
+                            loading={brokerLoading}
+                            error={brokerError}
+                            hasData={brokerData.length > 0}
+                            emptyMessage="無券商數據"
+                        >
+                            <BrokerChart data={brokerData} />
+                        </ChartSection>
                     </div>
                 </div>
             </DialogContent>
         </Dialog>
+    );
+}
+
+/**
+ * ChartSection Component
+ * 圖表區塊的共用容器
+ */
+interface ChartSectionProps {
+    title: string;
+    description: string;
+    loading: boolean;
+    error: string | null;
+    hasData: boolean;
+    emptyMessage: string;
+    children: React.ReactNode;
+}
+
+function ChartSection({ 
+    title, 
+    description, 
+    loading, 
+    error, 
+    hasData, 
+    emptyMessage, 
+    children 
+}: ChartSectionProps) {
+    return (
+        <section className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                {title}
+            </h2>
+            <div className="relative h-[450px]">
+                {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-slate-950/50 backdrop-blur-[1px]">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    </div>
+                )}
+                
+                {error ? (
+                    <div className="absolute inset-0 flex items-center justify-center z-10 text-red-500 font-medium">
+                        {error}
+                    </div>
+                ) : hasData ? (
+                    children
+                ) : !loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                        {emptyMessage}
+                    </div>
+                ) : null}
+            </div>
+            <p className="mt-2 text-xs text-slate-400 uppercase tracking-wider">
+                {description}
+            </p>
+        </section>
     );
 }
