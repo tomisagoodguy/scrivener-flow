@@ -40,6 +40,16 @@ def main():
 
     logger.info("🚀 Starting ETF Tracker V1...")
 
+    # Protecting Data Quota: Prevent accidental local runs wiping out Finlab quota
+    is_ci = os.getenv("CI", "false").lower() == "true"
+    force_run = os.getenv("FORCE_RUN", "false").lower() == "true"
+    
+    if not is_ci and not force_run:
+        logger.warning("🛑 Local execution blocked to protect Finlab quota (5GB/day limit).")
+        logger.warning("   Please run via GitHub Actions.")
+        logger.warning("   To force run locally, set FORCE_RUN=true in .env")
+        sys.exit(0)
+
     # 1. Output Dir
     output_dir = PROJECT_ROOT / "ETF" / "history"
     output_dir.mkdir(parents=True, exist_ok=True)
