@@ -31,12 +31,29 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
         const latestDate = [...new Set(logs.map(l => l.data_date))].sort().pop();
         const latestLogs = logs.filter(l => l.data_date === latestDate);
 
+        // 同一天同一檔股票可能有多筆異動（例如重跑 pipeline 或多次調整），
+        // 這裡先依 stock_code 彙總，把 diff_weight 加總後再排名，避免排行榜出現重複名稱。
+        const aggregatedMap = latestLogs.reduce<Record<string, { name: string; impact: number }>>(
+            (acc, log) => {
+                const code = log.stock_code;
+                const prev = acc[code]?.impact ?? 0;
+                acc[code] = {
+                    name: log.stock_name,
+                    impact: prev + (Number(log.diff_weight) || 0),
+                };
+                return acc;
+            },
+            {}
+        );
+
+        const aggregated = Object.values(aggregatedMap);
+
         // 按權重變動絕對值排序，取前 10 名
-        return latestLogs
-            .map(log => ({
-                name: log.stock_name,
-                impact: log.diff_weight,
-                color: log.diff_weight > 0 ? '#f43f5e' : '#10b981'
+        return aggregated
+            .map(item => ({
+                name: item.name,
+                impact: item.impact,
+                color: item.impact > 0 ? '#f43f5e' : '#10b981',
             }))
             .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
             .slice(0, 10);
