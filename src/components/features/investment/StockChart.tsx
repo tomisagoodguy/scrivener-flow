@@ -45,14 +45,14 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
                 textColor: isDarkMode ? '#94a3b8' : '#334155',
             },
             grid: {
-                vertLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
-                horzLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
+                vertLines: { color: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+                horzLines: { color: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
             },
             rightPriceScale: {
-                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             },
             timeScale: {
-                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                 timeVisible: true,
             },
         });
@@ -176,14 +176,14 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
                 textColor: isDarkMode ? '#94a3b8' : '#334155',
             },
             grid: {
-                vertLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
-                horzLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
+                vertLines: { color: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+                horzLines: { color: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
             },
             rightPriceScale: {
-                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             },
             timeScale: {
-                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             },
         });
     }, [isDarkMode]);
