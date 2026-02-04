@@ -22,11 +22,12 @@ interface StockChartProps {
  * Isolated from navigation and data-fetching logic.
  */
 export function StockChart({ data, isDarkMode = false }: StockChartProps) {
-    const chartContainerRef = useRef<HTMLDivElement>(null);
-    const chartRef = useRef<IChartApi | null>(null);
+    const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+    const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const maSeriesRefs = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
 
     useEffect(() => {
-        if (!chartContainerRef.current || data.length === 0) return;
+        if (!chartContainerRef.current) return;
 
         // 1. Initialize Chart
         const chart = createChart(chartContainerRef.current, {
@@ -49,6 +50,8 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             },
         });
 
+        chartRef.current = chart;
+
         // 2. Add Candlestick Series
         const candleSeries = chart.addSeries(CandlestickSeries, {
             upColor: '#ef4444',
@@ -57,22 +60,18 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             wickUpColor: '#ef4444',
             wickDownColor: '#22c55e',
         });
-        candleSeries.setData(data);
-
-        // 3. Add Volume Series (Weighted by Amount if desired, but we'll stick to Volume)
+        candleSeriesRef.current = candleSeries;
+        
+        // 3. Add Volume Series
         const volumeSeries = chart.addSeries(HistogramSeries, {
             color: '#3b82f6',
             priceFormat: { type: 'volume' },
-            priceScaleId: '',
+            priceScaleId: '', 
         });
         volumeSeries.priceScale().applyOptions({
             scaleMargins: { top: 0.8, bottom: 0 },
         });
-        volumeSeries.setData(data.map(d => ({
-            time: d.time,
-            value: d.value,
-            color: d.close >= d.open ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'
-        })));
+        volumeSeriesRef.current = volumeSeries;
 
         // 4. Add MA Indicators
         const maConfigs = [
@@ -82,7 +81,7 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
         ];
 
         maConfigs.forEach(config => {
-            const maSeries = chart.addSeries(LineSeries, {
+            const series = chart.addSeries(LineSeries, {
                 color: config.color,
                 lineWidth: 1,
                 lastValueVisible: false,
@@ -90,24 +89,76 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
                 crosshairMarkerVisible: false,
                 title: config.title,
             });
-            maSeries.setData(IndicatorService.calculateSMA(data, config.period));
+            maSeriesRefs.current.set(config.period, series);
         });
 
-        chart.timeScale().fitContent();
-        chartRef.current = chart;
-
+        // Resize handler
         const handleResize = () => {
-            if (chartContainerRef.current && chartRef.current) {
-                chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
+            if (chartContainerRef.current && chart) {
+                chart.applyOptions({ width: chartContainerRef.current.clientWidth });
             }
         };
 
         window.addEventListener('resize', handleResize);
+
         return () => {
             window.removeEventListener('resize', handleResize);
             chart.remove();
+            chartRef.current = null;
+            candleSeriesRef.current = null;
+            volumeSeriesRef.current = null;
+            maSeriesRefs.current.clear();
         };
-    }, [data, isDarkMode]);
+    }, []); // Run once on mount
+
+    // 2. Effect: Handle Data Changes
+    useEffect(() => {
+        if (!chartRef.current || data.length === 0) return;
+        
+        // Update Candle
+        if (candleSeriesRef.current) {
+            candleSeriesRef.current.setData(data);
+        }
+
+        // Update Volume
+        if (volumeSeriesRef.current) {
+            volumeSeriesRef.current.setData(data.map(d => ({
+                time: d.time,
+                value: d.value,
+                color: d.close >= d.open ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'
+            })));
+        }
+
+        // Update MAs
+        maSeriesRefs.current.forEach((series, period) => {
+            series.setData(IndicatorService.calculateSMA(data, period));
+        });
+
+        chartRef.current.timeScale().fitContent();
+
+    }, [data]);
+
+    // 3. Effect: Handle Theme Changes (Dynamic Update)
+    useEffect(() => {
+        if (!chartRef.current) return;
+        
+        chartRef.current.applyOptions({
+            layout: {
+                background: { type: ColorType.Solid, color: isDarkMode ? '#0f172a' : '#ffffff' },
+                textColor: isDarkMode ? '#94a3b8' : '#334155',
+            },
+            grid: {
+                vertLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
+                horzLines: { color: isDarkMode ? '#334155' : '#e2e8f0' },
+            },
+            rightPriceScale: {
+                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+            },
+            timeScale: {
+                borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+            },
+        });
+    }, [isDarkMode]);
 
     return <div ref={chartContainerRef} className="w-full h-full" />;
 }
