@@ -19,7 +19,7 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
 
     const formatBillions = (num: number | null | undefined) => {
         if (!num) return '-';
-        return (num / 100000000).toFixed(1);
+        return (num / 1000000).toFixed(1);
     };
 
     const getNewHighBadge = (item: Holding) => {
@@ -112,7 +112,7 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             <td className="px-2 py-3 text-right">
                 <div className="flex flex-col items-end gap-1">
                     <span className={`font-mono text-sm font-bold ${(item.amount || 0) > (maxAmount * 0.5) ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                        {item.amount ? (item.amount / 100000000).toFixed(1) : '-'}
+                        {item.amount ? (item.amount / 1000000).toFixed(1) : '-'}
                     </span>
                     <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div 

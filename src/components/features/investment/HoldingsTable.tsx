@@ -240,7 +240,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
 
                             <th scope="col" className="px-2 py-3 cursor-pointer group text-right" onClick={() => handleSort('amount')}>
                                 <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
-                                    成交(億) <SortIndicator field="amount" />
+                                    成交(百萬) <SortIndicator field="amount" />
                                 </div>
                             </th>
 
