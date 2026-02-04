@@ -12,24 +12,44 @@ import { ChangeImpactChart } from '@/components/features/investment/ChangeImpact
 async function getHoldings() {
     const supabase = await createClient();
     
-    // First, get the latest available date and its real creation time
-    const { data: latestDateData } = await supabase
+    // First, get the latest 2 available dates to check data integrity
+    const { data: dateCandidates } = await supabase
         .from('etf_holdings_snapshot')
         .select('data_date, updated_at')
         .order('data_date', { ascending: false })
         .order('updated_at', { ascending: false })
-        .limit(1);
+        .limit(2); // Fetch top 2
     
-    const latestDate = latestDateData?.[0]?.data_date;
-    const updatedAt = latestDateData?.[0]?.updated_at;
-    if (!latestDate) return { holdings: [], updatedAt: null, dataDate: null };
+    if (!dateCandidates || dateCandidates.length === 0) return { holdings: [], updatedAt: null, dataDate: null };
 
-    const { data } = await supabase
-        .from('etf_holdings_snapshot')
-        .select('*')
-        .eq('etf_code', '00981A')
-        .eq('data_date', latestDate)
-        .order('weight', { ascending: false });
+    // Helper to fetch holdings for a specific date
+    const fetchHoldingsForDate = async (date: string) => {
+        const { data } = await supabase
+            .from('etf_holdings_snapshot')
+            .select('*')
+            .eq('etf_code', '00981A')
+            .eq('data_date', date)
+            .order('weight', { ascending: false });
+        return data || [];
+    };
+
+    // 1. Try latest date
+    let targetDate = dateCandidates[0].data_date;
+    let targetUpdatedAt = dateCandidates[0].updated_at;
+    let data = await fetchHoldingsForDate(targetDate);
+
+    // 2. Integrity Check: If majority of prices are 0 or null, fallback to previous date
+    // (Assuming valid data should have non-zero prices for most stocks)
+    const validPriceCount = data.filter(h => h.price && h.price > 0).length;
+    const totalCount = data.length;
+    const isValid = totalCount > 0 && (validPriceCount / totalCount) > 0.5; // Threshold: 50% valid prices
+
+    if (!isValid && dateCandidates.length > 1) {
+        console.log(`⚠️ Snapshot for ${targetDate} seems incomplete (Valid Prices: ${validPriceCount}/${totalCount}). Falling back to ${dateCandidates[1].data_date}`);
+        targetDate = dateCandidates[1].data_date;
+        targetUpdatedAt = dateCandidates[1].updated_at;
+        data = await fetchHoldingsForDate(targetDate);
+    }
 
     // Fetch industry info
     const { data: industryData } = await supabase
@@ -76,8 +96,8 @@ async function getHoldings() {
 
     return {
         holdings: formattedHoldings,
-        updatedAt,
-        dataDate: latestDate
+        updatedAt: targetUpdatedAt,
+        dataDate: targetDate
     };
 }
 
