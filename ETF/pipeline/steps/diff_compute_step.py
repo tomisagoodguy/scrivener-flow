@@ -24,12 +24,34 @@ class DiffComputeStep(BaseStep):
         if ctx.df is None:
             raise ValueError("No DataFrame available for diff computation")
         
-        # 取得前一次快照（5天前或最新）
-        prev_df = ctx.storage.get_snapshot_days_ago(ctx.etf_code, days_ago=5)
+        # 1. Determine which previous snapshot to compare against
+        # We generally want the LATEST snapshot (index 0).
+        # But if we are re-running today's pipeline, the "latest" in DB might already be TODAY.
+        # In that case, we want the 2nd latest (index 1).
+        
+        target_df = pd.DataFrame()
+        
+        try:
+            # Check latest date available in DB
+            latest_date_in_db = ctx.storage.get_latest_date(ctx.etf_code)
+            
+            if latest_date_in_db == ctx.date_str:
+                self.logger.info(f"Latest DB snapshot is already today ({latest_date_in_db}). Comparing against previous day (Index 1).")
+                # Fetch index 1 (2nd latest)
+                target_df = ctx.storage.get_snapshot_by_index(ctx.etf_code, index=1)
+            else:
+                self.logger.info(f"Comparing against latest DB snapshot: {latest_date_in_db}")
+                target_df = ctx.storage.get_snapshot_from_date(ctx.etf_code, latest_date_in_db)
+                
+        except Exception as e:
+            self.logger.warning(f"Could not intelligently determine snapshot date: {e}. Falling back to simple latest fetch.")
+            target_df = ctx.storage.get_latest_snapshot(ctx.etf_code)
+
+        prev_df = target_df
         
         if prev_df.empty:
-            self.logger.info("No 5-day history found, falling back to latest snapshot.")
-            prev_df = ctx.storage.get_latest_snapshot(ctx.etf_code)
+            self.logger.warning("No suitable previous snapshot found. This will result in all 'New Entry' logs.")
+
         
         # 計算異動
         ctx.diff_logs = compute_diff(prev_df, ctx.df, ctx.etf_code, ctx.date_str)

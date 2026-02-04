@@ -28,23 +28,39 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        // 找出所有唯一的日期
-        const dates = [...new Set(data.map(d => d.data_date.substring(5, 10)))].sort();
+        // Pre-process: Ensure numeric weights
+        const processedData = data.map(d => ({
+            ...d,
+            weight: Number(d.weight) || 0
+        }));
+
+        // 找出所有唯一的日期 (Format: MM-DD)
+        const dates = [...new Set(processedData.map(d => {
+            // Handle potentially different date formats, ensure we get MM-DD
+            const dateStr = String(d.data_date); 
+            return dateStr.length >= 10 ? dateStr.substring(5, 10) : dateStr;
+        }))].sort();
         
-        // 找出權重最高的幾隻股票來追蹤（追蹤前 10 名）
-        const latestDate = [...new Set(data.map(d => d.data_date))].sort().pop();
-        const topStocks = data
+        // 找出權重最高的幾隻股票來追蹤（最新日期的前 10 名）
+        const uniqueFullDates = [...new Set(processedData.map(d => String(d.data_date)))].sort();
+        const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
+        
+        if (!latestDate) return [];
+
+        const topStocks = processedData
             .filter(d => d.data_date === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => ({ code: d.stock_code, name: d.stock_name }));
 
-        // 建立資料點
-        const result = dates.map(dateStr => {
-            const point: any = { date: dateStr };
+        // 建立資料點 (Iterate over SORTED FULL dates to ensure correct time sequence including year crossings)
+        const result = uniqueFullDates.map(fullDate => {
+            // Display Label: MM-DD
+            const dateLabel = fullDate.length >= 10 ? fullDate.substring(5, 10) : fullDate;
+            const point: any = { date: dateLabel, _fullDate: fullDate };
             
             // 計算該日期的所有排名
-            const dayData = data.filter(d => d.data_date.substring(5, 10) === dateStr);
+            const dayData = processedData.filter(d => String(d.data_date) === fullDate);
             const dayRanks = [...dayData]
                 .sort((a, b) => b.weight - a.weight)
                 .map((d, index) => ({ code: d.stock_code, rank: index + 1 }));
@@ -57,42 +73,45 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
             return point;
         });
 
-        // 如果只有一筆資料，Mock 一些前面的點來呈現「折線圖設計」
+        // 如果只有一筆資料，Mock 兩個點讓線條出現
         if (result.length === 1) {
             const realPoint = result[0];
+            // Mock previous days
             const mockPoints = [
-                { ...realPoint, date: '01-29' },
-                { ...realPoint, date: '01-31' },
-                realPoint
-            ].map((p, i) => {
-                if (i < 2) {
-                    const newP = { ...p };
-                    topStocks.forEach(s => {
-                        // 隨機模擬排名變動
-                        const baseRank = Number(realPoint[s.name]) || 5;
-                        newP[s.name] = Math.max(1, baseRank + (i === 0 ? 2 : -1));
-                    });
-                    return newP;
-                }
-                return p;
-            });
-            return mockPoints;
+                 { ...realPoint, date: 'Init' },
+                 realPoint
+            ];
+             return mockPoints;
         }
 
         return result;
     }, [data]);
 
-    const topStockNames = useMemo(() => {
+     const topStockNames = useMemo(() => {
         if (!data || data.length === 0) return [];
-        const latestDate = [...new Set(data.map(d => d.data_date))].sort().pop();
-        return data
+        
+        const processedData = data.map(d => ({ ...d, weight: Number(d.weight) || 0 }));
+        const uniqueFullDates = [...new Set(processedData.map(d => d.data_date))].sort();
+        const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
+        
+        if (!latestDate) return [];
+
+        return processedData
             .filter(d => d.data_date === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => d.stock_name);
     }, [data]);
 
-    if (chartData.length === 0) return null;
+    if (!chartData || chartData.length === 0) {
+         return (
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mb-8">
+                <div className="h-[280px] w-full flex items-center justify-center text-slate-400">
+                    尚無足夠排名的歷史數據
+                </div>
+            </div>
+         );
+    }
 
     const colors = [
         '#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', 
@@ -123,7 +142,7 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
                         />
                         <YAxis 
                             reversed 
-                            domain={[1, 'dataMax + 1']} 
+                            domain={[1, 'auto']} 
                             tick={{ fontSize: 11, fill: '#94a3b8' }}
                             axisLine={false}
                             tickLine={false}

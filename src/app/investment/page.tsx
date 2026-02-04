@@ -108,7 +108,10 @@ async function getRankingHistory() {
         .select('data_date, stock_code, stock_name, weight')
         .eq('etf_code', '00981A')
         .order('data_date', { ascending: true });
-    return data || [];
+    
+    if (!data || data.length === 0) return [];
+    
+    return data;
 }
 
 async function getDiffLogs() {
@@ -121,7 +124,7 @@ async function getDiffLogs() {
         .eq('etf_code', '00981A')
         .order('data_date', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(500);
     
     if (!logsData) return [];
 

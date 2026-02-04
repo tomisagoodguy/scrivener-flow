@@ -99,7 +99,7 @@ export default function GuidelinesPage() {
     });
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans">
             <PageSidebar
                 title="指南目錄"
                 groups={sidebarGroups}
@@ -113,7 +113,7 @@ export default function GuidelinesPage() {
                     {/* Header Section */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-3">
                                 <span className="p-2.5 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-500/30">
                                     🧭
                                 </span>

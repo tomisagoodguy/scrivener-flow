@@ -1,5 +1,8 @@
 {
     "files.encoding": "utf8",
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
     "files.autoGuessEncoding": false,
     "files.eol": "\n",
     "[markdown]": {

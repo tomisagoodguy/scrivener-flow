@@ -29,11 +29,10 @@ class ETFStorage:
             "Prefer": "return=minimal"
         }
 
-    def get_latest_snapshot(self, etf_code: str) -> pd.DataFrame:
+    def get_latest_date(self, etf_code: str) -> Optional[str]:
         """
-        Get the most recent snapshot available in DB.
+        Get the most recent data_date from DB.
         """
-        # 1. Get the latest date
         url_dates = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
         params_dates = {
             "etf_code": f"eq.{etf_code}",
@@ -44,15 +43,48 @@ class ETFStorage:
         try:
             resp = requests.get(url_dates, headers=self.headers, params=params_dates)
             resp.raise_for_status()
-            date_data = resp.json()
-            if not date_data:
+            data = resp.json()
+            if data and data[0]:
+                return data[0]['data_date']
+            return None
+        except Exception as e:
+            logger.error(f"Error getting latest date: {e}")
+            return None
+
+    def get_snapshot_by_index(self, etf_code: str, index: int = 0) -> pd.DataFrame:
+        """
+        Get snapshot by reverse chronological index (0 = latest, 1 = previous, etc.)
+        """
+        url_dates = f"{self.supabase_url}/rest/v1/etf_holdings_snapshot"
+        params_dates = {
+            "etf_code": f"eq.{etf_code}",
+            "select": "data_date",
+            "order": "data_date.desc"
+        }
+        try:
+            resp = requests.get(url_dates, headers=self.headers, params=params_dates)
+            resp.raise_for_status()
+            all_dates = sorted(list(set([r['data_date'] for r in resp.json()])), reverse=True)
+            
+            if not all_dates or index >= len(all_dates):
                 return pd.DataFrame()
             
-            latest_date = date_data[0]['data_date']
-            return self.get_snapshot_from_date(etf_code, latest_date)
+            target_date = all_dates[index]
+            logger.info(f"Fetching snapshot for index {index}: {target_date}")
+            return self.get_snapshot_from_date(etf_code, target_date)
         except Exception as e:
-            logger.error(f"Error finding latest date: {e}")
+            logger.error(f"Error getting snapshot by index {index}: {e}")
             return pd.DataFrame()
+
+    def get_latest_snapshot(self, etf_code: str) -> pd.DataFrame:
+        """
+        Get the most recent snapshot available in DB.
+        """
+        # 1. Get the latest date
+        latest_date = self.get_latest_date(etf_code)
+        if not latest_date:
+            return pd.DataFrame()
+        return self.get_snapshot_from_date(etf_code, latest_date)
 
     def get_snapshot_days_ago(self, etf_code: str, days_ago: int = 5) -> pd.DataFrame:
         """

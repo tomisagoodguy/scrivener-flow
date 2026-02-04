@@ -8,6 +8,7 @@ import type { Holding } from '@/types/investment';
 
 const mockHoldings: Holding[] = [
   {
+    stock_id: '2330',
     stock_code: '2330',
     stock_name: '台積電',
     shares: 1000000,
@@ -19,8 +20,10 @@ const mockHoldings: Holding[] = [
     volatility: 2.1,
     amount: 500000000,
     margin_ratio: 45.2,
+    currency: 'TWD',
   },
   {
+    stock_id: '2317',
     stock_code: '2317',
     stock_name: '鴻海',
     shares: 500000,
@@ -32,6 +35,7 @@ const mockHoldings: Holding[] = [
     volatility: 1.5,
     amount: 100000000,
     margin_ratio: 30.5,
+    currency: 'TWD',
   },
 ];
 
