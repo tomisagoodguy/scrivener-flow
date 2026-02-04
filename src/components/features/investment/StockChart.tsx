@@ -31,13 +31,17 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
 
     useEffect(() => {
         if (!chartContainerRef.current) return;
+        
+        // Safety check for width
+        const width = chartContainerRef.current.clientWidth;
+        if (width === 0) return;
 
         // 1. Initialize Chart
         const chart = createChart(chartContainerRef.current, {
-            width: chartContainerRef.current.clientWidth,
+            width: width,
             height: 450,
             layout: {
-                background: { type: ColorType.Solid, color: isDarkMode ? '#0f172a' : '#ffffff' },
+                background: { type: ColorType.Solid, color: 'transparent' }, // User CSS for background
                 textColor: isDarkMode ? '#94a3b8' : '#334155',
             },
             grid: {
@@ -168,7 +172,7 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
         
         chartRef.current.applyOptions({
             layout: {
-                background: { type: ColorType.Solid, color: isDarkMode ? '#0f172a' : '#ffffff' },
+                background: { type: ColorType.Solid, color: 'transparent' },
                 textColor: isDarkMode ? '#94a3b8' : '#334155',
             },
             grid: {
