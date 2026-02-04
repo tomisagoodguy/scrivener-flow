@@ -1,13 +1,6 @@
-'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Holding } from "@/types/investment";
@@ -18,6 +11,7 @@ import { ShareholderFlowChart } from "./ShareholderFlowChart";
 import { InvestmentTrustChart } from './InvestmentTrustChart';
 import { BrokerChart } from "./BrokerChart";
 import { PriceData } from "@/lib/investment/indicators";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 interface PriceChartModalProps {
     isOpen: boolean;
@@ -57,6 +51,9 @@ interface BrokerData {
  * 垂直滾動佈局，一次顯示所有分析圖表
  */
 export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: PriceChartModalProps) {
+    const { theme } = useTheme();
+    const isDarkMode = theme === 'dark';
+
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
     // K線圖數據
@@ -254,7 +251,7 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                                 ) : (
                                     <StockChart 
                                         data={priceData} 
-                                        isDarkMode={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')} 
+                                        isDarkMode={isDarkMode} 
                                     />
                                 )}
                             </div>
@@ -326,7 +323,7 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
                                         {/* Use priceData which contains the daily 'it_buy' info */}
                                         <InvestmentTrustChart 
                                             data={priceData} 
-                                            isDarkMode={typeof document !== 'undefined' && document.documentElement.classList.contains('dark')}
+                                            isDarkMode={isDarkMode}
                                         />
                                     </div>
 

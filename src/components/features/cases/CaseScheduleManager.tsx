@@ -33,7 +33,7 @@ export default function CaseScheduleManager({ caseId }: CaseScheduleManagerProps
 
     return (
         <div className="space-y-6">
-            <h3 className="text-xl font-black text-indigo-600 flex items-center gap-3">
+            <h3 className="text-xl font-black text-indigo-600 dark:!text-white flex items-center gap-3">
                 <span className="p-2 bg-indigo-50 rounded-lg text-indigo-600">📅</span>
                 案件行事曆與備忘 (Schedule)
             </h3>

@@ -38,11 +38,20 @@ interface RevenueChartProps {
 export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
   // 合併數據
   const chartData = revenueData.map(rev => {
-    const month = rev.data_date.substring(0, 7); // YYYY-MM
-    const price = priceData.find(p => p.month === month);
+    // 修正：Finlab 或資料源可能將資料日期標記為「公布日」或是下個月 1 號 (例如 1 月營收標為 2/1 或 2026-02)
+    // 用戶指出：通常營收月份都要 -1
+    const dateObj = new Date(rev.data_date);
+    dateObj.setMonth(dateObj.getMonth() - 1);
+    
+    // Format YYYY-MM safely
+    const year = dateObj.getFullYear();
+    const monthStr = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const displayMonth = `${year}-${monthStr}`;
+
+    const price = priceData.find(p => p.month === displayMonth);
     
     return {
-      month,
+      month: displayMonth,
       revenue: rev.revenue,
       revenue_yoy: rev.revenue_yoy,
       price: price?.avg_price || null,
@@ -79,15 +88,17 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
   };
 
   // 格式化營收為億/萬
+  // 輸入單位通常為「千元」，因此先 * 1000 轉為「元」
   const formatRevenue = (value: number) => {
-    if (value >= 1e8) return `${(value / 1e8).toFixed(1)}億`;
-    if (value >= 1e4) return `${(value / 1e4).toFixed(0)}萬`;
-    return value.toFixed(0);
+    const realValue = value * 1000;
+    if (realValue >= 1e8) return `${(realValue / 1e8).toFixed(1)}億`; // 大於 1 億
+    if (realValue >= 1e4) return `${(realValue / 1e4).toFixed(0)}萬`; // 大於 1 萬
+    return realValue.toFixed(0);
   };
 
   // 找出最新數據月份
   const latestData = revenueWithMA.length > 0 ? revenueWithMA[revenueWithMA.length - 1] : null;
-  const isNewMonth = latestData?.month === '2026-01' || latestData?.month === '2026-01' || latestData?.month === '2025-01'; // 支援 1 月營收標記
+  const isNewMonth = latestData?.month === '2026-01' || latestData?.month === '2025-01'; // 支援 1 月營收標記
   
   return (
     <div className="flex flex-col h-full">
@@ -96,7 +107,7 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isNewMonth ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`} />
           <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-            最新資料月份: {latestData?.month || '---'}
+             (營收月份: {latestData?.month || '---'})
           </span>
         </div>
         {isNewMonth ? (

@@ -101,8 +101,8 @@ export function InvestmentTrustChart({ data, isDarkMode = false }: InvestmentTru
             fontSize: '12px'
           }}
           formatter={(value: any, name: any) => {
-            // Convert to Zhang (1000 shares)
-            const valInZhang = (Number(value) / 1000).toFixed(1);
+            // Already converted to Zhang in dataKey
+            const valInZhang = Number(value).toFixed(1);
             if (name === 'it_buy') return [valInZhang, '買賣超 (張)'];
             if (name === 'ma5') return [valInZhang, '5日均 (張)'];
             if (name === 'ma20') return [valInZhang, '20日均 (張)'];

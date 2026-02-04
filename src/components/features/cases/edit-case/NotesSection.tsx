@@ -27,7 +27,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
         <div className="space-y-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                    <h4 className="text-sm font-bold text-rose-500">⚠️ 應注意 (Attention)</h4>
+                    <h4 className="text-sm font-bold text-rose-500 dark:!text-white">⚠️ 應注意 (Attention)</h4>
                     <textarea
                         name="notes"
                         value={notes}
@@ -38,7 +38,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
                     <QuickNotes onSelect={(note) => setNotes((p) => (p ? `${p}\n${note}` : note))} />
                 </div>
                 <div className="space-y-2">
-                    <h4 className="text-sm font-bold text-accent">目前狀態</h4>
+                    <h4 className="text-sm font-bold text-accent dark:!text-white">目前狀態</h4>
                     <select
                         name="status"
                         defaultValue={status}

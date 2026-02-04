@@ -17,11 +17,11 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-amber-600 border-l-4 border-amber-500 pl-3">進度日期</h3>
+                <h3 className="text-lg font-bold text-amber-600 dark:!text-white border-l-4 border-amber-500 pl-3">進度日期</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-600">簽約日/款</label>
+                    <label className="text-xs font-bold text-amber-600 dark:!text-white">簽約日/款</label>
                     <input
                         name="contract_date"
                         defaultValue={toISODate(milestones?.contract_date)}

@@ -78,7 +78,7 @@ export default function CaseNavigation({ cases, currentCaseId }: CaseNavigationP
             {/* Back to List */}
             <Link
                 href="/cases"
-                className="bg-secondary/50 p-2 rounded-full text-foreground/80 hover:bg-surface-hover hover:text-blue-600 transition-colors mr-2"
+                className="bg-secondary/50 p-2 rounded-full !text-black dark:!text-white hover:bg-surface-hover hover:text-blue-600 transition-colors mr-2"
                 title="返回列表"
             >
                 <ArrowLeft size={18} />
@@ -90,9 +90,10 @@ export default function CaseNavigation({ cases, currentCaseId }: CaseNavigationP
                 className={cn(
                     "flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-transparent",
                     prevCase
-                        ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
-                        : "text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-50 pointer-events-none"
-                )}
+                        ? "!text-black font-bold dark:!text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+                        : "!text-slate-400 dark:!text-slate-600 cursor-not-allowed pointer-events-none"
+                )
+}
                 title={prevCase ? `上一筆: ${prevCase.case_number}` : "沒有上一筆資料"}
                 aria-disabled={!prevCase}
             >
@@ -104,15 +105,15 @@ export default function CaseNavigation({ cases, currentCaseId }: CaseNavigationP
             <div className="relative" ref={dropdownRef}>
                 <button
                     onClick={() => setOpen(!open)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm w-48 sm:w-64 justify-between group"
+                    className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm !text-black dark:!text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm w-48 sm:w-64 justify-between group"
                 >
                     <div className="flex items-center gap-2 truncate">
-                        <List size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
-                        <span className="truncate font-semibold">
+                        <List size={16} className="text-slate-500 group-hover:text-blue-500 transition-colors" />
+                        <span className="truncate font-black !text-black">
                             {currentIndex !== -1 ? cases[currentIndex].case_number : '選擇案件...'}
                         </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-500 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                         {currentIndex + 1} / {cases.length}
                     </span>
                 </button>
@@ -161,9 +162,9 @@ export default function CaseNavigation({ cases, currentCaseId }: CaseNavigationP
                                             </span>
                                         </div>
                                         {(c.buyer_name || c.seller_name) && (
-                                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                            <label className="text-xs font-bold text-slate-500 uppercase">
                                                 買: {c.buyer_name || '-'} / 賣: {c.seller_name || '-'}
-                                            </div>
+                                            </label>
                                         )}
                                     </button>
                                 ))
@@ -179,8 +180,8 @@ export default function CaseNavigation({ cases, currentCaseId }: CaseNavigationP
                 className={cn(
                     "flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-transparent",
                     nextCase
-                        ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
-                        : "text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-50 pointer-events-none"
+                        ? "!text-black font-bold dark:!text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+                        : "!text-slate-400 dark:!text-slate-600 cursor-not-allowed pointer-events-none"
                 )}
                 title={nextCase ? `下一筆: ${nextCase.case_number}` : "沒有下一筆資料"}
                 aria-disabled={!nextCase}
