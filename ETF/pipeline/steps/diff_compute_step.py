@@ -6,6 +6,7 @@ Diff Compute Step
 
 from .base import BaseStep
 from ETF.pipeline.context import PipelineContext
+import pandas as pd
 
 
 class DiffComputeStep(BaseStep):
