@@ -34,21 +34,15 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
             weight: Number(d.weight) || 0
         }));
 
-        // 找出所有唯一的日期 (Format: MM-DD)
-        const dates = [...new Set(processedData.map(d => {
-            // Handle potentially different date formats, ensure we get MM-DD
-            const dateStr = String(d.data_date); 
-            return dateStr.length >= 10 ? dateStr.substring(5, 10) : dateStr;
-        }))].sort();
-        
         // 找出權重最高的幾隻股票來追蹤（最新日期的前 10 名）
+        // 注意：Supabase 有時會把 date 欄位轉成 Date 物件，所以這裡一律用 String 正規化
         const uniqueFullDates = [...new Set(processedData.map(d => String(d.data_date)))].sort();
         const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
         
         if (!latestDate) return [];
 
         const topStocks = processedData
-            .filter(d => d.data_date === latestDate)
+            .filter(d => String(d.data_date) === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => ({ code: d.stock_code, name: d.stock_name }));
@@ -91,13 +85,14 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
         if (!data || data.length === 0) return [];
         
         const processedData = data.map(d => ({ ...d, weight: Number(d.weight) || 0 }));
-        const uniqueFullDates = [...new Set(processedData.map(d => d.data_date))].sort();
+        // 同樣一律用 String 正規化日期，避免 Date 物件比對失敗
+        const uniqueFullDates = [...new Set(processedData.map(d => String(d.data_date)))].sort();
         const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
         
         if (!latestDate) return [];
 
         return processedData
-            .filter(d => d.data_date === latestDate)
+            .filter(d => String(d.data_date) === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => d.stock_name);
