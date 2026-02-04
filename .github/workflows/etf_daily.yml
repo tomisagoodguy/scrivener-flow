@@ -2,10 +2,11 @@ name: Daily ETF Tracker
 
 on:
   schedule:
-    # 每天執行兩次：
-    # 1. 台灣時間 22:00 (UTC 14:00): 確保取得當日盤後完整資料
-    # 2. 台灣時間 08:00 (UTC 00:00): 隔日開盤前再次確認 (Double Check)
-    - cron: '0 0,14 * * *'
+    # 每天執行三次：
+    # 1. 台灣時間 08:00 (UTC 00:00): 開盤前確認
+    # 2. 台灣時間 20:00 (UTC 12:00): 確保盤後資料 (User Request)
+    # 3. 台灣時間 22:00 (UTC 14:00): 最後確認
+    - cron: '0 0,12,14 * * *'
   workflow_dispatch: # 允許手動觸發
 
 jobs:
@@ -40,10 +41,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.finlab
-          # 採用更穩定的 Key，避免因服務程式碼微調就重新下載數百 MB 資料
-          key: ${{ runner.os }}-finlab-v1
+          # Reset cache key to v2 to clear potential bloat (>5GB issue)
+          key: ${{ runner.os }}-finlab-tracker-v2
           restore-keys: |
-            ${{ runner.os }}-finlab-
+            ${{ runner.os }}-finlab-tracker-
 
       - name: Install dependencies
         run: uv sync
