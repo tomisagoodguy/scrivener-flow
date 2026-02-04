@@ -147,7 +147,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredData.map((item) => (
+                        {filteredData.map((item: Holding) => (
                             <HoldingRow
                                 key={item.stock_code}
                                 item={item}
