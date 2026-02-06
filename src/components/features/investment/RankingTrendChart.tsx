@@ -28,33 +28,50 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        // Pre-process: Ensure numeric weights
+        // Pre-process: Ensure numeric weights and normalized fields
+        // Normalize date to YYYY-MM-DD to ensure matching
+        const normalizeDate = (d: any) => {
+             if (!d) return '';
+             return String(d).substring(0, 10);
+        };
+
         const processedData = data.map(d => ({
             ...d,
+            data_date: normalizeDate(d.data_date),
+            stock_code: String(d.stock_code).trim(),
+            stock_name: String(d.stock_name).trim(),
             weight: Number(d.weight) || 0
         }));
 
-        // 找出權重最高的幾隻股票來追蹤（最新日期的前 10 名）
-        // 注意：Supabase 有時會把 date 欄位轉成 Date 物件，所以這裡一律用 String 正規化
-        const uniqueFullDates = [...new Set(processedData.map(d => String(d.data_date)))].sort();
+        // Data Integrity Check: Filter out dates with too few records (likely scrape failures)
+        const dateCounts = processedData.reduce((acc, curr) => {
+            acc[curr.data_date] = (acc[curr.data_date] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const validThreshold = 5; // A valid ETF snapshot should definitely have more than 5 holdings
+        const validDates = new Set(Object.keys(dateCounts).filter(d => dateCounts[d] >= validThreshold));
+        
+        const validProcessedData = processedData.filter(d => validDates.has(d.data_date));
+
+        const uniqueFullDates = [...new Set(validProcessedData.map(d => d.data_date))].sort();
         const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
         
         if (!latestDate) return [];
 
-        const topStocks = processedData
-            .filter(d => String(d.data_date) === latestDate)
+        const topStocks = validProcessedData
+            .filter(d => d.data_date === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => ({ code: d.stock_code, name: d.stock_name }));
 
-        // 建立資料點 (Iterate over SORTED FULL dates to ensure correct time sequence including year crossings)
+        // 建立資料點
         const result = uniqueFullDates.map(fullDate => {
             // Display Label: MM-DD
             const dateLabel = fullDate.length >= 10 ? fullDate.substring(5, 10) : fullDate;
             const point: any = { date: dateLabel, _fullDate: fullDate };
             
-            // 計算該日期的所有排名
-            const dayData = processedData.filter(d => String(d.data_date) === fullDate);
+            const dayData = validProcessedData.filter(d => d.data_date === fullDate);
             const dayRanks = [...dayData]
                 .sort((a, b) => b.weight - a.weight)
                 .map((d, index) => ({ code: d.stock_code, rank: index + 1 }));
@@ -70,9 +87,8 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
         // 如果只有一筆資料，Mock 兩個點讓線條出現
         if (result.length === 1) {
             const realPoint = result[0];
-            // Mock previous days
             const mockPoints = [
-                 { ...realPoint, date: 'Init' },
+                 { ...realPoint, date: '起始' },
                  realPoint
             ];
              return mockPoints;
@@ -84,15 +100,32 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
      const topStockNames = useMemo(() => {
         if (!data || data.length === 0) return [];
         
-        const processedData = data.map(d => ({ ...d, weight: Number(d.weight) || 0 }));
-        // 同樣一律用 String 正規化日期，避免 Date 物件比對失敗
-        const uniqueFullDates = [...new Set(processedData.map(d => String(d.data_date)))].sort();
+        // Use logic consistent with above
+        const normalizeDate = (d: any) => String(d || '').substring(0, 10);
+
+        const processedData = data.map(d => ({ 
+            ...d, 
+            data_date: normalizeDate(d.data_date),
+            stock_name: String(d.stock_name).trim(), 
+            weight: Number(d.weight) || 0 
+        }));
+        
+        // Data Integrity Check (Copy of above logic)
+        const dateCounts = processedData.reduce((acc, curr) => {
+            acc[curr.data_date] = (acc[curr.data_date] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const validDates = new Set(Object.keys(dateCounts).filter(d => dateCounts[d] >= 5));
+        const validProcessedData = processedData.filter(d => validDates.has(d.data_date));
+        
+        const uniqueFullDates = [...new Set(validProcessedData.map(d => d.data_date))].sort();
         const latestDate = uniqueFullDates[uniqueFullDates.length - 1];
         
         if (!latestDate) return [];
 
-        return processedData
-            .filter(d => String(d.data_date) === latestDate)
+        return validProcessedData
+            .filter(d => d.data_date === latestDate)
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 10)
             .map(d => d.stock_name);
@@ -127,13 +160,15 @@ export function RankingTrendChart({ data }: RankingTrendChartProps) {
             
             <div className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                         <XAxis 
                             dataKey="date" 
                             tick={{ fontSize: 11, fill: '#94a3b8' }}
                             axisLine={false}
                             tickLine={false}
+                            interval={0}
+                            padding={{ left: 10, right: 10 }}
                         />
                         <YAxis 
                             reversed 

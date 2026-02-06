@@ -22,6 +22,8 @@ export interface MilestoneData {
     seal_appointment: string | null;
     tax_appointment: string | null;
     handover_appointment: string | null;
+    loan_approved_amount: number | null;
+    loan_shortfall_pay_date: string | null;
 }
 
 export interface FinancialData {
@@ -225,6 +227,8 @@ export const caseService = {
             seal_appointment: formatDateTime(data.seal_appointment),
             tax_appointment: formatDateTime(data.tax_appointment),
             handover_appointment: formatDateTime(data.handover_appointment),
+            loan_approved_amount: data.loan_approved_amount ? Number(data.loan_approved_amount) : null,
+            loan_shortfall_pay_date: formatDate(data.loan_shortfall_pay_date),
         };
     },
 

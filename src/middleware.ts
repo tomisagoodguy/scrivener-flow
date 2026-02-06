@@ -30,9 +30,16 @@ export async function middleware(request: NextRequest) {
     );
 
     // Refresh Session
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    // 使用 try-catch 捕捉 getUser 可能發生的 AuthApiError (如 Refresh Token 失效)
+    // 確保即使 Token 無效，程式也能繼續執行並正確將 user 設為 null
+    let user = null;
+    try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+    } catch (e) {
+        // 發生錯誤視為未登入
+        // console.error('Middleware Auth Error:', e);
+    }
 
     const { pathname } = request.nextUrl;
 

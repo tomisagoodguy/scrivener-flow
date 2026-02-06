@@ -4,7 +4,7 @@ import logging
 import requests
 import pathlib
 from typing import Optional
-from playwright.sync_api import sync_playwright
+# from playwright.sync_api import sync_playwright  <-- Moved inside function
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ def download_file_playwright(url: str, output_path: pathlib.Path) -> bool:
     """
     logger.info(f"Attempting download via Playwright: {url}")
     try:
+        from playwright.sync_api import sync_playwright
         with sync_playwright() as p:
             # Launch with headless=True for automation
             browser = p.chromium.launch(headless=True)

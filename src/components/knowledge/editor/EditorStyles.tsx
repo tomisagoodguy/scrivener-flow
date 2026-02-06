@@ -101,12 +101,9 @@ export function EditorStyles() {
             .ProseMirror p {
                 margin: 0.5rem 0;
             }
-            .ProseMirror ul, .ProseMirror ol {
-                padding-left: 1.5rem;
-                margin: 0.5rem 0;
-            }
-            .ProseMirror li {
-                margin: 0.25rem 0;
+            /* FORCE LIST STYLES - Removed as per user request to cancel feature attempts */
+            .ProseMirror li p {
+                margin: 0 !important;
             }
             .ProseMirror a {
                 color: #6366f1;

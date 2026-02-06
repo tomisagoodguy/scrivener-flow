@@ -110,7 +110,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
                 onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
             />
             {editor && <EditorBubbleMenu editor={editor} />}
-            <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
+            <EditorContent editor={editor} className="grow overflow-y-auto" />
         </div>
     );
 }
