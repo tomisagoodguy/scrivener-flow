@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
     /* config options here */
 
     // 🔒 Security Headers - 提升網站安全性評分
-    // 注意：Content-Security-Policy (CSP) 已移至 src/middleware.ts 以支援動態 Nonce
+    // 注意：Content-Security-Policy (CSP) 已移至 src/proxy.ts 以支援動態 Nonce
     async headers() {
         return [
             {

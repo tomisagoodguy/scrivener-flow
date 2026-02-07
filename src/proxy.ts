@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
     // 初始化 request headers
     const requestHeaders = new Headers(request.headers);
 

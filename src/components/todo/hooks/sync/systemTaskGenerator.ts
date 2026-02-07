@@ -41,7 +41,7 @@ export function generateSystemTasks(
             const oldDate = new Date(exists.due_date).getTime();
             const newDateVal = new Date(dateStr).getTime();
 
-            if (Math.abs(oldDate - newDateVal) > 60000) {
+            if (Math.abs(oldDate - newDateVal) > 60000 || exists.content !== newTitle) {
                 todosToUpdate.push({
                     id: exists.id,
                     user_id: userId,
@@ -76,6 +76,23 @@ export function generateSystemTasks(
         addSystemTask(c, 'sign_diff_date', m.sign_diff_date, 3, 'legal', '補差額');
         addSystemTask(c, 'seal_date', m.seal_date, 3, 'legal', '用印日');
         addSystemTask(c, 'tax_payment_date', m.tax_payment_date, 3, 'legal', '完稅日');
+
+        // 計算貸款差額提醒 (Shortfall Reminder)
+        const balance = Number(m.balance_amount || 0);
+        const loan = Number(m.loan_approved_amount || 0);
+
+        if (m.tax_payment_date && loan > 0 && balance > loan) {
+            const shortfall = balance - loan;
+            addSystemTask(
+                c,
+                'shortfall_payment_alert',
+                m.tax_payment_date,
+                3,
+                'legal',
+                `需補差額 ${shortfall} 萬`
+            );
+        }
+
         addSystemTask(c, 'transfer_date', m.transfer_date, 3, 'legal', '過戶日');
         addSystemTask(c, 'redemption_date', m.redemption_date, 3, 'legal', '代償日');
         addSystemTask(c, 'handover_date', m.handover_date, 3, 'legal', '交屋日');
