@@ -77,6 +77,8 @@ export function useTodoSync() {
         fetchAndSyncTodos();
         const channel = supabase.channel('todos-main-sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => fetchAndSyncTodos())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, () => fetchAndSyncTodos())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'financials' }, () => fetchAndSyncTodos())
             .subscribe();
 
         // 跨元件同步

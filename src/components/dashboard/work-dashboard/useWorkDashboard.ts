@@ -63,7 +63,7 @@ export function useWorkDashboard() {
                     .map((t: any) => {
                         let type: any = 'personal';
                         if (t.source_type === 'system') {
-                            if (t.source_key?.includes('tax')) type = 'tax';
+                            if (t.source_key?.includes('tax') || t.source_key === 'shortfall_payment_alert') type = 'tax';
                             else if (t.source_key?.includes('appt')) type = 'appointment';
                             else type = 'legal';
                         }
