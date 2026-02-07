@@ -12,6 +12,8 @@ import {
     Cell,
     ReferenceLine,
 } from 'recharts';
+import { StockWeightSidebar } from './StockWeightSidebar';
+import { List } from 'lucide-react';
 
 interface ImpactData {
     name: string;
@@ -24,22 +26,33 @@ interface ChangeImpactChartProps {
 }
 
 export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
+    const [timeRange, setTimeRange] = React.useState<'1D' | '3D' | '5D'>('1D');
+
     const impactData = useMemo(() => {
         if (!logs || logs.length === 0) return [];
 
-        // 取得最近日期的異動
-        const latestDate = [...new Set(logs.map(l => l.data_date))].sort().pop();
-        const latestLogs = logs.filter(l => l.data_date === latestDate);
+        // 1. Get all unique dates sorted descending (latest first)
+        const uniqueDates = [...new Set(logs.map(l => l.data_date))].sort().reverse();
 
-        // 同一天同一檔股票可能有多筆異動（例如重跑 pipeline 或多次調整），
-        // 這裡先依 stock_code 彙總，把 diff_weight 加總後再排名，避免排行榜出現重複名稱。
-        const aggregatedMap = latestLogs.reduce<Record<string, { name: string; impact: number }>>(
+        // 2. Determine how many days to look back
+        const daysToTake = timeRange === '1D' ? 1 : timeRange === '3D' ? 3 : 5;
+        const targetDates = uniqueDates.slice(0, daysToTake);
+
+        // 3. Filter logs for these dates
+        const targetLogs = logs.filter(l => targetDates.includes(l.data_date));
+
+        // 4. Aggregate diff_weight by stock_code
+        // 同一檔股票在多天內的變動需累加
+        const aggregatedMap = targetLogs.reduce<Record<string, { name: string; impact: number }>>(
             (acc, log) => {
                 const code = log.stock_code;
                 const prev = acc[code]?.impact ?? 0;
+                // Accumulate the diff_weight (ensure to handle strings/numbers safely)
+                const weightChange = Number(log.diff_weight) || 0;
+                
                 acc[code] = {
-                    name: log.stock_name,
-                    impact: prev + (Number(log.diff_weight) || 0),
+                    name: log.stock_name, // assumption: name is constant
+                    impact: prev + weightChange,
                 };
                 return acc;
             },
@@ -48,7 +61,7 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
 
         const aggregated = Object.values(aggregatedMap);
 
-        // 按權重變動絕對值排序，取前 10 名
+        // 5. Sort by absolute impact and take top 10
         return aggregated
             .map(item => ({
                 name: item.name,
@@ -57,20 +70,46 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
             }))
             .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
             .slice(0, 10);
-    }, [logs]);
+    }, [logs, timeRange]);
 
-    if (impactData.length === 0) return null;
+    if (!logs || logs.length === 0) return null;
 
     return (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mb-8">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <div className="w-1.5 h-4 bg-rose-500 rounded-full"></div>
-                    最新變動：資金影響力排行
+                    資金影響力排行 (近 {timeRange.replace('D', ' 日')})
                     <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded ml-2">
-                        (權重增減百分點 %)
+                        (累計權重增減 %)
                     </span>
                 </h3>
+                <div className="flex items-center gap-2">
+                    <StockWeightSidebar logs={logs}>
+                        <button className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-slate-500 hover:text-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                            <List className="w-3.5 h-3.5" />
+                            完整明細
+                        </button>
+                    </StockWeightSidebar>
+                    
+                    <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                        {(['1D', '3D', '5D'] as const).map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeRange(range)}
+                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                                    timeRange === range
+                                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                }`}
+                            >
+                                {range}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
             
             <div className="h-[280px] w-full">
@@ -114,6 +153,11 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
                     </BarChart>
                 </ResponsiveContainer>
             </div>
+            {impactData.length === 0 && (
+                 <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm pb-8">
+                    暫無資料
+                 </div>
+            )}
         </div>
     );
 }
