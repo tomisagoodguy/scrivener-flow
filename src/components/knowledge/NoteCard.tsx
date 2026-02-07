@@ -12,6 +12,7 @@ export interface TeamNote {
     tags: string[];
     author_id: string;
     author_name?: string; // 從 JOIN 查詢獲得
+    author_avatar?: string; // 從 JOIN 查詢獲得
     created_at: string;
     updated_at: string;
     is_pinned: boolean;
@@ -99,9 +100,13 @@ export default function NoteCard({ note, onClick }: NoteCardProps) {
             <div className="relative z-10">
                 {/* Meta Header */}
                 <div className="flex items-center gap-3 text-sm mb-4">
-                    {/* Author Avatar (Initials) */}
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs ring-2 ring-white">
-                        {note.author_name ? note.author_name[0] : 'A'}
+                    {/* Author Avatar */}
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs ring-2 ring-white overflow-hidden">
+                        {note.author_avatar ? (
+                            <img src={note.author_avatar} alt={note.author_name} className="w-full h-full object-cover" />
+                        ) : (
+                            note.author_name ? note.author_name[0] : 'A'
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 text-slate-500">

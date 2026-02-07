@@ -32,6 +32,7 @@ export default function TeamKnowledgeBase() {
         setLoading(true);
 
         try {
+            // 第一步：只抓取筆記基本資料
             let query = supabase
                 .from('team_notes')
                 .select('*')
@@ -52,19 +53,49 @@ export default function TeamKnowledgeBase() {
                 query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
             }
 
-            const { data, error } = await query;
+            const { data: notesData, error: notesError } = await query;
 
-            if (error) {
-                console.error('Error fetching notes:', error);
-            } else {
-                // Transform data
-                const transformedNotes = (data || []).map((note: any) => ({
-                    ...note,
-                    author_name: '匿名',
-                }));
-
-                setNotes(transformedNotes);
+            if (notesError) {
+                console.error('Error fetching notes:', notesError.message);
+                return;
             }
+
+            if (!notesData || notesData.length === 0) {
+                setNotes([]);
+                return;
+            }
+
+            // 第二步：收集所有作者 ID 並一次性抓取個人資料表 (手動 Join)
+            const authorIds = Array.from(new Set(notesData.map((n: any) => n.author_id)));
+            
+            const { data: profilesData, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .in('id', authorIds);
+
+            if (profilesError) {
+                console.error('Error fetching profiles:', profilesError.message);
+                // 即使個人資料抓不到，還是顯示筆記（作者顯示為匿名或 Email）
+                setNotes(notesData.map((note: any) => ({
+                    ...note,
+                    author_name: '下載 SQL 失敗',
+                })));
+                return;
+            }
+
+            // 第三步：在前端手動組合資料
+            const profilesMap = (profilesData || []).reduce((acc: any, p: any) => {
+                acc[p.id] = p;
+                return acc;
+            }, {});
+
+            const transformedNotes = notesData.map((note: any) => ({
+                ...note,
+                author_name: profilesMap[note.author_id]?.full_name || '匿名',
+                author_avatar: profilesMap[note.author_id]?.avatar_url,
+            }));
+
+            setNotes(transformedNotes);
         } catch (err) {
             console.error('Unexpected error in fetchNotes:', err);
         }
