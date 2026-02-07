@@ -8,7 +8,7 @@ interface AutoSaveProps {
     caseId: string;
     notes: string;
     privateNotes: string;
-    attributes: Record<string, string>;
+    attributes: Record<string, any>;
     initialNotes?: string;
     initialPrivateNotes?: string;
 }

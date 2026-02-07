@@ -23,7 +23,15 @@ export const useCaseTodos = (
                 return acc;
             }, {} as Record<string, boolean>);
         }
-        return data || {};
+        // Ensure values are boolean if data is object
+        if (data && typeof data === 'object') {
+            const normalized: Record<string, boolean> = {};
+            Object.keys(data).forEach(key => {
+                normalized[key] = !!data[key];
+            });
+            return normalized;
+        }
+        return {};
     }, []);
 
     const [todos, setTodos] = useState<Record<string, boolean>>(normalizeTodos(initialTodos));
@@ -49,9 +57,10 @@ export const useCaseTodos = (
     }, [caseId, normalizeTodos]);
 
     // Sync with props
+    const initialTodosJson = JSON.stringify(initialTodos);
     useEffect(() => {
-        setTodos(normalizeTodos(initialTodos));
-    }, [initialTodos, normalizeTodos]);
+        setTodos(normalizeTodos(JSON.parse(initialTodosJson)));
+    }, [initialTodosJson, normalizeTodos]);
 
     // Real-time Subscription & Initial Fetch
     useEffect(() => {
@@ -108,17 +117,18 @@ export const useCaseTodos = (
                 .eq('id', caseId);
 
             if (error) {
-                setTodos(todos); // Revert on error (using caught 'todos' from closure? No, strictly we should use 'prev' but here strictly reverting to before optimistic is tricky without keeping prev. 
-                // Actually, 'todos' in atomic closure here is the old state? No. 
-                // Let's just refetch or throw.
+                // 如果更新失敗，回滾狀態
+                setTodos(todos); 
                 throw error;
             }
         } catch (error: any) {
             console.error('Error updating todo:', error);
             // Revert by re-fetching essentially or simple toggle back
-            // Simpler: fetch latest again to be sure
             fetchLatestTodos();
-            alert(`更新狀態失敗: ${error.message || '未知錯誤'}`);
+            const msg = error?.message || '未知錯誤';
+            // 防止 alert 造成某些環境閃退，改用 console error (或者視情況 alert)
+            console.error(`更新狀態失敗: ${msg}`);
+            // alert(`更新狀態失敗: ${msg}`); 
         } finally {
             setLoading(null);
         }
@@ -148,8 +158,7 @@ export const useCaseTodos = (
         } catch (error: any) {
             console.error('Error adding task:', error);
             fetchLatestTodos(); // Revert/Sync
-            alert('新增失敗');
-            throw error; // Re-throw to let caller handle if needed (e.g. clearing input)
+            // alert('新增失敗'); 
         }
     };
 

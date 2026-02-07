@@ -10,9 +10,12 @@ interface ChecklistSectionProps {
 
 export const ChecklistSection: React.FC<ChecklistSectionProps> = ({ initialData }) => {
     // Filter out legacy items so they don't appear as custom items even if they exist in DB
-    const todos = { ...(initialData.todos || {}) };
-    delete (todos as any)['S_權狀印鑑'];
-    delete (todos as any)['S_稅單'];
+    const todos = React.useMemo(() => {
+        const t = { ...(initialData.todos || {}) };
+        delete (t as any)['S_權狀印鑑'];
+        delete (t as any)['S_稅單'];
+        return t;
+    }, [initialData.todos]);
     
     const filteredTodos = todos;
 
