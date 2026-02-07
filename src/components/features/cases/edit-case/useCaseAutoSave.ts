@@ -55,16 +55,29 @@ export function useCaseAutoSave({
                 setLastSaved(new Date());
 
                 // 3秒後恢復 idle 狀態
-                const idleTimer = setTimeout(() => setSaveStatus('idle'), 3000);
-                return () => clearTimeout(idleTimer);
+                // Use a global/outer variable or ref if needed, but since we are inside a useEffect that is triggered by deps, 
+                // the simplest way is to let the component handle 'saved' -> 'idle' transition in a separate effect or just fire and forget if component unmounts.
+                // However, to be correct with hooks, we shouldn't return cleanup from inside setTimeout.
+                // The correct pattern to auto-reset status is another useEffect listening to saveStatus.
             } catch (err) {
                 console.error('Auto-save failed:', err);
                 setSaveStatus('error');
             }
         }, 2000);
 
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+        };
     }, [notes, privateNotes, attributes, caseId, initialNotes, initialPrivateNotes, supabase]);
+
+    useEffect(() => {
+        if (saveStatus === 'saved') {
+            const timer = setTimeout(() => {
+                setSaveStatus('idle');
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [saveStatus]);
 
     return { saveStatus, lastSaved };
 }

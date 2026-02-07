@@ -179,7 +179,7 @@ export const useCaseTodos = (
         } catch (error: any) {
             console.error('Error deleting task:', error);
             fetchLatestTodos();
-            alert('刪除失敗');
+            // alert('刪除失敗');
         }
     };
 
