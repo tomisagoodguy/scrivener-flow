@@ -56,8 +56,18 @@ export const caseService = {
         let finalNotes = notes;
         if (data.loan_estimates_json) {
             try {
-                // 如果已有屬性，則合併；否則新建。這裡簡化處理，直接覆蓋屬性區塊
-                const attributes = { loan_estimates: JSON.parse(data.loan_estimates_json as string) };
+                // 如果已有屬性，則合併；否則新建。
+                const match = notes.match(/\[\[ATTR:(.*?)\]\]/);
+                let existingAttributes = {};
+                if (match && match[1]) {
+                    try {
+                        existingAttributes = JSON.parse(match[1]);
+                    } catch (e) {
+                         // ignore
+                    }
+                }
+
+                const attributes = { ...existingAttributes, loan_estimates: JSON.parse(data.loan_estimates_json as string) };
                 finalNotes = `${notes.replace(/\[\[ATTR:.*?\]\]/g, '')}\n\n[[ATTR:${JSON.stringify(attributes)}]]`.trim();
             } catch (e) {
                 console.error('[CaseService] Failed to parse loan_estimates_json', e);

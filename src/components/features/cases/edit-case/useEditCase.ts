@@ -22,7 +22,7 @@ export function useEditCase(initialData: DemoCase) {
     const [debugInfo, setDebugInfo] = useState('');
     const [privateNotes, setPrivateNotes] = useState(initialData.private_notes || '');
     const [currentUserEmail, setCurrentUserEmail] = useState('');
-    const [attributes, setAttributes] = useState<Record<string, string>>({});
+    const [attributes, setAttributes] = useState<Record<string, any>>({});
     const [isAttributesExpanded, setIsAttributesExpanded] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 

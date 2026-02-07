@@ -8,6 +8,7 @@ interface BasicInfoSectionProps {
     initialData: DemoCase;
     financials: any;
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    attributes?: Record<string, any>;
     loading: boolean;
 }
 
@@ -15,8 +16,13 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
     initialData,
     financials,
     handleFileUpload,
-    loading
+    loading,
+    attributes
 }) => {
+    // Determine initial values for loan estimates
+    // Priority: 1. attributes state (from useEditCase) 2. initialData.custom_fields (legacy/server-side populated)
+    const loanEstimates = attributes?.loan_estimates || initialData.custom_fields?.loan_estimates || [];
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -199,7 +205,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             {/* 買方貸款追蹤區塊 - 獨立展開 */}
             <div className="mt-2">
                 <LoanComparisonTracker
-                    initialValue={JSON.stringify(initialData.custom_fields?.loan_estimates || [])}
+                    initialValue={JSON.stringify(loanEstimates)}
                     onFinalBankSelect={(bankName) => {
                         const el = document.getElementById('buyer_loan_bank_input') as HTMLInputElement;
                         if (el) el.value = bankName;

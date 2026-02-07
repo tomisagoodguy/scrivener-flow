@@ -81,6 +81,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                     financials={financials}
                     handleFileUpload={handleFileUpload}
                     loading={loading}
+                    attributes={attributes}
                 />
 
                 <CustomAttributesSection
