@@ -11,19 +11,12 @@ import {
 } from "@/components/ui/sheet";
 import { ArrowDownIcon, ArrowUpIcon, SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    Cell,
-    ReferenceLine
-} from 'recharts';
+import { StockTrendChart } from './StockTrendChart';
+import { useStockWeightAnalysis, TimeRange, StockImpact } from './hooks/useStockWeightAnalysis';
+import { DiffLog } from '@/types/investment';
 
 interface StockWeightSidebarProps {
-    logs: any[];
+    logs: DiffLog[];
     children?: React.ReactNode; // For the trigger button
 }
 
@@ -31,48 +24,21 @@ type SortKey = 'impact' | 'code' | 'name';
 type SortDirection = 'asc' | 'desc';
 
 export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) {
-    const [timeRange, setTimeRange] = useState<'1D' | '3D' | '5D'>('1D');
+    const [timeRange, setTimeRange] = useState<TimeRange>('1D');
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
         key: 'impact',
         direction: 'desc'
     });
     const [expandedCode, setExpandedCode] = useState<string | null>(null);
 
+    // Use shared hook for data processing
+    const { processedData: rawData } = useStockWeightAnalysis(logs, timeRange);
+
     const processedData = useMemo(() => {
-        if (!logs || logs.length === 0) return [];
+        // Clone array to avoid mutating hook result (though hook returns new array on change)
+        const sorted = [...rawData];
 
-        // 1. Get all unique dates sorted descending (latest first)
-        const uniqueDates = [...new Set(logs.map(l => l.data_date))].sort().reverse();
-
-        // 2. Determine how many days to look back
-        const daysToTake = timeRange === '1D' ? 1 : timeRange === '3D' ? 3 : 5;
-        const targetDates = uniqueDates.slice(0, daysToTake);
-
-        // 3. Filter logs for these dates
-        const targetLogs = logs.filter(l => targetDates.includes(l.data_date));
-
-        // 4. Aggregate diff_weight by stock_code
-        const aggregatedMap = targetLogs.reduce<Record<string, { code: string; name: string; impact: number; industry?: string }>>(
-            (acc, log) => {
-                const code = log.stock_code;
-                const prev = acc[code]?.impact ?? 0;
-                const weightChange = Number(log.diff_weight) || 0;
-                
-                acc[code] = {
-                    code: log.stock_code,
-                    name: log.stock_name,
-                    industry: log.industry,
-                    impact: prev + weightChange,
-                };
-                return acc;
-            },
-            {}
-        );
-
-        let result = Object.values(aggregatedMap);
-
-        // 5. Sort
-        result.sort((a, b) => {
+        sorted.sort((a, b) => {
             const { key, direction } = sortConfig;
             let comparison = 0;
 
@@ -87,9 +53,8 @@ export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) 
             return direction === 'asc' ? comparison : -comparison;
         });
 
-        return result;
-
-    }, [logs, timeRange, sortConfig]);
+        return sorted;
+    }, [rawData, sortConfig]);
 
     const handleSort = (key: SortKey) => {
         setSortConfig(current => ({
@@ -108,7 +73,6 @@ export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) 
             <ArrowUpIcon className="w-3 h-3 text-indigo-500 ml-1" /> : 
             <ArrowDownIcon className="w-3 h-3 text-indigo-500 ml-1" />;
     };
-
 
     // Auto-expand the first item when data loads to show the feature
     React.useEffect(() => {
@@ -230,62 +194,5 @@ export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) 
                 </div>
             </SheetContent>
         </Sheet>
-    );
-}
-
-// Sub-component for individual stock trend
-function StockTrendChart({ code, logs }: { code: string, logs: any[] }) {
-    const data = useMemo(() => {
-        // Get all unique dates from logs, sorted ascending
-        const allDates = [...new Set(logs.map(l => l.data_date))].sort();
-        // Take the last 5 days for trend context
-        const recentDates = allDates.slice(-5);
-
-        return recentDates.map(date => {
-            const log = logs.find(l => l.stock_code === code && l.data_date === date);
-            const val = Number(log?.diff_weight || 0);
-            return {
-                date: date.substring(5).replace('-', '/'), // MM/DD
-                value: val,
-                color: val > 0 ? '#f43f5e' : val < 0 ? '#10b981' : '#94a3b8'
-            };
-        });
-    }, [code, logs]);
-
-    if (data.length === 0) return null;
-
-    return (
-        <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 10, fill: '#64748b' }} 
-                    axisLine={false}
-                    tickLine={false}
-                />
-                <YAxis 
-                    tick={{ fontSize: 10, fill: '#64748b' }} 
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(val) => `${val.toFixed(2)}`}
-                />
-                <Tooltip 
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{ 
-                        borderRadius: '8px', 
-                        border: 'none', 
-                        fontSize: '12px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                    formatter={(value: any) => [`${value > 0 ? '+' : ''}${Number(value).toFixed(2)}%`, '權重變動']}
-                />
-                <ReferenceLine y={0} stroke="#e2e8f0" strokeDasharray="3 3" />
-                <Bar dataKey="value" radius={[2, 2, 0, 0]}>
-                    {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                </Bar>
-            </BarChart>
-        </ResponsiveContainer>
     );
 }

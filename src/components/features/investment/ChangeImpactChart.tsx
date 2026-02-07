@@ -14,55 +14,22 @@ import {
 } from 'recharts';
 import { StockWeightSidebar } from './StockWeightSidebar';
 import { List } from 'lucide-react';
-
-interface ImpactData {
-    name: string;
-    impact: number;
-    color: string;
-}
+import { useStockWeightAnalysis, TimeRange } from './hooks/useStockWeightAnalysis';
+import { DiffLog } from '@/types/investment';
 
 interface ChangeImpactChartProps {
-    logs: any[];
+    logs: DiffLog[];
 }
 
 export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
-    const [timeRange, setTimeRange] = React.useState<'1D' | '3D' | '5D'>('1D');
+    const [timeRange, setTimeRange] = React.useState<TimeRange>('1D');
+    
+    // Use shared hook
+    const { processedData } = useStockWeightAnalysis(logs, timeRange);
 
     const impactData = useMemo(() => {
-        if (!logs || logs.length === 0) return [];
-
-        // 1. Get all unique dates sorted descending (latest first)
-        const uniqueDates = [...new Set(logs.map(l => l.data_date))].sort().reverse();
-
-        // 2. Determine how many days to look back
-        const daysToTake = timeRange === '1D' ? 1 : timeRange === '3D' ? 3 : 5;
-        const targetDates = uniqueDates.slice(0, daysToTake);
-
-        // 3. Filter logs for these dates
-        const targetLogs = logs.filter(l => targetDates.includes(l.data_date));
-
-        // 4. Aggregate diff_weight by stock_code
-        // 同一檔股票在多天內的變動需累加
-        const aggregatedMap = targetLogs.reduce<Record<string, { name: string; impact: number }>>(
-            (acc, log) => {
-                const code = log.stock_code;
-                const prev = acc[code]?.impact ?? 0;
-                // Accumulate the diff_weight (ensure to handle strings/numbers safely)
-                const weightChange = Number(log.diff_weight) || 0;
-                
-                acc[code] = {
-                    name: log.stock_name, // assumption: name is constant
-                    impact: prev + weightChange,
-                };
-                return acc;
-            },
-            {}
-        );
-
-        const aggregated = Object.values(aggregatedMap);
-
-        // 5. Sort by absolute impact and take top 10
-        return aggregated
+        // Take aggregated data from hook, transform for chart, sort by impact, take top 10
+        return processedData
             .map(item => ({
                 name: item.name,
                 impact: item.impact,
@@ -70,7 +37,7 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
             }))
             .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
             .slice(0, 10);
-    }, [logs, timeRange]);
+    }, [processedData]);
 
     if (!logs || logs.length === 0) return null;
 
