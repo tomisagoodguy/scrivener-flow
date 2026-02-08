@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 
 class LineNotifier:
-    def __init__(self, token_env="LINE_CHANNEL_ACCESS_TOKEN", user_id_env="LINE_USER_ID"):
+    def __init__(self):
         from dotenv import load_dotenv
         if os.path.exists('.env.local'):
             load_dotenv('.env.local')
@@ -15,12 +15,12 @@ class LineNotifier:
             load_dotenv()
 
         # Load from env
-        self.channel_token = os.getenv(token_env)
-        self.user_id = os.getenv(user_id_env)
+        self.channel_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+        self.user_id = os.getenv("LINE_USER_ID")
         self.api_url = "https://api.line.me/v2/bot/message/push"
 
         if not self.channel_token or not self.user_id:
-            logger.warning(f"LINE credentials ({token_env}, {user_id_env}) missing. Notification disabled.")
+            logger.warning("LINE credentials missing. Notification disabled.")
 
     def send_text(self, text: str):
         """發送簡單純文字訊息"""
@@ -47,7 +47,7 @@ class LineNotifier:
             if resp.status_code == 200:
                 logger.info("LINE text message sent successfully.")
             else:
-                logger.error(f"Failed to send LINE text: {resp.status_code} {resp.text}")
+                logger.error(f"Failed to send LINE text: {resp.text}")
         except Exception as e:
             logger.error(f"Error sending LINE text: {e}")
 
@@ -76,7 +76,7 @@ class LineNotifier:
             if resp.status_code == 200:
                 logger.info("LINE notification sent successfully.")
             else:
-                logger.error(f"Failed to send LINE: {resp.status_code} {resp.text}")
+                logger.error(f"Failed to send LINE: {resp.text}")
         except Exception as e:
             logger.error(f"Error sending LINE: {e}")
 
@@ -214,7 +214,6 @@ class LineNotifier:
                 - sync_days: 同步範圍（天數）
                 - diff_stats: 異動統計 (total_changes, new_in, removed, adjusted)
                 - top_changes: TOP 5 權重變化 (optional)
-                - market_signals: 市場訊號 (revenue_up, breakout, revenue_down)
         """
         if not summary:
             logger.warning("Summary is empty. Skipping completion notification.")
@@ -226,7 +225,6 @@ class LineNotifier:
         sync_days = summary.get('sync_days', 0)
         diff_stats = summary.get('diff_stats', {})
         top_changes = summary.get('top_changes', [])
-        market_signals = summary.get('market_signals', {})
         
         # 構建 Flex Message Body
         rows = []
@@ -317,7 +315,7 @@ class LineNotifier:
                 "align": "center"
             })
         
-        # TOP 10 權重變化（若有）
+        # TOP 5 權重變化（若有）
         if top_changes and len(top_changes) > 0:
             rows.append({
                 "type": "separator",
@@ -326,14 +324,14 @@ class LineNotifier:
             
             rows.append({
                 "type": "text",
-                "text": "📈 TOP 10 權重變化",
+                "text": "📈 TOP 5 權重變化",
                 "weight": "bold",
                 "color": "#0F172A",
                 "size": "sm",
                 "margin": "md"
             })
             
-            for change in top_changes[:10]:  # 確保最多 10 個
+            for change in top_changes[:5]:  # 確保最多 5 個
                 stock_name = change.get('stock_name', 'N/A')
                 diff_weight = change.get('diff_weight', 0)
                 change_type = change.get('change_type', 'ADJUST')
@@ -361,95 +359,6 @@ class LineNotifier:
                     ],
                     "margin": "sm"
                 })
-
-        # --- 策略亮點 / 市場訊號 Section ---
-        has_signals = market_signals and (
-            market_signals.get('revenue_up') or 
-            market_signals.get('breakout_200') or 
-            market_signals.get('breakout_20') or 
-            market_signals.get('breakout_5') or 
-            market_signals.get('revenue_down')
-        )
-
-        if has_signals:
-            rows.append({
-                "type": "separator",
-                "margin": "md"
-            })
-            
-            rows.append({
-                "type": "text",
-                "text": "🎯 策略亮點",
-                "weight": "bold",
-                "color": "#0F172A",
-                "size": "sm",
-                "margin": "md"
-            })
-
-            # 1. 營收爆發
-            revenue_up = market_signals.get('revenue_up', [])
-            if revenue_up:
-                rows.append({
-                    "type": "text",
-                    "text": "🔥 營收爆發 (>20%)",
-                    "size": "xs",
-                    "color": "#64748B",
-                    "margin": "sm"
-                })
-                for s in revenue_up:
-                    rows.append({
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {"type": "text", "text": f"{s['name']}", "size": "xs", "flex": 0, "color": "#334155", "weight": "bold"},
-                            {"type": "text", "text": f"YoY {s['value']}", "size": "xs", "align": "end", "color": "#EF4444", "flex": 1}
-                        ],
-                        "margin": "xs"
-                    })
-
-            # 2. 強勢突破 (200日/20日/5日新高)
-            for window in [200, 20, 5]:
-                key = f'breakout_{window}'
-                breakout = market_signals.get(key, [])
-                if breakout:
-                    rows.append({
-                        "type": "text",
-                        "text": f"📈 強勢突破 ({window}日高)",
-                        "size": "xs",
-                        "color": "#64748B",
-                        "margin": "sm"
-                    })
-                    for s in breakout:
-                        rows.append({
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {"type": "text", "text": f"{s['name']}", "size": "xs", "flex": 0, "color": "#334155", "weight": "bold"},
-                                {"type": "text", "text": f"{s['value']}", "size": "xs", "align": "end", "color": "#EF4444", "flex": 1}
-                            ],
-                            "margin": "xs"
-                        })
-
-            # 3. 營收衰退
-            revenue_down = market_signals.get('revenue_down', [])
-            if revenue_down:
-                rows.append({
-                    "type": "text",
-                    "text": "⚠️ 營收衰退 (<-20%)",
-                    "size": "xs",
-                    "color": "#64748B",
-                    "margin": "sm"
-                })
-                for s in revenue_down:
-                    rows.append({
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {"type": "text", "text": f"{s['name']}", "size": "xs", "flex": 0, "color": "#334155", "weight": "bold"},
-                            {"type": "text", "text": f"YoY {s['value']}", "size": "xs", "align": "end", "color": "#10B981", "flex": 1}
-                        ],
-                        "margin": "xs"
-                    })
         
         # 構建完整 Bubble
         bubble = {

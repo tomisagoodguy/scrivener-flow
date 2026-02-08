@@ -34,4 +34,7 @@ export interface Holding {
     revenue_month?: string | null;
     industry?: string;
     weightRank?: number;
+    amountRank?: number;
+    marginRankHigh?: number;
+    marginRankLow?: number;
 }

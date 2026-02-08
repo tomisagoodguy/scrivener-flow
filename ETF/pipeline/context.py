@@ -62,8 +62,25 @@ class PipelineContext:
     def notifier(self):
         """延遲初始化 LineNotifier"""
         if self._notifier is None:
+            import os
+            from dotenv import load_dotenv
             from ETF.notifiers.line_notifier import LineNotifier
-            self._notifier = LineNotifier()
+            
+            # Load env vars to check for specific bot config
+            if os.path.exists('.env.local'):
+                load_dotenv('.env.local')
+            else:
+                load_dotenv()
+
+            # Prioritize STOCK_ specific bot
+            if os.getenv("STOCK_LINE_CHANNEL_ACCESS_TOKEN"):
+                self._notifier = LineNotifier(
+                    token_env="STOCK_LINE_CHANNEL_ACCESS_TOKEN", 
+                    user_id_env="STOCK_LINE_USER_ID"
+                )
+            else:
+                # Fallback to default
+                self._notifier = LineNotifier()
         return self._notifier
     
     @property

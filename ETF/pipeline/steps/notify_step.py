@@ -6,6 +6,8 @@ Notify Step
 
 from .base import BaseStep
 from ETF.pipeline.context import PipelineContext
+import pandas as pd
+from typing import List, Dict, Any
 
 
 class NotifyStep(BaseStep):
@@ -26,7 +28,7 @@ class NotifyStep(BaseStep):
             notifier.notify_diffs(ctx.diff_logs, ctx.etf_code, ctx.date_str)
             self.logger.info(f"Sent {len(ctx.diff_logs)} diff notifications.")
         
-        # 2. 發送完成摘要
+        # 2. 發送完成摘要（含市場訊號）
         self._send_completion_summary(ctx, notifier)
         
         return ctx
@@ -41,11 +43,12 @@ class NotifyStep(BaseStep):
             'total_holdings': len(ctx.df) if ctx.df is not None else 0,
             'sync_days': days,
             'diff_stats': self._compute_diff_stats(ctx.diff_logs),
-            'top_changes': self._get_top_changes(ctx.diff_logs)
+            'top_changes': self._get_top_changes(ctx.diff_logs, top_n=10),
+            'market_signals': self._extract_market_signals(ctx.df)
         }
         
         notifier.notify_completion(summary)
-        self.logger.info("Completion notification sent with full summary.")
+        self.logger.info("Completion notification sent with full summary and market signals.")
     
     def _compute_diff_stats(self, diff_logs):
         """計算異動統計"""
@@ -64,7 +67,7 @@ class NotifyStep(BaseStep):
             'adjusted': len([d for d in diff_logs if d['change_type'] in ['BUY', 'SELL']])
         }
     
-    def _get_top_changes(self, diff_logs, top_n=5):
+    def _get_top_changes(self, diff_logs, top_n=10):
         """取得 TOP N 權重變化"""
         if not diff_logs:
             return []
@@ -84,3 +87,73 @@ class NotifyStep(BaseStep):
             }
             for d in sorted_changes[:top_n]
         ]
+
+    def _extract_market_signals(self, df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        從持股資料中提取市場訊號：
+        1. 營收爆發 (YoY > 20%)
+        2. 強勢突破 (200日/20日/5日新高)
+        3. 營收衰退警示 (YoY < -20%)
+        """
+        if df is None or df.empty:
+            return {}
+        
+        signals = {
+            'revenue_up': [],
+            'revenue_down': [],
+            'breakout_200': [],
+            'breakout_20': [],
+            'breakout_5': []
+        }
+        
+        try:
+            # 1. 營收爆發 (YoY > 20%)
+            if 'revenue_yoy' in df.columns:
+                up_mask = (df['revenue_yoy'] > 20)
+                up_stocks = df[up_mask].sort_values('revenue_yoy', ascending=False).head(3)
+                signals['revenue_up'] = [
+                    {
+                        'name': row.get('name', 'N/A'),
+                        'code': row.get('code', 'N/A'),
+                        'value': f"{row['revenue_yoy']:+.1f}%"
+                    }
+                    for _, row in up_stocks.iterrows()
+                ]
+
+            # 2. 強勢突破 (200日/20日/5日新高)
+            for window in [200, 20, 5]:
+                col = f'is_high_{window}d'
+                key = f'breakout_{window}'
+                
+                if col in df.columns:
+                    breakout_mask = (df[col] == True)
+                    # For breakout, maybe sort by diff_weight if available? Or random? 
+                    # Existing logic used head(3). Let's stick to head(3) or maybe sort by something meaningful if possible.
+                    # Since we don't have weight easily here without joining, head(3) is fine.
+                    breakout_stocks = df[breakout_mask].head(3)
+                    signals[key] = [
+                        {
+                            'name': row.get('name', 'N/A'),
+                            'code': row.get('code', 'N/A'),
+                            'value': f"{window}日新高"
+                        }
+                        for _, row in breakout_stocks.iterrows()
+                    ]
+            
+            # 3. 營收衰退警示 (YoY < -20%)
+            if 'revenue_yoy' in df.columns:
+                down_mask = (df['revenue_yoy'] < -20)
+                down_stocks = df[down_mask].sort_values('revenue_yoy', ascending=True).head(3) # 取衰退最多的
+                signals['revenue_down'] = [
+                    {
+                        'name': row.get('name', 'N/A'),
+                        'code': row.get('code', 'N/A'),
+                        'value': f"{row['revenue_yoy']:+.1f}%"
+                    }
+                    for _, row in down_stocks.iterrows()
+                ]
+                
+        except Exception as e:
+            self.logger.error(f"Error extracting market signals: {e}")
+            
+        return signals
