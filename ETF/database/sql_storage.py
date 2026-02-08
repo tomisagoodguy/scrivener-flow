@@ -67,7 +67,7 @@ class SQLStorage:
         logger.info(f"準備寫入 {len(records)} 筆營收記錄...")
         
         with self.engine.connect() as conn:
-            chunk_size = 2000
+            chunk_size = 500
             for i in range(0, len(records), chunk_size):
                 chunk = records[i:i+chunk_size]
                 upsert_sql = text("""
@@ -91,7 +91,7 @@ class SQLStorage:
 
         logger.info(f"準備寫入 {len(records)} 筆集保記錄...")
         with self.engine.connect() as conn:
-            chunk_size = 2000
+            chunk_size = 500
             for i in range(0, len(records), chunk_size):
                 chunk = records[i:i+chunk_size]
                 upsert_sql = text("""
