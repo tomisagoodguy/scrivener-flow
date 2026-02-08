@@ -61,11 +61,11 @@ export function useHoldingsFilter(initialData: Holding[]): UseHoldingsFilterResu
             let currentPool = dataWithRank;
             otherActiveFilters.forEach(fid => {
                 const otherDef = FILTER_DEFINITIONS.find(d => d.id === fid);
-                if (otherDef) currentPool = currentPool.filter(d => otherDef.filter(d, d));
+                if (otherDef) currentPool = currentPool.filter(d => otherDef.filter(d));
             });
 
-            const matchCount = currentPool.filter(d => def.filter(d, d)).length;
-            const totalCount = dataWithRank.filter(d => def.filter(d, d)).length;
+            const matchCount = currentPool.filter(d => def.filter(d)).length;
+            const totalCount = dataWithRank.filter(d => def.filter(d)).length;
 
             return { 
                 id: def.id,
