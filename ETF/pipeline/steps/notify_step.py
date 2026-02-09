@@ -91,46 +91,70 @@ class NotifyStep(BaseStep):
     def _extract_market_signals(self, df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
         """
         從持股資料中提取市場訊號：
-        1. 營收爆發 (YoY > 20%)
-        2. 強勢突破 (200日/20日/5日新高)
-        3. 營收衰退警示 (YoY < -20%)
+        1. 營收爆發 (YoY Top 10, MoM Top 10, 雙成長)
+        2. 強勢突破 (200日/20日/5日新高 - 列出全部)
+        3. 成交金額 Top 10
         """
         if df is None or df.empty:
             return {}
         
         signals = {
-            'revenue_up': [],
-            'revenue_down': [],
+            'revenue_yoy_top10': [],
+            'revenue_mom_top10': [],
+            'revenue_double_growth': [],
             'breakout_200': [],
             'breakout_20': [],
-            'breakout_5': []
+            'breakout_5': [],
+            'amount_top10': [],
         }
         
         try:
-            # 1. 營收爆發 (YoY > 20%)
-            if 'revenue_yoy' in df.columns:
-                up_mask = (df['revenue_yoy'] > 20)
-                up_stocks = df[up_mask].sort_values('revenue_yoy', ascending=False).head(3)
-                signals['revenue_up'] = [
+            # Helper to format list
+            def _format_list(sub_df, value_col, fmt="{:+.1f}%"):
+                return [
                     {
                         'name': row.get('name', 'N/A'),
                         'code': row.get('code', 'N/A'),
-                        'value': f"{row['revenue_yoy']:+.1f}%"
+                        'value': fmt.format(row[value_col]) if pd.notnull(row[value_col]) else "N/A"
                     }
-                    for _, row in up_stocks.iterrows()
+                    for _, row in sub_df.iterrows()
                 ]
 
-            # 2. 強勢突破 (200日/20日/5日新高)
+            # 1. 營收訊號
+            if 'revenue_yoy' in df.columns:
+                # YoY Top 10
+                yoy_df = df[df['revenue_yoy'].notnull()].sort_values('revenue_yoy', ascending=False).head(10)
+                signals['revenue_yoy_top10'] = _format_list(yoy_df, 'revenue_yoy')
+
+            if 'revenue_mom' in df.columns:
+                # MoM Top 10
+                mom_df = df[df['revenue_mom'].notnull()].sort_values('revenue_mom', ascending=False).head(10)
+                signals['revenue_mom_top10'] = _format_list(mom_df, 'revenue_mom')
+
+            if 'revenue_yoy' in df.columns and 'revenue_mom' in df.columns:
+                # Double Growth: YoY > 0 AND MoM > 0, sorted by sum
+                mask_double = (df['revenue_yoy'] > 0) & (df['revenue_mom'] > 0)
+                double_df = df[mask_double].copy()
+                if not double_df.empty:
+                    double_df['combined_growth'] = double_df['revenue_yoy'] + double_df['revenue_mom']
+                    double_top10 = double_df.sort_values('combined_growth', ascending=False).head(10)
+                    signals['revenue_double_growth'] = [
+                         {
+                            'name': row.get('name', 'N/A'),
+                            'code': row.get('code', 'N/A'),
+                            'value': f"Y:{row['revenue_yoy']:.1f}%/M:{row['revenue_mom']:.1f}%"
+                        }
+                        for _, row in double_top10.iterrows()
+                    ]
+
+            # 2. 強勢突破 (200日/20日/5日新高) - ALL
             for window in [200, 20, 5]:
                 col = f'is_high_{window}d'
                 key = f'breakout_{window}'
                 
                 if col in df.columns:
                     breakout_mask = (df[col] == True)
-                    # For breakout, maybe sort by diff_weight if available? Or random? 
-                    # Existing logic used head(3). Let's stick to head(3) or maybe sort by something meaningful if possible.
-                    # Since we don't have weight easily here without joining, head(3) is fine.
-                    breakout_stocks = df[breakout_mask].head(3)
+                    breakout_stocks = df[breakout_mask] # No limit
                     signals[key] = [
                         {
                             'name': row.get('name', 'N/A'),
@@ -140,19 +164,27 @@ class NotifyStep(BaseStep):
                         for _, row in breakout_stocks.iterrows()
                     ]
             
-            # 3. 營收衰退警示 (YoY < -20%)
-            if 'revenue_yoy' in df.columns:
-                down_mask = (df['revenue_yoy'] < -20)
-                down_stocks = df[down_mask].sort_values('revenue_yoy', ascending=True).head(3) # 取衰退最多的
-                signals['revenue_down'] = [
+            # 3. 成交金額 Top 10
+            if 'amount' in df.columns:
+                amount_df = df[df['amount'].notnull()].sort_values('amount', ascending=False).head(10)
+                
+                def fmt_amount(val):
+                    if pd.isna(val): return "N/A"
+                    if val >= 100000000:
+                        return f"{val/100000000:.2f}億"
+                    elif val >= 10000:
+                        return f"{val/10000:.0f}萬"
+                    return str(val)
+
+                signals['amount_top10'] = [
                     {
                         'name': row.get('name', 'N/A'),
                         'code': row.get('code', 'N/A'),
-                        'value': f"{row['revenue_yoy']:+.1f}%"
+                        'value': fmt_amount(row['amount'])
                     }
-                    for _, row in down_stocks.iterrows()
+                    for _, row in amount_df.iterrows()
                 ]
-                
+
         except Exception as e:
             self.logger.error(f"Error extracting market signals: {e}")
             
