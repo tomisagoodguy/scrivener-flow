@@ -60,6 +60,7 @@ export const SideNav = () => {
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
         { name: '投資監控', href: '/investment', icon: '📈' },
+        { name: '量化選股', href: '/investment/strategies', icon: '🧠' },
     ];
 
     const handleLogout = async () => {
@@ -68,12 +69,12 @@ export const SideNav = () => {
     };
 
     return (
-        <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-6 gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-[999] transition-all hover:w-64 group">
+        <aside className="fixed left-6 top-6 bottom-6 w-20 hidden lg:flex flex-col items-center py-6 gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 rounded-[40px] shadow-2xl z-999 transition-all hover:w-64 group">
             {/* Logo Area & Google Drive Trigger */}
             {email === 'tom890108159@gmail.com' ? (
                 <GoogleDriveUpload />
             ) : (
-                <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <div className="w-12 h-12 bg-linear-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                     <span className="text-white font-black text-xl">S</span>
                 </div>
             )}
@@ -88,7 +89,7 @@ export const SideNav = () => {
                                 key={item.href}
                                 href={item.href}
                                 className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-500 overflow-hidden shrink-0 ${isActive
-                                    ? 'bg-gradient-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                    ? 'bg-linear-to-r from-blue-600/10 to-transparent text-blue-600 dark:text-blue-400 border border-blue-500/20'
                                     : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                     }`}
                             >

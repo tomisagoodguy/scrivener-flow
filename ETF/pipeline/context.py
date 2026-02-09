@@ -101,7 +101,46 @@ class PipelineContext:
         return self._sql_storage
     
     def update_finlab_stock_list(self):
-        """當 df 更新後，重新初始化 FinlabService"""
+        """
+        當 df 更新後，重新初始化 FinlabService
+        同時合併策略選股的股票，確保這些股票也有完整的歷史資料
+        """
+        stock_list = []
+        
+        # 1. 加入 ETF 持股
         if self.df is not None:
+            stock_list.extend(self.df['code'].tolist())
+        
+        # 2. 加入策略選股（從資料庫讀取最近 3 個月的策略股票）
+        try:
+            strategy_stocks = self._get_strategy_tracked_stocks()
+            stock_list.extend(strategy_stocks)
+        except Exception as e:
+            # 如果查詢失敗，不影響主流程
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"無法載入策略股票清單: {e}")
+        
+        # 3. 去重並初始化
+        if stock_list:
+            stock_list = list(set(stock_list))  # 去重
             from ETF.services.finlab_service import FinlabService
-            self._finlab_srv = FinlabService(stock_list=self.df['code'].tolist())
+            self._finlab_srv = FinlabService(stock_list=stock_list)
+            
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"📋 Finlab 追蹤清單已更新: {len(stock_list)} 檔股票 "
+                       f"(ETF持股 + 策略選股)")
+    
+    def _get_strategy_tracked_stocks(self) -> list:
+        """從資料庫讀取最近 3 個月的策略選股股票"""
+        from sqlalchemy import text
+        
+        with self.sql_storage.engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT DISTINCT stock_code
+                FROM strategy_daily_holdings
+                WHERE data_date >= CURRENT_DATE - INTERVAL '3 months'
+                ORDER BY stock_code
+            """))
+            return [row[0] for row in result.fetchall()]

@@ -1,0 +1,51 @@
+name: Monthly Strategy Selection
+
+# 每月 10 號 22:00 台北時間執行（營收公布後）
+# 也可以手動觸發
+on:
+  schedule:
+    # 每月 10 號 14:00 UTC (22:00 TPE)
+    - cron: '0 14 10 * *'
+  workflow_dispatch:
+
+env:
+  TZ: 'Asia/Taipei'
+
+jobs:
+  run-monthly-strategy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: |
+          uv sync
+      
+      - name: Run LowVol Alpha YoY Strategy
+        env:
+          FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          STOCK_LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.STOCK_LINE_CHANNEL_ACCESS_TOKEN }}
+          STOCK_LINE_USER_ID: ${{ secrets.STOCK_LINE_USER_ID }}
+        run: |
+          uv run python ETF/run_strategy.py --strategy low_vol_alpha_yoy --notify
+      
+      - name: Notify completion
+        if: success()
+        run: echo "✅ Monthly strategy selection completed successfully"
+      
+      - name: Notify failure
+        if: failure()
+        run: echo "❌ Monthly strategy selection failed"
