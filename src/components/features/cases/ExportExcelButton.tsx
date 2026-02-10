@@ -75,8 +75,8 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
                 const formatMoney = (val?: number) => (val ? val / 10000 : '');
 
                 const SIGNING_TODOS = [
-                    '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀印鑑',
-                    '授權', '解約排除', '規費', '設定', '稅單', '差額', '整過戶',
+                    '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀', '印鑑',
+                    '授權', '解約排除', '規費', '設定', '等稅單', '已繳稅單', '差額', '整過戶',
                 ];
                 const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥'];
 
@@ -98,6 +98,10 @@ export default function ExportExcelButton({ cases, filename = '案件清單' }: 
                     if (existingTodos[key] === true) return false;
                     // Must not be numeric (matching UI logic)
                     if (!isNaN(Number(key))) return false;
+                    
+                    // Filter out legacy keys
+                    if (key === 'S_權狀印鑑' || key === 'S_稅單') return false;
+
                     return true;
                 });
 

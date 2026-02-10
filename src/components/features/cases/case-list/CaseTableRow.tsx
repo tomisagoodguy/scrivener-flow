@@ -15,12 +15,14 @@ const SIGNING_TODOS = [
     '賣方蓋印章',
     '用印款',
     '完稅款',
-    '權狀印鑑',
+    '權狀',
+    '印鑑',
     '授權',
     '解約排除',
     '規費',
     '設定',
-    '稅單',
+    '等稅單',
+    '已繳稅單',
     '差額',
     '整過戶',
 ];
@@ -38,6 +40,11 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
         ...SIGNING_TODOS.map((t) => `S_${t}`),
         ...TRANSFER_TODOS.map((t) => `T_${t}`),
     ];
+
+    // Filter out legacy items so they don't appear as custom items
+    const filteredTodos = { ...(caseData.todos || {}) };
+    delete (filteredTodos as any)['S_權狀印鑑'];
+    delete (filteredTodos as any)['S_稅單'];
 
     return (
         <tr
@@ -180,7 +187,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             <td className="px-2 py-2 border border-slate-100 dark:border-slate-800">
                 <CaseCompactTodoList
                     caseId={caseData.id}
-                    todos={caseData.todos as Record<string, boolean>}
+                    todos={filteredTodos as Record<string, boolean>}
                     allTasks={allTasks}
                     hideCompleted={true}
                 />

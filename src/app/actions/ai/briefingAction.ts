@@ -6,8 +6,8 @@ import { genAI, ALLOWED_EMAIL, MODELS_TO_TRY } from '@/lib/ai/geminiConfig';
 import { sendLineMessage } from '../lineNotify';
 
 const STANDARD_CHECKLIST_ITEMS = [
-    '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀印鑑', '授權',
-    '解約排除', '規費', '設定', '稅單', '差額', '整過戶',
+    '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀', '印鑑', '授權',
+    '解約排除', '規費', '設定', '等稅單', '已繳稅單', '差額', '整過戶',
     '整交屋', '實登', '打單', '履保', '水電', '稅費分算',
     '保單', '代償', '塗銷', '二撥'
 ];
