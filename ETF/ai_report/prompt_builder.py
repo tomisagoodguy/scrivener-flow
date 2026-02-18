@@ -57,6 +57,7 @@ def build_report_prompt(
 包含部分關鍵成分股的技術面與籌碼面：
 {json.dumps(technical_map, ensure_ascii=False, indent=2)}
 *(註：Trend=多空趨勢, itBuy=投信買賣超, brokerNetBuy=主力券商買賣超)*
+*(新增指標：volatility=年化波動率%, marginRatio=融資使用率%, revenueMomentumRank=營收動能PR值 0~1)*
 
 ### 3. 基本面與權重數據 (Fundamental & Weights - Top 10)
 {top_holdings_str}
@@ -76,12 +77,14 @@ def build_report_prompt(
   - **有無「經理人看走眼」的重倉股**？(例如權重高但營收衰退、法人在賣、技術面破線的拖油瓶)。
 
 #### 3. 🚀 潛力黑馬挖掘 (Hidden Gems)
-- 在中低權重持股中，找出 **「營收高成長 + 籌碼集中 (大戶增持) + 技術面多頭」** 的潛力股。
+- 在中低權重持股中，找出 **「高營收動能 (revenueMomentumRank > 0.8) + 籌碼集中 (大戶增持) + 技術面多頭」** 的潛力股。
+- 若有 **低波動 (volatility < 8%)** 且 **營收穩定成長** 的防禦型個股，也請一併推薦。
 
 #### 4. ⚠️ 風險與雷區 (Risk Alert) - 請嚴格篩選！
 - **股價已反應過度 (Overheated)**：
   - 若個股 **「近3個月股價最大漲幅 > 100%」** (isOverheated3M=True)，但 **營收成長趨勢不順** (YoY/MoM 衰退或持平)，且 **月均價線 (MA20Trend) 已轉弱或下彎**。
   - 請點名這些可能「假突破、真出貨」的危險股，提醒投資人股價可能已領先基本面太多 (Price Priced-in)。
+- **高槓桿風險**：若個股 **融資使用率過高 (marginRatio > 40%)** 且技術面轉弱，請特別示警籌碼凌亂風險。
 - **基本面與籌碼面雙殺**：營收爛、主力賣，且技術面破線的個股。
 
 #### 5. 💡 總結與操作建議

@@ -60,12 +60,31 @@ class AIReporter:
         if holdings_df.empty:
             logger.error(f"No holdings found for {self.etf_code}")
             return
+        
+        # 4.1 檢查資料日期是否為今日
+        from datetime import datetime
+        if "snapshot_date" in holdings_df.columns and not holdings_df.empty:
+            snapshot_date = holdings_df["snapshot_date"].iloc[0]
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            
+            # 轉換為字串比較 (假設 snapshot_date 可能是 date 物件或字串)
+            snapshot_str = str(snapshot_date)
+            
+            if snapshot_str != today_str and not dry_run:
+                logger.warning(f"⚠️ 持股資料日期 ({snapshot_str}) 非今日 ({today_str})，跳過 AI 報告發送。")
+                return
 
         stock_codes = holdings_df["stock_code"].tolist()
         logger.info("Fetching technical/broker/chip data...")
         prices_df = fetcher.fetch_technical_data(stock_codes)
         broker_df = fetcher.fetch_broker_data(stock_codes)
         chips_df = fetcher.fetch_chip_data(stock_codes)
+
+        # 計算營收動能排名 (PR)
+        if not holdings_df.empty:
+            holdings_df["momentum_rank"] = holdings_df["revenue_yoy"].rank(
+                pct=True, ascending=True
+            )
 
         # 5. 分析個股
         logger.info("Analyzing stocks...")
@@ -75,6 +94,14 @@ class AIReporter:
             try:
                 result = analyzer.analyze(code, prices_df, broker_df, chips_df)
                 if result:
+                    # 注入動能排名
+                    row = holdings_df[holdings_df["stock_code"] == code]
+                    if not row.empty:
+                        # 0.0 ~ 1.0
+                        rank = float(row.iloc[0]["momentum_rank"])
+                        if not pd.isna(rank):
+                            result["revenueMomentumRank"] = round(rank, 2)
+                    
                     technical_map[code] = result
             except Exception:
                 continue
@@ -113,7 +140,6 @@ class AIReporter:
                         logger.info("🐛 Dry Run Mode: Report generated but not sent.")
                         print(
                             f"\n[Dry Run Report Output]\n{response.text[:200]}...\n"
-                            "(Truncated for log)\n"
                         )
                         return
 
@@ -129,8 +155,12 @@ class AIReporter:
                         else "LINE_USER_ID"
                     )
                     notifier = LineNotifier(token_env=token_env, user_id_env=user_id_env)
-                    notifier.broadcast_ai_report(response.text)
+                    try:
+                        notifier.broadcast_ai_report(response.text)
+                    except Exception as e:
+                        logger.error(f"Failed to send LINE notification: {e}")
                     return
+
 
             except Exception as e:
                 logger.warning(f"Model {model_name} failed: {e}")

@@ -58,7 +58,7 @@ class ETFDataFetcher:
                 FROM etf_holdings_snapshot
                 WHERE etf_code = :etf_code
             )
-            SELECT h.*, r.revenue_yoy, r.revenue_mom
+            SELECT h.*, r.revenue_yoy, r.revenue_mom, (SELECT max_date FROM LatestDate) as snapshot_date
             FROM etf_holdings_snapshot h
             LEFT JOIN stock_revenue_monthly r
                 ON h.stock_code = r.stock_code
@@ -89,7 +89,7 @@ class ETFDataFetcher:
     def fetch_technical_data(self, stock_codes: list[str]) -> pd.DataFrame:
         """取得近期收盤價與投信買賣超資料。"""
         query = """
-            SELECT stock_code, data_date, close, it_buy
+            SELECT stock_code, data_date, close, it_buy, margin_ratio
             FROM stock_prices_daily
             WHERE stock_code IN ({placeholders})
             ORDER BY data_date DESC

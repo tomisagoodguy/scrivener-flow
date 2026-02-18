@@ -98,6 +98,24 @@ class StockAnalyzer:
                 elif curr < prev - 0.5:
                     large_trend = "Decreasing"
 
+        # ── 新增指標 ──────────────────────────────────────────────────────────
+        # 波動率 (20日年化)
+        volatility = 0.0
+        if len(closes) >= 20:
+            returns = pd.Series(closes[:21]).pct_change().dropna()
+            # 簡單計算：20日標準差 * sqrt(252)
+            # 若 returns 不足 20 筆則儘量算
+            std_dev = returns.std()
+            if not pd.isna(std_dev):
+                volatility = std_dev * (252**0.5) * 100
+
+        # 資使用率 (最新)
+        margin_ratio = 0.0
+        if "margin_ratio" in stock_prices.columns:
+            val = stock_prices.iloc[0]["margin_ratio"]
+            if not pd.isna(val):
+                margin_ratio = float(val)
+
         return {
             "code": code,
             "lastClose": last_close,
@@ -110,4 +128,6 @@ class StockAnalyzer:
             "itBuy5d": it_buy5d,
             "brokerNetBuy20d": broker_net_buy_20d,
             "largeShareholderTrend": large_trend,
+            "volatility": round(volatility, 2),
+            "marginRatio": round(margin_ratio, 2),
         }
