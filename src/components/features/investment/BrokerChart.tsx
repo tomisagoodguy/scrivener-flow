@@ -77,6 +77,7 @@ export function BrokerChart({ data }: BrokerChartProps) {
             (dataMax: number) => (dataMax + Math.abs(dataMax) * 0.2)
           ]}
           tick={{ fontSize: 12 }}
+          tickFormatter={(value) => value.toFixed(2)}
           label={{ 
             value: '主力動能', 
             angle: 90, 
