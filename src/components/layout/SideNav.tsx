@@ -60,7 +60,6 @@ export const SideNav = () => {
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
         { name: '投資監控', href: '/investment', icon: '📈' },
-        { name: '量化選股', href: '/investment/strategies', icon: '🧠' },
     ];
 
     const handleLogout = async () => {
