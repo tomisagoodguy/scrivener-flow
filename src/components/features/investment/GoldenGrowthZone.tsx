@@ -4,17 +4,20 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Holding } from '@/types/investment';
-import { TrendingUp, ShieldCheck, Zap, AlertTriangle, Crosshair } from 'lucide-react';
+import { StockHistoricalStats } from '@/types/revenuelab';
+import { TrendingUp, ShieldCheck, Zap, AlertTriangle, Crosshair, Star } from 'lucide-react';
 
 interface GoldenGrowthZoneProps {
     data: Holding[];
+    /** 可選：各股票的歷史統計（由 getGoldenZoneStats 取得），未傳入時元件行為與原本相同 */
+    historicalStats?: Record<string, StockHistoricalStats>;
 }
 
 /**
  * 黃金成長區間分析 (Golden Growth Zone Analysis)
  * 根據用戶論文研究：YOY 50-100% 區間勝率最高，兼具爆發力與抗跌性。
  */
-export function GoldenGrowthZone({ data }: GoldenGrowthZoneProps) {
+export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProps) {
     // 1. 篩選數據
     // 黃金區間: 50% <= YoY <= 100%
     const goldenZoneStocks = data.filter(h => (h.revenue_yoy ?? 0) >= 50 && (h.revenue_yoy ?? 0) <= 100);
@@ -122,6 +125,25 @@ export function GoldenGrowthZone({ data }: GoldenGrowthZoneProps) {
                                             </div>
                                             <div className="text-xs text-slate-400">YoY</div>
                                         </div>
+                                        {/* 歷史統計列（可選強化） */}
+                                        {historicalStats?.[stock.stock_code] && (() => {
+                                            const hs = historicalStats[stock.stock_code];
+                                            const stars = Math.round(Math.min(hs.qualityScore, 5));
+                                            return (
+                                                <div className="w-full mt-2 pt-2 border-t border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-1 text-amber-500">
+                                                        {Array.from({ length: 5 }).map((_, i) => (
+                                                            <Star key={i} className={`w-3 h-3 ${i < stars ? 'fill-amber-400' : 'fill-slate-200 dark:fill-slate-700'}`} />
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+                                                        <span>歷史勝率 <span className="font-bold text-emerald-600 dark:text-emerald-400">{hs.winRate.toFixed(0)}%</span></span>
+                                                        <span>均漲 <span className="font-bold text-indigo-600 dark:text-indigo-400">+{hs.avgReturn.toFixed(0)}%</span></span>
+                                                        <span>連爆 <span className="font-bold text-amber-600 dark:text-amber-400">{hs.burstMonths}月</span></span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 ))}
                             </div>

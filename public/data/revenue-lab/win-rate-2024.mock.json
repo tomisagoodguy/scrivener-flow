@@ -1,0 +1,114 @@
+{
+  "year": 2024,
+  "metric": "yoy_pct",
+  "threshold": { "low": 50, "high": 100 },
+  "generatedAt": "2026-02-18T00:00:00Z",
+  "data": [
+    {
+      "burstCount": 12,
+      "stockCount": 5,
+      "avgReturn": 112.4,
+      "medianReturn": 98.7,
+      "winRate": 100.0,
+      "doubleRate": 60.0,
+      "stdDev": 38.2,
+      "minReturn": 72.1,
+      "maxReturn": 178.5,
+      "stocks": [
+        { "code": "2330", "name": "台積電", "annualReturn": 178.5, "burstMonths": 12, "avgYoy": 78.3 },
+        { "code": "2454", "name": "聯發科", "annualReturn": 124.2, "burstMonths": 12, "avgYoy": 65.1 },
+        { "code": "3711", "name": "日月光投控", "annualReturn": 98.7, "burstMonths": 12, "avgYoy": 72.4 },
+        { "code": "2382", "name": "廣達", "annualReturn": 88.3, "burstMonths": 12, "avgYoy": 61.8 },
+        { "code": "2308", "name": "台達電", "annualReturn": 72.1, "burstMonths": 12, "avgYoy": 55.9 }
+      ]
+    },
+    {
+      "burstCount": 10,
+      "stockCount": 8,
+      "avgReturn": 87.3,
+      "medianReturn": 72.1,
+      "winRate": 87.5,
+      "doubleRate": 37.5,
+      "stdDev": 45.2,
+      "minReturn": 21.3,
+      "maxReturn": 198.4,
+      "stocks": [
+        { "code": "2303", "name": "聯電", "annualReturn": 198.4, "burstMonths": 10, "avgYoy": 82.1 },
+        { "code": "2412", "name": "中華電", "annualReturn": 95.6, "burstMonths": 10, "avgYoy": 58.3 },
+        { "code": "2317", "name": "鴻海", "annualReturn": 88.2, "burstMonths": 10, "avgYoy": 63.7 },
+        { "code": "2357", "name": "華碩", "annualReturn": 76.4, "burstMonths": 10, "avgYoy": 71.2 },
+        { "code": "2395", "name": "研華", "annualReturn": 68.9, "burstMonths": 10, "avgYoy": 59.8 },
+        { "code": "3034", "name": "聯詠", "annualReturn": 55.3, "burstMonths": 10, "avgYoy": 52.4 },
+        { "code": "2379", "name": "瑞昱", "annualReturn": 42.7, "burstMonths": 10, "avgYoy": 50.1 },
+        { "code": "2344", "name": "華邦電", "annualReturn": 21.3, "burstMonths": 10, "avgYoy": 51.6 }
+      ]
+    },
+    {
+      "burstCount": 8,
+      "stockCount": 12,
+      "avgReturn": 54.8,
+      "medianReturn": 48.2,
+      "winRate": 75.0,
+      "doubleRate": 16.7,
+      "stdDev": 52.1,
+      "minReturn": -18.4,
+      "maxReturn": 165.3,
+      "stocks": [
+        { "code": "2301", "name": "光寶科", "annualReturn": 165.3, "burstMonths": 8, "avgYoy": 88.4 },
+        { "code": "2337", "name": "旺宏", "annualReturn": 98.7, "burstMonths": 8, "avgYoy": 76.2 },
+        { "code": "2376", "name": "技嘉", "annualReturn": 72.4, "burstMonths": 8, "avgYoy": 62.1 },
+        { "code": "2356", "name": "英業達", "annualReturn": 65.8, "burstMonths": 8, "avgYoy": 58.7 },
+        { "code": "2385", "name": "群光", "annualReturn": 54.3, "burstMonths": 8, "avgYoy": 55.3 },
+        { "code": "2352", "name": "佳世達", "annualReturn": 48.2, "burstMonths": 8, "avgYoy": 53.8 }
+      ]
+    },
+    {
+      "burstCount": 6,
+      "stockCount": 15,
+      "avgReturn": 32.1,
+      "medianReturn": 28.4,
+      "winRate": 60.0,
+      "doubleRate": 6.7,
+      "stdDev": 48.7,
+      "minReturn": -35.2,
+      "maxReturn": 142.8,
+      "stocks": []
+    },
+    {
+      "burstCount": 4,
+      "stockCount": 18,
+      "avgReturn": 18.7,
+      "medianReturn": 12.3,
+      "winRate": 44.4,
+      "doubleRate": 5.6,
+      "stdDev": 55.3,
+      "minReturn": -48.7,
+      "maxReturn": 118.4,
+      "stocks": []
+    },
+    {
+      "burstCount": 2,
+      "stockCount": 22,
+      "avgReturn": 8.4,
+      "medianReturn": 5.1,
+      "winRate": 36.4,
+      "doubleRate": 4.5,
+      "stdDev": 62.1,
+      "minReturn": -65.3,
+      "maxReturn": 98.7,
+      "stocks": []
+    },
+    {
+      "burstCount": 0,
+      "stockCount": 30,
+      "avgReturn": -12.3,
+      "medianReturn": -8.7,
+      "winRate": 23.3,
+      "doubleRate": 3.3,
+      "stdDev": 58.4,
+      "minReturn": -78.2,
+      "maxReturn": 87.4,
+      "stocks": []
+    }
+  ]
+}

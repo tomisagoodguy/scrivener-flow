@@ -9,6 +9,8 @@ import { HoldingsOverview } from '@/components/features/investment/HoldingsOverv
 import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
 import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
+import { RevenueLab } from '@/components/features/investment/RevenueLab';
+import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
 
 // Fetch data on server
 async function getHoldings() {
@@ -173,6 +175,7 @@ export default async function InvestmentPage() {
     const { holdings, updatedAt, dataDate } = await getHoldings();
     const logs = await getDiffLogs();
     const rankingHistory = await getRankingHistory();
+    const goldenZoneStats = await getGoldenZoneStats();
     
     // 顯示最新的資料日期
     const displayDate = dataDate ? new Date(dataDate).toLocaleDateString('zh-TW', {
@@ -208,14 +211,22 @@ export default async function InvestmentPage() {
 
             {/* Holdings Table Section */}
             <Tabs defaultValue="analysis" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 max-w-[600px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <TabsList className="grid w-full grid-cols-4 max-w-[800px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                     <TabsTrigger value="analysis" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">策略洞察</TabsTrigger>
+                    <TabsTrigger value="revenue-lab" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">📊 Revenue Lab</TabsTrigger>
                     <TabsTrigger value="holdings" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">持股明細</TabsTrigger>
                     <TabsTrigger value="ledger" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">異動紀錄</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="analysis">
-                    <GoldenGrowthZone data={holdings} />
+                    <GoldenGrowthZone
+                        data={holdings}
+                        historicalStats={goldenZoneStats?.stats}
+                    />
+                </TabsContent>
+
+                <TabsContent value="revenue-lab">
+                    <RevenueLab />
                 </TabsContent>
 
                 <TabsContent value="holdings">

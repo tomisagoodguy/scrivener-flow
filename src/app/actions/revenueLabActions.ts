@@ -1,0 +1,351 @@
+'use server';
+
+import { unstable_cache } from 'next/cache';
+import { readFile } from 'fs/promises';
+import path from 'path';
+import { getServiceClient } from '@/lib/supabase/service';
+import type {
+  WinRateYearData,
+  WinRateBucket,
+  HeatmapYearData,
+  HeatmapCell,
+  ReturnBin,
+  GoldenZoneStats,
+} from '@/types/revenuelab';
+
+// ── 工具函數 ──────────────────────────────────────────────
+
+function getDataPath(filename: string): string {
+  return path.join(process.cwd(), 'public', 'data', 'revenue-lab', filename);
+}
+
+async function readJsonFile<T>(filename: string): Promise<T | null> {
+  try {
+    const raw = await readFile(getDataPath(filename), 'utf-8');
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+// ── 資料範圍說明 ──────────────────────────────────────────
+// 本專案 Supabase 資料：
+//   stock_revenue_monthly: 2024-03 至今，53 檔 ETF 持股
+//   stock_prices_daily:    2025-06 至今，53 檔 ETF 持股
+//
+// 分析策略（以 2025 年為例）：
+//   月營收研究期間：2024-12 至 2025-11（12 個月）
+//   股價漲幅：2025-06-01 開盤 vs 2025-12-31 收盤（半年漲幅）
+//
+// 注意：樣本僅限 ETF 持股（53 檔），非全市場分析
+
+// ── 模組 A：勝率回測 ──────────────────────────────────────
+
+async function fetchWinRateFromDB(
+  year: number,
+  low = 50,
+  high = 100
+): Promise<WinRateYearData | null> {
+  const supabase = getServiceClient();
+
+  // 月營收研究期間：前一年12月 至 目標年11月
+  const revenueStart = `${year - 1}-12-01`;
+  const revenueEnd = `${year}-11-30`;
+
+  // 股價期間：目標年6月（最早有資料）至 12月底
+  const priceStart = `${year}-06-01`;
+  const priceEnd = `${year}-12-31`;
+
+  // Step 1: 各股票爆發次數（YOY 在 [low, high) 的月份數）
+  const { data: hitData, error: hitError } = await (supabase as any)
+    .from('stock_revenue_monthly')
+    .select('stock_code, revenue_yoy')
+    .gte('data_date', revenueStart)
+    .lte('data_date', revenueEnd)
+    .gte('revenue_yoy', low)
+    .lt('revenue_yoy', high) as { data: any[] | null; error: any };
+
+  if (hitError || !hitData?.length) {
+    console.error('[WinRate] 月營收查詢失敗:', hitError?.message);
+    return null;
+  }
+
+  // 計算各股票爆發次數
+  const hitMap = new Map<string, number>();
+  for (const row of hitData) {
+    hitMap.set(row.stock_code, (hitMap.get(row.stock_code) ?? 0) + 1);
+  }
+
+  // Step 2: 各股票年度（半年）漲幅
+  const stockIds = [...hitMap.keys()];
+
+  const { data: priceStartData, error: psError } = await (supabase as any)
+    .from('stock_prices_daily')
+    .select('stock_code, open')
+    .gte('data_date', priceStart)
+    .in('stock_code', stockIds)
+    .order('data_date', { ascending: true }) as { data: any[] | null; error: any };
+
+  const { data: priceEndData, error: peError } = await (supabase as any)
+    .from('stock_prices_daily')
+    .select('stock_code, close')
+    .lte('data_date', priceEnd)
+    .in('stock_code', stockIds)
+    .order('data_date', { ascending: false }) as { data: any[] | null; error: any };
+
+  if (psError || peError || !priceStartData?.length || !priceEndData?.length) {
+    console.error('[WinRate] 股價查詢失敗:', psError?.message, peError?.message);
+    return null;
+  }
+
+  // 取各股票最早開盤價和最晚收盤價
+  const openMap = new Map<string, number>();
+  for (const row of priceStartData) {
+    if (!openMap.has(row.stock_code)) openMap.set(row.stock_code, row.open);
+  }
+  const closeMap = new Map<string, number>();
+  for (const row of priceEndData) {
+    if (!closeMap.has(row.stock_code)) closeMap.set(row.stock_code, row.close);
+  }
+
+  // Step 3: 計算漲幅並按爆發次數分組
+  const bucketMap = new Map<number, number[]>();
+  for (const [stockCode, hits] of hitMap) {
+    const open = openMap.get(stockCode);
+    const close = closeMap.get(stockCode);
+    if (open && close && open > 0) {
+      const ret = ((close - open) / open) * 100;
+      if (!bucketMap.has(hits)) bucketMap.set(hits, []);
+      bucketMap.get(hits)!.push(ret);
+    }
+  }
+
+  if (bucketMap.size === 0) return null;
+
+  // Step 4: 計算統計量
+  const buckets: WinRateBucket[] = [];
+  for (const [hits, returns] of bucketMap) {
+    const sorted = [...returns].sort((a, b) => a - b);
+    const avg = returns.reduce((s, v) => s + v, 0) / returns.length;
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const winRate = (returns.filter((r) => r > 20).length / returns.length) * 100;
+    const doubleRate = (returns.filter((r) => r > 100).length / returns.length) * 100;
+    const variance = returns.reduce((s, v) => s + (v - avg) ** 2, 0) / returns.length;
+    const stdDev = Math.sqrt(variance);
+
+    buckets.push({
+      burstCount: hits,
+      stockCount: returns.length,
+      avgReturn: Math.round(avg * 10) / 10,
+      medianReturn: Math.round(median * 10) / 10,
+      winRate: Math.round(winRate * 10) / 10,
+      doubleRate: Math.round(doubleRate * 10) / 10,
+      stdDev: Math.round(stdDev * 10) / 10,
+      minReturn: Math.round(sorted[0] * 10) / 10,
+      maxReturn: Math.round(sorted[sorted.length - 1] * 10) / 10,
+      stocks: [],
+    });
+  }
+
+  buckets.sort((a, b) => b.burstCount - a.burstCount);
+
+  return {
+    year,
+    metric: 'yoy_pct',
+    threshold: { low, high },
+    generatedAt: new Date().toISOString(),
+    data: buckets,
+  };
+}
+
+// ── 模組 B：熱力圖 ────────────────────────────────────────
+
+async function fetchHeatmapFromDB(year: number): Promise<HeatmapYearData | null> {
+  const supabase = getServiceClient();
+
+  const revenueStart = `${year - 1}-12-01`;
+  const revenueEnd = `${year}-11-30`;
+  const priceStart = `${year}-06-01`;
+  const priceEnd = `${year}-12-31`;
+
+  // 取得月營收資料
+  const { data: revenueData, error: revError } = await (supabase as any)
+    .from('stock_revenue_monthly')
+    .select('stock_code, data_date, revenue_yoy')
+    .gte('data_date', revenueStart)
+    .lte('data_date', revenueEnd)
+    .not('revenue_yoy', 'is', null) as { data: any[] | null; error: any };
+
+  if (revError || !revenueData?.length) return null;
+
+  // 取得股價漲幅
+  const { data: priceStartData } = await (supabase as any)
+    .from('stock_prices_daily')
+    .select('stock_code, open')
+    .gte('data_date', priceStart)
+    .order('data_date', { ascending: true }) as { data: any[] | null; error: any };
+
+  const { data: priceEndData } = await (supabase as any)
+    .from('stock_prices_daily')
+    .select('stock_code, close')
+    .lte('data_date', priceEnd)
+    .order('data_date', { ascending: false }) as { data: any[] | null; error: any };
+
+  if (!priceStartData?.length || !priceEndData?.length) return null;
+
+  // 建立股價漲幅 map
+  const openMap = new Map<string, number>();
+  for (const row of priceStartData) {
+    if (!openMap.has(row.stock_code)) openMap.set(row.stock_code, row.open);
+  }
+  const closeMap = new Map<string, number>();
+  for (const row of priceEndData) {
+    if (!closeMap.has(row.stock_code)) closeMap.set(row.stock_code, row.close);
+  }
+
+  const retMap = new Map<string, number>();
+  for (const [code, open] of openMap) {
+    const close = closeMap.get(code);
+    if (close && open > 0) {
+      retMap.set(code, ((close - open) / open) * 100);
+    }
+  }
+
+  // 定義漲幅 bin
+  const BIN_DEFS = [
+    { id: 'b00', label: '下跌 50%+', order: 0, min: -Infinity, max: -50 },
+    { id: 'b01', label: '下跌 30-50%', order: 1, min: -50, max: -30 },
+    { id: 'b02', label: '下跌 10-30%', order: 2, min: -30, max: -10 },
+    { id: 'b03', label: '下跌 0-10%', order: 3, min: -10, max: 0 },
+    { id: 'b04', label: '上漲 0-20%', order: 4, min: 0, max: 20 },
+    { id: 'b05', label: '上漲 20-50%', order: 5, min: 20, max: 50 },
+    { id: 'b06', label: '上漲 50-100%', order: 6, min: 50, max: 100 },
+    { id: 'b07', label: '上漲 100-200%', order: 7, min: 100, max: 200 },
+    { id: 'b08', label: '上漲 200%+', order: 8, min: 200, max: Infinity },
+  ];
+
+  // 為每個股票分配 bin
+  const stockBinMap = new Map<string, string>();
+  for (const [code, ret] of retMap) {
+    for (const bin of BIN_DEFS) {
+      if (ret >= bin.min && ret < bin.max) {
+        stockBinMap.set(code, bin.id);
+        break;
+      }
+    }
+  }
+
+  // 取得所有月份（格式 YYYY-MM）
+  const allMonths: string[] = [
+    ...new Set<string>(
+      revenueData.map((r: any) => {
+        const d = new Date(r.data_date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      })
+    ),
+  ].sort();
+
+  // 建立 (binId, month) -> yoy[] map
+  const cellDataMap = new Map<string, number[]>();
+  for (const row of revenueData) {
+    const binId = stockBinMap.get(row.stock_code);
+    if (!binId) continue;
+    const d = new Date(row.data_date);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${binId}::${month}`;
+    if (!cellDataMap.has(key)) cellDataMap.set(key, []);
+    cellDataMap.get(key)!.push(row.revenue_yoy as number);
+  }
+
+  // 計算 cell 統計
+  const cells: HeatmapCell[] = [];
+  for (const [key, values] of cellDataMap) {
+    const [binId, month] = key.split('::');
+    const sorted = [...values].sort((a, b) => a - b);
+    const mean = values.reduce((s, v) => s + v, 0) / values.length;
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    const positiveRate = (values.filter((v) => v > 0).length / values.length) * 100;
+
+    cells.push({
+      binId,
+      month,
+      median: Math.round(median * 10) / 10,
+      mean: Math.round(mean * 10) / 10,
+      stdDev: Math.round(stdDev * 10) / 10,
+      positiveRate: Math.round(positiveRate * 10) / 10,
+      dataPoints: values.length,
+    });
+  }
+
+  // 建立 ReturnBin 列表
+  const binStockMap = new Map<string, number[]>();
+  for (const [code, binId] of stockBinMap) {
+    const ret = retMap.get(code)!;
+    if (!binStockMap.has(binId)) binStockMap.set(binId, []);
+    binStockMap.get(binId)!.push(ret);
+  }
+
+  const returnBins: ReturnBin[] = BIN_DEFS.filter((b) => binStockMap.has(b.id)).map((b) => {
+    const rets = binStockMap.get(b.id) ?? [];
+    const avgRet = rets.reduce((s, v) => s + v, 0) / rets.length;
+    return {
+      id: b.id,
+      label: b.label,
+      order: b.order,
+      stockCount: rets.length,
+      avgAnnualReturn: Math.round(avgRet * 10) / 10,
+    };
+  });
+
+  return {
+    year,
+    months: allMonths,
+    returnBins,
+    cells,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// ── 公開 Server Actions（帶快取） ─────────────────────────
+
+export const getWinRateData = unstable_cache(
+  async (year: number, low = 50, high = 100): Promise<WinRateYearData | null> => {
+    try {
+      const result = await fetchWinRateFromDB(year, low, high);
+      if (result) return result;
+    } catch (e) {
+      console.error('[getWinRateData] DB error, falling back to JSON:', e);
+    }
+    // fallback：mock JSON
+    const suffix = process.env.NODE_ENV === 'development' ? '.mock' : '';
+    return readJsonFile<WinRateYearData>(`win-rate-${year}${suffix}.json`);
+  },
+  ['revenue-lab-win-rate'],
+  { revalidate: 3600 }
+);
+
+export const getHeatmapData = unstable_cache(
+  async (year: number): Promise<HeatmapYearData | null> => {
+    try {
+      const result = await fetchHeatmapFromDB(year);
+      if (result) return result;
+    } catch (e) {
+      console.error('[getHeatmapData] DB error, falling back to JSON:', e);
+    }
+    const suffix = process.env.NODE_ENV === 'development' ? '.mock' : '';
+    return readJsonFile<HeatmapYearData>(`heatmap-${year}${suffix}.json`);
+  },
+  ['revenue-lab-heatmap'],
+  { revalidate: 3600 }
+);
+
+export const getGoldenZoneStats = unstable_cache(
+  async (): Promise<GoldenZoneStats | null> => {
+    const suffix = process.env.NODE_ENV === 'development' ? '.mock' : '';
+    return readJsonFile<GoldenZoneStats>(`golden-zone-stats${suffix}.json`);
+  },
+  ['revenue-lab-golden-zone'],
+  { revalidate: 3600 }
+);

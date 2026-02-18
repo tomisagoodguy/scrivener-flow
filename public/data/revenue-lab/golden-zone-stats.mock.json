@@ -1,0 +1,62 @@
+{
+  "updatedAt": "2026-02-18",
+  "yoyRange": { "low": 50, "high": 100 },
+  "stats": {
+    "2330": {
+      "winRate": 100.0,
+      "avgReturn": 112.4,
+      "burstMonths": 12,
+      "qualityScore": 4.8,
+      "sampleYears": 4,
+      "sampleCount": 48
+    },
+    "2454": {
+      "winRate": 87.5,
+      "avgReturn": 78.3,
+      "burstMonths": 10,
+      "qualityScore": 3.9,
+      "sampleYears": 4,
+      "sampleCount": 38
+    },
+    "3711": {
+      "winRate": 75.0,
+      "avgReturn": 54.2,
+      "burstMonths": 8,
+      "qualityScore": 2.8,
+      "sampleYears": 3,
+      "sampleCount": 28
+    },
+    "2382": {
+      "winRate": 62.5,
+      "avgReturn": 42.7,
+      "burstMonths": 6,
+      "qualityScore": 2.1,
+      "sampleYears": 3,
+      "sampleCount": 22
+    },
+    "2308": {
+      "winRate": 50.0,
+      "avgReturn": 28.4,
+      "burstMonths": 4,
+      "qualityScore": 1.4,
+      "sampleYears": 2,
+      "sampleCount": 16
+    },
+    "2303": {
+      "winRate": 87.5,
+      "avgReturn": 95.8,
+      "burstMonths": 9,
+      "qualityScore": 4.2,
+      "sampleYears": 4,
+      "sampleCount": 42
+    },
+    "2412": {
+      "winRate": 75.0,
+      "avgReturn": 48.3,
+      "burstMonths": 7,
+      "qualityScore": 2.5,
+      "sampleYears": 3,
+      "sampleCount": 24
+    }
+  }
+}
