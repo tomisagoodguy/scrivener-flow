@@ -72,7 +72,10 @@ export function BrokerChart({ data }: BrokerChartProps) {
         <YAxis 
           yAxisId="right" 
           orientation="right"
-          domain={['auto', 'auto']}
+          domain={[
+            (dataMin: number) => (dataMin - Math.abs(dataMin) * 0.2),
+            (dataMax: number) => (dataMax + Math.abs(dataMax) * 0.2)
+          ]}
           tick={{ fontSize: 12 }}
           label={{ 
             value: '主力動能', 
