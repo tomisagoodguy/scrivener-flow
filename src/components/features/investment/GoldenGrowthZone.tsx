@@ -1,5 +1,4 @@
-"use client";
-
+import Link from 'next/link';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -103,31 +102,34 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                         {goldenZoneStocks.length > 0 ? (
                             <div className="space-y-3">
                                 {goldenZoneStocks.map((stock) => (
-                                    <div 
+                                    <Link 
                                         key={stock.stock_code} 
                                         id={`stock-${stock.stock_code}`}
-                                        className="group flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 target:ring-2 target:ring-indigo-500 target:border-indigo-500"
+                                        href={`/investment/dashboard/${stock.stock_code}`}
+                                        className="group flex flex-col p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 target:ring-2 target:ring-indigo-500 target:border-indigo-500"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                                                {stock.stock_code}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                                    {stock.stock_name}
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {stock.stock_code}
                                                 </div>
-                                                <div className="text-xs text-slate-500 flex items-center gap-1">
-                                                    <span>{stock.industry}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                    <span>權重 {stock.weight}%</span>
+                                                <div>
+                                                    <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                        {stock.stock_name}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                        <span>{stock.industry}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                                        <span>權重 {stock.weight}%</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                                                +{stock.revenue_yoy?.toFixed(1)}%
+                                            <div className="text-right">
+                                                <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                                                    +{stock.revenue_yoy?.toFixed(1)}%
+                                                </div>
+                                                <div className="text-xs text-slate-400">YoY</div>
                                             </div>
-                                            <div className="text-xs text-slate-400">YoY</div>
                                         </div>
                                         {/* 歷史統計列（可選強化） */}
                                         {historicalStats?.[stock.stock_code] && (() => {
@@ -148,7 +150,7 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                                                 </div>
                                             );
                                         })()}
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         ) : (
@@ -182,9 +184,10 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                         {explosiveZoneStocks.length > 0 ? (
                             <div className="space-y-3">
                                 {explosiveZoneStocks.map((stock) => (
-                                    <div 
+                                    <Link 
                                         key={stock.stock_code} 
                                         id={`stock-${stock.stock_code}`}
+                                        href={`/investment/dashboard/${stock.stock_code}`}
                                         className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity target:ring-2 target:ring-rose-500 target:border-rose-500"
                                     >
                                         <div className="flex items-center gap-3">
@@ -208,7 +211,7 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                                             </div>
                                             <div className="text-xs text-slate-400">YoY</div>
                                         </div>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         ) : (

@@ -25,6 +25,8 @@ jobs:
       # Stock Bot (Effective since 2026-02-08)
       STOCK_LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.STOCK_LINE_CHANNEL_ACCESS_TOKEN }}
       STOCK_LINE_USER_ID: ${{ secrets.STOCK_LINE_USER_ID }}
+      # AI API Key
+      GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
       # 確保時區正確
       TZ: 'Asia/Taipei'
 
@@ -66,6 +68,8 @@ jobs:
           # 預設同步最近 30 天數據即可，節省每日執行時間
           uv run python ETF/main.py --days 30
           uv run python ETF/sync_stock_financials.py --days 30
+          # Run AI Analysis Report
+          uv run python ETF/daily_ai_report.py
 
       - name: Upload ETF History Artifacts
         uses: actions/upload-artifact@v4

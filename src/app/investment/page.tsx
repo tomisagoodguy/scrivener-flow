@@ -12,6 +12,7 @@ import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZ
 import { RevenueLab } from '@/components/features/investment/RevenueLab';
 import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
+import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
 import React from 'react';
 import { Holding } from '@/types/investment';
 
@@ -209,6 +210,7 @@ export default async function InvestmentPage() {
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         資料日期: {displayDate} <span className="text-slate-400 dark:text-slate-300 text-xs ml-1">({updateTime})</span>
                     </div>
+                    <AIAnalysisPromptButton holdings={holdings as Holding[]} dataDate={displayDate} />
                 </div>
             </div>
 

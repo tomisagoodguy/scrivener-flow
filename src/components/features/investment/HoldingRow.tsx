@@ -116,7 +116,7 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                     </span>
                     <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-gradient-to-r from-yellow-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
+                            className="h-full bg-linear-to-r from-yellow-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
                             style={{ width: `${Math.min(((item.amount || 0) / maxAmount) * 100, 100)}%` }} 
                         />
                     </div>
@@ -159,7 +159,7 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             <td className="px-4 py-3 align-middle">
                 <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div 
-                        className={`h-full bg-gradient-to-r ${getMomentumColor(item.revenue_momentum_rank || 0)}`} 
+                        className={`h-full bg-linear-to-r ${getMomentumColor(item.revenue_momentum_rank || 0)}`} 
                         style={{ width: `${(item.revenue_momentum_rank || 0) * 100}%` }}
                     />
                 </div>

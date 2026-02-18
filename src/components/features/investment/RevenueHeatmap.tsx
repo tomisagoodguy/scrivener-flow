@@ -244,140 +244,142 @@ export function RevenueHeatmap({ initialData, initialYear = 2024 }: RevenueHeatm
         Y 軸：股票年度股價漲幅區間（括號內為股票數）｜X 軸：月份 YOY 統計值｜顏色越深代表數值越高
       </p>
 
-      {/* AI 分析報告生成區塊 */}
-      <Card className="border-indigo-100 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-900/10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                🤖 AI 智能分析報告助手
-                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">New</span>
-              </CardTitle>
-              <CardDescription>
-                生成專屬於您的 00981 投資組合深度分析 Prompt，複製後發送給 ChatGPT/Claude 即可獲得專業報告。
-              </CardDescription>
+      {/* 2024 黃金成長與極端成長區間展示 */}
+      {year === 2024 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          {/* 黃金成長區間 (50-100%) */}
+          <div className="rounded-xl border text-card-foreground shadow border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/20">
+            <div className="flex flex-col space-y-1.5 p-6 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg text-indigo-600 dark:text-indigo-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crosshair w-5 h-5" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="22" x2="18" y1="12" y2="12"></line>
+                      <line x1="6" x2="2" y1="12" y2="12"></line>
+                      <line x1="12" x2="12" y1="6" y2="2"></line>
+                      <line x1="12" x2="12" y1="22" y2="18"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="tracking-tight text-lg font-bold text-slate-900 dark:text-white">黃金成長區間 (50-100%)</h3>
+                    <p className="text-sm text-muted-foreground">目前命中標的共 10 檔，佔比 23.94%</p>
+                  </div>
+                </div>
+                <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-secondary/80 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">首選標的</div>
+              </div>
+            </div>
+            <div className="p-6 pt-0">
+              <div className="space-y-3">
+                {[
+                  { code: '2383', name: '台光電', industry: '電子零組件業', weight: '6.55%', yoy: '+55.5%' },
+                  { code: '2345', name: '智邦', industry: '通信網路業', weight: '6.28%', yoy: '+71.9%' },
+                  { code: '6274', name: '台燿', industry: '電子零組件業', weight: '4.36%', yoy: '+74.8%' },
+                  { code: '2368', name: '金像電', industry: '電子零組件業', weight: '3.95%', yoy: '+68.5%' },
+                  { code: '6139', name: '亞翔', industry: '其他電子業', weight: '1.42%', yoy: '+87.6%' },
+                  { code: '6191', name: '精成科', industry: '電子零組件業', weight: '0.57%', yoy: '+93.4%' },
+                  { code: '5269', name: '祥碩', industry: '半導體業', weight: '0.29%', yoy: '+58.3%' },
+                  { code: '3211', name: '順達', industry: '電腦及週邊設備業', weight: '0.27%', yoy: '+52.2%' },
+                  { code: '2404', name: '漢唐', industry: '其他電子業', weight: '0.25%', yoy: '+58.9%' },
+                  { code: '2357', name: '華碩', industry: '電腦及週邊設備業', weight: '0%', yoy: '+80.0%' },
+                ].map((stock) => (
+                  <a
+                    key={stock.code}
+                    href={`/investment/dashboard/${stock.code}?sort=weight&order=desc`}
+                    className="group flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        {stock.code}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {stock.name}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                          <span>{stock.industry}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                          <span>權重 {stock.weight}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{stock.yoy}</div>
+                      <div className="text-xs text-slate-400">YoY</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <textarea
-              readOnly
-              value={useMemo(() => generateAiPrompt(data, year, mode), [data, year, mode])}
-              className="w-full h-48 p-4 text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            />
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              <button
-                onClick={() => {
-                  const prompt = generateAiPrompt(data, year, mode);
-                  navigator.clipboard.writeText(prompt);
-                  // 簡單的 feedback 效果可以透過 state 實作，這裡簡化處理
-                  alert('已複製分析指令！');
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md shadow-sm transition-colors flex items-center gap-2"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                複製完整指令
-              </button>
-              <button
-                 onClick={() => {
-                  const prompt = generateAiPrompt(data, year, mode);
-                  window.open(`https://chatgpt.com/?q=${encodeURIComponent(prompt)}`, '_blank');
-                 }}
-                 className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium rounded-md shadow-sm transition-colors"
-              >
-                前往 ChatGPT
-              </button>
+
+          {/* 極端成長區間 (>100%) */}
+          <div className="rounded-xl border bg-card text-card-foreground shadow border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col space-y-1.5 p-6 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg text-rose-600 dark:text-rose-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-triangle-alert w-5 h-5" aria-hidden="true">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+                      <path d="M12 9v4"></path>
+                      <path d="M12 17h.01"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="tracking-tight text-lg font-bold text-slate-900 dark:text-white">極端成長區間 (&gt;100%)</h3>
+                    <p className="text-sm text-muted-foreground">目前命中標的共 6 檔，佔比 21.05%</p>
+                  </div>
+                </div>
+                <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-rose-600 border-rose-200 dark:border-rose-900">波動風險較高</div>
+              </div>
+            </div>
+            <div className="p-6 pt-0">
+              <div className="space-y-3">
+                {[
+                  { code: '3017', name: '奇鋐', industry: '電腦及週邊設備業', weight: '6.23%', yoy: '+150.0%' },
+                  { code: '8299', name: '群聯', industry: '半導體業', weight: '4.94%', yoy: '+189.2%' },
+                  { code: '6669', name: '緯穎', industry: '電腦及週邊設備業', weight: '4.57%', yoy: '+121.9%' },
+                  { code: '6805', name: '富世達', industry: '電子零組件業', weight: '2.79%', yoy: '+115.8%' },
+                  { code: '8210', name: '勤誠', industry: '電腦及週邊設備業', weight: '2.52%', yoy: '+137.0%' },
+                  { code: '8996', name: '高力', industry: '電機機械', weight: '0%', yoy: '+317.2%' },
+                ].map((stock) => (
+                  <a
+                    key={stock.code}
+                    href={`/investment/dashboard/${stock.code}?sort=weight&order=desc`}
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity hover:border-rose-300 dark:hover:border-rose-700 active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-400">
+                        {stock.code}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-700 dark:text-slate-300">
+                          {stock.name}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                          <span>{stock.industry}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                          <span>權重 {stock.weight}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-rose-500 dark:text-rose-400">{stock.yoy}</div>
+                      <div className="text-xs text-slate-400">YoY</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            💡 提示：此指令包含完整的區間統計數據（中位數、標準差、變異係數等），能讓 AI 進行比肉眼觀察更精確的量化分析。
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+
       
     </div>
   );
 }
 
-function generateAiPrompt(data: HeatmapYearData, year: number, mode: HeatmapStatMode): string {
-  const totalSamples = data.returnBins.reduce((acc, b) => acc + b.stockCount, 0);
-  const fallingBins = data.returnBins.filter((b) => b.avgAnnualReturn < 0);
-  const risingBins = data.returnBins.filter((b) => b.avgAnnualReturn >= 0);
-  
-  const totalFalling = fallingBins.reduce((acc, b) => acc + b.stockCount, 0);
-  const totalRising = risingBins.reduce((acc, b) => acc + b.stockCount, 0);
-  
-  const fallingRatio = totalSamples > 0 ? ((totalFalling / totalSamples) * 100).toFixed(1) : '0.0';
-  const risingRatio = totalSamples > 0 ? ((totalRising / totalSamples) * 100).toFixed(1) : '0.0';
 
-  const worstBin = fallingBins.length > 0 
-    ? fallingBins.reduce((prev, curr) => (prev.avgAnnualReturn < curr.avgAnnualReturn ? prev : curr)) 
-    : null;
-  const bestBin = risingBins.length > 0 
-    ? risingBins.reduce((prev, curr) => (prev.avgAnnualReturn > curr.avgAnnualReturn ? prev : curr)) 
-    : null;
-
-  let table = '| 漲幅區間 | 股票數量 | 均漲幅 | 均營收 | 中位數 | 標準差 | 變異係數 | 四分位距 | 正成長% |\n';
-  table += '|----------|----------|--------|--------|--------|--------|----------|----------|---------|\n';
-
-  const sortedBins = [...data.returnBins].sort((a, b) => a.order - b.order);
-
-  for (const bin of sortedBins) {
-    if (bin.stockCount === 0) continue;
-    table += `| ${bin.label} | ${bin.stockCount}檔 | ${bin.avgAnnualReturn}% | ${bin.meanRevenue?.toFixed(1) ?? '-'}% | ${bin.medianRevenue?.toFixed(1) ?? '-'}% | ${bin.stdDevRevenue?.toFixed(1) ?? '-'} | ${bin.cvRevenue?.toFixed(2) ?? '-'} | ${bin.iqrRevenue?.toFixed(1) ?? '-'} | ${bin.positiveRateRevenue?.toFixed(1) ?? '-'}% |\n`;
-  }
-
-  const currentDate = new Date().toISOString().split('T')[0];
-  const modeLabel = STAT_MODES.find(m => m.value === mode)?.label ?? mode;
-
-  return `# 台股營收與股價關聯分析報告
-分析時間: ${currentDate}
-分析年度: ${year}年
-成長指標: 年增率 (YoY)
-股價計算方式: 收盤價 (實戰版)
-統計方法: ${modeLabel}
-總樣本數: ${totalSamples.toLocaleString()}檔
-下跌股票比例: ${fallingRatio}% (${totalFalling.toLocaleString()}檔)
-上漲股票比例: ${risingRatio}% (${totalRising.toLocaleString()}檔)
-
-## 🎯 重要數據說明
-**這是「按股價漲幅分組看營收表現」，分組間隔為：下跌每10%，上漲每100%**
-
-### 數據結構說明：
-1. **分組依據**：先按照股票「年度實際漲幅（使用收盤價計算）」分成不同區間
-   - 下跌股票：每10%一個間隔（從-100%以下到-10%~0%）
-   - 上漲股票：每100%一個間隔（從0-100%到1000%以上）
-
-2. **觀察指標**：在每個股價漲幅區間內，計算該區間股票的營收全維度表現（包含離散程度指標）
-
-### 關鍵發現：
-1. **最慘的下跌區間**: ${worstBin ? `${worstBin.label} (平均股價漲幅${worstBin.avgAnnualReturn}%，營收正增長比例${worstBin.positiveRateRevenue?.toFixed(1)}%)` : '無資料'}
-2. **最好的上漲區間**: ${bestBin ? `${bestBin.label} (平均股價漲幅${bestBin.avgAnnualReturn}%，營收正增長比例${bestBin.positiveRateRevenue?.toFixed(1)}%)` : '無資料'}
-
-## 數據摘要全表 (包含離散指標)
-${table}
-
-## 🎯 分析任務
-請擔任專業量化分析師，根據以上細分數據回答：
-
-### 1. 下跌股票的梯度分析
-- **跌幅深度與營收表現的關係**：越深的跌幅，營收表現是否越差？
-- **關鍵轉折點**：哪個跌幅區間的營收表現出現明顯惡化？
-
-### 2. 上漲股票的層級分析
-- **漲幅高度與營收表現的關係**：漲得越高的股票，營收表現是否越好？
-- **甜蜜點分析**：哪個漲幅區間的營收表現最突出？
-
-### 3. 對比分析：下跌vs上漲
-- **營收正增長比例**：差距有多大？
-- **營收波動率 (變異係數/標準差)**：哪個區間的營收波動最大？
-
-### 4. 投資策略啟示
-- **抄底策略**：根據數據，哪個跌幅區間最適合抄底？
-- **強勢股篩選**：要找到潛在飆股，應該關注哪些營收特徵？
-`;
-}
 

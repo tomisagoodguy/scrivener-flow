@@ -211,4 +211,15 @@ class LineNotifier:
             except Exception as fallback_error:
                 logger.error(f"Fallback notification also failed: {fallback_error}")
 
+    def broadcast_ai_report(self, ai_report: str):
+        """廣播 AI 分析報告 (Broadcast to All)"""
+        if not self.channel_token:
+            return
+        
+        # 簡單處理過長的報告，分段發送 (LINE 上限 5000 字)
+        MAX_LENGTH = 3000 # 保留一些 buffer
+        if len(ai_report) > MAX_LENGTH:
+            ai_report = ai_report[:MAX_LENGTH] + "\n...(報告過長，請至網站查看完整版)"
 
+        msg = f"🤖 AI 每日投資分析報告\n\n{ai_report}"
+        self.broadcast_text(msg)

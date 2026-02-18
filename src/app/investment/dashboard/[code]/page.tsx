@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react';
+import { Loader2, ArrowLeft, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StockChart } from '@/components/features/investment/StockChart';
@@ -54,8 +54,7 @@ export default function StockDashboardPage() {
     const stockCode = params.code as string;
 
     // 持股列表與當前位置
-    const [holdings, setHoldings] = useState<Holding[]>([]);
-    const [currentIndex, setCurrentIndex] = useState(-1);
+    // Stock Info
     const [stockName, setStockName] = useState('');
 
     // 數據狀態
@@ -96,27 +95,16 @@ export default function StockDashboardPage() {
                          data = filterAndSortHoldings(data, filters, search, sort, order);
                     }
                     
-                    setHoldings(data);
-                    
                     // 找到當前股票的位置
-                    const index = data.findIndex((h: Holding) => h.stock_code === stockCode);
-                    setCurrentIndex(index);
+                    const targetStock = data.find((h: Holding) => h.stock_code === stockCode);
                     
-                    if (index >= 0) {
-                        setStockName(data[index].stock_name);
-                    } else {
-                        // If current stock is screened out by filter but user navigated directly, 
-                        // we might want to fetch its basic info separately or just show 'Unknown'
-                        // For now let's just show code
-                        // Or we can append it to the list temporarily? No, that breaks navigation logic.
+                    if (targetStock) {
+                        setStockName(targetStock.stock_name);
                     }
                     
                     console.log('🔍 Dashboard Debug:', {
-                        totalHoldings: data.length,
                         currentStockCode: stockCode,
-                        foundIndex: index,
-                        stockName: index >= 0 ? data[index].stock_name : 'Not found',
-                        filters: searchParams.get('filters'),
+                        stockName: targetStock ? targetStock.stock_name : 'Not found',
                     });
                 }
             } catch (error) {
@@ -228,20 +216,7 @@ export default function StockDashboardPage() {
         }
     };
 
-    // 導航函數
-    const handlePrev = () => {
-        if (currentIndex > 0 && holdings.length > 0) {
-            const prevStock = holdings[currentIndex - 1];
-            router.push(`/investment/dashboard/${prevStock.stock_code}?${searchParams.toString()}`);
-        }
-    };
 
-    const handleNext = () => {
-        if (currentIndex < holdings.length - 1 && holdings.length > 0) {
-            const nextStock = holdings[currentIndex + 1];
-            router.push(`/investment/dashboard/${nextStock.stock_code}?${searchParams.toString()}`);
-        }
-    };
 
     if (loading) {
         return (
@@ -254,60 +229,27 @@ export default function StockDashboardPage() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
             {/* 頂部導航 */}
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push('/investment')}
-                        className="flex items-center gap-2"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        返回
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                            {stockCode} {stockName && `${stockName}`}
-                        </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            技術分析 • 基本面 • 籌碼分析
-                        </p>
-                    </div>
-                </div>
-
-                {/* 股票導航按鈕 - 總是顯示 */}
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePrev}
-                        disabled={currentIndex <= 0 || holdings.length === 0}
-                        className="h-9 w-9 p-0"
-                    >
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    
-                    <div className="flex flex-col items-center min-w-[80px]">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Stock
+            <div className="mb-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/investment?tab=analysis')}
+                    className="flex items-center gap-2 mb-4"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    返回投資總覽
+                </Button>
+                
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-lg font-mono text-slate-600 dark:text-slate-400">
+                            {stockCode}
                         </span>
-                        <span className="text-sm font-mono font-semibold text-slate-700 dark:text-slate-300">
-                            {holdings.length > 0 && currentIndex >= 0 
-                                ? `${currentIndex + 1} / ${holdings.length}`
-                                : '- / -'
-                            }
-                        </span>
-                    </div>
-
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNext}
-                        disabled={currentIndex >= holdings.length - 1 || holdings.length === 0}
-                        className="h-9 w-9 p-0"
-                    >
-                        <ChevronRight className="h-5 w-5" />
-                    </Button>
+                        {stockName || 'Loading...'}
+                    </h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        技術分析 • 基本面 • 籌碼分析
+                    </p>
                 </div>
             </div>
 
