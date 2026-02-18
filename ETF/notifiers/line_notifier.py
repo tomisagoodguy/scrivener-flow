@@ -3,7 +3,7 @@ import logging
 import json
 import requests
 from typing import List, Dict, Any
-from .message_builder import DiffMessageBuilder, SummaryMessageBuilder, StrategyMessageBuilder
+from .message_builder import DiffMessageBuilder, SummaryMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -211,22 +211,4 @@ class LineNotifier:
             except Exception as fallback_error:
                 logger.error(f"Fallback notification also failed: {fallback_error}")
 
-    def notify_strategy_changes(self, strategy_name: str, changes: List[Dict[str, Any]], date_str: str):
-        """
-        發送策略選股異動通知
-        Uses Broadcast API.
-        """
-        if not changes:
-            return
 
-        # Use Builder
-        bubble = StrategyMessageBuilder.build(strategy_name, changes, date_str)
-        if bubble:
-            try:
-                self.broadcast_flex_message(f"🤖 {strategy_name} 選股訊號", bubble)
-            except Exception as e:
-                logger.error(f"Failed to broadcast strategy notification: {e}")
-                # Fallback text
-                msg = f"🤖 {strategy_name} 選股訊號 ({date_str})\n"
-                msg += f"共 {len(changes)} 筆異動，請查看詳細資訊。"
-                self.broadcast_text(msg)
