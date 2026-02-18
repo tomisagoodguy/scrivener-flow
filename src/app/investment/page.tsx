@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
 import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
+import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
 
 // Fetch data on server
 async function getHoldings() {
@@ -206,11 +207,16 @@ export default async function InvestmentPage() {
             </div>
 
             {/* Holdings Table Section */}
-            <Tabs defaultValue="holdings" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <Tabs defaultValue="analysis" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 max-w-[600px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                    <TabsTrigger value="analysis" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">策略洞察</TabsTrigger>
                     <TabsTrigger value="holdings" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">持股明細</TabsTrigger>
                     <TabsTrigger value="ledger" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">異動紀錄</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="analysis">
+                    <GoldenGrowthZone data={holdings} />
+                </TabsContent>
 
                 <TabsContent value="holdings">
                     <div className="w-full space-y-6">
