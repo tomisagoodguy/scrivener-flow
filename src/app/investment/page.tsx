@@ -197,6 +197,7 @@ export default async function InvestmentPage() {
                     </p>
                 </div>
 
+                <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full text-sm font-medium text-slate-700 dark:text-white">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         資料日期: {displayDate} <span className="text-slate-400 dark:text-slate-300 text-xs ml-1">({updateTime})</span>
