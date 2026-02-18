@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ComposedChart,
   Bar,
@@ -12,6 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Trophy, ChevronDown, ChevronUp, Users, Target, Zap } from 'lucide-react';
@@ -24,6 +26,7 @@ const AVAILABLE_YEARS = [2025];
 interface WinRateLabProps {
   initialData: WinRateYearData | null;
   initialYear?: number;
+  currentStockCodes?: string[];
 }
 
 // ── 統計摘要卡片 ──────────────────────────────────────────
@@ -57,8 +60,9 @@ function MetricCard({
 
 // ── 詳細名單 Accordion ────────────────────────────────────
 
-function StockListAccordion({ bucket }: { bucket: WinRateBucket }) {
+function StockListAccordion({ bucket, currentStockCodes }: { bucket: WinRateBucket, currentStockCodes?: string[] }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   if (!bucket.stocks || bucket.stocks.length === 0) return null;
 
@@ -73,23 +77,51 @@ function StockListAccordion({ bucket }: { bucket: WinRateBucket }) {
       </button>
       {open && (
         <div className="mt-2 space-y-1">
-          {bucket.stocks.map((s) => (
-            <div
-              key={s.code}
-              className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-slate-600 dark:text-slate-400">{s.code}</span>
-                <span className="text-slate-700 dark:text-slate-300">{s.name}</span>
-                <Badge variant="outline" className="text-[10px] py-0">
-                  連爆 {s.burstMonths} 月
-                </Badge>
+          {bucket.stocks.map((s) => {
+            const isAvailable = currentStockCodes?.includes(s.code);
+            return (
+              <div
+                key={s.code}
+                className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-slate-600 dark:text-slate-400">{s.code}</span>
+                  <span className="text-slate-700 dark:text-slate-300">{s.name}</span>
+                  <Badge variant="outline" className="text-[10px] py-0">
+                    連爆 {s.burstMonths} 月
+                  </Badge>
+                  {isAvailable ? (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const targetUrl = `?tab=analysis#stock-${s.code}`;
+                        router.push(targetUrl, { scroll: false });
+                        
+                        // 如果 Hash 沒變，手動觸發事件確保 InvestmentTabs 捲動
+                        if (window.location.hash === `#stock-${s.code}`) {
+                          window.dispatchEvent(new HashChangeEvent('hashchange'));
+                        }
+                      }}
+                      className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded-md text-indigo-600 transition-all active:scale-90 cursor-pointer shadow-sm border border-transparent hover:border-indigo-200"
+                      title="該標的目前在黃金區間，點擊查看策略洞察"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <span 
+                      className="p-1 text-slate-300 dark:text-slate-600 cursor-not-allowed" 
+                      title="該標目前未在黃金成長區間明細中"
+                    >
+                      <Target className="w-3 h-3 opacity-30" />
+                    </span>
+                  )}
+                </div>
+                <span className={`font-bold ${s.annualReturn >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-500'}`}>
+                  {s.annualReturn >= 0 ? '+' : ''}{s.annualReturn.toFixed(1)}%
+                </span>
               </div>
-              <span className={`font-bold ${s.annualReturn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
-                {s.annualReturn >= 0 ? '+' : ''}{s.annualReturn.toFixed(1)}%
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -98,7 +130,7 @@ function StockListAccordion({ bucket }: { bucket: WinRateBucket }) {
 
 // ── 主元件 ────────────────────────────────────────────────
 
-export function WinRateLab({ initialData, initialYear = 2024 }: WinRateLabProps) {
+export function WinRateLab({ initialData, initialYear = 2024, currentStockCodes }: WinRateLabProps) {
   const [year, setYear] = useState(initialYear);
   const [data, setData] = useState<WinRateYearData | null>(initialData);
   const [yoyLow, setYoyLow] = useState(50);
@@ -241,7 +273,7 @@ export function WinRateLab({ initialData, initialYear = 2024 }: WinRateLabProps)
               />
               <Legend />
               <Bar yAxisId="left" dataKey="平均漲幅" fill="#6366f1" radius={[4, 4, 0, 0]} opacity={0.85} />
-              <Line yAxisId="left" type="monotone" dataKey="中位數漲幅" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+              <Line yAxisId="left" type="monotone" dataKey="中位數漲幅" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
               <Line yAxisId="right" type="monotone" dataKey="勝率" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -273,16 +305,16 @@ export function WinRateLab({ initialData, initialYear = 2024 }: WinRateLabProps)
                         <Badge variant="outline" className="font-mono">{b.burstCount} 次</Badge>
                       </td>
                       <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{b.stockCount} 檔</td>
-                      <td className={`py-2 px-3 font-bold ${b.avgReturn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                      <td className={`py-2 px-3 font-bold ${b.avgReturn >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-500'}`}>
                         {b.avgReturn >= 0 ? '+' : ''}{b.avgReturn.toFixed(1)}%
                       </td>
-                      <td className={`py-2 px-3 ${b.medianReturn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                      <td className={`py-2 px-3 ${b.medianReturn >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-500'}`}>
                         {b.medianReturn >= 0 ? '+' : ''}{b.medianReturn.toFixed(1)}%
                       </td>
                       <td className="py-2 px-3">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 w-16">
-                            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${b.winRate}%` }} />
+                            <div className="bg-rose-500 h-1.5 rounded-full" style={{ width: `${b.winRate}%` }} />
                           </div>
                           <span className="text-xs font-mono">{b.winRate.toFixed(1)}%</span>
                         </div>
@@ -293,7 +325,7 @@ export function WinRateLab({ initialData, initialYear = 2024 }: WinRateLabProps)
                     {b.stocks && b.stocks.length > 0 && (
                       <tr className="border-b border-slate-100 dark:border-slate-800">
                         <td colSpan={7} className="px-3 pb-2">
-                          <StockListAccordion bucket={b} />
+                          <StockListAccordion bucket={b} currentStockCodes={currentStockCodes} />
                         </td>
                       </tr>
                     )}

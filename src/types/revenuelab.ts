@@ -48,6 +48,15 @@ export interface ReturnBin {
   label: string;         // 顯示用標籤
   stockCount: number;
   avgAnnualReturn: number;
+  // 新增：AI 分析所需的全維度統計
+  meanRevenue?: number;
+  medianRevenue?: number;
+  stdDevRevenue?: number;
+  cvRevenue?: number;
+  iqrRevenue?: number;
+  minRevenue?: number;
+  maxRevenue?: number;
+  positiveRateRevenue?: number;
 }
 
 export interface HeatmapCell {

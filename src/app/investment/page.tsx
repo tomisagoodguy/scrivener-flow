@@ -10,7 +10,10 @@ import { RankingTrendChart } from '@/components/features/investment/RankingTrend
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
 import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
 import { RevenueLab } from '@/components/features/investment/RevenueLab';
+import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
+import React from 'react';
+import { Holding } from '@/types/investment';
 
 // Fetch data on server
 async function getHoldings() {
@@ -210,47 +213,39 @@ export default async function InvestmentPage() {
             </div>
 
             {/* Holdings Table Section */}
-            <Tabs defaultValue="analysis" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 max-w-[800px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                    <TabsTrigger value="analysis" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">策略洞察</TabsTrigger>
-                    <TabsTrigger value="revenue-lab" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">📊 Revenue Lab</TabsTrigger>
-                    <TabsTrigger value="holdings" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">持股明細</TabsTrigger>
-                    <TabsTrigger value="ledger" className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">異動紀錄</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="analysis">
-                    <GoldenGrowthZone
-                        data={holdings}
-                        historicalStats={goldenZoneStats?.stats}
-                    />
-                </TabsContent>
-
-                <TabsContent value="revenue-lab">
-                    <RevenueLab />
-                </TabsContent>
-
-                <TabsContent value="holdings">
-                    <div className="w-full space-y-6">
-                        <HoldingsOverview data={holdings} />
-                        <HoldingsTable initialData={holdings} />
-                    </div>
-                </TabsContent>
-                <TabsContent value="ledger">
-                    <div className="w-full space-y-8">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <RankingTrendChart data={rankingHistory} />
-                            <ChangeImpactChart logs={logs} />
+            <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
+                <InvestmentTabs
+                    analysisContent={
+                        <GoldenGrowthZone
+                            data={holdings}
+                            historicalStats={goldenZoneStats?.stats}
+                        />
+                    }
+                    revenueLabContent={<RevenueLab currentHoldings={holdings as Holding[]} />}
+                    holdingsContent={
+                        <div className="w-full space-y-6">
+                            <HoldingsOverview data={holdings} />
+                            <HoldingsTable initialData={holdings} />
                         </div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <ClockIcon className="w-5 h-5 text-indigo-500" />
-                                近期異動紀錄
-                            </h3>
+                    }
+                    ledgerContent={
+                        <div className="w-full space-y-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <RankingTrendChart data={rankingHistory} />
+                                <ChangeImpactChart logs={logs} />
+                            </div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <ClockIcon className="w-5 h-5 text-indigo-500" />
+                                    近期異動紀錄
+                                </h3>
+                            </div>
+                            <DiffLedger logs={logs} />
                         </div>
-                        <DiffLedger logs={logs} />
-                    </div>
-                </TabsContent>
-            </Tabs>
+                    }
+                />
+            </React.Suspense>
+
         </div>
     );
 }

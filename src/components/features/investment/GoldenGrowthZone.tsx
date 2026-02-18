@@ -103,7 +103,11 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                         {goldenZoneStocks.length > 0 ? (
                             <div className="space-y-3">
                                 {goldenZoneStocks.map((stock) => (
-                                    <div key={stock.stock_code} className="group flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700">
+                                    <div 
+                                        key={stock.stock_code} 
+                                        id={`stock-${stock.stock_code}`}
+                                        className="group flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 target:ring-2 target:ring-indigo-500 target:border-indigo-500"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
                                                 {stock.stock_code}
@@ -178,7 +182,11 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                         {explosiveZoneStocks.length > 0 ? (
                             <div className="space-y-3">
                                 {explosiveZoneStocks.map((stock) => (
-                                    <div key={stock.stock_code} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity">
+                                    <div 
+                                        key={stock.stock_code} 
+                                        id={`stock-${stock.stock_code}`}
+                                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity target:ring-2 target:ring-rose-500 target:border-rose-500"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-400">
                                                 {stock.stock_code}
