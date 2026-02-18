@@ -198,7 +198,7 @@ class SummaryMessageBuilder(FlexMessageBuilder):
         return {
             "type": "bubble",
             "header": cls._box_vertical([
-                cls._text(f"✅ {etf_code} 數據同步完成", weight="bold", size="lg", color="#UTF-8"), # White
+                cls._text(f"✅ {etf_code} 數據同步完成", weight="bold", size="lg", color="#FFFFFF"),
                 cls._text(f"📅 資料日期: {data_date}", size="xs", color="#FFFFFFCC", margin="xs")
             ], backgroundColor="#10B981", paddingAll="16px"),
             "body": cls._box_vertical(rows, paddingAll="16px"),
