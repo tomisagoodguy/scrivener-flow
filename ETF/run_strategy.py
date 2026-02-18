@@ -44,6 +44,17 @@ def main():
     try:
         selected_df, data_date = strategy.run_selection()
         
+        # 檢查資料日期是否為今日 (避免休市重複通知)
+        from datetime import datetime, timedelta, timezone
+        tz = timezone(timedelta(hours=8))
+        today_str = datetime.now(tz).strftime('%Y-%m-%d')
+        
+        if data_date != today_str:
+            logger.warning(f"⚠️ 資料日期 ({data_date}) 非今日 ({today_str})，推測為休市或資料未更新。")
+            if args.notify:
+                logger.info("❌ 取消發送 Line 通知 (避免重複通知舊資料)")
+                args.notify = False
+        
         if selected_df.empty:
             logger.warning("⚠️  今日無符合條件的股票，跳過資料庫寫入")
             return
