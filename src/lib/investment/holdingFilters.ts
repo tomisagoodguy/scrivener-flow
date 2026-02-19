@@ -31,6 +31,8 @@ export const FILTER_DEFINITIONS: FilterDefinition[] = [
     { id: 'low_vol', label: '低波動 <8%', filter: (d) => (d.volatility || 0) > 0 && (d.volatility || 0) < 8 },
     { id: 'high_margin', label: '高資前10', filter: (d) => (d.marginRankHigh ?? Infinity) <= 10 },
     { id: 'low_margin', label: '低資前10', filter: (d) => (d.marginRankLow ?? Infinity) <= 10 },
+    { id: 'golden_zone', label: '黃金區間', filter: (d) => (d.revenue_yoy || 0) >= 50 && (d.revenue_yoy || 0) <= 100 },
+    { id: 'explosive_zone', label: '爆發區間', filter: (d) => (d.revenue_yoy || 0) > 100 },
 ];
 
 export function getRankedHoldings(holdings: Holding[]): Holding[] {

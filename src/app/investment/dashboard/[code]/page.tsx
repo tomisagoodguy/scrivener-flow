@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, ArrowLeft, Briefcase } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StockChart } from '@/components/features/investment/StockChart';
@@ -43,6 +43,11 @@ interface BrokerTransactionData {
     sell_amount?: number;
 }
 
+interface NavStock {
+    code: string;
+    name: string;
+}
+
 /**
  * 股票儀表板全螢幕頁面
  * 使用 Grid 佈局同時顯示所有圖表
@@ -56,6 +61,8 @@ export default function StockDashboardPage() {
     // 持股列表與當前位置
     // Stock Info
     const [stockName, setStockName] = useState('');
+    const [prevStock, setPrevStock] = useState<NavStock | null>(null);
+    const [nextStock, setNextStock] = useState<NavStock | null>(null);
 
     // 數據狀態
     const [priceData, setPriceData] = useState<PriceData[]>([]);
@@ -96,15 +103,37 @@ export default function StockDashboardPage() {
                     }
                     
                     // 找到當前股票的位置
-                    const targetStock = data.find((h: Holding) => h.stock_code === stockCode);
+                    const index = data.findIndex((h: Holding) => h.stock_code === stockCode);
+                    const targetStock = data[index];
                     
                     if (targetStock) {
                         setStockName(targetStock.stock_name);
+
+                        // Set Prev/Next
+                        if (index > 0) {
+                            setPrevStock({
+                                code: data[index - 1].stock_code,
+                                name: data[index - 1].stock_name
+                            });
+                        } else {
+                            setPrevStock(null);
+                        }
+
+                        if (index < data.length - 1) {
+                            setNextStock({
+                                code: data[index + 1].stock_code,
+                                name: data[index + 1].stock_name
+                            });
+                        } else {
+                            setNextStock(null);
+                        }
                     }
                     
                     console.log('🔍 Dashboard Debug:', {
                         currentStockCode: stockCode,
                         stockName: targetStock ? targetStock.stock_name : 'Not found',
+                        prev: index > 0 ? data[index-1].stock_name : 'None',
+                        next: index < data.length - 1 ? data[index+1].stock_name : 'None'
                     });
                 }
             } catch (error) {
@@ -120,6 +149,11 @@ export default function StockDashboardPage() {
             fetchAllData(stockCode);
         }
     }, [stockCode]);
+
+    const handleNavigate = (targetCode: string) => {
+        const query = searchParams.toString();
+        router.push(`/investment/dashboard/${targetCode}${query ? `?${query}` : ''}`);
+    };
 
     const fetchAllData = async (code: string) => {
         setLoading(true);
@@ -230,15 +264,40 @@ export default function StockDashboardPage() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
             {/* 頂部導航 */}
             <div className="mb-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push('/investment?tab=analysis')}
-                    className="flex items-center gap-2 mb-4"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    返回投資總覽
-                </Button>
+                <div className="flex items-center justify-between mb-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/investment?tab=analysis')}
+                        className="flex items-center gap-2"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        返回投資總覽
+                    </Button>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!prevStock}
+                            onClick={() => prevStock && handleNavigate(prevStock.code)}
+                            className="flex items-center gap-2"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            {prevStock ? `上一檔 ${prevStock.name}` : '無'}
+                        </Button>
+                        <Button
+                            variant="default" 
+                            size="sm"
+                            disabled={!nextStock}
+                            onClick={() => nextStock && handleNavigate(nextStock.code)}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {nextStock ? `下一檔 ${nextStock.name}` : '無'}
+                            <ArrowRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
                 
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -418,3 +477,4 @@ export default function StockDashboardPage() {
         </div>
     );
 }
+

@@ -105,7 +105,7 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                                     <Link 
                                         key={stock.stock_code} 
                                         id={`stock-${stock.stock_code}`}
-                                        href={`/investment/dashboard/${stock.stock_code}`}
+                                        href={`/investment/dashboard/${stock.stock_code}?filters=golden_zone`}
                                         className="group flex flex-col p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 target:ring-2 target:ring-indigo-500 target:border-indigo-500"
                                     >
                                         <div className="flex items-center justify-between w-full">
@@ -187,7 +187,7 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                                     <Link 
                                         key={stock.stock_code} 
                                         id={`stock-${stock.stock_code}`}
-                                        href={`/investment/dashboard/${stock.stock_code}`}
+                                        href={`/investment/dashboard/${stock.stock_code}?filters=explosive_zone`}
                                         className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity target:ring-2 target:ring-rose-500 target:border-rose-500"
                                     >
                                         <div className="flex items-center gap-3">

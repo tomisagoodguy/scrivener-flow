@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 export default function AIWorkAssistant() {
     const [isVisible, setIsVisible] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
     const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -145,15 +145,16 @@ export default function AIWorkAssistant() {
     if (!isVisible) return null;
 
     return (
-        <div className="mb-6 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-3xl p-[1px] shadow-xl shadow-indigo-500/20 animate-fade-in tracking-tight">
+        <div className="mb-6 bg-linear-to-r from-indigo-600 to-blue-600 rounded-3xl p-px shadow-xl shadow-indigo-500/20 animate-fade-in tracking-tight">
             <div className="bg-white dark:bg-slate-900 rounded-[23px] overflow-hidden">
                 {/* Header */}
                 <div
-                    className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer select-none"
+                    title="點擊展開/收合助理"
+                    className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer select-none transition-colors hover:bg-slate-100/50 dark:hover:bg-slate-800"
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                        <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
                             <Bot className="w-6 h-6" />
                         </div>
                         <div>
