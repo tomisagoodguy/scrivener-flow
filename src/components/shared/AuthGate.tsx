@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/auth/client';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, ShieldCheck, ArrowRight, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Lock, ShieldCheck, ArrowRight, KeyRound, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 interface AuthGateContextType {
     isAuthorized: boolean;
@@ -13,7 +13,9 @@ interface AuthGateContextType {
 
 const AuthGateContext = createContext<AuthGateContextType | undefined>(undefined);
 
-const PASSPHRASE = '長的是磨難，短的是人生';
+const PASSPHRASE = '自由在邊界之外';
+const AUTH_KEY = 'app_passphrase_authorized_v2';
+
 
 export function AuthGateProvider({ children }: { children: React.ReactNode }) {
     const [isAuthorized, setIsAuthorized] = useState(false);
@@ -31,7 +33,8 @@ export function AuthGateProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            const storedAuth = localStorage.getItem('app_passphrase_authorized');
+            const storedAuth = localStorage.getItem(AUTH_KEY);
+
             if (storedAuth === 'true' && session) {
                 setIsAuthorized(true);
             }
@@ -44,9 +47,10 @@ export function AuthGateProvider({ children }: { children: React.ReactNode }) {
     const checkPassphrase = (pass: string) => {
         if (pass === PASSPHRASE) {
             setIsAuthorized(true);
-            localStorage.setItem('app_passphrase_authorized', 'true');
+            localStorage.setItem(AUTH_KEY, 'true');
             return true;
         }
+
         return false;
     };
 
@@ -123,11 +127,19 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                         </motion.div>
 
                         <h1 className="text-3xl font-black text-white mb-3 tracking-tight">系統安全鎖</h1>
+                        
+                        {/* 緊急環境警告 */}
+                        <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full animate-pulse">
+                            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                            <span className="text-[10px] font-black text-blue-300 uppercase tracking-wider">個人隱私防護：建議使用私有設備登入</span>
+                        </div>
+
                         <p className="text-slate-400 font-medium text-sm leading-relaxed">
                             請輸入您的專屬授權碼以繼續<br />
                             <span className="text-slate-500 text-[10px] uppercase tracking-widest mt-2 block">Premium Scrivener Flow v2.0</span>
                         </p>
                     </div>
+
 
                     <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
                         <div className="relative">
@@ -169,7 +181,7 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                                         exit={{ opacity: 0 }}
                                         className="text-red-400 text-xs font-black mt-3 text-center uppercase tracking-widest"
                                     >
-                                        密語驗證失敗，請再試一次
+                                        密語驗證失敗。基於資安升級，請使用環境安全的個人設備登入或聯繫管理員。
                                     </motion.p>
                                 )}
                             </AnimatePresence>
