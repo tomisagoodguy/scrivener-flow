@@ -7,6 +7,7 @@ import Header from '@/components/layout/Header';
 import { SideNav } from '@/components/layout/SideNav';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthGateProvider } from '@/components/shared/AuthGate';
+import { SecurityWarningModal } from '@/components/shared/SecurityWarningModal';
 
 const inter = Inter({
     variable: '--font-inter',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={`${inter.variable} ${outfit.variable} antialiased selection:bg-blue-500/20`} suppressHydrationWarning>
                 <ThemeProvider>
                     <AuthGateProvider>
+                        <SecurityWarningModal />
                         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-500">
                             <Toaster richColors position="top-center" />
                             <SideNav />

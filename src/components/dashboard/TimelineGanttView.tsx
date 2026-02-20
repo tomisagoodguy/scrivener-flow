@@ -8,7 +8,7 @@ import { GanttGrid } from './timeline/GanttGrid';
 import { GanttLegend } from './timeline/GanttLegend';
 
 export default function TimelineGanttView({ cases }: TimelineGanttViewProps) {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const [showEmpty, setShowEmpty] = useState(false);
     const [hoveredMarker, setHoveredMarker] = useState<HoveredMarkerInfo | null>(null);
 

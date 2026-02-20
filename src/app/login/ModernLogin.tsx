@@ -60,7 +60,7 @@ export function ModernLogin() {
     if (!isMounted) return null;
 
     return (
-        <div className="relative w-full min-h-screen flex items-center justify-center p-6 overflow-hidden bg-slate-50">
+        <div className="relative w-full min-h-screen flex items-center justify-center p-6 overflow-hidden bg-slate-50 dark:bg-slate-100">
             {/* --- CLEAN LIGHT BACKGROUND --- */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-blue-100/50 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
@@ -145,21 +145,21 @@ export function ModernLogin() {
                         <div className="absolute -inset-4 bg-blue-500/5 rounded-[4rem] blur-3xl opacity-50" />
 
                         {/* The Actual Card */}
-                        <div className="relative bg-white/90 backdrop-blur-xl rounded-[3.5rem] border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden p-12 md:p-14">
+                        <div className="relative bg-white/90 dark:bg-white backdrop-blur-xl rounded-[3.5rem] border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden p-12 md:p-14">
 
                             <div className="flex flex-col items-center mb-12">
                                 <div className="w-16 h-16 bg-blue-600 rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-blue-500/20 mb-8">
                                     <Gavel className="w-8 h-8 text-white" />
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">身分認證</h2>
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">Secure Access Portal</p>
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-slate-900 tracking-tight mb-2">身分認證</h2>
+                                <p className="text-slate-400 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">Secure Access Portal</p>
                             </div>
 
                             <div className="space-y-5">
                                 {/* Google Connect */}
                                 <button
                                     onClick={handleGoogleLogin}
-                                    className="w-full h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-4 transition-all hover:bg-slate-50 hover:shadow-lg hover:shadow-slate-100 active:scale-[0.98] group"
+                                    className="w-full h-16 bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-2xl flex items-center justify-center gap-4 transition-all hover:bg-slate-50 dark:hover:bg-slate-50 hover:shadow-lg hover:shadow-slate-100 active:scale-[0.98] group"
                                 >
                                     <svg className="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -167,7 +167,7 @@ export function ModernLogin() {
                                         <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
                                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                     </svg>
-                                    <span className="text-slate-700 font-black tracking-tight">使用 Google 帳號</span>
+                                    <span className="text-slate-700 dark:text-slate-700 font-black tracking-tight">使用 Google 帳號</span>
                                 </button>
 
                                 {/* Apple Connect */}
@@ -183,7 +183,7 @@ export function ModernLogin() {
 
                                 <div className="relative py-4">
                                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
-                                    <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]"><span className="bg-white/90 border border-slate-100 rounded-full px-5 py-1 text-slate-400">Magic Link</span></div>
+                                    <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]"><span className="bg-white dark:bg-white border border-slate-100 dark:border-slate-100 rounded-full px-5 py-1 text-slate-400 dark:text-slate-400">Magic Link</span></div>
                                 </div>
 
                                 <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -194,7 +194,7 @@ export function ModernLogin() {
                                             placeholder="電郵地址"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-14 h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 font-bold"
+                                            className="w-full pl-14 h-16 bg-slate-50 dark:bg-slate-100 border-2 border-transparent focus:bg-white dark:focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 dark:text-slate-900 font-bold placeholder:text-slate-400 dark:placeholder:text-slate-400"
                                             required
                                         />
                                     </div>
@@ -231,8 +231,8 @@ export function ModernLogin() {
                                 <svg className="w-8 h-8 text-slate-900 fill-current" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74s2.57-.99 3.87-.74c.51.01.69.05 2.01.59-1.74 1.16-1.53 4.6.61 5.48-.12.63-.26 1.19-.51 1.69-.6.18-1 1.16-1.06 1.21zM11.99 5.32c-.05.16-.1.32-.17.47-.58 1.18-1.5 1.57-2.05 1.48-.16-1.58.74-2.81 1.6-3.4 1.29-.98 2.65-.63 2.81-.59.04 1.22-.56 2.03-2.19 2.04z" /></svg>
                                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-black border-4 border-white">!</div>
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">系統品味適配中</h3>
-                            <p className="text-slate-500 mb-10 text-sm font-medium leading-relaxed">偵測到您的品味極高，<br />但為了維持核心開發預算，<br />請優先使用團隊指定的：<br /><span className="text-blue-600 font-black tracking-widest uppercase">Google Auth</span></p>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-900 mb-4 tracking-tight">系統品味適配中</h3>
+                            <p className="text-slate-500 dark:text-slate-500 mb-10 text-sm font-medium leading-relaxed">偵測到您的品味極高，<br />但為了維持核心開發預算，<br />請優先使用團隊指定的：<br /><span className="text-blue-600 font-black tracking-widest uppercase">Google Auth</span></p>
                             <button onClick={() => setShowAppleModal(false)} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl transition-all shadow-xl shadow-slate-200">了解</button>
                         </motion.div>
                     </motion.div>
