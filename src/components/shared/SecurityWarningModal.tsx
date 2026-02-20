@@ -39,14 +39,14 @@ export function SecurityWarningModal() {
 
     return (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="security-warning-title"
         >
             <div className="relative w-full max-w-md mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-amber-400/40 overflow-hidden">
                 {/* 頂部警示色條 */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-400 to-red-400" />
+                <div className="h-1.5 w-full bg-linear-to-r from-amber-400 via-orange-400 to-red-400" />
 
                 <div className="p-6 space-y-5">
                     {/* 圖示 + 標題 */}
@@ -88,7 +88,7 @@ export function SecurityWarningModal() {
                     <button
                         onClick={handleAcknowledge}
                         className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-white
-                                   bg-gradient-to-r from-amber-500 to-orange-500
+                                   bg-linear-to-r from-amber-500 to-orange-500
                                    hover:from-amber-400 hover:to-orange-400
                                    active:scale-[0.98] transition-all duration-150 shadow-md"
                     >

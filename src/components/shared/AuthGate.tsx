@@ -115,12 +115,12 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
             >
                 <div className="bg-white/10 backdrop-blur-3xl rounded-[40px] border border-white/10 p-10 shadow-2xl relative overflow-hidden group">
                     {/* Animated Border Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 via-transparent to-indigo-500/10 pointer-events-none" />
+                    <div className="absolute inset-0 bg-linear-to-tr from-blue-500/10 via-transparent to-indigo-500/10 pointer-events-none" />
 
                     <div className="text-center mb-10 relative z-10">
                         <motion.div
                             animate={isSuccess ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-                            className={`w-20 h-20 mx-auto mb-6 rounded-3xl flex items-center justify-center text-3xl shadow-2xl transition-all duration-500 ${isSuccess ? 'bg-emerald-500 text-white' : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
+                            className={`w-20 h-20 mx-auto mb-6 rounded-3xl flex items-center justify-center text-3xl shadow-2xl transition-all duration-500 ${isSuccess ? 'bg-emerald-500 text-white' : 'bg-linear-to-br from-blue-500 to-indigo-600 text-white'
                                 }`}
                         >
                             {isSuccess ? <ShieldCheck size={32} /> : <Lock size={32} />}
@@ -194,7 +194,7 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                             disabled={isSuccess}
                             className={`w-full py-5 rounded-2xl font-black flex items-center justify-center gap-3 transition-all duration-500 shadow-xl ${isSuccess
                                 ? 'bg-emerald-500 text-white shadow-emerald-500/20'
-                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20 hover:shadow-blue-500/40'
+                                : 'bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20 hover:shadow-blue-500/40'
                                 }`}
                         >
                             <span>{isSuccess ? '取得授權' : '進入系統'}</span>
