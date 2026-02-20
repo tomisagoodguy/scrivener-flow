@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCaseTodos } from '@/hooks/useCaseTodos';
-import { useRouter } from 'next/navigation';
 import { Plus, X, Check } from 'lucide-react';
 
 interface CaseTodosProps {
@@ -11,8 +10,10 @@ interface CaseTodosProps {
     items: string[];
     hideCompleted?: boolean;
     allowAdd?: boolean;
-    prefix?: string; // e.g. "S_" for Signing, "T_" for Transfer
+    prefix?: string; // e.g. "SIG_" for Signing, "SEAL_" for Sealing…
     catchUncategorized?: boolean; // If true, show items that don't match any standard list or known prefix
+    allKnownPrefixes?: string[]; // All known prefixes across all stages (for uncategorized detection)
+    onCountChange?: (completed: number, total: number) => void;
 }
 
 export default function CaseTodos({
@@ -22,21 +23,86 @@ export default function CaseTodos({
     hideCompleted = false,
     allowAdd = false,
     prefix = '',
-    catchUncategorized = false
+    catchUncategorized = false,
+    allKnownPrefixes = ['S_', 'T_'],
+    onCountChange,
 }: CaseTodosProps) {
     const { todos, loadingItem, toggleTodo, addTodo, deleteTodo } = useCaseTodos(caseId, initialTodos, prefix);
-    const router = useRouter();
 
-
+    // 離場動畫：記錄正在執行淡出的 item keys
+    const [leavingItems, setLeavingItems] = useState<Set<string>>(new Set());
+    // 記錄上一次的 hideCompleted，用來偵測模式切換
+    const prevHideCompleted = useRef(hideCompleted);
 
     // New State for adding tasks
     const [isAdding, setIsAdding] = useState(false);
     const [newTaskName, setNewTaskName] = useState('');
 
+    // 計算 displayItems（在 hooks 依賴項之前先算好）
+    const knownPrefixes = allKnownPrefixes;
+    const standardSet = new Set(items);
+    const prefixedItems = prefix ? items.map((i) => (i.startsWith(prefix) ? i : `${prefix}${i}`)) : items;
+    const prefixedStandardSet = new Set(prefixedItems);
+
+    const customKeys = Object.keys(todos).filter((key) => {
+        if (!isNaN(Number(key))) return false;
+        if (standardSet.has(key)) return false;
+        if (prefixedStandardSet.has(key)) return false;
+        if (prefix && key.startsWith(prefix)) return true;
+        if (catchUncategorized) {
+            const hasKnownPrefix = knownPrefixes.some((p) => key.startsWith(p));
+            if (!hasKnownPrefix) return true;
+        }
+        return false;
+    });
+
+    const displayItems = [...prefixedItems, ...customKeys];
+
+    // 用 ref 儲存最新的 callback，避免 callback 參考變動觸發無限重渲染
+    const onCountChangeRef = useRef(onCountChange);
+    onCountChangeRef.current = onCountChange;
+
+    // 上報計數給父元件（依賴項只有資料，不含 callback ref）
+    useEffect(() => {
+        if (!onCountChangeRef.current) return;
+        const total = displayItems.length;
+        const completed = displayItems.filter((item) => todos[item]).length;
+        onCountChangeRef.current(completed, total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [todos, displayItems.join(',')]);
+
+    // 當 hideCompleted 從 false 切換回 true 時，清除 leavingItems（避免殘留動畫狀態）
+    useEffect(() => {
+        if (!hideCompleted && prevHideCompleted.current) {
+            setLeavingItems(new Set());
+        }
+        prevHideCompleted.current = hideCompleted;
+    }, [hideCompleted]);
+
     const handleToggle = (e: React.MouseEvent, item: string) => {
         e.preventDefault();
         e.stopPropagation();
-        toggleTodo(item);
+
+        const willBeCompleted = !todos[item];
+
+        // 若切換後為「已完成」且目前處於「隱藏已完成」模式 → 觸發離場動畫
+        if (willBeCompleted && hideCompleted) {
+            toggleTodo(item);
+            // 短暫延遲後加入 leavingItems，讓綠色完成狀態先顯示
+            setTimeout(() => {
+                setLeavingItems((prev) => new Set(prev).add(item));
+                // 動畫完成後從 leavingItems 移除（讓 filter 自然隱藏）
+                setTimeout(() => {
+                    setLeavingItems((prev) => {
+                        const next = new Set(prev);
+                        next.delete(item);
+                        return next;
+                    });
+                }, 350);
+            }, 150);
+        } else {
+            toggleTodo(item);
+        }
     };
 
     const handleAddTask = async () => {
@@ -45,7 +111,7 @@ export default function CaseTodos({
             await addTodo(newTaskName);
             setIsAdding(false);
             setNewTaskName('');
-        } catch (e) {
+        } catch {
             // Error handled in hook
         }
     };
@@ -58,116 +124,87 @@ export default function CaseTodos({
         }
     };
 
-
-
-    // Calculate display items
-    // 1. Standard items (always shown unless hideCompleted)
-    // 2. Custom items matching prefix
-    // 3. Uncategorized items (if catchUncategorized is true)
-
-    const knownPrefixes = ['S_', 'T_']; // Hardcoded known prefixes to detect uncategorized
-    const standardSet = new Set(items);
-
-    // Determine the actual keys we expect for standard items
-    const prefixedItems = prefix ? items.map((i) => (i.startsWith(prefix) ? i : `${prefix}${i}`)) : items;
-    const prefixedStandardSet = new Set(prefixedItems);
-
-    const customKeys = Object.keys(todos).filter(key => {
-        // Filter out numeric keys (artifacts from legacy Array storage)
-        if (!isNaN(Number(key))) return false;
-
-        if (standardSet.has(key)) return false; // Already in standard list (raw)
-        if (prefixedStandardSet.has(key)) return false; // Already in standard list (prefixed)
-
-        if (prefix && key.startsWith(prefix)) return true; // Matches our prefix
-
-        if (catchUncategorized) {
-            // Check if it starts with ANY known prefix
-            const hasKnownPrefix = knownPrefixes.some(p => key.startsWith(p));
-            if (!hasKnownPrefix) return true; // No prefix, so it's uncategorized
-        }
-
-        return false;
-    });
-
-    const displayItems = [...prefixedItems, ...customKeys];
-
     const getDisplayName = (key: string) => {
         if (prefix && key.startsWith(prefix)) return key.substring(prefix.length);
-        // Also strip other known prefixes if showing uncategorized to be clean? 
-        // No, show raw if uncategorized so user knows.
         return key;
     };
 
-
-
-    // Debug logging
+    // 決定哪些 items 需要 render（考量 hideCompleted + leavingItems 動畫）
+    const visibleItems = displayItems.filter((item) => {
+        if (!hideCompleted) return true;
+        // 正在執行離場動畫的 item 仍然顯示（動畫中）
+        if (leavingItems.has(item)) return true;
+        // 已完成且不在動畫中 → 隱藏
+        return !todos[item];
+    });
 
     return (
         <div className="flex flex-wrap gap-2 py-2 items-center">
-            {displayItems
-                .filter((item) => !hideCompleted || !todos[item])
-                .map((item) => {
-                    const displayName = getDisplayName(item);
+            {visibleItems.map((item) => {
+                const displayName = getDisplayName(item);
+                const isCustom = customKeys.includes(item);
+                const isCompleted = todos[item];
+                const isLeaving = leavingItems.has(item);
 
-                    // Check if is custom task (in customKeys)
-                    const isCustom = customKeys.includes(item);
-                    const isCompleted = todos[item];
+                return (
+                    <div
+                        key={item}
+                        className="relative group flex items-center"
+                        style={{
+                            transition: 'opacity 200ms ease-out, max-height 300ms ease-in-out, margin 300ms ease-in-out',
+                            maxHeight: isLeaving ? '0' : '48px',
+                            opacity: isLeaving ? 0 : 1,
+                            overflow: 'hidden',
+                            marginBottom: isLeaving ? '-8px' : '0',
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggle(e, item)}
+                            disabled={loadingItem === item}
+                            className={`
+                                px-3 py-1.5 rounded-full text-[12px] font-bold transition-all
+                                border-2 flex items-center gap-1.5
+                                ${isCompleted
+                                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                                    : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                                }
+                                ${loadingItem === item ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
+                                ${isCustom ? 'pr-7' : ''} 
+                            `}
+                        >
+                            {isCompleted ? (
+                                <svg
+                                    className="w-3.5 h-3.5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            ) : (
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                            )}
 
-                    // Debug rendering
-                    // console.log(`Rendering Item: ${item}, Completed: ${isCompleted}`);
+                            {displayName}
+                        </button>
 
-                    return (
-                        <div key={item} className="relative group flex items-center">
+                        {isCustom && (
                             <button
                                 type="button"
-                                onClick={(e) => handleToggle(e, item)}
-                                disabled={loadingItem === item}
-                                className={`
-                                    px-3 py-1.5 rounded-full text-[12px] font-bold transition-all
-                                    border-2 flex items-center gap-1.5
-                                    ${isCompleted
-                                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                                        : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
-                                    }
-                                    ${loadingItem === item ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                                    ${isCustom ? 'pr-7' : ''} 
-                                `}
+                                onClick={(e) => handleDeleteTask(e, item)}
+                                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-black/10 hover:bg-red-500 hover:text-white text-black/40 transition-all opacity-0 group-hover:opacity-100 z-10"
+                                title="刪除此事項"
                             >
-                                {isCompleted ? (
-                                    <svg
-                                        className="w-3.5 h-3.5"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                ) : (
-                                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                                )}
-
-                                {displayName}
+                                <X size={12} />
                             </button>
-
-                            {isCustom && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteTask(e, item)}
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-black/10 hover:bg-red-500 hover:text-white text-black/40 transition-all opacity-0 group-hover:opacity-100 z-10"
-                                    title="刪除此事項"
-                                >
-                                    <X size={12} />
-                                </button>
-                            )}
-                        </div>
-                    );
-                })}
-
-
+                        )}
+                    </div>
+                );
+            })}
 
             {allowAdd &&
                 (isAdding ? (

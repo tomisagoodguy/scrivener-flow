@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Eye, EyeOff, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import CaseTodos from '@/components/features/cases/CaseTodos';
 import { DemoCase } from '@/types';
 
@@ -8,54 +9,337 @@ interface ChecklistSectionProps {
     initialData: DemoCase;
 }
 
+interface StageCount {
+    completed: number;
+    total: number;
+}
+
+const STORAGE_KEY = 'checklist_show_completed';
+const DETAIL_STORAGE_KEY = 'checklist_show_detail';
+
+// 所有已知前綴（用於辨識「未分類」項目）
+const ALL_KNOWN_PREFIXES = ['SIG_', 'SEAL_', 'LOAN_', 'TAX_', 'HO_', 'S_', 'T_'];
+
+// ─── 舊版二階段任務清單（快速瀏覽，永遠展開）──────────────────────
+
+const OLD_SIGNING_TODOS = [
+    '買方蓋印章',
+    '賣方蓋印章',
+    '用印款',
+    '完稅款',
+    '權狀',
+    '印鑑',
+    '授權',
+    '解約排除',
+    '規費',
+    '設定',
+    '等稅單',
+    '已繳稅單',
+    '差額',
+    '整過戶',
+];
+
+const OLD_TRANSFER_TODOS = [
+    '整交屋',
+    '實登',
+    '打單',
+    '履保',
+    '水電',
+    '稅費分算',
+    '保單',
+    '代償',
+    '塗銷',
+    '二撥',
+];
+
+const OLD_STAGES = [
+    {
+        key: 'old_sig',
+        label: '簽約用印',
+        prefix: 'S_',
+        items: OLD_SIGNING_TODOS,
+        color: 'border-slate-300/60 bg-slate-50/60 dark:border-slate-600/40 dark:bg-slate-800/30',
+        badge: 'text-slate-500',
+    },
+    {
+        key: 'old_trf',
+        label: '過戶交屋',
+        prefix: 'T_',
+        items: OLD_TRANSFER_TODOS,
+        color: 'border-slate-300/60 bg-slate-50/60 dark:border-slate-600/40 dark:bg-slate-800/30',
+        badge: 'text-slate-500',
+        catchUncategorized: false,
+    },
+] as const;
+
+// ─── 新版五階段任務清單（詳細流程，預設收合）───────────────────────
+
+const SIGNING_ITEMS = [
+    '確認通訊方式',
+    '掃描文件',
+    '送各項申請',
+];
+
+const SEALING_ITEMS = [
+    '通知買方匯入用印款及預收規費',
+    '確認用印款及預收規費有無匯入',
+    '列印過戶及水電文件',
+    '確認用印款達成條件是否達成',
+    '約用印',
+    '買方用印',
+    '賣方用印',
+];
+
+const LOAN_ITEMS = [
+    '貸款預估',
+    '請銀行約客戶寫貸款申請書',
+    '確認貸款核准條件',
+    '領設定文件',
+    '預計過戶完成日確認代償金額',
+    '通知銀行代償資料',
+    '過戶完成通知撥款',
+    '送他項權利登記',
+    '追前手清償證明',
+    '塗銷文件準備',
+    '地政送塗銷',
+    '送塗後謄本/過戶後謄本',
+    '二撥進履保',
+];
+
+const TAX_ITEMS = [
+    '通知買方匯入完稅款',
+    '確認完稅款有無匯入',
+    '報稅（最後繳納日）：確認登記人後報稅',
+    '整卷',
+    '出款繳稅',
+    '送地政過戶',
+    '領件（領取權狀及新謄本）',
+];
+
+const HANDOVER_ITEMS = [
+    '交屋整理',
+    '水電瓦斯過戶',
+    '辦理交屋',
+    '房地合一申報（30日內）',
+    '結案',
+];
+
+const NEW_STAGES = [
+    { key: 'sig',  label: '一、簽約階段', prefix: 'SIG_',  items: SIGNING_ITEMS,  color: 'border-blue-400/40 bg-blue-500/5',       badge: 'text-blue-500'   },
+    { key: 'seal', label: '二、用印階段', prefix: 'SEAL_', items: SEALING_ITEMS,  color: 'border-purple-400/40 bg-purple-500/5',   badge: 'text-purple-500' },
+    { key: 'loan', label: '三、貸款階段', prefix: 'LOAN_', items: LOAN_ITEMS,     color: 'border-amber-400/40 bg-amber-500/5',     badge: 'text-amber-600'  },
+    { key: 'tax',  label: '四、完稅階段', prefix: 'TAX_',  items: TAX_ITEMS,      color: 'border-rose-400/40 bg-rose-500/5',       badge: 'text-rose-500'   },
+    { key: 'ho',   label: '五、交屋階段', prefix: 'HO_',   items: HANDOVER_ITEMS, color: 'border-emerald-400/40 bg-emerald-500/5', badge: 'text-emerald-600', catchUncategorized: true },
+] as const;
+
+// ─── 計算所有階段的初始狀態 ──────────────────────────────────────
+
+const initCounts = (stages: readonly { key: string }[]) =>
+    Object.fromEntries(stages.map((s) => [s.key, { completed: 0, total: 0 }]));
+
+// ─── Component ───────────────────────────────────────────────────
+
 export const ChecklistSection: React.FC<ChecklistSectionProps> = ({ initialData }) => {
-    // Filter out legacy items so they don't appear as custom items even if they exist in DB
-    const todos = React.useMemo(() => {
+    const [showCompleted, setShowCompleted] = useState(true);
+    const [showDetail, setShowDetail] = useState(false);
+
+    // 讀取 localStorage（useEffect 避免 SSR hydration mismatch）
+    useEffect(() => {
+        const comp = localStorage.getItem(STORAGE_KEY);
+        if (comp === 'false') setShowCompleted(false);
+        const detail = localStorage.getItem(DETAIL_STORAGE_KEY);
+        if (detail === 'true') setShowDetail(true);
+    }, []);
+
+    const [oldCounts, setOldCounts] = useState<Record<string, StageCount>>(initCounts(OLD_STAGES));
+    const [newCounts, setNewCounts] = useState<Record<string, StageCount>>(initCounts(NEW_STAGES));
+
+    const handleToggleCompleted = () => {
+        const next = !showCompleted;
+        setShowCompleted(next);
+        localStorage.setItem(STORAGE_KEY, String(next));
+    };
+
+    const handleToggleDetail = () => {
+        const next = !showDetail;
+        setShowDetail(next);
+        localStorage.setItem(DETAIL_STORAGE_KEY, String(next));
+    };
+
+    const makeOldCountHandler = useCallback(
+        (stageKey: string) => (completed: number, total: number) => {
+            setOldCounts((prev) => ({ ...prev, [stageKey]: { completed, total } }));
+        },
+        []
+    );
+
+    const makeNewCountHandler = useCallback(
+        (stageKey: string) => (completed: number, total: number) => {
+            setNewCounts((prev) => ({ ...prev, [stageKey]: { completed, total } }));
+        },
+        []
+    );
+
+    // 過濾掉歷史遺留的 legacy key
+    const filteredTodos = React.useMemo(() => {
         const t = { ...(initialData.todos || {}) };
         delete (t as any)['S_權狀印鑑'];
         delete (t as any)['S_稅單'];
         return t;
     }, [initialData.todos]);
-    
-    const filteredTodos = todos;
 
-    const SIGNING_ITEMS = [
-        '買方蓋印章', '賣方蓋印章', '用印款', '完稅款', '權狀', '印鑑',
-        '授權', '解約排除', '規費', '設定', '等稅單', '已繳稅單', '差額', '整過戶',
-    ];
-
-    const TRANSFER_ITEMS = [
-        '整交屋', '實登', '打單', '履保', '水電', '稅費分算', '保單', '代償', '塗銷', '二撥',
-    ];
+    // 計算新版五階段整體進度
+    const newTotal = Object.values(newCounts).reduce((s, c) => s + c.total, 0);
+    const newCompleted = Object.values(newCounts).reduce((s, c) => s + c.completed, 0);
 
     return (
-        <div className="space-y-2">
-            <h3 className="text-lg font-bold text-accent dark:text-white! border-l-4 border-accent pl-3">辦事清單 (Checklist)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
-                    <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">簽約與用印階段</h4>
-                    <CaseTodos
-                        caseId={initialData.id}
-                        initialTodos={filteredTodos}
-                        items={SIGNING_ITEMS}
-                        hideCompleted={false}
-                        allowAdd={true}
-                        prefix="S_"
-                    />
-                </div>
-                <div className="p-4 border border-border-color rounded-xl bg-secondary/20">
-                    <h4 className="text-xs font-black text-foreground/40 mb-2 uppercase">過戶與交屋階段</h4>
-                    <CaseTodos
-                        caseId={initialData.id}
-                        initialTodos={filteredTodos}
-                        items={TRANSFER_ITEMS}
-                        hideCompleted={false}
-                        allowAdd={true}
-                        prefix="T_"
-                        catchUncategorized={true}
-                    />
-                </div>
+        <div className="space-y-3">
+            {/* ── Header ──────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="text-lg font-bold text-accent dark:text-white! border-l-4 border-accent pl-3">
+                    辦事清單
+                </h3>
+                <button
+                    type="button"
+                    onClick={handleToggleCompleted}
+                    className={`
+                        flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold
+                        border transition-all select-none shrink-0
+                        ${showCompleted
+                            ? 'border-slate-300 text-slate-500 hover:text-slate-700 hover:border-slate-400 dark:border-white/20 dark:text-white/40 dark:hover:text-white/70'
+                            : 'border-emerald-400/60 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500/40 dark:text-emerald-400'
+                        }
+                    `}
+                    title={showCompleted ? '點擊以隱藏已完成事項' : '點擊以顯示全部事項'}
+                >
+                    {showCompleted ? <Eye size={13} /> : <EyeOff size={13} />}
+                    <span>{showCompleted ? '顯示已完成' : '隱藏已完成'}</span>
+                </button>
             </div>
+
+            {/* ── 舊版二階段（永遠展開）──────────────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {OLD_STAGES.map((stage) => {
+                    const count = oldCounts[stage.key];
+                    const isAllDone = count.total > 0 && count.completed === count.total;
+
+                    return (
+                        <div
+                            key={stage.key}
+                            className={`p-3 border rounded-xl ${stage.color} flex flex-col gap-1`}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <h4 className="text-[11px] font-black text-foreground/50 uppercase tracking-wide">
+                                    {stage.label}
+                                </h4>
+                                {count.total > 0 && (
+                                    <span
+                                        className={`
+                                            text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-colors shrink-0
+                                            ${isAllDone
+                                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-600'
+                                                : `bg-white/40 border-current/20 ${stage.badge} opacity-80`
+                                            }
+                                        `}
+                                    >
+                                        {count.completed}/{count.total}
+                                    </span>
+                                )}
+                            </div>
+                            <CaseTodos
+                                caseId={initialData.id}
+                                initialTodos={filteredTodos}
+                                items={stage.items as unknown as string[]}
+                                hideCompleted={!showCompleted}
+                                allowAdd={false}
+                                prefix={stage.prefix}
+                                catchUncategorized={false}
+                                allKnownPrefixes={ALL_KNOWN_PREFIXES}
+                                onCountChange={makeOldCountHandler(stage.key)}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* ── 展開/收合按鈕（新版五階段）─────────────────────────── */}
+            <button
+                type="button"
+                onClick={handleToggleDetail}
+                className={`
+                    w-full flex items-center justify-between gap-2
+                    px-4 py-2.5 rounded-xl border text-[12px] font-bold
+                    transition-all select-none cursor-pointer
+                    ${showDetail
+                        ? 'bg-blue-600 border-blue-700 text-white shadow-md shadow-blue-500/20 dark:bg-blue-500 dark:border-blue-600'
+                        : 'bg-slate-300 border-slate-400 text-slate-700 hover:bg-blue-500 hover:border-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-500/20 dark:bg-slate-600 dark:border-slate-500 dark:text-slate-100 dark:hover:bg-blue-500 dark:hover:border-blue-400 dark:hover:text-white dark:hover:shadow-blue-500/30'
+                    }
+                `}
+            >
+                <div className="flex items-center gap-2">
+                    <ClipboardList size={14} />
+                    <span>詳細五階段流程</span>
+                    {newTotal > 0 && (
+                        <span className={`
+                            text-[10px] px-1.5 py-0.5 rounded-full border
+                            ${newCompleted === newTotal
+                                ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-600'
+                                : 'bg-blue-500/10 border-blue-300/40 text-blue-500'
+                            }
+                        `}>
+                            {newCompleted}/{newTotal}
+                        </span>
+                    )}
+                </div>
+                {showDetail ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+
+            {/* ── 新版五階段（收合區塊）───────────────────────────────── */}
+            {showDetail && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 animate-fade-in">
+                    {NEW_STAGES.map((stage) => {
+                        const count = newCounts[stage.key];
+                        const isAllDone = count.total > 0 && count.completed === count.total;
+
+                        return (
+                            <div
+                                key={stage.key}
+                                className={`p-3 border rounded-xl ${stage.color} flex flex-col gap-1`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <h4 className="text-[11px] font-black text-foreground/50 uppercase tracking-wide leading-tight">
+                                        {stage.label}
+                                    </h4>
+                                    {count.total > 0 && (
+                                        <span
+                                            className={`
+                                                text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-colors shrink-0
+                                                ${isAllDone
+                                                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                                    : `bg-white/40 border-current/20 ${stage.badge} opacity-80`
+                                                }
+                                            `}
+                                        >
+                                            {count.completed}/{count.total}
+                                        </span>
+                                    )}
+                                </div>
+                                <CaseTodos
+                                    caseId={initialData.id}
+                                    initialTodos={filteredTodos}
+                                    items={stage.items as unknown as string[]}
+                                    hideCompleted={!showCompleted}
+                                    allowAdd={true}
+                                    prefix={stage.prefix}
+                                    catchUncategorized={'catchUncategorized' in stage ? stage.catchUncategorized : false}
+                                    allKnownPrefixes={ALL_KNOWN_PREFIXES}
+                                    onCountChange={makeNewCountHandler(stage.key)}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

@@ -48,10 +48,15 @@ export default function CaseCompactTodoList({
         }
     };
 
-    // Compute display tasks
+    // 所有已知前綴，用於辨別「未分類」 items
+    const KNOWN_PREFIXES = ['SIG_', 'SEAL_', 'LOAN_', 'TAX_', 'HO_', 'S_', 'T_'];
+    const hasKnownPrefix = (key: string) => KNOWN_PREFIXES.some((p) => key.startsWith(p));
+
     const customTasks = Object.keys(localTodos).filter((t) => {
         if (!isNaN(Number(t))) return false; // Filter numeric keys
-        return !allTasks.includes(t);
+        if (allTasks.includes(t)) return false; // Already in standard list
+        if (hasKnownPrefix(t)) return false;    // Has a known stage prefix → belongs to ChecklistSection
+        return true;
     });
     const displayTasks = [...allTasks, ...customTasks];
 
@@ -86,7 +91,7 @@ export default function CaseCompactTodoList({
                                 `}
                             >
                                 {isCompleted ? '✓ ' : ''}
-                                {task.replace(/^(S_|T_)/, '')}
+                                {task.replace(/^(SIG_|SEAL_|LOAN_|TAX_|HO_|S_|T_)/, '')}
                             </button>
                             {isCustom && (
                                 <button
