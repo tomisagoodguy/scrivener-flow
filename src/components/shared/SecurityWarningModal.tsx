@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'sf_security_warning_acknowledged';
 
+import { createClient } from '@/lib/auth/client';
+import { logSecurityAcknowledgement } from '@/app/actions/securityActions';
+
+
 export function SecurityWarningModal() {
     const [visible, setVisible] = useState(false);
 
@@ -14,10 +18,22 @@ export function SecurityWarningModal() {
         }
     }, []);
 
-    function handleAcknowledge() {
+    async function handleAcknowledge() {
         localStorage.setItem(STORAGE_KEY, 'true');
         setVisible(false);
+
+        // 非同步紀錄到後台
+        try {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await logSecurityAcknowledgement(user.id, user.email || 'unknown');
+            }
+        } catch (err) {
+            console.error('Failed to log security acknowledgement:', err);
+        }
     }
+
 
     if (!visible) return null;
 
