@@ -16,7 +16,7 @@ export function BankListCard({ bank, isDbMode, startEdit, handleDelete }: BankLi
         <div id={`bank-${bank.id}`} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group scroll-mt-24">
             <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
+                    <div className="h-12 w-12 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
                         {bank.name.substring(0, 1)}
                     </div>
                     <div>

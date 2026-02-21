@@ -27,7 +27,7 @@ export function BankEditModal({
     removeContact,
 }: BankEditModalProps) {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8 z-[100] fixed inset-0 overflow-y-auto">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8 z-100 fixed inset-0 overflow-y-auto">
             <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 animate-fade-in relative ring-1 ring-slate-900/5">
                 <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700 pb-4 sticky top-0 bg-white dark:bg-slate-800 z-10 pt-2">
                     <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">

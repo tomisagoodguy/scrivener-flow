@@ -28,7 +28,7 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
     } = useMessageGenerator(caseData);
 
     return (
-        <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-linear-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function CaseMessageGenerator({ caseData }: CaseMessageGeneratorP
                         </span>
                     </div>
 
-                    <div className="relative flex-grow group">
+                    <div className="relative grow group">
                         <textarea
                             value={generatedText}
                             onChange={(e) => {

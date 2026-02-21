@@ -14,6 +14,7 @@ interface AuthGateContextType {
 const AuthGateContext = createContext<AuthGateContextType | undefined>(undefined);
 
 const PASSPHRASE = '自由在邊界之外';
+const OLD_PASSPHRASE = '長的是磨難，短的是人生';
 const AUTH_KEY = 'app_passphrase_authorized_v2';
 
 
@@ -86,16 +87,24 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
     const [error, setError] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [showPassphrase, setShowPassphrase] = useState(false);
+    const [isMigrating, setIsMigrating] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (onVerify(input)) {
-            setIsSuccess(true);
+        if (input === PASSPHRASE) {
+            if (onVerify(input)) {
+                setIsSuccess(true);
+                setError(false);
+                setIsMigrating(false);
+            }
+        } else if (input === OLD_PASSPHRASE) {
+            setIsMigrating(true);
             setError(false);
+            setInput('');
         } else {
             setError(true);
+            setIsMigrating(false);
             setInput('');
-            // Optional: reset animation key
         }
     };
 
@@ -126,18 +135,47 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                             {isSuccess ? <ShieldCheck size={32} /> : <Lock size={32} />}
                         </motion.div>
 
-                        <h1 className="text-3xl font-black text-white mb-3 tracking-tight">系統安全鎖</h1>
+                        <h1 className="text-3xl font-black text-white mb-3 tracking-tight">
+                            {isMigrating ? '安全密語遷徙' : '系統安全鎖'}
+                        </h1>
                         
                         {/* 緊急環境警告 */}
                         <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full animate-pulse">
                             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                            <span className="text-[10px] font-black text-blue-300 uppercase tracking-wider">個人隱私防護：建議使用私有設備登入</span>
+                            <span className="text-[10px] font-black text-blue-300 uppercase tracking-wider">個人隱私防護：系統已升級加密協議</span>
                         </div>
 
-                        <p className="text-slate-400 font-medium text-sm leading-relaxed">
-                            請輸入您的專屬授權碼以繼續<br />
-                            <span className="text-slate-500 text-[10px] uppercase tracking-widest mt-2 block">Premium Scrivener Flow v2.0</span>
-                        </p>
+                        <AnimatePresence mode="wait">
+                            {isMigrating ? (
+                                <motion.div
+                                    key="migration"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mb-2"
+                                >
+                                    <div className="flex items-center gap-2 text-amber-400 mb-2 justify-center">
+                                        <AlertTriangle size={16} />
+                                        <span className="text-xs font-black uppercase tracking-widest">發現舊版密語</span>
+                                    </div>
+                                    <p className="text-slate-300 text-xs leading-relaxed font-bold">
+                                        因應資安升級，為了保護您的隱私，<br />
+                                        <span className="text-amber-400">請避免使用公司設備</span>並改用新語：<br />
+                                        <span className="text-lg text-white block mt-2 mb-2 select-all ring-1 ring-white/20 p-2 rounded-lg bg-white/5 cursor-pointer hover:bg-white/10 transition-colors">自由在邊界之外</span>
+                                        <span className="text-[9px] opacity-50 font-normal">提示：點擊上方可複製，輸入新密語即可進入。</span>
+                                    </p>
+                                </motion.div>
+                            ) : (
+                                <motion.p 
+                                    key="normal"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-slate-400 font-medium text-sm leading-relaxed"
+                                >
+                                    請輸入您的專屬授權碼以繼續<br />
+                                    <span className="text-slate-500 text-[10px] uppercase tracking-widest mt-2 block">Premium Scrivener Flow v2.0</span>
+                                </motion.p>
+                            )}
+                        </AnimatePresence>
                     </div>
 
 

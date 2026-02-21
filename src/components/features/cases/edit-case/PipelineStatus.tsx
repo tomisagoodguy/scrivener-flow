@@ -41,7 +41,7 @@ export const PipelineStatus: React.FC<PipelineStatusProps> = ({ initialData }) =
 
                     return (
                         <React.Fragment key={stage.id}>
-                            <div className="flex flex-col items-center flex-shrink-0 z-10 transition-all duration-500">
+                            <div className="flex flex-col items-center shrink-0 z-10 transition-all duration-500">
                                 <div
                                     className={`
                                         relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black shadow-lg border-4 transition-all duration-300
@@ -62,7 +62,7 @@ export const PipelineStatus: React.FC<PipelineStatusProps> = ({ initialData }) =
                             </div>
 
                             {!isLast && (
-                                <div className="flex-grow mx-2 relative -mt-6">
+                                <div className="grow mx-2 relative -mt-6">
                                     <div className="h-1 bg-secondary/50 rounded-full relative">
                                         <div
                                             className={`h-full rounded-full transition-all duration-1000 ${stages[idx].color}`}

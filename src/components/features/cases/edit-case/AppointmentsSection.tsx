@@ -10,7 +10,7 @@ interface AppointmentsSectionProps {
 export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milestones }) => {
     return (
         <div className="space-y-2">
-            <h3 className="text-lg font-bold text-indigo-600 dark:!text-white border-l-4 border-indigo-500 pl-3">
+            <h3 className="text-lg font-bold text-indigo-600 dark:text-white! border-l-4 border-indigo-500 pl-3">
                 與客戶約定時間 (Appointments)
             </h3>
             <p className="text-xs text-foreground/50">

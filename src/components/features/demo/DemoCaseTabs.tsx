@@ -25,7 +25,7 @@ export function DemoCaseTabs({ cases, selectedIndex, onSelect }: DemoCaseTabsPro
                         onClick={() => onSelect(i)}
                         className={`flex items-center px-6 min-w-[140px] max-w-[240px] border-r border-[#ccc] dark:border-[#333] text-[11px] font-bold transition-all relative ${selectedIndex === i
                                 ? 'bg-white dark:bg-[#1e293b] text-primary shadow-[inset_0_-3px_0_var(--primary)]'
-                                : 'text-[var(--foreground)] opacity-50 hover:bg-white/50 dark:hover:bg-white/5'
+                                : 'text-foreground opacity-50 hover:bg-white/50 dark:hover:bg-white/5'
                             }`}
                     >
                         <span className="truncate">

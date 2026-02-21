@@ -20,7 +20,7 @@ export function GuidelineCard({ item }: GuidelineCardProps) {
 
     return (
         <div className="group bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-900/20 opacity-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-blue-50 to-transparent dark:from-blue-900/20 opacity-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
 
             <div className="relative z-10">
                 <div className="flex items-start justify-between mb-6">

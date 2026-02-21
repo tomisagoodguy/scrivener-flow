@@ -55,7 +55,7 @@ export function ScheduleItemCard({
                     type="text"
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="flex-grow bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm"
+                    className="grow bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm"
                 />
                 <div className="flex gap-2">
                     <button

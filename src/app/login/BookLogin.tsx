@@ -53,7 +53,7 @@ export function BookLogin() {
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[150px]" />
                 <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[120px]" />
-                <div className="absolute inset-0 bg-[radial-gradient(#0ea5e9_1px,transparent_1px)] [background-size:40px_40px] opacity-[0.03]" />
+                <div className="absolute inset-0 bg-[radial-gradient(#0ea5e9_1px,transparent_1px)] bg-size-[40px_40px] opacity-[0.03]" />
             </div>
 
             <motion.div
@@ -67,7 +67,7 @@ export function BookLogin() {
             >
                 {/* --- THE SPREAD --- */}
                 <motion.div
-                    className="absolute inset-0 flex bg-white/40 backdrop-blur-2xl rounded-[2rem] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.1)] border border-white overflow-hidden transition-all duration-1000"
+                    className="absolute inset-0 flex bg-white/40 backdrop-blur-2xl rounded-4xl shadow-[0_32px_80px_-20px_rgba(0,0,0,0.1)] border border-white overflow-hidden transition-all duration-1000"
                     initial={false}
                     animate={{ opacity: isOpen ? 1 : 0, scale: isOpen ? 1 : 0.95 }}
                 >
@@ -100,7 +100,7 @@ export function BookLogin() {
                                         <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input type="email" placeholder="電子郵件地址" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-14 pr-6 h-14 bg-slate-50 dark:bg-slate-50 border-2 border-transparent focus:bg-white dark:focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-sm font-bold text-slate-900 dark:text-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-400" required />
                                     </div>
-                                    <button type="submit" disabled={loading || !email} className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50">
+                                    <button type="submit" disabled={loading || !email} className="w-full h-14 bg-linear-to-r from-blue-600 to-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all hover:shadow-xl hover:shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50">
                                         {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><LogIn className="w-5 h-5" /><span>傳送登入連結</span></>}
                                     </button>
                                 </form>

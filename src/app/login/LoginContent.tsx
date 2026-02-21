@@ -38,7 +38,7 @@ export function LoginContent() {
                     📑
                 </div>
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
                 My Case Tracker
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">案件追蹤管理系統 • 請使用 Google 帳號登入</p>

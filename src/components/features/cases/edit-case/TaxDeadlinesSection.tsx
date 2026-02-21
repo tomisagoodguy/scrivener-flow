@@ -19,7 +19,7 @@ export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initia
 
     return (
         <div className="space-y-2">
-            <h3 className="text-lg font-bold text-rose-600 dark:!text-white border-l-4 border-rose-500 pl-3">
+            <h3 className="text-lg font-bold text-rose-600 dark:text-white! border-l-4 border-rose-500 pl-3">
                 稅單限繳日期 (Tax Deadlines)
             </h3>
             <p className="text-xs text-foreground/50">設定限繳日後，系統將於前 5 天開始提醒。</p>

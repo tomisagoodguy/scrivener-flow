@@ -99,7 +99,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
                     <button
                         type="button"
                         onClick={() => setShowModal(true)}
-                        className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover/gdrive:scale-110 transition-transform active:scale-95"
+                        className="w-12 h-12 bg-linear-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover/gdrive:scale-110 transition-transform active:scale-95"
                     >
                         <span className="text-white font-black text-xl">S</span>
                     </button>
@@ -108,7 +108,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
             {/* 2. 點擊後跳出的模態視窗 */}
             {showModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300">
                     <div
                         className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-white/20 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
@@ -116,7 +116,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
                         <div className="p-8">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                    <div className="w-12 h-12 bg-linear-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                                         <span className="text-white font-black text-xl">S</span>
                                     </div>
                                     <div>
@@ -153,7 +153,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
                                 {/* 檔案列表 */}
                                 <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                                     {uploadedFiles.length === 0 ? (
-                                        <div className="py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] flex flex-col items-center justify-center text-slate-400 gap-3">
+                                        <div className="py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-4xl flex flex-col items-center justify-center text-slate-400 gap-3">
                                             <File className="w-10 h-10 opacity-10" />
                                             <span className="text-xs font-bold uppercase tracking-widest text-slate-300">目前此案件無附件</span>
                                         </div>

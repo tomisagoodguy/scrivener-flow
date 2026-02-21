@@ -95,7 +95,7 @@ export function DiffLedger({ logs }: DiffLedgerProps) {
                             <CalendarIcon size={14} />
                             {date}
                         </div>
-                        <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent dark:from-slate-800" />
+                        <div className="h-px flex-1 bg-linear-to-r from-slate-200 to-transparent dark:from-slate-800" />
                         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                             {groupedLogs[date].length} 次變動
                         </span>

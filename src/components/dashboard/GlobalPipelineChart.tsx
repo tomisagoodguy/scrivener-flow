@@ -81,7 +81,7 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                         <React.Fragment key={stage.id}>
                             <Link
                                 href={isActive ? '/cases' : `/cases?stage=${stage.id}`}
-                                className={`flex flex-col items-center flex-shrink-0 group focus:outline-none transition-opacity ${isInactive ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}
+                                className={`flex flex-col items-center shrink-0 group focus:outline-none transition-opacity ${isInactive ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}
                             >
                                 <div
                                     className={`
@@ -112,7 +112,7 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                             </Link>
 
                             {!isLast && (
-                                <div className="flex-grow flex flex-col items-center justify-center px-1 md:px-2 -mt-6 md:-mt-8 min-w-[20px] relative">
+                                <div className="grow flex flex-col items-center justify-center px-1 md:px-2 -mt-6 md:-mt-8 min-w-[20px] relative">
                                     <div className="flex items-center w-full opacity-30">
                                         <div
                                             className={`h-1 w-full rounded-full transition-colors ${count > 0 ? 'bg-slate-300' : 'bg-slate-100'

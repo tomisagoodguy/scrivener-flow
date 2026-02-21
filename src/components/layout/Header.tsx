@@ -57,9 +57,9 @@ export default function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 w-full backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 relative overflow-hidden">
+            <header className="sticky top-0 z-50 w-full backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-300 overflow-hidden">
                 {/* Ambient Weather Background */}
-                <div className={`absolute inset-0 opacity-20 bg-gradient-to-r ${weather ? weather.bg : 'from-white to-slate-50'} transition-all duration-1000`} />
+                <div className={`absolute inset-0 opacity-20 bg-linear-to-r ${weather ? weather.bg : 'from-white to-slate-50'} transition-all duration-1000`} />
                 <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/70" />
 
                 {/* Weather Animation Layer */}
@@ -146,7 +146,7 @@ export default function Header() {
                             
                             <Link
                                 href="/cases/new"
-                                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2"
+                                className="bg-linear-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2"
                             >
                                 <span>✨</span>
                                 <span className="hidden md:inline">新增案件</span>
@@ -159,7 +159,7 @@ export default function Header() {
 
             {/* Mobile Menu Overlay */}
             {isMenuOpen && (
-                <div className="fixed inset-0 z-[100] lg:hidden">
+                <div className="fixed inset-0 z-100 lg:hidden">
                     <div
                         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
                         onClick={() => setIsMenuOpen(false)}

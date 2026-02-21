@@ -77,7 +77,7 @@ export default function DashboardDateCalculator() {
                             <button onClick={() => setTaxType('一般')} className={`flex-1 py-2 rounded-lg text-sm font-black transition-all ${taxType === '一般' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-gray-400 dark:text-gray-500'}`}>一般稅單</button>
                             <button onClick={() => setTaxType('自用')} className={`flex-1 py-2 rounded-lg text-sm font-black transition-all ${taxType === '自用' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-gray-400 dark:text-gray-500'}`}>自用稅單</button>
                         </div>
-                        <button onClick={handleCalculate} disabled={!contractDate} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl py-4 mt-6 font-black shadow-lg shadow-purple-200 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2">⚡ 開始推算</button>
+                        <button onClick={handleCalculate} disabled={!contractDate} className="w-full bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-xl py-4 mt-6 font-black shadow-lg shadow-purple-200 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2">⚡ 開始推算</button>
                     </div>
 
                     {result && (

@@ -43,7 +43,7 @@ export function ScheduleInput({
                         className="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 outline-none"
                     />
                 </div>
-                <div className="space-y-1 flex-grow">
+                <div className="space-y-1 grow">
                     <label className="text-xs font-bold text-indigo-400">行程內容 / 備忘</label>
                     <input
                         type="text"

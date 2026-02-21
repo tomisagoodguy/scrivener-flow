@@ -132,7 +132,7 @@ export function ClauseEditModal({ initialClause, onClose, onSave, onDelete }: Cl
                             required
                             value={currentClause.content || ''}
                             onChange={(e) => setCurrentClause({ ...currentClause, content: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[300px] bg-white resize-y text-sm leading-relaxed"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[300px] resize-y text-sm leading-relaxed"
                             placeholder="輸入完整的合約條文..."
                         />
                     </div>

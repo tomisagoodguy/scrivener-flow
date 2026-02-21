@@ -24,7 +24,7 @@ interface PageSidebarProps {
 
 export function PageSidebar({ title, groups, selectedId, onSelect, className }: PageSidebarProps) {
     return (
-        <div className={cn("w-64 flex-shrink-0 bg-white border-r border-slate-200 h-[calc(100vh-64px)] overflow-y-auto sticky top-16", className)}>
+        <div className={cn("w-64 shrink-0 bg-white border-r border-slate-200 h-[calc(100vh-64px)] overflow-y-auto sticky top-16", className)}>
             <div className="p-4 border-b border-slate-100">
                 <h2 className="font-bold text-slate-800 flex items-center gap-2">
                     <List className="w-4 h-4 text-slate-500" />

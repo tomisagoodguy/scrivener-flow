@@ -12,8 +12,8 @@ export function CaseDetailCard({ currentCase, formatDate }: CaseDetailCardProps)
     return (
         <div className="max-w-6xl mx-auto space-y-4 animate-fade-in">
             {/* Case Header Card */}
-            <div className="bg-[var(--surface)] border border-[var(--border-color)] rounded-sm overflow-hidden shadow-xl">
-                <div className="bg-slate-800 dark:bg-slate-900 border-b border-[var(--border-color)] p-4 flex justify-between items-center">
+            <div className="bg-(--surface) border border-border rounded-sm overflow-hidden shadow-xl">
+                <div className="bg-slate-800 dark:bg-slate-900 border-b border-border p-4 flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <div className="text-xs font-mono bg-black/40 px-2 py-1 rounded text-primary">
                             {currentCase.case_number}
@@ -44,7 +44,7 @@ export function CaseDetailCard({ currentCase, formatDate }: CaseDetailCardProps)
                 </div>
 
                 {/* Grid for Master Content */}
-                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-[var(--border-color)] divide-[var(--border-color)]">
+                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-border divide-border">
                     {/* People */}
                     <div className="p-4 space-y-4">
                         <div>
@@ -140,7 +140,7 @@ export function CaseDetailCard({ currentCase, formatDate }: CaseDetailCardProps)
                                                     {f.seller_bank || '無貸款'}
                                                 </div>
                                             </div>
-                                            <div className="pt-2 border-t border-[var(--border-color)] flex justify-between">
+                                            <div className="pt-2 border-t border-border flex justify-between">
                                                 <span className="text-[10px] opacity-40">稅費類型</span>
                                                 <span className="text-[10px] font-bold">
                                                     {f.vat_type || '一般'}
@@ -155,12 +155,12 @@ export function CaseDetailCard({ currentCase, formatDate }: CaseDetailCardProps)
                 </div>
 
                 {/* Footer Notes (Excel's Remarks) */}
-                <div className="bg-slate-100 dark:bg-black/20 p-4 border-t border-[var(--border-color)] grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-100 dark:bg-black/20 p-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex gap-3">
                         <span className="text-[10px] font-bold opacity-30 mt-0.5">備註:</span>
                         <p className="text-sm opacity-70 leading-relaxed">{currentCase.notes || '--'}</p>
                     </div>
-                    <div className="flex gap-3 border-l-0 md:border-l border-[var(--border-color)] md:pl-4">
+                    <div className="flex gap-3 border-l-0 md:border-l border-border md:pl-4">
                         <span className="text-[10px] font-bold text-primary mt-0.5">其他備註:</span>
                         <p className="text-sm text-primary/80 font-medium leading-relaxed italic">
                             {currentCase.other_notes || '目前尚無代償計畫'}
@@ -171,7 +171,7 @@ export function CaseDetailCard({ currentCase, formatDate }: CaseDetailCardProps)
 
             {/* Bottom Master View Statistics (Optional Excel feel) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-[var(--surface)] border border-[var(--border-color)] rounded-sm">
+                <div className="p-4 bg-(--surface) border border-border rounded-sm">
                     <div className="text-[9px] font-bold opacity-40 uppercase">總成交金額估算</div>
                     <div className="text-xl font-black text-emerald-500 mt-1">
                         ${((currentCase.financials?.[0] as any)?.total_price || 0).toLocaleString()}
