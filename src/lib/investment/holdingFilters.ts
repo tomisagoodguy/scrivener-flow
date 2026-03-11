@@ -12,6 +12,7 @@ export type SortField =
     | 'revenue_yoy' 
     | 'revenue_mom' 
     | 'revenue_momentum_rank' 
+    | 'filter_score'
     | 'price';
 
 export type SortOrder = 'asc' | 'desc';
@@ -33,6 +34,10 @@ export const FILTER_DEFINITIONS: FilterDefinition[] = [
     { id: 'low_margin', label: '低資前10', filter: (d) => (d.marginRankLow ?? Infinity) <= 10 },
     { id: 'golden_zone', label: '黃金區間', filter: (d) => (d.revenue_yoy || 0) >= 50 && (d.revenue_yoy || 0) <= 100 },
     { id: 'explosive_zone', label: '爆發區間', filter: (d) => (d.revenue_yoy || 0) > 100 },
+    // === 量化 Filter ===
+    { id: 'triple_pass', label: '🏆 三大全過', filter: (d) => (d.filter_score ?? 0) === 3 },
+    { id: 'double_pass', label: '⚡ 雙Filter', filter: (d) => (d.filter_score ?? 0) >= 2 },
+    { id: 'rev_new_high', label: '⭐ Rev新高', filter: (d) => !!d.rev_ma3_new_high },
 ];
 
 export function getRankedHoldings(holdings: Holding[]): Holding[] {

@@ -139,10 +139,11 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                 </div>
                             </th>
 
-                            <th scope="col" className="px-3 py-3">
-                                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                            <th scope="col" className="px-3 py-3 cursor-pointer group" onClick={() => handleSort('filter_score')}>
+                                <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">
                                     量化篩選
-                                    <span className="text-[9px] text-slate-400 font-normal">(M·T·R)</span>
+                                    <span className="text-[9px] text-slate-400 font-normal group-hover:text-blue-400">(M·T·R)</span>
+                                    <SortIndicator field="filter_score" />
                                 </div>
                             </th>
 

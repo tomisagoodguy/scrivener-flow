@@ -48,7 +48,13 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={() => onClick(item)}
-            className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group border-b border-slate-50 dark:border-slate-800/50"
+            className={`bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group border-b border-slate-50 dark:border-slate-800/50 relative ${
+                item.filter_score === 3
+                    ? 'border-l-[3px] border-l-amber-400'
+                    : item.filter_score === 2
+                    ? 'border-l-[3px] border-l-blue-300'
+                    : 'border-l-[3px] border-l-transparent'
+            }`}
         >
             {/* Rank */}
             <td className="sticky left-0 w-12 px-4 py-3 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors z-20">
@@ -188,6 +194,13 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             {/* Quant Filters */}
             <td className="px-3 py-3">
                 <div className="flex flex-col gap-1">
+                    {/* Triple Pass crown */}
+                    {item.filter_score === 3 && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-700 mb-0.5 w-fit">
+                            🏆 三大全過
+                        </span>
+                    )}
+
                     {/* filterScore 總評分背景 */}
                     <div className="flex items-center gap-1 flex-wrap">
                         {/* Momentum badge */}
@@ -234,7 +247,6 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                     )}
                 </div>
             </td>
-
             {/* Weight */}
             <td className="px-4 py-3 text-right">
                 <div className="flex flex-col items-end gap-1">
