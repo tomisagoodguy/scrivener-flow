@@ -109,6 +109,109 @@ async function getHoldings() {
     };
 }
 
+/**
+ * 計算三大量化 Filter (Server-side, 供 UI 直接顯示)
+ * - momentum_pass : close / close[60] - 1 > 0
+ * - it_buy_10d_pass: 投信10日累積 > 0
+ * - rev_ma3_new_high: revMa3 == revMa3.rolling(12).max()
+ */
+async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
+    momentum_60d: number | null;
+    momentum_pass: boolean;
+    it_buy_10d: number | null;
+    it_buy_10d_pass: boolean;
+    rev_ma3: number | null;
+    rev_ma3_new_high: boolean;
+    filter_score: number;
+}>> {
+    if (stockCodes.length === 0) return {};
+    const supabase = await createClient();
+
+    // (A) 抓 65 天價格與投信，足以計算 60日動能 + 10日投信
+    const { data: priceData } = await supabase
+        .from('stock_prices_daily')
+        .select('stock_code, data_date, close, it_buy')
+        .in('stock_code', stockCodes)
+        .order('data_date', { ascending: false })
+        .limit(65 * stockCodes.length);
+
+    // (B) 抓 14 個月營收，足以計算 rev_ma3.rolling(12).max()
+    const { data: revenueData } = await supabase
+        .from('stock_revenue_monthly')
+        .select('stock_code, data_date, revenue')
+        .in('stock_code', stockCodes)
+        .order('data_date', { ascending: false })
+        .limit(15 * stockCodes.length);
+
+    const result: Record<string, {
+        momentum_60d: number | null;
+        momentum_pass: boolean;
+        it_buy_10d: number | null;
+        it_buy_10d_pass: boolean;
+        rev_ma3: number | null;
+        rev_ma3_new_high: boolean;
+        filter_score: number;
+    }> = {};
+
+    for (const code of stockCodes) {
+        // ---- Price & IT ----
+        const prices = (priceData?.filter(p => p.stock_code === code) || [])
+            .sort((a, b) => new Date(b.data_date).getTime() - new Date(a.data_date).getTime());
+
+        let momentum_60d: number | null = null;
+        let momentum_pass = false;
+        let it_buy_10d: number | null = null;
+        let it_buy_10d_pass = false;
+
+        if (prices.length >= 20) {
+            const closes = prices.map(p => Number(p.close));
+            const itBuys = prices.map(p => Number(p.it_buy || 0));
+
+            // Momentum filter
+            if (prices.length >= 61 && closes[60] > 0) {
+                momentum_60d = Number(((closes[0] / closes[60] - 1) * 100).toFixed(2));
+                momentum_pass = momentum_60d > 0;
+            }
+
+            // 投信 10日 filter
+            it_buy_10d = itBuys.slice(0, 10).reduce((a, b) => a + b, 0);
+            it_buy_10d_pass = it_buy_10d > 0;
+        }
+
+        // ---- Revenue MA3 New High ----
+        const revs = (revenueData?.filter(r => r.stock_code === code) || [])
+            .sort((a, b) => new Date(b.data_date).getTime() - new Date(a.data_date).getTime());
+
+        let rev_ma3: number | null = null;
+        let rev_ma3_new_high = false;
+
+        if (revs.length >= 14) {
+            // 計算 12 個連續 rev_ma3（從最新往回推）
+            const ma3Series: number[] = [];
+            for (let i = 0; i <= 11; i++) {
+                const avg = (
+                    Number(revs[i]?.revenue || 0) +
+                    Number(revs[i + 1]?.revenue || 0) +
+                    Number(revs[i + 2]?.revenue || 0)
+                ) / 3;
+                ma3Series.push(avg);
+            }
+            rev_ma3 = Number(ma3Series[0].toFixed(0));
+            const rollingMax = Math.max(...ma3Series);
+            rev_ma3_new_high = ma3Series[0] > 0 && Math.abs(ma3Series[0] - rollingMax) < 0.01;
+        } else if (revs.length >= 3) {
+            rev_ma3 = Number(((Number(revs[0]?.revenue || 0) + Number(revs[1]?.revenue || 0) + Number(revs[2]?.revenue || 0)) / 3).toFixed(0));
+        }
+
+        const filter_score = (momentum_pass ? 1 : 0) + (it_buy_10d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
+
+        result[code] = { momentum_60d, momentum_pass, it_buy_10d, it_buy_10d_pass, rev_ma3, rev_ma3_new_high, filter_score };
+    }
+
+    return result;
+}
+
+
 async function getRankingHistory() {
     const supabase = await createClient();
     const { data } = await supabase
@@ -177,10 +280,21 @@ async function getDiffLogs() {
 
 export default async function InvestmentPage() {
     const { holdings, updatedAt, dataDate } = await getHoldings();
-    const logs = await getDiffLogs();
-    const rankingHistory = await getRankingHistory();
-    const goldenZoneStats = await getGoldenZoneStats();
-    
+
+    // 並行計算三大量化 Filter（不阻塞其他 fetch）
+    const [logs, rankingHistory, goldenZoneStats, quantFilters] = await Promise.all([
+        getDiffLogs(),
+        getRankingHistory(),
+        getGoldenZoneStats(),
+        fetchQuantFilters(holdings.map(h => h.stock_code)),
+    ]);
+
+    // Merge quantitative filter data into holdings
+    const holdingsWithFilters = holdings.map(h => ({
+        ...h,
+        ...quantFilters[h.stock_code],
+    })) as Holding[];
+
     // 顯示最新的資料日期
     const displayDate = dataDate ? new Date(dataDate).toLocaleDateString('zh-TW', {
         month: '2-digit',
@@ -210,7 +324,7 @@ export default async function InvestmentPage() {
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         資料日期: {displayDate} <span className="text-slate-400 dark:text-slate-300 text-xs ml-1">({updateTime})</span>
                     </div>
-                    <AIAnalysisPromptButton holdings={holdings as Holding[]} dataDate={displayDate} />
+                    <AIAnalysisPromptButton holdings={holdingsWithFilters} dataDate={displayDate} />
                 </div>
             </div>
 
@@ -219,15 +333,15 @@ export default async function InvestmentPage() {
                 <InvestmentTabs
                     analysisContent={
                         <GoldenGrowthZone
-                            data={holdings}
+                            data={holdingsWithFilters}
                             historicalStats={goldenZoneStats?.stats}
                         />
                     }
-                    revenueLabContent={<RevenueLab currentHoldings={holdings as Holding[]} />}
+                    revenueLabContent={<RevenueLab currentHoldings={holdingsWithFilters} />}
                     holdingsContent={
                         <div className="w-full space-y-6">
-                            <HoldingsOverview data={holdings} />
-                            <HoldingsTable initialData={holdings} />
+                            <HoldingsOverview data={holdingsWithFilters} />
+                            <HoldingsTable initialData={holdingsWithFilters} />
                         </div>
                     }
                     ledgerContent={

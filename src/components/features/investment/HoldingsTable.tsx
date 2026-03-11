@@ -139,6 +139,13 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                 </div>
                             </th>
 
+                            <th scope="col" className="px-3 py-3">
+                                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                                    量化篩選
+                                    <span className="text-[9px] text-slate-400 font-normal">(M·T·R)</span>
+                                </div>
+                            </th>
+
                             <th scope="col" className="px-4 py-3 cursor-pointer group text-right" onClick={() => handleSort('weight')}>
                                 <div className="flex items-center justify-end group-hover:text-blue-600 transition-colors">
                                     權重 <SortIndicator field="weight" />

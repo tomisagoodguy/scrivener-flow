@@ -37,4 +37,12 @@ export interface Holding {
     amountRank?: number;
     marginRankHigh?: number;
     marginRankLow?: number;
+    // === 三大量化 Filter ===
+    momentum_60d?: number | null;       // close/close[60]-1 百分比
+    momentum_pass?: boolean;            // filter: momentum > 0
+    it_buy_10d?: number | null;         // 投信 10日累積買超 (張)
+    it_buy_10d_pass?: boolean;          // filter: it_buy_10d > 0
+    rev_ma3?: number | null;            // 最新 3月均營收 (千元)
+    rev_ma3_new_high?: boolean;         // filter: rev_ma3 == rolling(12).max()
+    filter_score?: number;              // 通過 Filter 數 (0~3)
 }

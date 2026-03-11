@@ -185,6 +185,56 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                 {item.shares?.toLocaleString()}
             </td>
 
+            {/* Quant Filters */}
+            <td className="px-3 py-3">
+                <div className="flex flex-col gap-1">
+                    {/* filterScore 總評分背景 */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {/* Momentum badge */}
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                            item.momentum_pass
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                                : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                        }`} title={item.momentum_60d != null ? `60日動能: ${item.momentum_60d > 0 ? '+' : ''}${item.momentum_60d}%` : '動能資料不足'}>
+                            M {item.momentum_pass ? '✓' : '✗'}
+                        </span>
+
+                        {/* 投信 badge */}
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                            item.it_buy_10d_pass
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                                : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                        }`} title={item.it_buy_10d != null ? `投信10日: ${item.it_buy_10d > 0 ? '+' : ''}${item.it_buy_10d?.toLocaleString()}張` : '投信資料不足'}>
+                            T {item.it_buy_10d_pass ? '✓' : '✗'}
+                        </span>
+
+                        {/* Rev New High badge */}
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                            item.rev_ma3_new_high
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                                : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                        }`} title={item.rev_ma3 != null ? `RevMA3: ${(item.rev_ma3 / 1000).toFixed(0)}M${item.rev_ma3_new_high ? ' ⭐12月新高' : ''}` : '營收資料不足'}>
+                            R {item.rev_ma3_new_high ? '✓' : '✗'}
+                        </span>
+                    </div>
+
+                    {/* filter_score 火力條 */}
+                    {(item.filter_score ?? 0) > 0 && (
+                        <div className="flex gap-0.5">
+                            {[0, 1, 2].map(i => (
+                                <div key={i} className={`h-1 w-4 rounded-full ${
+                                    i < (item.filter_score ?? 0)
+                                        ? item.filter_score === 3 ? 'bg-amber-400'
+                                        : item.filter_score === 2 ? 'bg-blue-400'
+                                        : 'bg-slate-400'
+                                        : 'bg-slate-100 dark:bg-slate-800'
+                                }`} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </td>
+
             {/* Weight */}
             <td className="px-4 py-3 text-right">
                 <div className="flex flex-col items-end gap-1">
