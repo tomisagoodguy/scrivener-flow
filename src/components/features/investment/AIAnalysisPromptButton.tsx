@@ -65,10 +65,10 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl">
                         <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                        00981 投資組合深度分析報告
+                        00981A 量化體檢報告
                     </DialogTitle>
                     <DialogDescription>
-                        由 Gemini 模型直接分析當前持股權重與營收動能，提供專業的投資見解。
+                        Gemini 分析三大量化 Filter：動能(60日)、投信10日累積、Rev MA3 創12月新高，識別強勢複合信號股。
                     </DialogDescription>
                 </DialogHeader>
                 
@@ -77,8 +77,8 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
                         <div className="flex flex-col items-center justify-center p-12 h-full bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
                             <Sparkles className="w-16 h-16 text-slate-300 mb-4" />
                             <p className="text-slate-500 mb-6 text-center">
-                                點擊下方按鈕，AI 將為您分析<br/>
-                                持股結構、營收動能與投資風險
+                                點擊下方按鈕，AI 將為您計算<br/>
+                                <span className="font-semibold text-indigo-500">動能 × 投信 × Rev New High</span> 三大量化 Filter
                             </p>
                             <Button onClick={handleGenerate} size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
                                 <Sparkles className="w-5 h-5 mr-2" />
@@ -94,8 +94,8 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
                                 <Loader2 className="w-12 h-12 text-indigo-600 animate-spin relative z-10" />
                             </div>
                             <div className="text-center space-y-2">
-                                <h3 className="font-medium text-lg text-slate-800 dark:text-slate-200">正在撰寫分析報告...</h3>
-                                <p className="text-slate-500 text-sm">分析持股權重 • 計算營收動能 • 評估投資風險</p>
+                                <h3 className="font-medium text-lg text-slate-800 dark:text-slate-200">正在進行量化體檢...</h3>
+                                <p className="text-slate-500 text-sm">計算 60日動能 • 統計投信10日買超 • 辨識Rev MA3新高</p>
                             </div>
                         </div>
                     )}
