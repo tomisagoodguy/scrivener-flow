@@ -14,7 +14,7 @@ export async function fetchWinRateFromDB(
   high = 100
 ): Promise<WinRateYearData | null> {
   try {
-    console.log(`[WinRate] Fetching data for year ${year}, yoy [${low}, ${high})...`);
+    console.info(`[WinRate] Fetching data for year ${year}, yoy [${low}, ${high})...`);
 
     // 1. Fetch Data in Parallel
     const [revenueRows, priceData] = await Promise.all([
@@ -55,7 +55,7 @@ export async function fetchWinRateFromDB(
 
 export async function fetchHeatmapFromDB(year: number): Promise<HeatmapYearData | null> {
   try {
-    console.log(`[Heatmap] Fetching data for year ${year}...`);
+    console.info(`[Heatmap] Fetching data for year ${year}...`);
 
     // 1. Fetch Data (Heatmap needs all revenue data, not filtered by YOY range)
     // Note: The original code filtered specifically for not-null revenue_yoy

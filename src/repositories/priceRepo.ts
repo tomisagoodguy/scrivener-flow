@@ -1,5 +1,6 @@
 
 import { getServiceClient } from '@/lib/supabase/service';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface PriceRow {
   stock_code: string;
@@ -8,14 +9,16 @@ export interface PriceRow {
   close: number;
 }
 
+type DbRow = Record<string, unknown>;
+
 export async function fetchPriceData(year: number, stockCodes?: string[]): Promise<{ startPrices: PriceRow[]; endPrices: PriceRow[] }> {
-  const supabase = getServiceClient();
-  
+  const supabase = getServiceClient() as SupabaseClient;
+
   // 股價期間：目標年6月（最早有資料）至 12月底
   const priceStart = `${year}-06-01`;
   const priceEnd = `${year}-12-31`;
 
-  let queryStart = (supabase as any)
+  let queryStart = supabase
     .from('stock_prices_daily')
     .select('stock_code, data_date, open')
     .gte('data_date', priceStart)
@@ -25,9 +28,9 @@ export async function fetchPriceData(year: number, stockCodes?: string[]): Promi
     queryStart = queryStart.in('stock_code', stockCodes);
   }
 
-  const { data: startData, error: startError } = await queryStart as { data: any[] | null; error: any };
+  const { data: startData, error: startError } = await queryStart;
 
-  let queryEnd = (supabase as any)
+  let queryEnd = supabase
     .from('stock_prices_daily')
     .select('stock_code, data_date, close')
     .lte('data_date', priceEnd)
@@ -37,7 +40,7 @@ export async function fetchPriceData(year: number, stockCodes?: string[]): Promi
     queryEnd = queryEnd.in('stock_code', stockCodes);
   }
 
-  const { data: endData, error: endError } = await queryEnd as { data: any[] | null; error: any };
+  const { data: endData, error: endError } = await queryEnd;
 
   if (startError || endError) {
     console.error('[PriceRepo] fetchPriceData error:', startError?.message, endError?.message);
@@ -45,7 +48,7 @@ export async function fetchPriceData(year: number, stockCodes?: string[]): Promi
   }
 
   return {
-    startPrices: (startData ?? []) as PriceRow[],
-    endPrices: (endData ?? []) as PriceRow[],
+    startPrices: ((startData ?? []) as DbRow[]) as unknown as PriceRow[],
+    endPrices: ((endData ?? []) as DbRow[]) as unknown as PriceRow[],
   };
 }

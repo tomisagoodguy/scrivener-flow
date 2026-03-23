@@ -39,7 +39,7 @@ export async function syncCaseData(options: {
         const result = await response.json();
 
         // 前端顯示模糊訊息
-        console.log('✅ 案件資料已同步');
+        console.info('✅ 案件資料已同步');
         return result;
 
     } catch (error) {
@@ -74,7 +74,7 @@ export async function syncProgress(options: {
         }
 
         const result = await response.json();
-        console.log('✅ 進度已同步');
+        console.info('✅ 進度已同步');
         return result;
 
     } catch (error) {
@@ -109,7 +109,7 @@ export async function backupData(options: {
         }
 
         const result = await response.json();
-        console.log('✅ 資料已備份');
+        console.info('✅ 資料已備份');
         return result;
 
     } catch (error) {

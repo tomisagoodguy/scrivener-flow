@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { ParsedCaseData } from '../../domain/case/types';
 import { processRawDocx } from '../../lib/docx-parser/preprocessor';
@@ -8,7 +8,7 @@ import { extractPayments } from '../../lib/docx-parser/extractors/payments';
 import { extractRedemption } from '../../lib/docx-parser/extractors/redemptions';
 
 export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
-    console.log('>>> Server Action Triggered: parseDocx (Refactored Modular Logic)');
+    console.info('>>> Server Action Triggered: parseDocx (Refactored Modular Logic)');
     try {
         const file = formData.get('file');
         if (!file) throw new Error('No file uploaded');
@@ -18,7 +18,7 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
         // 1. Preprocess: Convert Docx to Structured and Flat Text
         const { rawText, flatText } = await processRawDocx(buffer);
 
-        console.log('Processed Structured Text (First 300 chars):', rawText.substring(0, 300));
+        console.info('Processed Structured Text (First 300 chars):', rawText.substring(0, 300));
 
         // 2. Initialize Data
         const parsedData: ParsedCaseData = {
@@ -35,8 +35,9 @@ export async function parseDocx(formData: FormData): Promise<ParsedCaseData> {
         Object.assign(parsedData, basicInfo, personnel, payments, redemptions);
 
         return parsedData;
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error('Parse Error', e);
-        return { debug_text: 'Error parsing file: ' + e.message };
+        const message = e instanceof Error ? e.message : String(e);
+        return { debug_text: 'Error parsing file: ' + message };
     }
 }

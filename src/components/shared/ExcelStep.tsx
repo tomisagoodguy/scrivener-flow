@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface ExcelStepProps {
     label: string;
@@ -11,15 +11,12 @@ interface ExcelStepProps {
 
 export default function ExcelStep({ label, date, note, caseId }: ExcelStepProps) {
     const isCompleted = !!date;
-    const [isHighlighted, setIsHighlighted] = useState(false);
-
-    useEffect(() => {
+    // 使用 lazy initializer 在首次渲染時讀取 localStorage，無需 useEffect
+    const [isHighlighted, setIsHighlighted] = useState(() => {
+        if (typeof window === 'undefined') return false;
         const key = `highlight_${caseId}_${label}`;
-        const saved = localStorage.getItem(key);
-        if (saved === 'true') {
-            setIsHighlighted(true);
-        }
-    }, [caseId, label]);
+        return localStorage.getItem(key) === 'true';
+    });
 
     const toggleHighlight = () => {
         const key = `highlight_${caseId}_${label}`;

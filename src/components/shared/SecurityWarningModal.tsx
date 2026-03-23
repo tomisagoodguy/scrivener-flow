@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const STORAGE_KEY = 'sf_security_warning_acknowledged';
 
@@ -9,14 +9,11 @@ import { logSecurityAcknowledgement } from '@/app/actions/securityActions';
 
 
 export function SecurityWarningModal() {
-    const [visible, setVisible] = useState(false);
-
-    useEffect(() => {
-        const acknowledged = localStorage.getItem(STORAGE_KEY);
-        if (!acknowledged) {
-            setVisible(true);
-        }
-    }, []);
+    // 使用 lazy initializer 讀取 localStorage，避免 useEffect 中同步 setState
+    const [visible, setVisible] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return !localStorage.getItem(STORAGE_KEY);
+    });
 
     async function handleAcknowledge() {
         localStorage.setItem(STORAGE_KEY, 'true');

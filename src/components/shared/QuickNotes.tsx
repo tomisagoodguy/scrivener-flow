@@ -45,7 +45,7 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
                     return;
                 }
 
-                const { data, error } = await supabase
+                const { data, error: _error } = await supabase
                     .from('user_settings')
                     .select('custom_quick_notes')
                     .eq('user_id', user.id)
@@ -54,8 +54,8 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
                 if (data && data.custom_quick_notes) {
                     setCustomNotes(data.custom_quick_notes as string[]);
                 }
-            } catch (err) {
-                console.error('Failed to load custom quick notes', err);
+            } catch (_err) {
+                console.error('Failed to load custom quick notes', _err);
             }
         };
         loadNotes();

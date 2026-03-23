@@ -1,5 +1,6 @@
 
 import { getServiceClient } from '@/lib/supabase/service';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface RevenueRow {
   stock_code: string;
@@ -12,14 +13,16 @@ export interface RevenueFilter {
   yoyHigh?: number;
 }
 
+type DbRow = Record<string, unknown>;
+
 export async function fetchRevenueData(year: number, filters?: RevenueFilter): Promise<RevenueRow[]> {
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as SupabaseClient;
 
   // 月營收研究期間：前一年12月 至 目標年11月
   const revenueStart = `${year - 1}-12-01`;
   const revenueEnd = `${year}-11-30`;
 
-  let query = (supabase as any)
+  let query = supabase
     .from('stock_revenue_monthly')
     .select('stock_code, data_date, revenue_yoy')
     .gte('data_date', revenueStart)
@@ -35,12 +38,12 @@ export async function fetchRevenueData(year: number, filters?: RevenueFilter): P
     query = query.not('revenue_yoy', 'is', null);
   }
 
-  const { data, error } = await query as { data: any[] | null; error: any };
+  const { data, error } = await query;
 
   if (error) {
     console.error('[RevenueRepo] fetchRevenueData error:', error.message);
     throw error;
   }
 
-  return (data ?? []) as RevenueRow[];
+  return ((data ?? []) as DbRow[]) as unknown as RevenueRow[];
 }

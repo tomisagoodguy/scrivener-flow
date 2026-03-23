@@ -1,7 +1,5 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { BarChart3, Flame, TrendingUp, Clock } from 'lucide-react';
+import { Flame, TrendingUp } from 'lucide-react';
 import { getWinRateData, getHeatmapData } from '@/app/actions/revenueLabActions';
 import { WinRateLab } from './WinRateLab';
 import { RevenueHeatmap } from './RevenueHeatmap';

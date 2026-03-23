@@ -13,7 +13,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Trophy, ChevronDown, ChevronUp, Users, Target, Zap } from 'lucide-react';

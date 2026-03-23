@@ -10,6 +10,7 @@ import { ClauseItem } from '@/components/features/clauses/ClauseItem';
 
 export default function ClausesPage() {
     const {
+        clauses,
         filteredClauses,
         loading,
         searchTerm,
@@ -38,12 +39,15 @@ export default function ClausesPage() {
     const sidebarGroups: SidebarGroup[] = [
         {
             title: "標籤索引",
-            items: allTags.map(tag => ({
-                id: tag,
-                label: tag,
-                count: filteredClauses.filter(c => c.tags && c.tags.includes(tag)).length, // Dynamic count based on current filter context (or use clauses.filter if global count desired)
-                icon: <Tag className="w-4 h-4 text-emerald-400" />
-            }))
+            items: allTags
+                .map(tag => ({
+                    id: tag,
+                    label: tag,
+                    count: clauses.filter(c => c.tags && c.tags.includes(tag)).length,
+                    icon: <Tag className="w-4 h-4 text-emerald-400" />
+                }))
+                // 熱門（使用次數高）排前面，相同 count 再按字母排
+                .sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label, 'zh-TW'))
         }
     ];
 
@@ -54,6 +58,8 @@ export default function ClausesPage() {
                 groups={sidebarGroups}
                 selectedId={selectedCategory}
                 onSelect={setSelectedCategory}
+                searchable
+                hotThreshold={2}
                 className="hidden md:block shadow-sm z-10 sticky top-0 h-screen"
             />
 

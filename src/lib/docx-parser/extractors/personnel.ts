@@ -1,6 +1,5 @@
 
 import { ParsedCaseData } from '../../../domain/case/types';
-import { formatDate } from '../utils';
 
 export function extractPersonnel(rawText: string): Partial<ParsedCaseData> {
     const data: Partial<ParsedCaseData> = {};
@@ -29,11 +28,15 @@ export function extractPersonnel(rawText: string): Partial<ParsedCaseData> {
     // Mammoth output is unstructured, so we treat it as a stream
     const tokens = processedText.split(/[,，\s\n]+/).filter((t) => t.trim().length > 0);
 
-    const people: any = {
-        buyer: { name: '', phones: [] as string[] },
-        seller: { name: '', phones: [] as string[] },
-        registrant: { name: '', phones: [] as string[] },
-        agent: { name: '', phones: [] as string[] },
+    interface PersonEntry {
+        name: string;
+        phones: string[];
+    }
+    const people: Record<string, PersonEntry> = {
+        buyer: { name: '', phones: [] },
+        seller: { name: '', phones: [] },
+        registrant: { name: '', phones: [] },
+        agent: { name: '', phones: [] },
     };
 
     let currentRole: string | null = null;

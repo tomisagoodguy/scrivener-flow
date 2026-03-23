@@ -1,10 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { ClockIcon, TrendingUpIcon } from 'lucide-react';
-import Link from 'next/link';
+import { ClockIcon } from 'lucide-react';
 import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Assuming shadcn/ui tabs exist
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
 import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
@@ -53,7 +50,7 @@ async function getHoldings() {
     const isValid = totalCount > 0 && (validPriceCount / totalCount) > 0.5; // Threshold: 50% valid prices
 
     if (!isValid && dateCandidates.length > 1) {
-        console.log(`⚠️ Snapshot for ${targetDate} seems incomplete (Valid Prices: ${validPriceCount}/${totalCount}). Falling back to ${dateCandidates[1].data_date}`);
+        console.info(`⚠️ Snapshot for ${targetDate} seems incomplete (Valid Prices: ${validPriceCount}/${totalCount}). Falling back to ${dateCandidates[1].data_date}`);
         targetDate = dateCandidates[1].data_date;
         targetUpdatedAt = dateCandidates[1].updated_at;
         data = await fetchHoldingsForDate(targetDate);

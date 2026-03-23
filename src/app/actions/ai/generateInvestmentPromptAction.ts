@@ -376,13 +376,13 @@ ${JSON.stringify(topHoldings, null, 2)}
         let lastError = null;
         for (const modelName of MODELS_TO_TRY) {
             try {
-                console.log(`🤖 嘗試呼叫 AI 模型: ${modelName}...`);
+                console.info(`🤖 嘗試呼叫 AI 模型: ${modelName}...`);
                 const model = genAI.getGenerativeModel({ model: modelName });
                 const result = await model.generateContent(systemPrompt);
                 const analysisReport = result.response.text();
 
                 if (analysisReport) {
-                    console.log(`✅ 成功使用 ${modelName} 生成報告`);
+                    console.info(`✅ 成功使用 ${modelName} 生成報告`);
                     return { success: true, prompt: analysisReport };
                 }
             } catch (e: unknown) {
