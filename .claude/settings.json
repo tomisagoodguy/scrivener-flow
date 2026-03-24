@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\")"
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\")",
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: Magic Link 隱式流改由 /auth/confirm 頁面處理，登入 tab 改名為帳號登入/一次性連結\")"
     ]
   }
 }

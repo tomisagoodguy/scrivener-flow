@@ -6,51 +6,51 @@ export async function GET(request: Request) {
     const code = searchParams.get('code');
     const token_hash = searchParams.get('token_hash');
     const type = searchParams.get('type') as any;
-    // if "next" is in param, use it as the redirect URL
     const next = searchParams.get('next') ?? '/';
 
-    const redirectTo = new URL(next, origin);
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const isLocalEnv = process.env.NODE_ENV === 'development';
+
+    const buildRedirect = (path: string) => {
+        if (isLocalEnv) return new URL(path, origin).toString();
+        if (forwardedHost) return `https://${forwardedHost}${path}`;
+        return new URL(path, origin).toString();
+    };
 
     if (code) {
         const supabase = await createClient();
-        const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (!error && session) {
+        if (!error) {
             // 持久化 Google Token 到 user_settings，供後端 Drive API 使用
-            if (session.provider_token) {
+            const session = data.session;
+            if (session?.provider_token) {
                 await supabase.from('user_settings').upsert({
                     user_id: session.user.id,
                     google_access_token: session.provider_token,
                     google_refresh_token: session.provider_refresh_token,
                     last_token_update: new Date().toISOString(),
                 });
-                console.log('Google Token persisted for user:', session.user.id);
             }
-
-            const forwardedHost = request.headers.get('x-forwarded-host');
-            const isLocalEnv = process.env.NODE_ENV === 'development';
-
-            if (isLocalEnv) {
-                return NextResponse.redirect(redirectTo);
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`);
-            } else {
-                return NextResponse.redirect(redirectTo);
-            }
+            return NextResponse.redirect(buildRedirect(next));
         }
-    } else if (token_hash && type) {
-        const supabase = await createClient();
-        const { error } = await supabase.auth.verifyOtp({
-            token_hash,
-            type,
-        });
-        if (!error) {
-            return NextResponse.redirect(redirectTo);
-        } else {
-            console.error('Verify OTP error:', error);
-        }
+        console.error('exchangeCodeForSession error:', error.message);
     }
 
-    // return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/login?error=auth-code-error`);
+    if (token_hash && type) {
+        const supabase = await createClient();
+        const { error } = await supabase.auth.verifyOtp({ token_hash, type });
+        if (!error) {
+            return NextResponse.redirect(buildRedirect(next));
+        }
+        console.error('verifyOtp error:', error.message);
+    }
+
+    // 若都沒有 code / token_hash，可能是 implicit flow（#access_token 在 hash 中）
+    // 轉到 /auth/confirm 讓 client 端處理
+    if (!code && !token_hash) {
+        return NextResponse.redirect(buildRedirect('/auth/confirm'));
+    }
+
+    return NextResponse.redirect(buildRedirect(`/login?error=auth-code-error`));
 }

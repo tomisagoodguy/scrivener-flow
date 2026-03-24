@@ -232,14 +232,14 @@ export function ModernLogin() {
                                         onClick={() => { setLoginMode('password'); setMessage(''); }}
                                         className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'password' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
-                                        <span className="flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" />密碼登入</span>
+                                        <span className="flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" />帳號登入</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => { setLoginMode('otp'); setMessage(''); }}
                                         className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'otp' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
-                                        <span className="flex items-center justify-center gap-1.5"><Mail className="w-3 h-3" />Magic Link</span>
+                                        <span className="flex items-center justify-center gap-1.5"><Mail className="w-3 h-3" />一次性連結</span>
                                     </button>
                                 </div>
 
@@ -247,7 +247,7 @@ export function ModernLogin() {
                                 <AnimatePresence mode="wait">
                                 {mfaStep === 'totp' ? (
                                     <motion.form key="totp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onSubmit={handleTotpVerify} className="space-y-4">
-                                        <p className="text-xs text-slate-500 font-bold text-center">開啟 Authenticator App，輸入 6 位驗證碼</p>
+                                        <p className="text-xs text-slate-500 font-bold text-center">開啟驗證器 App（如 Google Authenticator），輸入 6 位數字</p>
                                         <div className="relative group/input">
                                             <input
                                                 type="text"
