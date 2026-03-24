@@ -2,13 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gavel, ShieldCheck, Mail, LogIn, ChevronRight, X, Lock, Command, Fingerprint, Sparkles } from 'lucide-react';
+import { Gavel, ShieldCheck, Mail, LogIn, X, Lock, Command, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/auth/client';
+
+type LoginMode = 'password' | 'otp';
+type MfaStep = 'none' | 'totp';
 
 export function ModernLogin() {
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [totpCode, setTotpCode] = useState('');
+    const [loginMode, setLoginMode] = useState<LoginMode>('password');
+    const [mfaStep, setMfaStep] = useState<MfaStep>('none');
+    const [mfaFactorId, setMfaFactorId] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState<'info' | 'error'>('info');
     const [showAppleModal, setShowAppleModal] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const supabase = createClient();
@@ -36,6 +45,56 @@ export function ModernLogin() {
         }
     };
 
+    const handlePasswordLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email || !password) return;
+
+        setLoading(true);
+        setMessage('');
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            setMessageType('error');
+            setMessage(error.message === 'Invalid login credentials' ? 'Email 或密碼錯誤' : error.message);
+            setLoading(false);
+            return;
+        }
+
+        // Check if TOTP MFA is required
+        if (data.session?.user) {
+            const { data: factorsData } = await supabase.auth.mfa.listFactors();
+            const totpFactor = factorsData?.totp?.[0];
+            if (totpFactor && totpFactor.status === 'verified') {
+                setMfaFactorId(totpFactor.id);
+                setMfaStep('totp');
+                setLoading(false);
+                return;
+            }
+        }
+
+        setLoading(false);
+    };
+
+    const handleTotpVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!totpCode || !mfaFactorId) return;
+
+        setLoading(true);
+        setMessage('');
+
+        const { error } = await supabase.auth.mfa.challengeAndVerify({
+            factorId: mfaFactorId,
+            code: totpCode,
+        });
+
+        setLoading(false);
+        if (error) {
+            setMessageType('error');
+            setMessage('驗證碼錯誤，請重新輸入');
+        }
+    };
+
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) return;
@@ -51,8 +110,10 @@ export function ModernLogin() {
 
         setLoading(false);
         if (error) {
+            setMessageType('error');
             setMessage(error.message);
         } else {
+            setMessageType('info');
             setMessage('驗證信已寄出，請檢查您的信箱');
         }
     };
@@ -156,7 +217,121 @@ export function ModernLogin() {
                             </div>
 
                             <div className="space-y-5">
-                                {/* Google Connect */}
+                                {/* 企業網路提示 */}
+                                <div className="flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-100 rounded-2xl">
+                                    <span className="text-amber-500 text-sm mt-0.5">🏢</span>
+                                    <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
+                                        公司或企業網路環境，請使用<span className="text-amber-900">密碼登入</span>或 TOTP 驗證器
+                                    </p>
+                                </div>
+
+                                {/* 模式切換 Tab */}
+                                <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setLoginMode('password'); setMessage(''); }}
+                                        className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'password' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        <span className="flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" />密碼登入</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setLoginMode('otp'); setMessage(''); }}
+                                        className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'otp' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        <span className="flex items-center justify-center gap-1.5"><Mail className="w-3 h-3" />Magic Link</span>
+                                    </button>
+                                </div>
+
+                                {/* TOTP 驗證步驟 */}
+                                <AnimatePresence mode="wait">
+                                {mfaStep === 'totp' ? (
+                                    <motion.form key="totp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onSubmit={handleTotpVerify} className="space-y-4">
+                                        <p className="text-xs text-slate-500 font-bold text-center">開啟 Authenticator App，輸入 6 位驗證碼</p>
+                                        <div className="relative group/input">
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                placeholder="000000"
+                                                value={totpCode}
+                                                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                className="w-full text-center tracking-[0.5em] text-2xl font-black h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 placeholder:text-slate-300"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={loading || totpCode.length !== 6}
+                                            className="w-full h-16 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/20 text-white font-black active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>驗證並登入</span></>}
+                                        </button>
+                                        <button type="button" onClick={() => { setMfaStep('none'); setTotpCode(''); }} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">返回</button>
+                                    </motion.form>
+                                ) : loginMode === 'password' ? (
+                                    /* 密碼登入表單 */
+                                    <motion.form key="password" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onSubmit={handlePasswordLogin} className="space-y-4">
+                                        <div className="relative group/input">
+                                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                                            <input
+                                                type="email"
+                                                placeholder="電郵地址"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="w-full pl-14 h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 font-bold placeholder:text-slate-400"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="relative group/input">
+                                            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                                            <input
+                                                type="password"
+                                                placeholder="密碼"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="w-full pl-14 h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 font-bold placeholder:text-slate-400"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={loading || !email || !password}
+                                            className="w-full h-16 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/20 text-white font-black active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>登入</span></>}
+                                        </button>
+                                    </motion.form>
+                                ) : (
+                                    /* Magic Link 表單 */
+                                    <motion.form key="otp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onSubmit={handleEmailLogin} className="space-y-4">
+                                        <div className="relative group/input">
+                                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                                            <input
+                                                type="email"
+                                                placeholder="電郵地址"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="w-full pl-14 h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 font-bold placeholder:text-slate-400"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={loading || !email}
+                                            className="w-full h-16 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/20 text-white font-black active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>傳送登入連結</span></>}
+                                        </button>
+                                    </motion.form>
+                                )}
+                                </AnimatePresence>
+
+                                <div className="relative py-4">
+                                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
+                                    <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]"><span className="bg-white dark:bg-white border border-slate-100 dark:border-slate-100 rounded-full px-5 py-1 text-slate-400 dark:text-slate-400">或使用社群帳號</span></div>
+                                </div>
+
+                                {/* Google Connect（次要） */}
                                 <button
                                     onClick={handleGoogleLogin}
                                     className="w-full h-16 bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-2xl flex items-center justify-center gap-4 transition-all hover:bg-slate-50 dark:hover:bg-slate-50 hover:shadow-lg hover:shadow-slate-100 active:scale-[0.98] group"
@@ -180,38 +355,12 @@ export function ModernLogin() {
                                     </svg>
                                     <span className="text-white font-black tracking-tight">Continue with Apple</span>
                                 </button>
-
-                                <div className="relative py-4">
-                                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
-                                    <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]"><span className="bg-white dark:bg-white border border-slate-100 dark:border-slate-100 rounded-full px-5 py-1 text-slate-400 dark:text-slate-400">Magic Link</span></div>
-                                </div>
-
-                                <form onSubmit={handleEmailLogin} className="space-y-4">
-                                    <div className="relative group/input">
-                                        <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
-                                        <input
-                                            type="email"
-                                            placeholder="電郵地址"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-14 h-16 bg-slate-50 dark:bg-slate-100 border-2 border-transparent focus:bg-white dark:focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 dark:text-slate-900 font-bold placeholder:text-slate-400 dark:placeholder:text-slate-400"
-                                            required
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        disabled={loading || !email}
-                                        className="w-full h-16 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/20 text-white font-black active:scale-[0.98] disabled:opacity-50"
-                                    >
-                                        {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>傳送登入連結</span></>}
-                                    </button>
-                                </form>
                             </div>
 
                             <AnimatePresence>
                                 {message && (
-                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-8 p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
-                                        <p className="text-xs text-blue-600 font-black">{message}</p>
+                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`mt-8 p-4 rounded-2xl border text-center ${messageType === 'error' ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
+                                        <p className={`text-xs font-black ${messageType === 'error' ? 'text-red-600' : 'text-blue-600'}`}>{message}</p>
                                     </motion.div>
                                 )}
                             </AnimatePresence>

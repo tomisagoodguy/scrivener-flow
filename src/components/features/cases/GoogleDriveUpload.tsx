@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { DriveFile, GoogleDriveService } from '@/lib/google/drive';
+import { DriveFile } from '@/lib/google/drive';
 import { Upload, File, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { resizeImage } from '@/utils/imageUtils';
@@ -65,21 +65,73 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
                 }
 
             } else {
-                // === 模式 B: 直連加密通道 (大檔案) ===
-                toast.info('檔案較大 (>4MB)，切換至直連通道...', { description: '正在建立安全連線，請稍候' });
+                // === 模式 B: 分塊代理上傳 (大檔案) — 全程走伺服器，不直連 googleapis.com ===
+                const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB per chunk
+                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                toast.info(`檔案較大 (>4MB)，啟動分塊代理上傳...`, { description: `共 ${totalChunks} 塊，全程走伺服器加密轉發` });
 
-                // 1. 取得目標資料夾 ID (自動判斷結構)
-                const folderId = await GoogleDriveService.getCaseFolderId(caseId, caseNumber);
+                // 1. 初始化 Resumable Upload Session（由伺服器向 Google 申請）
+                const initRes = await fetch('/api/drive/init-resumable', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        caseId,
+                        caseNumber,
+                        fileName: file.name,
+                        mimeType: file.type || 'application/octet-stream',
+                        fileSize: file.size,
+                    }),
+                });
 
-                // 2. 直連上傳 Google Drive
-                const tempFile = await GoogleDriveService.uploadFile(file, folderId);
+                if (!initRes.ok) {
+                    const err = await initRes.json();
+                    throw new Error(err.error || '初始化上傳失敗');
+                }
 
-                // 3. 取得完整檔案資訊 (包含 webViewLink)
-                const fullFile = await GoogleDriveService.getFileDetails(tempFile.id);
+                const { sessionId } = await initRes.json();
 
-                setUploadedFiles(prev => [...prev, fullFile]);
+                // 2. 分塊上傳
+                let uploadedFile: DriveFile | null = null;
+                for (let i = 0; i < totalChunks; i++) {
+                    const rangeStart = i * CHUNK_SIZE;
+                    const rangeEnd = Math.min(rangeStart + CHUNK_SIZE - 1, file.size - 1);
+                    const chunk = file.slice(rangeStart, rangeEnd + 1);
+
+                    const chunkBuffer = await chunk.arrayBuffer();
+                    const chunkBase64 = btoa(String.fromCharCode(...new Uint8Array(chunkBuffer)));
+
+                    const chunkRes = await fetch('/api/drive/upload-chunk', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId, chunkBase64, rangeStart, rangeEnd, totalSize: file.size }),
+                    });
+
+                    if (!chunkRes.ok) {
+                        const err = await chunkRes.json();
+                        if (err.error === 'session_expired') {
+                            throw new Error('上傳 Session 已過期，請重新上傳');
+                        }
+                        throw new Error(err.error || `第 ${i + 1} 塊上傳失敗`);
+                    }
+
+                    const chunkData = await chunkRes.json();
+                    toast.info(`上傳中 ${i + 1}/${totalChunks} 塊...`);
+
+                    if (chunkData.status === 'complete') {
+                        uploadedFile = {
+                            id: chunkData.fileId || chunkData.id,
+                            name: chunkData.name || file.name,
+                            webViewLink: chunkData.webViewLink,
+                            iconLink: chunkData.iconLink,
+                        };
+                    }
+                }
+
+                if (!uploadedFile) throw new Error('上傳完成但未取得檔案資訊');
+
+                setUploadedFiles(prev => [...prev, uploadedFile!]);
                 toast.success(`檔案 ${file.name} 上傳成功！`);
-                if (onUploadComplete) onUploadComplete(fullFile);
+                if (onUploadComplete) onUploadComplete(uploadedFile);
             }
 
         } catch (error: any) {
@@ -201,7 +253,7 @@ export default function GoogleDriveUpload({ caseId, caseNumber, onUploadComplete
 
                             <div className="mt-8 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/30">
                                 <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold leading-relaxed text-center italic">
-                                    Secure Smart Routing: E2EE (Small) / Direct SSL (Large) Active
+                                    Secure Smart Routing: E2EE (Small) / Server Proxy Chunked (Large) Active
                                 </p>
                             </div>
                         </div>

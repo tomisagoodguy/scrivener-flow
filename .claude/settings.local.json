@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.py$|migrations|logs\")",
+      "Bash(grep -r \"GOOGLE_CLIENT_ID\\\\|GOOGLE_CLIENT_SECRET\\\\|GOOGLE_GEMINI\\\\|googleapis\\\\|google.com\" .env*)",
+      "Bash(grep -r \"GoogleProvider\\\\|google.*provider\\\\|oauth\" src/ --include=*.ts --include=*.tsx)",
+      "Bash(openspec --version)",
+      "Bash(openspec new:*)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(yarn build:*)"
+    ]
+  }
+}
