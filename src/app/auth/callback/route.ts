@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
     const token_hash = searchParams.get('token_hash');
-    const type = searchParams.get('type') as any;
+    const type = searchParams.get('type') as import('@supabase/supabase-js').EmailOtpType;
     const next = searchParams.get('next') ?? '/';
 
     const forwardedHost = request.headers.get('x-forwarded-host');
