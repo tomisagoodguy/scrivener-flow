@@ -12,16 +12,19 @@ export default function AuthConfirmPage() {
 
     useEffect(() => {
         const handleAuth = async () => {
+            const searchParams = new URLSearchParams(window.location.search);
+            const next = searchParams.get('next') || '/';
+
             // @supabase/ssr 的 createBrowserClient 會自動偵測 URL hash 中的 token
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                router.replace('/');
+                window.location.href = next;
             } else {
                 // 等待 onAuthStateChange 觸發（hash token 尚未解析完成）
                 const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_IN' && session) {
                         subscription.unsubscribe();
-                        router.replace('/');
+                        window.location.href = next;
                     } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
                         subscription.unsubscribe();
                         router.replace('/login?error=auth-code-error');

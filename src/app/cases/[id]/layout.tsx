@@ -16,7 +16,7 @@ export default async function CaseLayout({ children }: { children: React.ReactNo
 
     // Fetch all active cases (Processing) for the sidebar directory
     // We only need id, buyer_name, seller_name, status, case_number
-    let query = supabase
+    const query = supabase
         .from('cases')
         .select(`
             id, 

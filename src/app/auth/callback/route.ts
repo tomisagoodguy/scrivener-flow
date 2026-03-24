@@ -46,10 +46,8 @@ export async function GET(request: Request) {
         console.error('verifyOtp error:', error.message);
     }
 
-    // 若都沒有 code / token_hash，可能是 implicit flow（#access_token 在 hash 中）
-    // 轉到 /auth/confirm 讓 client 端處理
     if (!code && !token_hash) {
-        return NextResponse.redirect(buildRedirect('/auth/confirm'));
+        return NextResponse.redirect(buildRedirect(`/auth/confirm?next=${encodeURIComponent(next)}`));
     }
 
     return NextResponse.redirect(buildRedirect(`/login?error=auth-code-error`));

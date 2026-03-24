@@ -378,7 +378,7 @@ You MUST pause and trigger a 'Mini-Reflect' sequence when:
     - Was it a user preference?
 3. **Update Memory (The Commit)**:
     - **Global/Project Rules**: Append to ANTIGRAVITY.md or this file (.agent/rules.md) if fundamental.
-    - **Skill-Specific**: Append to .agent/skills/<skill>/SKILL.md.
+    - **Skill-Specific**: Append to `.agent/skills/<skill>/SKILL.md`.
 4. **Confirm**: Explicitly state: *'I have updated ANTIGRAVITY.md to [action] in the future.'*
 
 ### 3. Memory Structure
