@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, ShieldCheck, Mail, LogIn, X, Lock, Command, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/auth/client';
@@ -20,13 +21,8 @@ export function ModernLogin() {
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState<'info' | 'error'>('info');
     const [showAppleModal, setShowAppleModal] = useState(false);
-    const [isMounted, setIsMounted] = useState(false);
     const supabase = createClient();
     const router = useRouter();
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
 
     const handleGoogleLogin = async () => {
         try {
@@ -54,28 +50,43 @@ export function ModernLogin() {
         setLoading(true);
         setMessage('');
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-        if (error) {
-            setMessageType('error');
-            setMessage(error.message === 'Invalid login credentials' ? 'Email 或密碼錯誤' : error.message);
-            setLoading(false);
-            return;
-        }
-
-        // Check if TOTP MFA is required
-        if (data.session?.user) {
-            const { data: factorsData } = await supabase.auth.mfa.listFactors();
-            const totpFactor = factorsData?.totp?.[0];
-            if (totpFactor && totpFactor.status === 'verified') {
-                setMfaFactorId(totpFactor.id);
-                setMfaStep('totp');
+            if (error) {
+                setMessageType('error');
+                setMessage(error.message === 'Invalid login credentials' ? 'Email 或密碼錯誤' : error.message);
                 setLoading(false);
                 return;
             }
-        }
 
-        router.push('/');
+            if (data.session?.user) {
+                const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+                if (factorsError) {
+                    console.error('List factors error:', factorsError);
+                }
+                const totpFactor = factorsData?.totp?.[0];
+                if (totpFactor && totpFactor.status === 'verified') {
+                    setMfaFactorId(totpFactor.id);
+                    setMfaStep('totp');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            setMessageType('info');
+            setMessage('登入成功，正在導向...');
+            router.refresh();
+            setTimeout(() => {
+                router.push('/');
+            }, 300);
+        } catch (error: unknown) {
+            console.error('Login exception:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            setMessageType('error');
+            setMessage(errorMessage || '網路異常，無法連線至認證伺服器');
+            setLoading(false);
+        }
     };
 
     const handleTotpVerify = async (e: React.FormEvent) => {
@@ -85,33 +96,56 @@ export function ModernLogin() {
         setLoading(true);
         setMessage('');
 
-        const { error } = await supabase.auth.mfa.challengeAndVerify({
-            factorId: mfaFactorId,
-            code: totpCode,
-        });
+        try {
+            const { error } = await supabase.auth.mfa.challengeAndVerify({
+                factorId: mfaFactorId,
+                code: totpCode,
+            });
 
-        setLoading(false);
-        if (error) {
+            if (error) {
+                setLoading(false);
+                setMessageType('error');
+                setMessage('驗證碼錯誤，請重新輸入');
+            } else {
+                setMessageType('info');
+                setMessage('驗證成功，正在導向...');
+                router.refresh();
+                setTimeout(() => {
+                    router.push('/');
+                }, 300);
+            }
+        } catch (error: unknown) {
+            console.error('TOTP Verify exception:', error);
             setMessageType('error');
-            setMessage('驗證碼錯誤，請重新輸入');
+            setMessage('驗證異常，無法連線伺服器');
+            setLoading(false);
         }
     };
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) return;
+        
         setLoading(true);
         setMessage('');
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/callback?next=/auth/set-password`,
-        });
-        setLoading(false);
-        if (error) {
+        
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth/callback?next=/auth/set-password`,
+            });
+            setLoading(false);
+            if (error) {
+                setMessageType('error');
+                setMessage(error.message);
+            } else {
+                setMessageType('info');
+                setMessage('密碼設定信已寄出，請至信箱點擊連結（有效 1 小時）');
+            }
+        } catch (error: unknown) {
+            console.error('Reset Password exception:', error);
             setMessageType('error');
-            setMessage(error.message);
-        } else {
-            setMessageType('info');
-            setMessage('密碼設定信已寄出，請至信箱點擊連結（有效 1 小時）');
+            setMessage('重設請求異常，無法連線伺服器');
+            setLoading(false);
         }
     };
 
@@ -121,24 +155,30 @@ export function ModernLogin() {
 
         setLoading(true);
         setMessage('');
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+        
+        try {
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
 
-        setLoading(false);
-        if (error) {
+            setLoading(false);
+            if (error) {
+                setMessageType('error');
+                setMessage(error.message);
+            } else {
+                setMessageType('info');
+                setMessage('驗證信已寄出，請檢查您的信箱');
+            }
+        } catch (error: unknown) {
+            console.error('Email Login exception:', error);
             setMessageType('error');
-            setMessage(error.message);
-        } else {
-            setMessageType('info');
-            setMessage('驗證信已寄出，請檢查您的信箱');
+            setMessage('登入請求異常，無法連線伺服器');
+            setLoading(false);
         }
     };
-
-    if (!isMounted) return null;
 
     return (
         <div className="relative w-full min-h-screen flex items-center justify-center p-6 overflow-hidden bg-slate-50 dark:bg-slate-100">
@@ -164,10 +204,13 @@ export function ModernLogin() {
                         <div className="absolute -inset-1 bg-linear-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-25 animate-pulse"></div>
                         <div className="relative w-56 md:w-64 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300 bg-white">
                             {/* Standard HTML img tag for local assets in public folder usually works easier without imports if public path is correct */}
-                            <img
+                            <Image
                                 src="/login-cat.png"
                                 alt="Monday Mood"
+                                width={256}
+                                height={256}
                                 className="w-full h-auto block"
+                                priority
                             />
                         </div>
                         <div className="absolute -bottom-3 -right-2 bg-white px-4 py-1.5 rounded-full shadow-lg border border-slate-100 transform rotate-6 z-10 transition-transform group-hover:rotate-0">

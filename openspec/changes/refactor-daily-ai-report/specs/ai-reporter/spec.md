@@ -36,22 +36,22 @@
 
 ## Scenarios
 
-#### Scenario: dry_run 模式
+### Scenario: dry_run 模式
 
 - **WHEN** `AIReporter('00878', [...]).run(dry_run=True)` 被呼叫
 - **THEN** 印出 `[Dry Run Report Output]` 前綴與報告前 200 字，不呼叫 LINE notifier
 
-#### Scenario: API Key 缺失
+### Scenario: API Key 缺失
 
 - **WHEN** 環境中無 `GOOGLE_GEMINI_API_KEY`
 - **THEN** `logger.error` 記錄錯誤，`run()` 提前 `return`，不執行後續步驟
 
-#### Scenario: 所有模型失敗
+### Scenario: 所有模型失敗
 
 - **WHEN** `models_to_try` 中所有模型的 Gemini API 呼叫均失敗
 - **THEN** `logger.error` 記錄錯誤，不發送 LINE 通知
 
-#### Scenario: STOCK token 優先
+### Scenario: STOCK token 優先
 
 - **WHEN** `STOCK_LINE_CHANNEL_ACCESS_TOKEN` 與 `LINE_CHANNEL_ACCESS_TOKEN` 均存在
 - **THEN** 使用 `STOCK_LINE_CHANNEL_ACCESS_TOKEN` 發送通知

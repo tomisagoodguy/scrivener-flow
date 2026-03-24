@@ -116,7 +116,7 @@ When the user asks for a specific "feel," map it to these technical implementati
 ## 🚫 禁止事項 (Prohibitions)
 
 | ❌ 禁止 | 說明 |
-|--------|------|
+| -------- | ------ |
 | 臆測資訊 | 不確定就說「我不知道」 |
 | 建立備份檔 | 不要產生 `_old.py`, `.bak` |
 | 寫入 API Key | 機密只能放環境變數 |
@@ -154,7 +154,7 @@ When the user asks for a specific "feel," map it to these technical implementati
 ## 🛠️ 互動模式 (Interaction Modes)
 
 | 模式 | 觸發關鍵字 | 行為 |
-|------|------------|------|
+| ------ | ------------ | ------ |
 | **標準模式** | (預設) | 均衡的分析、規劃與實作。 |
 | **簡潔模式** | `簡潔`, `tl;dr`, `quick` | 省略解釋，僅輸出核心程式碼。 |
 | **審查模式** | `審查`, `review`, `重構` | 以 SOLID、效能、安全為核心進行深度檢視。 |
@@ -384,7 +384,7 @@ You MUST pause and trigger a 'Mini-Reflect' sequence when:
 ### 3. Memory Structure
 
 - ANTIGRAVITY.md: The single source of truth for Project Standards, Tech Stack, and Behavioral Rules.
-- .agent/skills/*/SKILL.md: Detailed instructions for specific capabilities.
+- `.agent/skills/<skill>/SKILL.md`: Detailed instructions for specific capabilities.
 
 ---
 

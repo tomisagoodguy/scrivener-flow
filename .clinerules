@@ -5,9 +5,9 @@ Your behavior is strictly governed by the rules defined in the `.agent` director
 
 ## Core Directives
 
-1. **Read Core Rules First**: 
+1. **Read Core Rules First**:
    ALWAYS read and refer to `.agent/rules.md` and `.agent/ANTIGRAVITY_INTELLIGENCE.md` before starting any significant task or if you are unsure about the project conventions.
-   
+
 2. **Consult Domain Expertise**:
    When working on specific technologies (Next.js, Python, Testing, etc.), check `.agent/domain_expertise.md` for role-specific guidelines.
 
@@ -18,7 +18,7 @@ Your behavior is strictly governed by the rules defined in the `.agent` director
    You have access to a rich set of specialized skills in `.agent/skills/`. Before attempting a complex tool or solving a difficult problem, check if a skill exists that provides instructions and scripts for it. Always read `SKILL.md` inside a skill directory to understand how to use it.
 
 5. **Memory and Evolution**:
-   Project-specific memory and corrections are stored in `ANTIGRAVITY.md` at the root directory. If the user corrects you, you must document it there. 
+   Project-specific memory and corrections are stored in `ANTIGRAVITY.md` at the root directory. If the user corrects you, you must document it there.
 
 ## Key Behavioral summary
 

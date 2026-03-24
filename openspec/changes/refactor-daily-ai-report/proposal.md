@@ -5,7 +5,9 @@
 `ETF/daily_ai_report.py` 目前是一個 **371 行的巨石腳本 (Monolith Script)**，違反單一職責原則 (SRP)，存在以下問題：
 
 ### 1. 職責混雜 (God Function)
+
 `generate_report()` 函式承擔了 **5 種不同職責**：
+
 - 環境初始化 (載入 .env、設定 API Key)
 - 資料庫連線與資料獲取
 - 個股技術/籌碼分析
@@ -15,7 +17,9 @@
 這使得函式難以測試、難以維護，任何一個環節出錯都會導致整個流程失敗。
 
 ### 2. 資料獲取邏輯重複 (DRY Violation)
+
 `fetch_technical_data`、`fetch_broker_data`、`fetch_chip_data` 三個函式有 **完全相同的模板**：
+
 - 建立 `placeholders` 字串
 - 建立 `params` dict
 - `conn.execute()` + `pd.DataFrame()`
@@ -24,19 +28,22 @@
 這段邏輯重複了 3 次，應封裝成通用的 `_query_by_codes()` helper。
 
 ### 3. Prompt 硬編碼在業務邏輯中 (Separation of Concerns)
+
 AI Prompt（約 50 行的 f-string）直接嵌入在 `generate_report()` 中，導致：
+
 - 修改 Prompt 需要理解整個函式的上下文
 - 無法對 Prompt 進行單元測試
 - 未來若要支援多種報告格式 (如週報、月報) 將極難擴展
 
 ### 4. 分析邏輯與資料獲取耦合
+
 `analyze_stock()` 直接接收 3 個 DataFrame 參數，並在函式內部進行 DataFrame 過濾。這讓函式難以獨立測試，且若資料結構改變，需修改多處。
 
 ## Proposed Solution
 
 將 `daily_ai_report.py` 拆分為以下模組結構：
 
-```
+```text
 ETF/
 ├── daily_ai_report.py          # 入口點 (main only, <30 行)
 └── ai_report/

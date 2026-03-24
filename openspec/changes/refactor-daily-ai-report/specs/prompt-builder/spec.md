@@ -28,17 +28,17 @@
 
 ## Scenarios
 
-#### Scenario: 正常輸出
+### Scenario: 正常輸出
 
 - **WHEN** `build_report_prompt()` 被呼叫，`technical_map` 含有 5 支股票資料
 - **THEN** 回傳非空字串，包含所有必要區塊
 
-#### Scenario: 風險警示觸發
+### Scenario: 風險警示觸發
 
 - **WHEN** `technical_map` 中有股票 `isOverheated3M=True` 且 `ma20Trend='Falling'`
 - **THEN** Prompt 中包含該股票代碼的風險警示文字
 
-#### Scenario: 無持股資料
+### Scenario: 無持股資料
 
 - **WHEN** `top_holdings` 為空 list
 - **THEN** 回傳有效 Prompt（不崩潰），持股區塊顯示「無資料」

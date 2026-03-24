@@ -39,22 +39,22 @@
 
 ## Scenarios
 
-#### Scenario: 資料不足
+### Scenario: 資料不足
 
 - **WHEN** 某股票在 `prices_df` 中只有 15 筆資料
 - **THEN** `analyze()` 回傳 `None`
 
-#### Scenario: 過熱偵測
+### Scenario: 過熱偵測
 
 - **WHEN** 近 60 日最高價為 200，最低價為 90（漲幅 122%）
 - **THEN** `isOverheated3M` 為 `True`
 
-#### Scenario: 多頭趨勢
+### Scenario: 多頭趨勢
 
 - **WHEN** `close > MA5 > MA20`
 - **THEN** `trend` 為 `'Bullish'`
 
-#### Scenario: 籌碼資料缺失
+### Scenario: 籌碼資料缺失
 
 - **WHEN** `broker_df` 中無該股票資料
 - **THEN** `brokerNetBuy20d` 為 `0.0`，不拋出例外
