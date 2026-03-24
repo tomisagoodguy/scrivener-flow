@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, ShieldCheck, Mail, LogIn, X, Lock, Command, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/auth/client';
@@ -21,6 +22,7 @@ export function ModernLogin() {
     const [showAppleModal, setShowAppleModal] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const supabase = createClient();
+    const router = useRouter();
 
     useEffect(() => {
         setIsMounted(true);
@@ -73,7 +75,7 @@ export function ModernLogin() {
             }
         }
 
-        setLoading(false);
+        router.push('/');
     };
 
     const handleTotpVerify = async (e: React.FormEvent) => {
