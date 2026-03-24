@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, ShieldCheck, Mail, LogIn, X, Lock, Command, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/auth/client';
 
-type LoginMode = 'password' | 'otp';
+type LoginMode = 'password' | 'otp' | 'reset';
 type MfaStep = 'none' | 'totp';
 
 export function ModernLogin() {
@@ -92,6 +92,24 @@ export function ModernLogin() {
         if (error) {
             setMessageType('error');
             setMessage('驗證碼錯誤，請重新輸入');
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) return;
+        setLoading(true);
+        setMessage('');
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth/callback?next=/auth/set-password`,
+        });
+        setLoading(false);
+        if (error) {
+            setMessageType('error');
+            setMessage(error.message);
+        } else {
+            setMessageType('info');
+            setMessage('密碼設定信已寄出，請至信箱點擊連結（有效 1 小時）');
         }
     };
 
@@ -300,6 +318,33 @@ export function ModernLogin() {
                                         >
                                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>登入</span></>}
                                         </button>
+                                        <button type="button" onClick={() => { setLoginMode('reset'); setMessage(''); }} className="w-full text-xs text-slate-400 hover:text-blue-600 font-bold py-1 transition-colors">
+                                            首次使用？忘記密碼？→ 設定密碼
+                                        </button>
+                                    </motion.form>
+                                ) : loginMode === 'reset' ? (
+                                    /* 設定/重設密碼表單 */
+                                    <motion.form key="reset" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onSubmit={handleResetPassword} className="space-y-4">
+                                        <p className="text-xs text-slate-500 font-bold text-center leading-relaxed">輸入您的 Email，我們會寄送密碼設定連結<br /><span className="text-slate-400 font-normal">（需在可收信的網路環境操作，僅需一次）</span></p>
+                                        <div className="relative group/input">
+                                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                                            <input
+                                                type="email"
+                                                placeholder="電郵地址"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="w-full pl-14 h-16 bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500/20 rounded-2xl outline-none transition-all text-slate-900 font-bold placeholder:text-slate-400"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={loading || !email}
+                                            className="w-full h-16 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/20 text-white font-black active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Mail className="w-5 h-5" /><span>寄送密碼設定信</span></>}
+                                        </button>
+                                        <button type="button" onClick={() => { setLoginMode('password'); setMessage(''); }} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">← 返回登入</button>
                                     </motion.form>
                                 ) : (
                                     /* Magic Link 表單 */
