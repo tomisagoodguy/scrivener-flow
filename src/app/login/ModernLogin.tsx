@@ -280,14 +280,6 @@ export function ModernLogin() {
                             </div>
 
                             <div className="space-y-5">
-                                {/* 企業網路提示 */}
-                                <div className="flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-100 rounded-2xl">
-                                    <span className="text-amber-500 text-sm mt-0.5">🏢</span>
-                                    <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
-                                        公司或企業網路環境，請使用<span className="text-amber-900">密碼登入</span>或 TOTP 驗證器
-                                    </p>
-                                </div>
-
                                 {/* 模式切換 Tab */}
                                 <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
                                     <button

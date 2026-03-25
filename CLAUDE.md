@@ -92,9 +92,10 @@ scrivener-flow/
 ### 開發
 
 ```bash
-yarn dev              # 啟動 Next.js dev server (port 3000)
+yarn dev              # 啟動 Next.js dev server（預設 port 3000，若被占用則為 3001）
 yarn build            # Production 建置
 yarn start            # 執行 production server
+npx supabase status   # 查看本地 Supabase 狀態（npx 一次性指令可用，但禁止 npm install）
 ```
 
 ### 測試
@@ -140,15 +141,27 @@ Supabase **Row Level Security (RLS)** 在資料庫層強制 `user_id` 隔離，�
 - **里程碑（Milestone）**：合約事實（簽約日、完稅日），唯讀，不可刪除。
 - **任務（Task）**：可執行的待辦，系統會在里程碑前 3–5 天自動生成提醒任務。
 
-### 4. 投資模組
+### 4. API 設計規則
+
+**資料突變（Mutation）優先使用 Server Actions**，禁止建立傳統 REST API Route (`route.ts`)，除非用於：
+
+- Webhooks（LINE、Google 等第三方回呼）
+- 需要特定 HTTP Method 的第三方整合
+
+**多表寫入（Multi-table writes）必須確保原子性**：
+
+- 優先使用 Supabase RPC（PL/pgSQL Transaction）
+- 若在 Server Action 處理，必須實作 `try/catch` 與補償機制清除失敗的髒資料
+
+### 5. 投資模組
 
 投資儀表板（`src/app/investment/`）採 Repository Pattern，`repositories/` 下有獨立的 `priceRepo`、`revenueRepo`、`stockRepo`。後端股票資料由 Python FinLab 腳本定期同步，存入 Supabase。
 
-### 5. E2EE 敏感資料
+### 6. E2EE 敏感資料
 
 `src/lib/crypto/` 實作 AES-256 用戶端加密，私密備註在傳入 DB 前已加密，Master Key 僅存於 `.env.local`。
 
-### 6. UI 風格規範（強制）
+### 7. UI 風格規範（強制）
 
 所有容器使用 `.glass-card`（`backdrop-blur + bg-white/65 + border-white/50`）。
 Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 focus:bg-white`。
@@ -179,6 +192,10 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | 硬編碼 API Key | 所有機密僅放 `.env.local`，發現立即警告 |
 | 新增 `_v2.ts` 備份檔 | 直接修改原檔，版本交給 git 管理 |
 | 修改里程碑邏輯時忘記自動任務 | 里程碑與任務是連動的，確認 `caseService.ts` 中的自動任務生成邏輯 |
+| Supabase JOIN 結果當 Object 存取 | JOIN 回傳**陣列**（1:many），必須用 `relation?.[0]`，並將型別定義為 `Relation[]` |
+| `useSearchParams()` 放在 layout/header 全域元件 | 這會導致靜態 build 失敗，必須在 `layout.tsx` 用 `<Suspense>` 包裹 |
+| Google Auth 在 Production 失敗 | Supabase Dashboard → Authentication → Redirect URLs 必須加入 `https://<your-domain>/**` |
+| Component 超過 150 行不拆分 | 超過 150 行必須拆分；業務邏輯抽至 `use*.ts` hook |
 
 ---
 
