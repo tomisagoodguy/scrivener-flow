@@ -359,3 +359,14 @@ html.dark .bg-destructive {
     background-color: #dc2626 !important;
     /* red-600 */
 }
+
+/* ========================================
+   🔵 基本特約卡片 - 深色模式亮藍背景
+   覆寫 .rounded-2xl / .shadow-sm 的通用 !important
+   ======================================== */
+html.dark .clause-basic-card {
+    background: linear-gradient(135deg, #0f1e3c 0%, #1a2d4f 100%) !important;
+    /* 深海軍藍漸層 - 低調高級 */
+    box-shadow: 0 0 0 2px #3b82f6, 0 4px 20px rgba(59, 130, 246, 0.15) !important;
+    /* blue ring + 柔和藍光暈 */
+}

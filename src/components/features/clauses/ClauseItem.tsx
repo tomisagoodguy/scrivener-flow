@@ -11,7 +11,11 @@ interface ClauseItemProps {
 
 export function ClauseItem({ clause, copyFeedback, onCopy, onEdit, onDelete }: ClauseItemProps) {
     return (
-        <div className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
+        <div className={`group rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 ${
+            clause.category === '基本特約'
+                ? 'clause-basic-card bg-blue-50 ring-2 ring-blue-400 hover:shadow-blue-500/10 dark:ring-blue-400'
+                : 'bg-white ring-1 ring-slate-100 hover:shadow-blue-500/5 dark:bg-slate-800 dark:ring-slate-700'
+        }`}>
             <div className="flex flex-col sm:flex-row gap-6">
                 {/* Left: Metadata */}
                 <div className="sm:w-1/4 min-w-[200px] flex flex-col gap-2">
