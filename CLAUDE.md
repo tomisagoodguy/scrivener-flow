@@ -196,6 +196,7 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | `useSearchParams()` 放在 layout/header 全域元件 | 這會導致靜態 build 失敗，必須在 `layout.tsx` 用 `<Suspense>` 包裹 |
 | Google Auth 在 Production 失敗 | Supabase Dashboard → Authentication → Redirect URLs 必須加入 `https://<your-domain>/**` |
 | Component 超過 150 行不拆分 | 超過 150 行必須拆分；業務邏輯抽至 `use*.ts` hook |
+| 深色模式用 `dark:bg-*` Tailwind 類別 | `dark-theme.css` 對 `.rounded-2xl`、`.shadow-sm`、`.bg-white` 等結構類別使用 `!important`，導致 Tailwind `dark:` variants 被蓋掉。需要深色模式特定樣式時，必須在元素加專用 CSS class（如 `.my-special-card`），並在 `dark-theme.css` 末端用 `html.dark .my-special-card { ... !important }` 覆蓋 |
 
 ---
 

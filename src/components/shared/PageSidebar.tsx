@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, List, Search } from 'lucide-react';
+import { LayoutGrid, List, Search, ChevronRight } from 'lucide-react';
 
 export interface SidebarGroup {
     title: string;
@@ -12,6 +12,7 @@ export interface SidebarItem {
     label: string;
     count?: number;
     icon?: React.ReactNode;
+    subLabels?: string[];
 }
 
 interface PageSidebarProps {
@@ -36,6 +37,15 @@ export function PageSidebar({
     hotThreshold = 2,
 }: PageSidebarProps) {
     const [filterText, setFilterText] = useState('');
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (id: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) { next.delete(id); } else { next.add(id); }
+            return next;
+        });
+    };
 
     return (
         <div className={cn("w-64 shrink-0 bg-white border-r border-slate-200 h-[calc(100vh-64px)] overflow-y-auto sticky top-16", className)}>
@@ -101,35 +111,60 @@ export function PageSidebar({
 
                     if (matched.length === 0) return null;
 
-                    const renderItem = (item: SidebarItem) => (
-                        <button
-                            key={item.id}
-                            onClick={() => onSelect(item.id)}
-                            className={cn(
-                                "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors group",
-                                selectedId === item.id
-                                    ? "bg-white border border-indigo-200 text-indigo-700 shadow-sm"
-                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
-                            )}
-                        >
-                            <span className="flex items-center gap-2 truncate min-w-0">
-                                {item.icon}
-                                <span className="truncate">{item.label}</span>
-                            </span>
-                            {item.count !== undefined && (
-                                <span className={cn(
-                                    "text-xs px-1.5 py-0.5 rounded-full transition-colors shrink-0 ml-1",
-                                    selectedId === item.id
-                                        ? "bg-indigo-100 text-indigo-700"
-                                        : (item.count ?? 0) >= hotThreshold
-                                            ? "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
-                                            : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
-                                )}>
-                                    {item.count}
-                                </span>
-                            )}
-                        </button>
-                    );
+                    const renderItem = (item: SidebarItem) => {
+                        const isExpanded = expandedIds.has(item.id);
+                        const hasSubLabels = (item.subLabels?.length ?? 0) > 0;
+                        return (
+                            <div key={item.id}>
+                                <button
+                                    onClick={() => onSelect(item.id)}
+                                    className={cn(
+                                        "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors group",
+                                        selectedId === item.id
+                                            ? "bg-white border border-indigo-200 text-indigo-700 shadow-sm"
+                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
+                                    )}
+                                >
+                                    <span className="flex items-center gap-2 truncate min-w-0">
+                                        {item.icon}
+                                        <span className="truncate">{item.label}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1 shrink-0 ml-1">
+                                        {item.count !== undefined && (
+                                            <span className={cn(
+                                                "text-xs px-1.5 py-0.5 rounded-full transition-colors",
+                                                selectedId === item.id
+                                                    ? "bg-indigo-100 text-indigo-700"
+                                                    : (item.count ?? 0) >= hotThreshold
+                                                        ? "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
+                                                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                                            )}>
+                                                {item.count}
+                                            </span>
+                                        )}
+                                        {hasSubLabels && (
+                                            <ChevronRight
+                                                onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }}
+                                                className={cn(
+                                                    "w-3.5 h-3.5 text-slate-400 transition-transform hover:text-slate-600",
+                                                    isExpanded && "rotate-90"
+                                                )}
+                                            />
+                                        )}
+                                    </span>
+                                </button>
+                                {hasSubLabels && isExpanded && (
+                                    <div className="ml-5 mt-0.5 mb-1 space-y-0.5 border-l-2 border-slate-100 pl-3">
+                                        {item.subLabels!.map((label, i) => (
+                                            <div key={i} className="text-xs text-slate-500 py-1 leading-snug line-clamp-2">
+                                                {label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    };
 
                     return (
                         <div key={idx} className="space-y-1">

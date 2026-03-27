@@ -10,7 +10,11 @@
       "Bash(openspec instructions:*)",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__apply_migration",
-      "Bash(yarn build:*)"
+      "Bash(yarn build:*)",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(clauses\\): 移除基本特約強制置頂邏輯，改為依篩選條件顯示\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"style\\(clauses\\): 修復深色模式基本特約卡片背景色，改用深海軍藍漸層\")"
     ]
   }
 }

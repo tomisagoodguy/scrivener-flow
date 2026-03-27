@@ -46,17 +46,33 @@ export function ClauseEditModal({ initialClause, onClose, onSave, onDelete }: Cl
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">
-                            使用情境 (標題) <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                            required
-                            value={currentClause.title || ''}
-                            onChange={(e) => setCurrentClause({ ...currentClause, title: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                            placeholder="例如：現況交屋"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">
+                                使用情境 (標題) <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                                required
+                                value={currentClause.title || ''}
+                                onChange={(e) => setCurrentClause({ ...currentClause, title: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
+                                placeholder="例如：現況交屋"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700">
+                                分類 <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                                required
+                                value={currentClause.category || '增補特約'}
+                                onChange={(e) => setCurrentClause({ ...currentClause, category: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
+                            >
+                                <option value="基本特約">基本特約</option>
+                                <option value="增補特約">增補特約</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
