@@ -26,13 +26,24 @@ export default function DashboardQuickNotes() {
     // Notes State
     const [notes, setNotes] = useState<Note[]>([{ id: 'default', title: '主要筆記', content: '' }]);
     const [activeNoteId, setActiveNoteId] = useState('default');
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [, setLastSaved] = useState<Date | null>(null);
     const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     // Tasks State
     const [tasks, setTasks] = useState<PersonalTask[]>([]);
     const [newTaskContent, setNewTaskContent] = useState('');
     const [newTaskDate, setNewTaskDate] = useState('');
+
+    const fetchTasks = async (userId: string) => {
+        const { data } = await supabase
+            .from('todos')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('source_type', 'manual') // Only show manually added tasks here
+            .order('due_date', { ascending: true });
+
+        if (data) setTasks(data);
+    };
 
     useEffect(() => {
         // Load initial settings
@@ -52,7 +63,7 @@ export default function DashboardQuickNotes() {
                 .single();
 
             if (data?.dashboard_notes) {
-                setNotes(data.dashboard_notes as any);
+                setNotes(data.dashboard_notes as Note[]);
             }
 
             // Load Tasks
@@ -74,17 +85,6 @@ export default function DashboardQuickNotes() {
             supabase.removeChannel(channel);
         };
     }, []);
-
-    const fetchTasks = async (userId: string) => {
-        const { data } = await supabase
-            .from('todos')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('source_type', 'manual') // Only show manually added tasks here
-            .order('due_date', { ascending: true });
-
-        if (data) setTasks(data);
-    };
 
     // Auto-save logic for Notes
     useEffect(() => {

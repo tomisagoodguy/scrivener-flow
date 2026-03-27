@@ -46,8 +46,8 @@ export function useClauses() {
             const { error } = await supabase.from('contract_clauses').delete().eq('id', id);
             if (error) throw error;
             fetchClauses();
-        } catch (error: any) {
-            alert('刪除失敗：' + error.message);
+        } catch (error: unknown) {
+            alert('刪除失敗：' + (error as Error).message);
         }
     };
 
@@ -64,7 +64,7 @@ export function useClauses() {
         }
     };
 
-    const handleSaveClause = async (clause: Partial<Clause>, isNew: boolean) => {
+    const handleSaveClause = async (clause: Partial<Clause>, _isNew: boolean) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
@@ -79,14 +79,14 @@ export function useClauses() {
 
             const { error } = await supabase
                 .from('contract_clauses')
-                .upsert(payload as any)
+                .upsert(payload as Record<string, unknown>)
                 .select();
 
             if (error) throw error;
             fetchClauses();
             return true;
-        } catch (error: any) {
-            alert('儲存失敗：' + error.message);
+        } catch (error: unknown) {
+            alert('儲存失敗：' + (error as Error).message);
             return false;
         }
     };
@@ -97,8 +97,8 @@ export function useClauses() {
     const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        const matchesCategory = selectedCategory ? (clause.category === selectedCategory || (clause.tags && clause.tags.includes(selectedCategory))) : true;
-        return matchesSearch && matchesCategory;
+        const matchesTag = !selectedCategory || (clause.tags?.includes(selectedCategory) ?? false);
+        return matchesSearch && matchesTag;
     });
 
     const suggestions = clauses
@@ -113,7 +113,7 @@ export function useClauses() {
         setSearchTerm,
         selectedCategory,
         setSelectedCategory,
-        copyFeedback, // Expose this
+        copyFeedback,
         allTags,
         suggestions,
         fetchClauses,

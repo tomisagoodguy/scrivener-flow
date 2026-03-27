@@ -30,26 +30,19 @@ export default function ClausesPage() {
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     const clauseColumns = [
-        { header: '類別', key: 'category', width: 15 },
         { header: '情境/標題', key: 'title', width: 30 },
         { header: '條文內容', key: 'content', width: 80 },
-        { header: '使用次數', key: 'usage_count', width: 10 },
     ];
 
-    const sidebarGroups: SidebarGroup[] = [
-        {
-            title: "標籤索引",
-            items: allTags
-                .map(tag => ({
-                    id: tag,
-                    label: tag,
-                    count: clauses.filter(c => c.tags && c.tags.includes(tag)).length,
-                    icon: <Tag className="w-4 h-4 text-emerald-400" />
-                }))
-                // 熱門（使用次數高）排前面，相同 count 再按字母排
-                .sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label, 'zh-TW'))
-        }
-    ];
+    const sidebarGroups: SidebarGroup[] = [{
+        title: '',
+        items: allTags.map((tag: string) => ({
+            id: tag,
+            label: tag,
+            count: clauses.filter((c) => c.tags?.includes(tag)).length,
+            icon: <Tag className="w-4 h-4 text-emerald-400" />,
+        })),
+    }];
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -131,7 +124,7 @@ export default function ClausesPage() {
 
                             <button
                                 onClick={() => {
-                                    setCurrentClause({ category: selectedCategory || '一般', tags: [] });
+                                    setCurrentClause({ tags: [] });
                                     setIsEditing(true);
                                 }}
                                 className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold shadow-xl shadow-slate-900/20 border border-slate-700/50 flex items-center gap-2 transition-all active:scale-95"

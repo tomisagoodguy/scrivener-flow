@@ -133,14 +133,16 @@ export function PageSidebar({
 
                     return (
                         <div key={idx} className="space-y-1">
-                            <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                {group.title}
-                                {filterText && (
-                                    <span className="ml-1 text-indigo-400 normal-case font-normal">
-                                        ({matched.length} 筆)
-                                    </span>
-                                )}
-                            </h3>
+                            {group.title && (
+                                <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                                    {group.title}
+                                    {filterText && (
+                                        <span className="ml-1 text-indigo-400 normal-case font-normal">
+                                            ({matched.length} 筆)
+                                        </span>
+                                    )}
+                                </h3>
+                            )}
 
                             {/* 熱門區 */}
                             {!filterText && hotItems.length > 0 && (

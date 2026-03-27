@@ -16,9 +16,6 @@ export function ClauseItem({ clause, copyFeedback, onCopy, onEdit, onDelete }: C
                 {/* Left: Metadata */}
                 <div className="sm:w-1/4 min-w-[200px] flex flex-col gap-2">
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                            {clause.category || '一般'}
-                        </span>
                         {(clause.tags || []).map(t => (
                             <span key={t} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                                 #{t}

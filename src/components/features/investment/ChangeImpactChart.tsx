@@ -80,7 +80,7 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
             </div>
             
             <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={280}>
                     <BarChart
                         data={impactData}
                         layout="vertical"
@@ -105,7 +105,7 @@ export function ChangeImpactChart({ logs }: ChangeImpactChartProps) {
                                 fontSize: '12px'
                             }}
                             cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                            formatter={(value: any) => [`${Number(value) > 0 ? '+' : ''}${Number(value).toFixed(2)}%`, '權重變動']}
+                            formatter={(value: number | string | undefined) => [`${Number(value ?? 0) > 0 ? '+' : ''}${Number(value ?? 0).toFixed(2)}%`, '權重變動']}
                         />
                         <ReferenceLine x={0} stroke="#cbd5e1" />
                         <Bar 
