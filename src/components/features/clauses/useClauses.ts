@@ -94,11 +94,25 @@ export function useClauses() {
     // Derived State
     const allTags = Array.from(new Set(clauses.flatMap((c) => c.tags || []))).sort();
 
+    const categories = Array.from(new Set(clauses.map((c) => c.category).filter(Boolean))).sort();
+    const tagsByCategory = Object.fromEntries(
+        categories.map((cat) => [
+            cat,
+            Array.from(new Set(clauses.filter((c) => c.category === cat).flatMap((c) => c.tags || []))).sort(),
+        ])
+    );
+
     const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        const matchesTag = !selectedCategory || (clause.tags?.includes(selectedCategory) ?? false);
-        return matchesSearch && matchesTag;
+        if (!matchesSearch) return false;
+
+        if (!selectedCategory) return true;
+        if (selectedCategory.includes('::')) {
+            const [cat, tag] = selectedCategory.split('::');
+            return clause.category === cat && (clause.tags?.includes(tag) ?? false);
+        }
+        return clause.category === selectedCategory;
     });
 
     const suggestions = clauses
@@ -115,6 +129,8 @@ export function useClauses() {
         setSelectedCategory,
         copyFeedback,
         allTags,
+        categories,
+        tagsByCategory,
         suggestions,
         fetchClauses,
         handleDelete,
