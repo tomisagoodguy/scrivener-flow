@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Plus, Tag } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
@@ -28,6 +28,10 @@ export default function ClausesPage() {
 
     const [isEditing, setIsEditing] = useState(false);
     const [currentClause, setCurrentClause] = useState<Partial<Clause>>({ tags: [] });
+
+    const basicClauses = filteredClauses.filter(c => c.category === '基本特約');
+    const supplementClauses = filteredClauses.filter(c => c.category !== '基本特約');
+    const handleEditClause = (c: Clause) => { setCurrentClause(c); setIsEditing(true); };
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     const clauseColumns = [
@@ -35,7 +39,7 @@ export default function ClausesPage() {
         { header: '條文內容', key: 'content', width: 80 },
     ];
 
-    const sidebarGroups: SidebarGroup[] = categories.map((cat) => ({
+    const sidebarGroups = useMemo<SidebarGroup[]>(() => categories.map((cat) => ({
         title: cat,
         items: (tagsByCategory[cat] ?? []).map((tag: string) => {
             const matched = clauses.filter((c) => c.category === cat && c.tags?.includes(tag));
@@ -47,7 +51,7 @@ export default function ClausesPage() {
                 subLabels: matched.map((c) => c.title),
             };
         }),
-    }));
+    })), [categories, tagsByCategory, clauses]);
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -169,42 +173,36 @@ export default function ClausesPage() {
                             <h3 className="text-lg font-bold text-slate-700">沒有找到條文</h3>
                             <p className="text-slate-500 mt-2">請調整搜尋條件或新增資料</p>
                         </div>
-                    ) : (() => {
-                        const basicClauses = filteredClauses.filter(c => c.category === '基本特約');
-                        const supplementClauses = filteredClauses.filter(c => c.category !== '基本特約');
-                        return (
-                            <div className="space-y-8">
-                                {/* 基本特約：永遠顯示 */}
-                                {basicClauses.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">基本特約</span>
-                                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{basicClauses.length}</span>
-                                            <div className="flex-1 h-px bg-slate-200" />
-                                        </div>
-                                        {basicClauses.map((clause) => (
-                                            <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback} onCopy={handleCopy}
-                                                onEdit={(c) => { setCurrentClause(c); setIsEditing(true); }} onDelete={handleDelete} />
-                                        ))}
+                    ) : (
+                        <div className="space-y-8">
+                            {basicClauses.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">基本特約</span>
+                                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{basicClauses.length}</span>
+                                        <div className="flex-1 h-px bg-slate-200" />
                                     </div>
-                                )}
-                                {/* 增補特約：依篩選顯示 */}
-                                {supplementClauses.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">增補特約</span>
-                                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{supplementClauses.length}</span>
-                                            <div className="flex-1 h-px bg-slate-200" />
-                                        </div>
-                                        {supplementClauses.map((clause) => (
-                                            <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback} onCopy={handleCopy}
-                                                onEdit={(c) => { setCurrentClause(c); setIsEditing(true); }} onDelete={handleDelete} />
-                                        ))}
+                                    {basicClauses.map((clause) => (
+                                        <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback} onCopy={handleCopy}
+                                            onEdit={handleEditClause} onDelete={handleDelete} />
+                                    ))}
+                                </div>
+                            )}
+                            {supplementClauses.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">增補特約</span>
+                                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{supplementClauses.length}</span>
+                                        <div className="flex-1 h-px bg-slate-200" />
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+                                    {supplementClauses.map((clause) => (
+                                        <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback} onCopy={handleCopy}
+                                            onEdit={handleEditClause} onDelete={handleDelete} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 

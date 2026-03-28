@@ -1,5 +1,4 @@
 import TodoContainer from '@/components/todo/TodoContainer';
-import DashboardDateCalculator from '@/components/dashboard/DashboardDateCalculator';
 import DashboardQuickNotes from '@/components/dashboard/DashboardQuickNotes';
 import { RecentCases } from '@/components/features/cases/RecentCases';
 import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
@@ -19,24 +18,12 @@ export default function Home() {
 
                 {/* Dashboard Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-                    {/* Main Workspace (Notes) - Spans 8 cols */}
-                    <div className="lg:col-span-8 h-[750px]">
+                    <div className="lg:col-span-12 h-[750px]">
                         <TodoContainer />
                     </div>
-
-                    {/* Utility Tools (Calculator) - Spans 4 cols */}
-                    <div className="lg:col-span-4 h-auto">
-                        <div className="h-[750px]">
-                            <DashboardDateCalculator />
-                        </div>
-                    </div>
-
-                    {/* Personal Working Notes - Full Width Big Area */}
                     <div className="lg:col-span-12 h-[600px]">
                         <DashboardQuickNotes />
                     </div>
-
-                    {/* Recent Cases - Spans Full Width */}
                     <div className="lg:col-span-12 min-h-[400px]">
                         <RecentCases />
                     </div>

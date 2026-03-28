@@ -88,7 +88,7 @@ export const TodoWeekView = ({ tasks, onToggle, onDelete }: TodoWeekViewProps) =
                             </div>
 
                             {/* Tasks List */}
-                            <div className="flex-1 space-y-2">
+                            <div className="flex-1 space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
                                 {dayTasks.length === 0 ? (
                                     <div className="h-full flex flex-col items-center justify-center text-slate-300 text-xs italic py-4">
                                         無安排事項

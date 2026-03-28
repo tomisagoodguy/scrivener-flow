@@ -15,7 +15,7 @@ interface TaxWatchProps {
  */
 export function TaxWatch({ tasks, onComplete }: TaxWatchProps) {
     return (
-        <div className="glass-card p-10 border-slate-200/50 relative overflow-hidden group">
+        <div className="glass-card p-10 border-slate-200/50 relative overflow-hidden group h-full">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] group-hover:bg-slate-500/10 transition-colors" />
 
             <div className="relative z-10 flex justify-between items-start mb-8">

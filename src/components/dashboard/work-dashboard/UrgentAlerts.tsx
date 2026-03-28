@@ -19,7 +19,7 @@ export function UrgentAlerts({ tasks, onComplete }: UrgentAlertsProps) {
     today.setHours(0, 0, 0, 0);
 
     return (
-        <div className="glass-card p-10 border-red-100/50 relative overflow-hidden group">
+        <div className="glass-card p-10 border-red-100/50 relative overflow-hidden group h-full">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-red-500/5 rounded-full blur-[80px] group-hover:bg-red-500/10 transition-colors" />
 
             <div className="flex items-center justify-between mb-8 relative z-10">
