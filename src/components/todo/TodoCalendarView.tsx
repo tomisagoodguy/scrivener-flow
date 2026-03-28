@@ -13,8 +13,8 @@ import {
 } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Gift } from 'lucide-react';
-import { getHolidayByDate, getHolidayColor } from '@/utils/publicHolidays';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getHolidayByDate } from '@/utils/publicHolidays';
 
 interface Props {
     tasks: TodoTask[];
@@ -146,7 +146,7 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-visible space-y-1 relative">
+                            <div className="flex-1 overflow-hidden space-y-1 relative">
                                 {/* 假期名稱（僅在無待辦時顯示） */}
                                 {holiday && isCurrentMonth && dayTasks.length === 0 && (
                                     <div
@@ -166,8 +166,8 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                     </div>
                                 )}
 
-                                {/* 待辦事項 */}
-                                {dayTasks.map((task) => (
+                                {/* 待辦事項（最多顯示3個，超過顯示 +N） */}
+                                {dayTasks.slice(0, 3).map((task) => (
                                     <div
                                         key={task.id}
                                         className={`group relative text-[10px] px-1 py-0.5 rounded border cursor-pointer ${task.isCompleted
@@ -195,13 +195,13 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
 
                                         {/* Magnified Tooltip */}
                                         <div
-                                            className={`hidden group-hover:block absolute bottom-full mb-1 w-64 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 z-[100] text-left pointer-events-none ${
+                                            className={`hidden group-hover:block absolute bottom-full mb-1 w-64 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-600 z-100 text-left pointer-events-none ${
                                                 // Smart positioning: if it's Sunday/Monday/Tuesday (0,1,2), align left.
                                                 // If it's Saturday/Friday (5,6) etc, align right to avoid overflow.
                                                 day.getDay() === 5 || day.getDay() === 6 ? 'right-0' : 'left-0'
                                                 }`}
                                         >
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug break-words">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug wrap-break-word">
                                                 {task.title}
                                             </h4>
                                             <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
@@ -266,6 +266,11 @@ export function TodoCalendarView({ tasks, onToggle, onDelete }: Props) {
                                         )}
                                     </div>
                                 ))}
+                                {dayTasks.length > 3 && (
+                                    <div className="text-[9px] text-slate-400 font-bold text-center bg-slate-50 rounded px-1 py-0.5 border border-slate-100">
+                                        +{dayTasks.length - 3} 筆
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
