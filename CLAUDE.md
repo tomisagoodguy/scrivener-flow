@@ -47,6 +47,7 @@ scrivener-flow/
 │   │   │   ├── sync/           # 跨裝置資料同步
 │   │   │   └── migrations/     # DB migration endpoints
 │   │   ├── cases/              # 案件詳情頁
+│   │   ├── clauses/            # 特約條款管理（基本特約 + 自訂特約）
 │   │   ├── investment/         # 投資儀表板與分析
 │   │   ├── knowledge/          # 團隊知識庫
 │   │   ├── calculator/         # 稅費試算工具
@@ -92,11 +93,13 @@ scrivener-flow/
 ### 開發
 
 ```bash
-yarn dev              # 啟動 Next.js dev server（預設 port 3000，若被占用則為 3001）
+yarn dev              # 啟動 Next.js dev server（預設 port 3000，若被占用則 3001）
 yarn build            # Production 建置
 yarn start            # 執行 production server
 npx supabase status   # 查看本地 Supabase 狀態（npx 一次性指令可用，但禁止 npm install）
 ```
+
+> **本地開發常見狀況**：port 3000 被占用時自動使用 3001。根頁面 `/` 若無 session 會跳轉 `/login`；若 login 後仍 404，直接嘗試 `/cases` 或 `/dashboard`。
 
 ### 測試
 
@@ -159,9 +162,42 @@ Supabase **Row Level Security (RLS)** 在資料庫層強制 `user_id` 隔離，�
 
 ### 6. E2EE 敏感資料
 
-`src/lib/crypto/` 實作 AES-256 用戶端加密，私密備註在傳入 DB 前已加密，Master Key 僅存於 `.env.local`。
+`src/lib/crypto/` 實作 AES-256-GCM（PBKDF2 100k iterations）加密，私密備註在傳入 DB 前已加密。
 
-### 7. UI 風格規範（強制）
+- **Key 來源優先序**：環境變數 `ENCRYPTION_MASTER_KEY` → DB `encryption_keys` 表 → Fallback
+- **Key 輪替**：90 天週期，保留最近 3 個歷史 key 供舊資料解密（舊資料不會自動重新加密）
+- `SecureApi` wrapper 額外加入隨機 padding（512–1536 bytes）與隨機延遲（50–300ms）防流量分析
+- 解密失敗的常見原因：key 版本不符，需確認 `encryption_keys` 表有對應版本的 key
+
+### 7. AI 功能（Gemini）
+
+AI 功能（每日簡報、文字優化、投資分析）由 `src/lib/ai/geminiConfig.ts` 統一管理。
+
+- **功能閘門**：`ALLOWED_EMAIL` 硬編碼限制，AI Server Actions 在執行前會驗證 session email，不符合者靜默返回
+- **模型 Fallback 鏈**：依序嘗試 `gemini-2.5-flash` → `gemini-3-flash` → ... 共 9 個模型，失敗才往下一個，解釋 AI 回應有時較慢的原因
+- Gemini API Key 存於環境變數 `GOOGLE_GEMINI_API_KEY`
+
+### 8. Todo 同步架構
+
+`src/components/todo/hooks/useTodoSync.ts` 採**雙軌同步**：
+
+1. **Supabase Realtime**：訂閱 `todos`、`milestones`、`financials` 表的 `postgres_changes`，跨裝置即時更新
+2. **Window 自訂事件**：`window.dispatchEvent(new Event('todo-updated'))` 用於同頁面跨元件通知
+
+修改待辦相關邏輯時，兩軌都必須考慮。
+
+- 待辦使用**軟刪除**（`is_deleted: true`），不會直接 DELETE，查詢時必須過濾 `is_deleted = false`
+- 系統自動任務（案件里程碑前 3–5 天）透過 `source_key`（`case_id + milestone_type`）去重，防止重複產生
+
+### 9. Supabase Client 三種用法
+
+| 檔案 | 用途 | 注意 |
+|------|------|------|
+| `src/lib/supabase/client.ts` | Browser（Client Component） | 受 RLS 限制，使用登入 session |
+| `src/lib/supabase/server.ts` | Server Component / Server Action | 受 RLS 限制，使用 session cookie |
+| `src/lib/supabase/service.ts` | 管理員操作（bypass RLS） | **只能在 Server 端使用**，勿暴露於 Client |
+
+### 10. UI 風格規範（強制）
 
 所有容器使用 `.glass-card`（`backdrop-blur + bg-white/65 + border-white/50`）。
 Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 focus:bg-white`。
@@ -197,6 +233,9 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | Google Auth 在 Production 失敗 | Supabase Dashboard → Authentication → Redirect URLs 必須加入 `https://<your-domain>/**` |
 | Component 超過 150 行不拆分 | 超過 150 行必須拆分；業務邏輯抽至 `use*.ts` hook |
 | 深色模式用 `dark:bg-*` Tailwind 類別 | `dark-theme.css` 對 `.rounded-2xl`、`.shadow-sm`、`.bg-white` 等結構類別使用 `!important`，導致 Tailwind `dark:` variants 被蓋掉。需要深色模式特定樣式時，必須在元素加專用 CSS class（如 `.my-special-card`），並在 `dark-theme.css` 末端用 `html.dark .my-special-card { ... !important }` 覆蓋 |
+| AI 功能除錯時找不到問題 | AI Server Actions 有 `ALLOWED_EMAIL` 閘門，session email 不符合會靜默返回空結果，不會拋出錯誤 |
+| 查詢待辦事項漏掉已刪除筆 | 待辦使用軟刪除（`is_deleted` flag），必須在查詢條件加 `is_deleted = false` |
+| `CaseStatus` 使用中文字串比對 | `CaseStatus` 型別混用中英文值（`'辦理中'` 和 `'Processing'` 並存），寫 filter 條件時注意資料來源實際儲存的是哪一種 |
 
 ---
 
