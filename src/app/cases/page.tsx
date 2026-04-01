@@ -162,7 +162,7 @@ export default async function CasesPage({
 
             {/* List Table */}
             <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
-                <div className="overflow-x-auto overflow-y-auto max-h-[75vh]">
+                <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse table-fixed">
                         <thead>
                             <tr className="bg-slate-50 dark:bg-slate-950/30 sticky top-0 z-10">

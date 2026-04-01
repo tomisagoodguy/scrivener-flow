@@ -149,7 +149,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     <label className="text-xs font-bold text-orange-600 uppercase">塗銷方式</label>
                     <div className="flex flex-col gap-2">
                         <select
-                            defaultValue={['代書塗銷', '賣方自辦', '無', '先塗二胎'].includes(initialData?.cancellation_type ?? '') ? initialData.cancellation_type : 'CUSTOM'}
+                            defaultValue={['代書塗銷', '賣方自辦', '無', '先塗二胎', '線上塗銷'].includes(initialData?.cancellation_type ?? '') ? initialData.cancellation_type : 'CUSTOM'}
                             onChange={(e) => {
                                 const input = document.getElementById('cancellation_type_input') as HTMLInputElement;
                                 const val = e.target.value;
@@ -172,6 +172,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             <option value="賣方自辦">賣方自辦</option>
                             <option value="無">無</option>
                             <option value="先塗二胎">先塗二胎</option>
+                            <option value="線上塗銷">線上塗銷</option>
                             <option value="CUSTOM">其他 (手動輸入...)</option>
                         </select>
                         <input
@@ -179,7 +180,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             name="cancellation_type"
                             defaultValue={initialData.cancellation_type}
                             type="text"
-                            style={{ display: ['代書塗銷', '賣方自辦', '無', '先塗二胎'].includes(initialData?.cancellation_type ?? '') ? 'none' : 'block' }}
+                            style={{ display: ['代書塗銷', '賣方自辦', '無', '先塗二胎', '線上塗銷'].includes(initialData?.cancellation_type ?? '') ? 'none' : 'block' }}
                             className="w-full bg-primary/5 border-2 border-primary/20 rounded-lg px-3 py-2 text-foreground font-black focus:ring-2 focus:ring-primary/40 transition-all text-sm"
                             placeholder="請輸入塗銷方式..."
                         />

@@ -155,7 +155,7 @@ export function BasicInfoSection({
                     <label className="text-sm text-orange-600 font-bold">塗銷方式</label>
                     <div className="flex flex-col gap-2">
                         <select
-                            value={['代書塗銷', '賣方自辦', '無', '先塗二胎', ''].includes(formData.cancellation_type) ? formData.cancellation_type : 'CUSTOM'}
+                            value={['代書塗銷', '賣方自辦', '無', '先塗二胎', '線上塗銷', ''].includes(formData.cancellation_type) ? formData.cancellation_type : 'CUSTOM'}
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (val === 'CUSTOM') {
@@ -170,9 +170,10 @@ export function BasicInfoSection({
                             <option value="賣方自辦">賣方自辦</option>
                             <option value="無">無</option>
                             <option value="先塗二胎">先塗二胎</option>
+                            <option value="線上塗銷">線上塗銷</option>
                             <option value="CUSTOM">其他 (手動輸入...)</option>
                         </select>
-                        {(!['代書塗銷', '賣方自辦', '無', '先塗二胎'].includes(formData.cancellation_type) || formData.cancellation_type === '') && (
+                        {(!['代書塗銷', '賣方自辦', '無', '先塗二胎', '線上塗銷'].includes(formData.cancellation_type) || formData.cancellation_type === '') && (
                             <input
                                 name="cancellation_type"
                                 type="text"
