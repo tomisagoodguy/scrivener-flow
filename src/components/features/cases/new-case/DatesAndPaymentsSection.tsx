@@ -18,7 +18,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                 {/* Contract Stage */}
                 <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-amber-600">簽約日</label>
+                        <label className="text-sm font-bold text-amber-600">簽約日</label>
                         <input
                             name="contract_date"
                             type="date"
@@ -29,7 +29,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs text-foreground/60 font-medium">簽約款 (萬元)</label>
+                        <label className="text-sm text-foreground/60 font-medium">簽約款 (萬元)</label>
                         <input
                             name="contract_amount"
                             type="number"
@@ -69,7 +69,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                 {/* Seal & Tax */}
                 <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-blue-500">用印日</label>
+                        <label className="text-sm font-bold text-blue-500">用印日</label>
                         <input
                             name="seal_date"
                             type="date"
@@ -79,7 +79,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs text-foreground/60 font-medium">用印款 (萬元)</label>
+                        <label className="text-sm text-foreground/60 font-medium">用印款 (萬元)</label>
                         <input
                             name="seal_amount"
                             type="number"
@@ -91,7 +91,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                     </div>
                     <div className="border-t border-border pt-2">
                         <div className="space-y-1 pt-2">
-                            <label className="text-xs font-bold text-emerald-500">完稅日</label>
+                            <label className="text-sm font-bold text-emerald-500">完稅日</label>
                             <input
                                 name="tax_payment_date"
                                 type="date"
@@ -101,7 +101,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-foreground/60 font-medium">完稅款 (萬元)</label>
+                            <label className="text-sm text-foreground/60 font-medium">完稅款 (萬元)</label>
                             <input
                                 name="tax_amount"
                                 type="number"
@@ -117,7 +117,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                 {/* Transfer & Note */}
                 <div className="bg-secondary/30 p-5 rounded-2xl space-y-4 border border-border">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-purple-500">過戶日</label>
+                        <label className="text-sm font-bold text-purple-500">過戶日</label>
                         <input
                             name="transfer_date"
                             type="date"
@@ -127,7 +127,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs text-foreground/60 font-medium">過戶備註</label>
+                        <label className="text-sm text-foreground/60 font-medium">過戶備註</label>
                         <input
                             name="transfer_note"
                             type="text"
@@ -139,7 +139,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                     </div>
                     <div className="border-t border-border pt-2">
                         <div className="space-y-1 pt-2">
-                            <label className="text-xs font-bold text-orange-600">代償日</label>
+                            <label className="text-sm font-bold text-orange-600">代償日</label>
                             <input
                                 name="redemption_date"
                                 type="date"
@@ -154,7 +154,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                 {/* Handover & Balance */}
                 <div className="bg-primary/5 p-5 rounded-2xl space-y-4 border border-primary/20 ring-1 ring-primary/5">
                     <div className="space-y-1">
-                        <label className="text-xs font-black text-red-500 uppercase tracking-tighter flex items-center gap-2">
+                        <label className="text-sm font-black text-red-500 uppercase tracking-tighter flex items-center gap-2">
                             交屋日{' '}
                             <span className="text-[10px] bg-red-500 text-white px-1.5 rounded-full">必填</span>
                         </label>
@@ -168,7 +168,7 @@ export function DatesAndPaymentsSection({ formData, handleChange }: DatesAndPaym
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs text-foreground/60 font-bold">尾款金額 (萬元)</label>
+                        <label className="text-sm text-foreground/60 font-bold">尾款金額 (萬元)</label>
                         <input
                             name="balance_amount"
                             type="number"

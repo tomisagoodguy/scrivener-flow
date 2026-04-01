@@ -191,6 +191,13 @@ html {
             background-position: 200% 0;
         }
     }
+
+    /* 60歲使用者字體可讀性提升：將所有字級上移一階 */
+    --font-size-xs: 0.875rem;    /* 12px → 14px */
+    --font-size-sm: 1rem;        /* 14px → 16px */
+    --font-size-base: 1.125rem;  /* 16px → 18px */
+    --font-size-lg: 1.25rem;     /* 18px → 20px */
+    --font-size-xl: 1.375rem;    /* 20px → 22px */
 }
 
 body {

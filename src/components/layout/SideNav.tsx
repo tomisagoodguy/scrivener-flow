@@ -135,7 +135,7 @@ export const SideNav = () => {
                 className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-slate-800 p-0.5 hover:rotate-12 transition-transform cursor-pointer"
                 title="登出"
             >
-                <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[12px] font-bold text-slate-400 dark:text-slate-500">
                     登出
                 </div>
             </button>

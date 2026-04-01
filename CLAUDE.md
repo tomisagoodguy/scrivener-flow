@@ -46,11 +46,17 @@ scrivener-flow/
 │   │   │   ├── line/           # LINE Messaging webhook
 │   │   │   ├── sync/           # 跨裝置資料同步
 │   │   │   └── migrations/     # DB migration endpoints
-│   │   ├── cases/              # 案件詳情頁
+│   │   ├── cases/              # 案件詳情頁（含 [id] 動態路由）
 │   │   ├── clauses/            # 特約條款管理（基本特約 + 自訂特約）
 │   │   ├── investment/         # 投資儀表板與分析
-│   │   ├── knowledge/          # 團隊知識庫
+│   │   ├── knowledge/          # 團隊知識庫（含 Tiptap 富文字編輯）
 │   │   ├── calculator/         # 稅費試算工具
+│   │   ├── banks/              # 銀行貸款管理
+│   │   ├── notes/              # 備忘錄 / 案件筆記板
+│   │   ├── redemptions/        # 代償管理
+│   │   ├── guidelines/         # 作業指引
+│   │   ├── identify/           # 標的物辨識
+│   │   ├── admin/import/       # 管理員資料匯入
 │   │   └── auth/               # 登入 / OAuth callback
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件（案件、投資、知識庫）
@@ -78,7 +84,9 @@ scrivener-flow/
 ├── .agent/                     # AI Agent 規則與記憶庫（MUST READ）
 │   ├── rules.md                # 核心行為規則
 │   ├── ANTIGRAVITY_INTELLIGENCE.md # 專案記憶
-│   └── domain_expertise.md    # 技術選型細節指引
+│   ├── domain_expertise.md    # 技術選型細節指引
+│   ├── LEARNINGS.md            # 開發過程觀念升級與錯誤反思
+│   └── PROACTIVE_SUGGESTIONS.md # 智能場景建議系統
 ├── migrations/                 # SQL migration 腳本
 ├── .github/workflows/          # CI/CD Pipelines
 └── pyproject.toml              # Python 依賴（uv 管理）
@@ -212,8 +220,9 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | 1 | `.agent/rules.md` | **MUST READ**：AI Agent 完整行為準則與 ECC 協議 |
 | 2 | `.agent/ANTIGRAVITY_INTELLIGENCE.md` | **MUST READ**：專案特定記憶與過往修正紀錄 |
 | 3 | `.agent/domain_expertise.md` | 各技術層（Next.js、Python、測試）的選型細節 |
-| 4 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
-| 5 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
+| 4 | `.agent/LEARNINGS.md` | 開發觀念升級與最佳實踐累積 |
+| 5 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
+| 6 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 
 ---
 
@@ -231,11 +240,13 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | Supabase JOIN 結果當 Object 存取 | JOIN 回傳**陣列**（1:many），必須用 `relation?.[0]`，並將型別定義為 `Relation[]` |
 | `useSearchParams()` 放在 layout/header 全域元件 | 這會導致靜態 build 失敗，必須在 `layout.tsx` 用 `<Suspense>` 包裹 |
 | Google Auth 在 Production 失敗 | Supabase Dashboard → Authentication → Redirect URLs 必須加入 `https://<your-domain>/**` |
-| Component 超過 150 行不拆分 | 超過 150 行必須拆分；業務邏輯抽至 `use*.ts` hook |
+| Component 超過 150 行不拆分 | 超過 150 行必須拆分；業務邏輯抽至 `use*.ts` hook；任何單一檔案不超過 800 行 |
 | 深色模式用 `dark:bg-*` Tailwind 類別 | `dark-theme.css` 對 `.rounded-2xl`、`.shadow-sm`、`.bg-white` 等結構類別使用 `!important`，導致 Tailwind `dark:` variants 被蓋掉。需要深色模式特定樣式時，必須在元素加專用 CSS class（如 `.my-special-card`），並在 `dark-theme.css` 末端用 `html.dark .my-special-card { ... !important }` 覆蓋 |
 | AI 功能除錯時找不到問題 | AI Server Actions 有 `ALLOWED_EMAIL` 閘門，session email 不符合會靜默返回空結果，不會拋出錯誤 |
 | 查詢待辦事項漏掉已刪除筆 | 待辦使用軟刪除（`is_deleted` flag），必須在查詢條件加 `is_deleted = false` |
 | `CaseStatus` 使用中文字串比對 | `CaseStatus` 型別混用中英文值（`'辦理中'` 和 `'Processing'` 並存），寫 filter 條件時注意資料來源實際儲存的是哪一種 |
+| localhost 登入後無限重導向 `/login` | 根頁面 `/` 無 session 時自動跳轉登入。若已登入仍 404，直接訪問 `/cases` 或 `/dashboard`。遇到 `/login` 重導向時**停止重試**，告知使用者需在瀏覽器手動登入，不要盲目重試 |
+| 新增系統自動任務時重複產生 | 系統任務（里程碑提醒）必須以 `source_key`（`caseId + milestone_type`）為複合唯一鍵去重；發現舊資料缺鍵時需清理 DB，不能只從 UI 過濾 |
 
 ---
 

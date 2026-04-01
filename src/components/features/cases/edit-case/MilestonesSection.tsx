@@ -25,7 +25,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-600 dark:text-white!">簽約日/款</label>
+                    <label className="text-sm font-bold text-amber-600 dark:text-white!">簽約日/款</label>
                     <input
                         name="contract_date"
                         defaultValue={toISODate(milestones?.contract_date)}
@@ -43,7 +43,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-600">補差額/款</label>
+                    <label className="text-sm font-bold text-amber-600">補差額/款</label>
                     <input
                         name="sign_diff_date"
                         defaultValue={toISODate(milestones?.sign_diff_date)}
@@ -60,7 +60,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-blue-600">用印日/款</label>
+                    <label className="text-sm font-bold text-blue-600">用印日/款</label>
                     <input
                         name="seal_date"
                         defaultValue={toISODate(milestones?.seal_date)}
@@ -77,7 +77,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-emerald-600">完稅日/款</label>
+                    <label className="text-sm font-bold text-emerald-600">完稅日/款</label>
                     <input
                         name="tax_payment_date"
                         defaultValue={toISODate(milestones?.tax_payment_date)}
@@ -94,7 +94,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/40 flex justify-between">
+                    <label className="text-sm font-bold text-foreground/40 flex justify-between">
                         <span>過戶日</span>
                         <span className="text-[9px] text-purple-500">備註</span>
                     </label>
@@ -129,7 +129,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                 </div>
                 {/* 6th: Redemption/Handover/Balance */}
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-red-600">代償/交屋/尾款</label>
+                    <label className="text-sm font-bold text-red-600">代償/交屋/尾款</label>
                     <input
                         name="redemption_date"
                         defaultValue={toISODate(milestones?.redemption_date)}
@@ -157,7 +157,7 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                 </div>
                 {/* 7th: Loan Approved / Shortfall */}
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-orange-600 flex justify-between">
+                    <label className="text-sm font-bold text-orange-600 flex justify-between">
                         貸款核定
                         {shortfall > 0 && (
                             <span className="text-[9px] text-red-500 animate-pulse">

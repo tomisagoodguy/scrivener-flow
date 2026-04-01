@@ -55,7 +55,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
                 <Link
                     href={`/cases/${caseData.id}`}
-                    className="block font-black text-[13px] text-blue-600 hover:text-blue-700 text-center"
+                    className="block font-black text-[15px] text-blue-600 hover:text-blue-700 text-center"
                 >
                     {caseData.case_number}
                 </Link>
@@ -63,7 +63,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
 
             {/* 地區 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div className="text-[12px] text-slate-900 dark:text-slate-100 font-bold text-center leading-tight whitespace-normal">
+                <div className="text-[14px] text-slate-900 dark:text-slate-100 font-bold text-center leading-tight whitespace-normal">
                     {caseData.district || caseData.city || '-'}
                 </div>
             </td>
@@ -71,7 +71,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             {/* 買方 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
                 <div
-                    className="text-[12px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
+                    className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
                     title={caseData.buyer_name}
                 >
                     {caseData.buyer_name}
@@ -81,7 +81,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             {/* 賣方 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
                 <div
-                    className="text-[12px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
+                    className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
                     title={caseData.seller_name}
                 >
                     {caseData.seller_name}
@@ -93,17 +93,17 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                 <div className="flex flex-col gap-0.5">
                     {(financials.total_price || financials.contract_amount) && (
                         <div className="flex items-center justify-between px-0.5">
-                            <span className="text-[9px] text-slate-400">總</span>
-                            <span className="text-[11px] font-black text-emerald-600">
+                            <span className="text-[11px] text-slate-400">總</span>
+                            <span className="text-[13px] font-black text-emerald-600">
                                 {financials.total_price || financials.contract_amount}萬
                             </span>
                         </div>
                     )}
                     {financials.buyer_bank && (
                         <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">買</span>
+                            <span className="text-[11px] text-slate-400">買</span>
                             <span
-                                className="text-[10px] font-bold text-blue-600 truncate max-w-[60px]"
+                                className="text-[12px] font-bold text-blue-600 truncate max-w-[60px]"
                                 title={financials.buyer_bank}
                             >
                                 {financials.buyer_bank}
@@ -112,9 +112,9 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                     )}
                     {financials.seller_bank && (
                         <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">賣</span>
+                            <span className="text-[11px] text-slate-400">賣</span>
                             <span
-                                className="text-[10px] font-bold text-purple-600 truncate max-w-[60px]"
+                                className="text-[12px] font-bold text-purple-600 truncate max-w-[60px]"
                                 title={financials.seller_bank}
                             >
                                 {financials.seller_bank}
@@ -123,9 +123,9 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                     )}
                     {caseData.cancellation_type && caseData.cancellation_type !== '無' && (
                         <div className="flex items-center justify-between border-t border-slate-100/50 dark:border-slate-700/50 pt-0.5 px-0.5">
-                            <span className="text-[9px] text-slate-400">塗</span>
+                            <span className="text-[11px] text-slate-400">塗</span>
                             <span
-                                className="text-[10px] font-bold text-slate-500 truncate max-w-[60px]"
+                                className="text-[12px] font-bold text-slate-500 truncate max-w-[60px]"
                                 title={caseData.cancellation_type}
                             >
                                 {caseData.cancellation_type}
@@ -142,15 +142,15 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                         value={caseData.tax_type || '一般'}
                         caseId={caseData.id}
                         fieldKey="tax_type"
-                        defaultClassName="text-[11px] font-black text-slate-700 border border-slate-200 rounded bg-slate-50 px-1 py-0.5 shadow-sm w-full"
+                        defaultClassName="text-[13px] font-black text-slate-700 border border-slate-200 rounded bg-slate-50 px-1 py-0.5 shadow-sm w-full"
                     />
                     {financials.pre_collected_fee && (
                         <div className="mt-0.5">
                             <HighlightableValue
                                 value={
                                     <div className="flex items-center gap-0.5 justify-center">
-                                        <span className="text-[9px] text-slate-400">預</span>
-                                        <span className="text-[10px] font-bold text-amber-600">
+                                        <span className="text-[11px] text-slate-400">預</span>
+                                        <span className="text-[12px] font-bold text-amber-600">
                                             {financials.pre_collected_fee >= 1000
                                                 ? Number((financials.pre_collected_fee / 10000).toFixed(2))
                                                 : financials.pre_collected_fee}
@@ -195,18 +195,18 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                     <div className="mt-2 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-1.5">
                         {caseData.pending_tasks && (
                             <div className="flex items-start gap-1.5">
-                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] px-1 rounded">
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[11px] px-1 rounded">
                                     📝
                                 </span>
-                                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-tight italic">
+                                <p className="text-[12px] text-slate-600 dark:text-slate-400 leading-tight italic">
                                     {caseData.pending_tasks}
                                 </p>
                             </div>
                         )}
                         {caseData.notes && caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim() && (
                             <div className="flex items-start gap-1.5">
-                                <span className="bg-rose-500/10 text-rose-500 text-[9px] px-1 rounded">⚠️</span>
-                                <p className="text-[10px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap">
+                                <span className="bg-rose-500/10 text-rose-500 text-[11px] px-1 rounded">⚠️</span>
+                                <p className="text-[12px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap">
                                     {caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim()}
                                 </p>
                             </div>

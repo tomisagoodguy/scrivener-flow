@@ -55,7 +55,7 @@ export function BasicInfoSection({
                     )}
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">承辦地點</label>
                     <select
                         name="city"
                         value={formData.city}
@@ -202,7 +202,7 @@ export function BasicInfoSection({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
+                    <label className="text-sm text-foreground/60 font-medium">履保帳號</label>
                     <input
                         name="escrow_account"
                         type="text"

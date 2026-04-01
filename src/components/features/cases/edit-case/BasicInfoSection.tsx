@@ -41,7 +41,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">案件編號</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">案件編號</label>
                     <input
                         name="case_number"
                         defaultValue={initialData.case_number}
@@ -51,7 +51,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">承辦地點</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">承辦地點</label>
                     <select
                         name="city"
                         defaultValue={initialData.city || '台北(士)'}
@@ -64,7 +64,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     <input type="hidden" name="district" value="" />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">買方</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">買方</label>
                     <input
                         name="buyer"
                         defaultValue={initialData.buyer_name}
@@ -74,7 +74,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">賣方</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">賣方</label>
                     <input
                         name="seller"
                         defaultValue={initialData.seller_name}
@@ -87,7 +87,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">成交總價 (萬)</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">成交總價 (萬)</label>
                     <input
                         name="total_price"
                         defaultValue={financials?.total_price}
@@ -96,7 +96,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-emerald-600 uppercase">預收規費</label>
+                    <label className="text-sm font-bold text-emerald-600 uppercase">預收規費</label>
                     <input
                         name="pre_collected_fee"
                         defaultValue={financials?.pre_collected_fee}
@@ -113,7 +113,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">買方貸款銀行</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">買方貸款銀行</label>
                     <input
                         id="buyer_loan_bank_input"
                         name="buyer_loan_bank"
@@ -124,7 +124,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1 col-span-1">
-                    <label className="text-xs font-bold text-orange-600 uppercase">賣方代償銀行 & 設定金額</label>
+                    <label className="text-sm font-bold text-orange-600 uppercase">賣方代償銀行 & 設定金額</label>
                     <div className="grid grid-cols-2 gap-2">
                         <input
                             name="seller_loan_bank"
@@ -146,7 +146,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </div>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-orange-600 uppercase">塗銷方式</label>
+                    <label className="text-sm font-bold text-orange-600 uppercase">塗銷方式</label>
                     <div className="flex flex-col gap-2">
                         <select
                             defaultValue={['代書塗銷', '賣方自辦', '無', '先塗二胎', '線上塗銷'].includes(initialData?.cancellation_type ?? '') ? initialData.cancellation_type : 'CUSTOM'}
@@ -187,7 +187,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </div>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-foreground/50 uppercase">稅單性質</label>
+                    <label className="text-sm font-bold text-foreground/50 uppercase">稅單性質</label>
                     <select
                         name="tax_type"
                         defaultValue={initialData.tax_type || '一般'}
@@ -218,7 +218,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <div className="border-t border-border-color pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs text-foreground/60 font-medium">履保帳號</label>
+                        <label className="text-sm text-foreground/60 font-medium">履保帳號</label>
                         <input
                             name="escrow_account"
                             defaultValue={initialData.escrow_account}
@@ -239,7 +239,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs text-foreground/50">姓名</label>
+                            <label className="text-sm text-foreground/50">姓名</label>
                             <input
                                 name="buyer_name"
                                 type="text"
@@ -249,7 +249,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-foreground/50">電話</label>
+                            <label className="text-sm text-foreground/50">電話</label>
                             <input
                                 name="buyer_phone"
                                 type="text"
@@ -260,7 +260,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                         <div className="space-y-1">
-                            <label className="text-[10px] text-foreground/40 uppercase font-bold">登記名義人</label>
+                            <label className="text-xs text-foreground/40 uppercase font-bold">登記名義人</label>
                             <input
                                 name="registrant_name"
                                 type="text"
@@ -270,7 +270,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] text-foreground/40 uppercase font-bold">登記人電話</label>
+                            <label className="text-xs text-foreground/40 uppercase font-bold">登記人電話</label>
                             <input
                                 name="registrant_phone"
                                 type="text"
@@ -288,7 +288,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs text-foreground/50">姓名</label>
+                            <label className="text-sm text-foreground/50">姓名</label>
                             <input
                                 name="seller_name"
                                 type="text"
@@ -298,7 +298,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-foreground/50">電話</label>
+                            <label className="text-sm text-foreground/50">電話</label>
                             <input
                                 name="seller_phone"
                                 type="text"
@@ -309,7 +309,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/50">
                         <div className="space-y-1">
-                            <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人</label>
+                            <label className="text-xs text-foreground/40 uppercase font-bold">代理人</label>
                             <input
                                 name="agent_name"
                                 type="text"
@@ -318,7 +318,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] text-foreground/40 uppercase font-bold">代理人電話</label>
+                            <label className="text-xs text-foreground/40 uppercase font-bold">代理人電話</label>
                             <input
                                 name="agent_phone"
                                 type="text"

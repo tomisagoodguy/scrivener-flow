@@ -99,10 +99,10 @@ export default function Header() {
                                 <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-700">
                                     <span className="text-xl animate-pulse-slow">{weather.icon}</span>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest leading-tight">
+                                        <span className="text-[12px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest leading-tight">
                                             士林區
                                         </span>
-                                        <span className="text-[10px] font-bold text-slate-400 leading-tight">
+                                        <span className="text-[12px] font-bold text-slate-400 leading-tight">
                                             {weather.temp}°C {weather.label}
                                         </span>
                                     </div>
@@ -114,7 +114,7 @@ export default function Header() {
                             </div>
                             <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
+                                <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
                                     {format(now, 'MM/dd EEEE', { locale: zhTW })}
                                 </span>
                             </div>
@@ -134,7 +134,7 @@ export default function Header() {
                                 className="bg-transparent border-none outline-none text-sm px-2 w-64 text-slate-600 dark:text-slate-300 placeholder:text-slate-400 font-medium"
                             />
                             <div className="flex items-center gap-1 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 shadow-sm">
-                                <span className="text-[10px] font-black text-slate-400">Enter</span>
+                                <span className="text-[12px] font-black text-slate-400">Enter</span>
                             </div>
                         </div>
 
