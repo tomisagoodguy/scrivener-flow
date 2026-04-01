@@ -3,18 +3,18 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { toISODate } from './caseUtils';
-import { DemoCase } from '@/types';
+import { DemoCase, Financials } from '@/types';
 
 interface TaxDeadlinesSectionProps {
     initialData: DemoCase;
-    financials: any;
+    financials: Financials | null | undefined;
 }
 
 export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initialData, financials }) => {
-    const todos = (initialData as any).todos || [];
+    const todos = initialData.todos_list || [];
 
     const isCompleted = (key: string) => {
-        return todos.find((t: any) => t.source_key === key)?.is_completed;
+        return todos.find((t) => t.source_key === key)?.is_completed;
     };
 
     return (
@@ -26,7 +26,7 @@ export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initia
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                        <label className="text-xs font-bold text-rose-600">土增稅限繳日 (常用)</label>
+                        <label className="text-xs font-bold text-rose-600 dark:text-rose-400">土增稅限繳日 (常用)</label>
                         {isCompleted('land_value_tax_deadline') && (
                             <CheckCircle2 className="w-3 h-3 text-green-500" />
                         )}
@@ -40,7 +40,7 @@ export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initia
                 </div>
                 <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                        <label className="text-xs font-bold text-rose-600">契稅限繳日 (常用)</label>
+                        <label className="text-xs font-bold text-rose-600 dark:text-rose-400">契稅限繳日 (常用)</label>
                         {isCompleted('deed_tax_deadline') && (
                             <CheckCircle2 className="w-3 h-3 text-green-500" />
                         )}
@@ -54,7 +54,7 @@ export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initia
                 </div>
                 <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                        <label className="text-xs font-bold text-gray-500">地價稅限繳日</label>
+                        <label className="text-xs font-bold text-gray-500 dark:text-slate-400">地價稅限繳日</label>
                         {isCompleted('land_tax_deadline') && (
                             <CheckCircle2 className="w-3 h-3 text-green-500" />
                         )}
@@ -68,7 +68,7 @@ export const TaxDeadlinesSection: React.FC<TaxDeadlinesSectionProps> = ({ initia
                 </div>
                 <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                        <label className="text-xs font-bold text-gray-500">房屋稅限繳日</label>
+                        <label className="text-xs font-bold text-gray-500 dark:text-slate-400">房屋稅限繳日</label>
                         {isCompleted('house_tax_deadline') && (
                             <CheckCircle2 className="w-3 h-3 text-green-500" />
                         )}

@@ -3,8 +3,10 @@
 import React from 'react';
 import { toISODatetime } from './caseUtils';
 
+import { Milestone } from '@/types';
+
 interface AppointmentsSectionProps {
-    milestones: any;
+    milestones: Milestone | null | undefined;
 }
 
 export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milestones }) => {
@@ -18,7 +20,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milest
             </p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-indigo-600">用印約定</label>
+                    <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400">用印約定</label>
                     <input
                         name="seal_appointment"
                         defaultValue={toISODatetime(milestones?.seal_appointment)}
@@ -27,7 +29,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milest
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-indigo-600">完稅約定</label>
+                    <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400">完稅約定</label>
                     <input
                         name="tax_appointment"
                         defaultValue={toISODatetime(milestones?.tax_appointment)}
@@ -36,7 +38,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({ milest
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-indigo-600">交屋約定</label>
+                    <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400">交屋約定</label>
                     <input
                         name="handover_appointment"
                         defaultValue={toISODatetime(milestones?.handover_appointment)}

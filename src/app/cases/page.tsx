@@ -3,10 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
 
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
-import TimelineGanttView from '@/components/dashboard/TimelineGanttView';
+
 import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
 import { CaseTableRow } from '@/components/features/cases/case-list/CaseTableRow';
 import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
+import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 
 import { getCaseStage } from '@/lib/stageUtils';
 
@@ -116,6 +117,7 @@ export default async function CasesPage({
                         { label: '承辦中', value: 'Processing' },
                         { label: '已結案', value: 'Closed' },
                         { label: '📋 備忘錄', value: 'Memo' },
+                        { label: '📅 時程', value: 'Timeline' },
                     ].map((tab) => (
                         <Link
                             key={tab.value}
@@ -155,19 +157,23 @@ export default async function CasesPage({
                 <CaseMemoBoard cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
             )}
 
+            {/* Timeline Hub View */}
+            {statusParam === 'Timeline' && (
+                <TimelineHub cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
+            )}
+
             {/* Monitoring View */}
-            {statusParam !== 'Closed' && statusParam !== 'Memo' && monitoringCases.length > 0 && (
+            {statusParam !== 'Closed' && statusParam !== 'Memo' && statusParam !== 'Timeline' && monitoringCases.length > 0 && (
                 <div className="space-y-8">
                     <GlobalPipelineChart
                         cases={monitoringCases}
                         currentStage={typeof stageParam === 'string' ? stageParam : undefined}
                     />
-                    <TimelineGanttView cases={monitoringCases} />
                 </div>
             )}
 
             {/* List Table */}
-            {statusParam !== 'Memo' && (
+            {statusParam !== 'Memo' && statusParam !== 'Timeline' && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse table-fixed">

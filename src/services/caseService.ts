@@ -62,7 +62,7 @@ export const caseService = {
                 if (match && match[1]) {
                     try {
                         existingAttributes = JSON.parse(match[1]);
-                    } catch (e) {
+                    } catch (_e) {
                          // ignore
                     }
                 }
