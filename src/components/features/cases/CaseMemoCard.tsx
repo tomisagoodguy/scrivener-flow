@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DemoCase, Milestone } from '@/types';
@@ -55,6 +55,23 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
     const [draft, setDraft] = useState(value);
     const [status, setStatus] = useState<SaveStatus>('idle');
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // 自動調整 textarea 高度
+    const autoResize = useCallback(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    }, []);
+
+    // 進入編輯模式時立即調整高度
+    useEffect(() => {
+        if (editing) {
+            // 等一幀確保 DOM 已渲染
+            requestAnimationFrame(autoResize);
+        }
+    }, [editing, autoResize]);
 
     const triggerSave = useCallback(
         (val: string) => {
@@ -75,6 +92,7 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
 
     const handleChange = (val: string) => {
         setDraft(val);
+        autoResize();
         triggerSave(val);
     };
 
@@ -84,10 +102,10 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
 
     if (editing) {
         return (
-            <div className={`rounded-xl border px-2.5 py-2 ${bgClassName}`}>
+            <div className={`w-full rounded-xl border px-2.5 py-2 transition-all ${bgClassName}`}>
                 <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px]">{icon}</span>
-                    <span className={`text-[9px] font-bold ${
+                    <span className="text-[14px]">{icon}</span>
+                    <span className={`text-[11px] font-bold ${
                         status === 'saving' ? 'text-amber-500' :
                         status === 'saved'  ? 'text-emerald-500' :
                         status === 'error'  ? 'text-red-500' : 'text-slate-300'
@@ -96,13 +114,15 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
                     </span>
                 </div>
                 <textarea
+                    ref={textareaRef}
                     autoFocus
                     value={draft}
                     onChange={(e) => handleChange(e.target.value)}
                     onBlur={handleBlur}
-                    rows={4}
+                    onFocus={autoResize}
+                    rows={2}
                     placeholder={placeholder}
-                    className={`w-full bg-transparent text-[11px] ${textClassName} leading-snug resize-none outline-none placeholder:text-slate-300 whitespace-pre-wrap`}
+                    className={`w-full min-h-[36px] bg-transparent text-[13px] ${textClassName} leading-relaxed resize-none outline-none placeholder:text-slate-300 whitespace-pre-wrap overflow-hidden`}
                 />
             </div>
         );
@@ -115,15 +135,15 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
             onClick={() => setEditing(true)}
             className={`w-full text-left flex items-start gap-1.5 rounded-xl px-2.5 py-2 border transition-all group/note ${bgClassName} hover:brightness-95`}
         >
-            <span className="text-[11px] shrink-0 mt-px">{icon}</span>
+            <span className="text-[14px] shrink-0 mt-px">{icon}</span>
             {draft ? (
-                <p className={`text-[11px] ${textClassName} leading-snug whitespace-pre-wrap break-words flex-1`}>
+                <p className={`text-[13px] ${textClassName} leading-relaxed whitespace-pre-wrap break-words flex-1`}>
                     {draft}
                 </p>
             ) : (
-                <p className="text-[11px] text-slate-300 italic leading-snug flex-1">{placeholder}</p>
+                <p className="text-[13px] text-slate-300 italic leading-relaxed flex-1">{placeholder}</p>
             )}
-            <span className="text-[9px] text-slate-300 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-px">
+            <span className="text-[11px] text-slate-300 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-px">
                 編輯
             </span>
         </button>
@@ -171,18 +191,18 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
             <div className="flex items-center justify-between gap-2">
                 <Link
                     href={`/cases/${caseData.id}`}
-                    className="text-[13px] font-black text-blue-600 hover:text-blue-700 transition-colors"
+                    className="text-[15px] font-black text-blue-600 hover:text-blue-700 transition-colors"
                 >
                     {caseData.case_number}
                 </Link>
                 <div className="flex items-center gap-1.5 shrink-0">
                     {pendingCount > 0 && (
-                        <span className="text-[10px] font-bold bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-500/20">
+                        <span className="text-[12px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full border border-amber-500/20">
                             {pendingCount} 待辦
                         </span>
                     )}
                     {next && (
-                        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-500/20">
+                        <span className="text-[12px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full border border-blue-500/20">
                             {next.label} {formatShortDate(next.date!)}
                         </span>
                     )}
@@ -190,7 +210,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
             </div>
 
             {/* Buyer / Seller */}
-            <div className="text-[11px] text-slate-500 font-medium leading-tight">
+            <div className="text-[13px] text-slate-500 font-medium leading-tight">
                 {caseData.buyer_name}
                 <span className="mx-1 text-slate-300">/</span>
                 {caseData.seller_name}
