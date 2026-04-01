@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
@@ -7,6 +6,7 @@ import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
 import TimelineGanttView from '@/components/dashboard/TimelineGanttView';
 import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
 import { CaseTableRow } from '@/components/features/cases/case-list/CaseTableRow';
+import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
 
 import { getCaseStage } from '@/lib/stageUtils';
 
@@ -115,6 +115,7 @@ export default async function CasesPage({
                     {[
                         { label: '承辦中', value: 'Processing' },
                         { label: '已結案', value: 'Closed' },
+                        { label: '📋 備忘錄', value: 'Memo' },
                     ].map((tab) => (
                         <Link
                             key={tab.value}
@@ -149,8 +150,13 @@ export default async function CasesPage({
                 </form>
             </div>
 
+            {/* Memo Board View */}
+            {statusParam === 'Memo' && (
+                <CaseMemoBoard cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
+            )}
+
             {/* Monitoring View */}
-            {statusParam !== 'Closed' && monitoringCases.length > 0 && (
+            {statusParam !== 'Closed' && statusParam !== 'Memo' && monitoringCases.length > 0 && (
                 <div className="space-y-8">
                     <GlobalPipelineChart
                         cases={monitoringCases}
@@ -161,51 +167,53 @@ export default async function CasesPage({
             )}
 
             {/* List Table */}
-            <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse table-fixed">
-                        <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-950/30 sticky top-0 z-10">
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[85px] text-center">
-                                    案號
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[50px] text-center">
-                                    地區
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[65px] text-center">
-                                    買方
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[65px] text-center">
-                                    賣方
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[110px] text-center">
-                                    價格/銀行/塗銷
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[60px] text-center">
-                                    稅單
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[260px] text-center">
-                                    {'簽 > 印 > 稅 > 過 > 交'}
-                                </th>
-                                <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter min-w-[300px]">
-                                    未完成事項 / 備註
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/30">
-                            {cases.length === 0 && !error ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-32 text-slate-400 font-bold">
-                                        目前沒有符合條件的案件資料
-                                    </td>
+            {statusParam !== 'Memo' && (
+                <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse table-fixed">
+                            <thead>
+                                <tr className="bg-slate-50 dark:bg-slate-950/30 sticky top-0 z-10">
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[85px] text-center">
+                                        案號
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[50px] text-center">
+                                        地區
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[65px] text-center">
+                                        買方
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[65px] text-center">
+                                        賣方
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[110px] text-center">
+                                        價格/銀行/塗銷
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[60px] text-center">
+                                        稅單
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[260px] text-center">
+                                        {'簽 > 印 > 稅 > 過 > 交'}
+                                    </th>
+                                    <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter min-w-[300px]">
+                                        未完成事項 / 備註
+                                    </th>
                                 </tr>
-                            ) : (
-                                cases.map((caseData) => <CaseTableRow key={caseData.id} caseData={caseData} />)
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/30">
+                                {cases.length === 0 && !error ? (
+                                    <tr>
+                                        <td colSpan={8} className="text-center py-32 text-slate-400 font-bold">
+                                            目前沒有符合條件的案件資料
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    cases.map((caseData) => <CaseTableRow key={caseData.id} caseData={caseData} />)
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

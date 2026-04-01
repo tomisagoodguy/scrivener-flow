@@ -2,7 +2,6 @@
 
 import React from 'react';
 import QuickNotes from '@/components/shared/QuickNotes';
-import { DemoCase } from '@/types';
 
 interface NotesSectionProps {
     notes: string;
@@ -21,7 +20,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
     pendingTasks,
     privateNotes,
     setPrivateNotes,
-    cancellationType
+    cancellationType: _cancellationType
 }) => {
     return (
         <div className="space-y-2">
