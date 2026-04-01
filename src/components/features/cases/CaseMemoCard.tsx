@@ -137,7 +137,7 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
         >
             <span className="text-[14px] shrink-0 mt-px">{icon}</span>
             {draft ? (
-                <p className={`text-[13px] ${textClassName} leading-relaxed whitespace-pre-wrap break-words flex-1`}>
+                <p className={`text-[13px] ${textClassName} leading-relaxed whitespace-pre-wrap wrap-break-word flex-1`}>
                     {draft}
                 </p>
             ) : (
