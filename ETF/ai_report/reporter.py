@@ -156,7 +156,9 @@ class AIReporter:
                     )
                     notifier = LineNotifier(token_env=token_env, user_id_env=user_id_env)
                     try:
-                        notifier.broadcast_ai_report(response.text)
+                        # 依據使用者要求，暫時停止推播 AI 分析報告避免訊息過多
+                        # notifier.broadcast_ai_report(response.text)
+                        logger.info("LINE notification for AI report is temporarily disabled.")
                     except Exception as e:
                         logger.error(f"Failed to send LINE notification: {e}")
                     return
