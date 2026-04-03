@@ -1,4 +1,4 @@
-import { TodoTask, TaskType } from '../../types';
+import { TodoTask, TaskType, Priority } from '../../types';
 
 export interface RawTodoRow {
     id: string;
@@ -58,9 +58,9 @@ export const mapTodosToState = (todos: RawTodoRow[], cases: CaseRef[], activeCas
                 type: type,
                 date: new Date(t.due_date || t.created_at),
                 isCompleted: t.is_completed,
-                priority: t.priority || 'not-urgent-important',
+                priority: (t.priority as Priority) || 'not-urgent-important',
                 caseName: relatedCase ? relatedCase.buyer_name : undefined,
-                caseId: t.case_id,
+                caseId: t.case_id ?? undefined,
                 notes: t.source_type === 'system' ? '系統自動提醒' : undefined,
                 endDate: t.end_date ? new Date(t.end_date) : undefined,
                 isAllDay: t.is_all_day || false,
