@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { TodoTask } from '../types';
-import { mapTodosToState } from './sync/todoMapper';
+import { mapTodosToState, RawTodoRow } from './sync/todoMapper';
 import { generateSystemTasks } from './sync/systemTaskGenerator';
 
 export function useTodoSync() {
@@ -22,7 +22,7 @@ export function useTodoSync() {
             const duplicatesToDelete: string[] = [];
             let cleanExistingTodos = existingTodos || [];
 
-            (existingTodos || []).forEach((t: any) => {
+            (existingTodos || [] as RawTodoRow[]).forEach((t: RawTodoRow) => {
                 if (t.source_type === 'system' && t.case_id && t.source_key) {
                     const key = `${t.case_id}_${t.source_key}`;
                     if (uniqueMap.has(key)) duplicatesToDelete.push(t.id);
@@ -34,7 +34,7 @@ export function useTodoSync() {
 
             if (duplicatesToDelete.length > 0) {
                 await supabase.from('todos').delete().in('id', duplicatesToDelete);
-                cleanExistingTodos = cleanExistingTodos.filter((t: any) => !duplicatesToDelete.includes(t.id));
+                cleanExistingTodos = cleanExistingTodos.filter((t: RawTodoRow) => !duplicatesToDelete.includes(t.id));
             }
 
             const { data: activeCases, error: caseError } = await supabase
@@ -46,7 +46,27 @@ export function useTodoSync() {
 
             if (caseError) throw caseError;
 
-            const { todosToInsert, todosToUpdate } = generateSystemTasks(activeCases || [], cleanExistingTodos, user.id, new Date());
+            // 只把「未刪除」的 todo 傳入 generateSystemTasks
+            // 已軟刪除的 todo 若日期仍存在，應重新 insert，而非被視為「已存在、無需更新」而跳過
+            const nonDeletedExistingTodos = cleanExistingTodos.filter((t: RawTodoRow) => !t.is_deleted);
+            const { todosToInsert, todosToUpdate, processedKeys } = generateSystemTasks(activeCases || [], nonDeletedExistingTodos, user.id, new Date());
+
+            // 刪除日期已被清除的系統 todo（避免刪除日期後舊任務殘留）
+            // processedKeys 包含所有「日期存在、有被處理」的 key，不在其中代表日期已被清空
+            const activeCaseIdSet = new Set(activeCases?.map(c => c.id) || []);
+            const todosToDelete = nonDeletedExistingTodos
+                .filter(t =>
+                    t.source_type === 'system' &&
+                    t.case_id &&
+                    t.source_key &&
+                    activeCaseIdSet.has(t.case_id) &&
+                    !processedKeys.has(`${t.case_id}_${t.source_key}`)
+                )
+                .map(t => t.id);
+
+            if (todosToDelete.length > 0) {
+                await supabase.from('todos').update({ is_deleted: true }).in('id', todosToDelete);
+            }
 
             if (todosToUpdate.length > 0) await supabase.from('todos').upsert(todosToUpdate);
             if (todosToInsert.length > 0) await supabase.from('todos').insert(todosToInsert);

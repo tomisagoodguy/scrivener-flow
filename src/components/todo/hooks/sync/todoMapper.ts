@@ -1,6 +1,27 @@
 import { TodoTask, TaskType } from '../../types';
 
-export const mapTodosToState = (todos: any[], cases: any[], activeCaseIds: Set<string>): TodoTask[] => {
+export interface RawTodoRow {
+    id: string;
+    user_id: string;
+    case_id: string | null;
+    source_type: string | null;
+    source_key: string | null;
+    content: string;
+    is_completed: boolean;
+    is_deleted: boolean;
+    priority: string;
+    due_date: string;
+    end_date: string | null;
+    is_all_day: boolean;
+    created_at: string;
+}
+
+interface CaseRef {
+    id: string;
+    buyer_name: string;
+}
+
+export const mapTodosToState = (todos: RawTodoRow[], cases: CaseRef[], activeCaseIds: Set<string>): TodoTask[] => {
     return todos
         .filter((t) => !t.is_deleted)
         .filter((t) => {
@@ -24,8 +45,8 @@ export const mapTodosToState = (todos: any[], cases: any[], activeCaseIds: Set<s
         .map((t) => {
             let type: TaskType = 'personal';
             if (t.source_type === 'system') {
-                if (t.source_key?.includes('tax')) type = 'tax';
-                else if (t.source_key?.includes('appt')) type = 'appointment';
+                if (t.source_key?.includes('appt')) type = 'appointment';
+                else if (t.source_key?.includes('tax')) type = 'tax';
                 else if (t.source_key?.includes('date')) type = 'legal';
             }
 

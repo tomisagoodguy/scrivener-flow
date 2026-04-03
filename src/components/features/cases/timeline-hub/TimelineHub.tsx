@@ -5,6 +5,7 @@ import { DemoCase } from '@/types';
 import { useTimelineHub } from './useTimelineHub';
 import { TodayFocus } from './TodayFocus';
 import { MonthCalendar } from './MonthCalendar';
+import { DailyList } from './DailyList';
 
 interface TimelineHubProps {
     cases: DemoCase[];
@@ -15,7 +16,7 @@ interface TimelineHubProps {
  * 三段式：① 今日焦點 → ② 月曆格 → ③ 跨案件甘特圖
  */
 export default function TimelineHub({ cases }: TimelineHubProps) {
-    const { today, allEvents, stats, upcomingAttentions } = useTimelineHub(cases);
+    const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(cases);
 
     return (
         <div className="space-y-6">
@@ -46,6 +47,9 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
 
             {/* ② 月曆格 */}
             <MonthCalendar events={allEvents} today={today} />
+
+            {/* ③ 每日列表 */}
+            <DailyList dayGroups={dayGroups} today={today} />
         </div>
     );
 }

@@ -1,28 +1,65 @@
 import { TaskType } from '../../types';
 
+interface ActiveCase {
+    id: string;
+    buyer_name: string;
+    milestones?: Array<Record<string, string | number | null>>;
+    financials?: Array<Record<string, string | number | null>>;
+}
+
+interface ExistingTodo {
+    id: string;
+    case_id: string | null;
+    source_key: string | null;
+    due_date: string;
+    content: string;
+    created_at: string;
+}
+
+interface SystemTodoInsert {
+    user_id: string;
+    content: string;
+    priority: string;
+    due_date: string;
+    case_id: string;
+    source_type: 'system';
+    source_key: string;
+    is_completed: false;
+}
+
+interface SystemTodoUpdate extends SystemTodoInsert {
+    id: string;
+    created_at: string;
+}
+
 export function generateSystemTasks(
-    activeCases: any[],
-    cleanExistingTodos: any[],
+    activeCases: ActiveCase[],
+    cleanExistingTodos: ExistingTodo[],
     userId: string,
     today: Date
 ) {
-    const todosToInsert: any[] = [];
-    const todosToUpdate: any[] = [];
+    const todosToInsert: SystemTodoInsert[] = [];
+    const todosToUpdate: SystemTodoUpdate[] = [];
+    // 記錄所有「日期存在、已處理」的 key（包含無需更新的現有 todo）
+    const processedKeys = new Set<string>();
 
     const addSystemTask = (
-        c: any,
+        c: ActiveCase,
         key: string,
-        dateStr: string | null,
+        dateStr: string | null | undefined,
         daysBefore: number,
         type: TaskType,
         titlePrefix: string
     ) => {
         if (!dateStr) return;
+        // 標記此 key 有效（日期存在）
+        processedKeys.add(`${c.id}_${key}`);
+
         const date = new Date(dateStr);
         const remindDate = new Date(date);
         remindDate.setDate(date.getDate() - daysBefore);
 
-        const exists = cleanExistingTodos.find((t: any) => t.case_id === c.id && t.source_key === key);
+        const exists = cleanExistingTodos.find(t => t.case_id === c.id && t.source_key === key);
         const isUrgent = today >= remindDate;
         const isAppointment = type === 'appointment';
 
@@ -69,9 +106,9 @@ export function generateSystemTasks(
         }
     };
 
-    activeCases?.forEach((c: any) => {
-        const m = c.milestones?.[0] || {};
-        const f = c.financials?.[0] || {};
+    activeCases?.forEach(c => {
+        const m = (c.milestones?.[0] || {}) as Record<string, string | null>;
+        const f = (c.financials?.[0] || {}) as Record<string, string | null>;
 
         addSystemTask(c, 'sign_diff_date', m.sign_diff_date, 3, 'legal', '補差額');
         addSystemTask(c, 'seal_date', m.seal_date, 3, 'legal', '用印日');
@@ -107,5 +144,5 @@ export function generateSystemTasks(
         addSystemTask(c, 'house_tax', f.house_tax_deadline, 5, 'tax', '房屋稅限繳');
     });
 
-    return { todosToInsert, todosToUpdate };
+    return { todosToInsert, todosToUpdate, processedKeys };
 }
