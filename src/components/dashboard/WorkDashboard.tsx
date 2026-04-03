@@ -12,7 +12,7 @@ interface WorkDashboardProps {
 }
 
 export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
-    const { loading, urgentTasks, taxTasks, pipelineTasks, completeTask } = useWorkDashboard();
+    const { loading, urgentTasks, staleTasks, taxTasks, pipelineTasks, completeTask, archiveStaleTasks } = useWorkDashboard();
 
     if (loading) {
         return (
@@ -35,7 +35,7 @@ export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                 {/* LEFT: Urgent Alerts */}
                 <div className="xl:col-span-6">
-                    <UrgentAlerts tasks={urgentTasks} onComplete={completeTask} />
+                    <UrgentAlerts tasks={urgentTasks} staleCount={staleTasks.length} onComplete={completeTask} onArchiveStale={archiveStaleTasks} />
                 </div>
 
                 {/* RIGHT: Tax Watch */}

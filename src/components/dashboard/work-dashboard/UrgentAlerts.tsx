@@ -3,18 +3,20 @@
 import React from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
-import { AlertTriangle, Calendar, CheckCircle2, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle2, ArrowRight, Archive } from 'lucide-react';
 import { TodoTask } from '@/components/todo/types';
 
 interface UrgentAlertsProps {
     tasks: TodoTask[];
+    staleCount: number;
     onComplete: (taskId: string) => void;
+    onArchiveStale: () => void;
 }
 
 /**
  * 緊急戰情室（72小時內緊急事項）
  */
-export function UrgentAlerts({ tasks, onComplete }: UrgentAlertsProps) {
+export function UrgentAlerts({ tasks, staleCount, onComplete, onArchiveStale }: UrgentAlertsProps) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -36,10 +38,20 @@ export function UrgentAlerts({ tasks, onComplete }: UrgentAlertsProps) {
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end gap-2">
                     <span className="text-5xl font-black text-red-500/10 tabular-nums leading-none">
                         {String(tasks.length).padStart(2, '0')}
                     </span>
+                    {staleCount > 0 && (
+                        <button
+                            onClick={onArchiveStale}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-400 bg-slate-50 hover:bg-slate-100 hover:text-slate-600 border border-slate-200 rounded-full transition-all duration-200"
+                            title={`封存 ${staleCount} 筆逾期超過 5 天的項目`}
+                        >
+                            <Archive className="w-3.5 h-3.5" />
+                            封存 {staleCount} 筆舊逾期
+                        </button>
+                    )}
                 </div>
             </div>
 

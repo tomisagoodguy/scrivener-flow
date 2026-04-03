@@ -1,7 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { differenceInDays } from 'date-fns';
-import { TodoTask } from '@/components/todo/types';
+import { TodoTask, TaskType, Priority } from '@/components/todo/types';
+
+interface RawMilestone {
+    contract_date: string | null;
+    seal_date: string | null;
+    tax_payment_date: string | null;
+    handover_date: string | null;
+    sign_appointment: string | null;
+    seal_appointment: string | null;
+    tax_appointment: string | null;
+    handover_appointment: string | null;
+}
+
+interface RawCase {
+    id: string;
+    case_number: string;
+    buyer_name: string;
+    status: string;
+    milestones: RawMilestone[];
+    financials: unknown[];
+}
+
+interface RawTodo {
+    id: string;
+    content: string;
+    due_date: string;
+    is_completed: boolean;
+    source_type: string | null;
+    source_key: string | null;
+    priority: string;
+    case_id: string | null;
+    notes: string | null;
+}
 
 /**
  * useWorkDashboard Hook
@@ -49,19 +81,19 @@ export function useWorkDashboard() {
             if (syncedTodos) {
                 const activeCaseIds = new Set(cases?.map(c => c.id) || []);
                 const caseMap: Record<string, string> = {};
-                cases?.forEach((c: any) => {
+                (cases as RawCase[] ?? []).forEach((c) => {
                     caseMap[c.id] = c.buyer_name;
                 });
 
                 // 將 Todos 轉換為 TodoTask 格式
-                const todoTasks: TodoTask[] = syncedTodos
-                    .filter((t: any) => {
+                const todoTasks: TodoTask[] = (syncedTodos as RawTodo[])
+                    .filter((t) => {
                         if (t.source_key === 'contract_date' || t.content.includes('簽約日')) return false;
                         if (t.case_id && !activeCaseIds.has(t.case_id)) return false;
                         return true;
                     })
-                    .map((t: any) => {
-                        let type: any = 'personal';
+                    .map((t) => {
+                        let type: TaskType = 'personal';
                         if (t.source_type === 'system') {
                             if (t.source_key?.includes('tax') || t.source_key === 'shortfall_payment_alert') type = 'tax';
                             else if (t.source_key?.includes('appt')) type = 'appointment';
@@ -74,18 +106,18 @@ export function useWorkDashboard() {
                             date: new Date(t.due_date),
                             isCompleted: t.is_completed,
                             isMilestone: false,
-                            priority: t.priority as any,
-                            caseId: t.case_id,
+                            priority: t.priority as Priority,
+                            caseId: t.case_id ?? undefined,
                             caseName: t.case_id ? (caseMap[t.case_id] || undefined) : undefined,
-                            notes: t.notes || undefined
+                            notes: t.notes ?? undefined
                         };
                     });
 
                 // 新增 Milestone 標記（資訊性質，不可勾選）
                 const milestoneMarkers: TodoTask[] = [];
-                cases?.forEach((c: any) => {
+                (cases as RawCase[] ?? []).forEach((c) => {
                     const m = c.milestones?.[0] || {};
-                    const addMarker = (dateStr: string, label: string) => {
+                    const addMarker = (dateStr: string | null, label: string) => {
                         if (!dateStr) return;
                         milestoneMarkers.push({
                             id: `m-${c.id}-${label}`,
@@ -121,6 +153,8 @@ export function useWorkDashboard() {
         fetchTasks();
         const channel = supabase.channel('dashboard_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTasks)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, fetchTasks)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'financials' }, fetchTasks)
             .subscribe();
 
         // 監聽跨元件同步事件
@@ -153,12 +187,34 @@ export function useWorkDashboard() {
     };
 
     /**
+     * 封存所有逾期超過 5 天的任務（標記為已完成）
+     */
+    const archiveStaleTasks = useCallback(async () => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const staleIds = tasks
+            .filter(t => !t.isMilestone && differenceInDays(t.date, now) < 0)
+            .map(t => t.id);
+        if (staleIds.length === 0) return;
+        await supabase.from('todos').update({ is_completed: true }).in('id', staleIds);
+        setTasks(prev => prev.filter(t => !staleIds.includes(t.id)));
+        window.dispatchEvent(new CustomEvent('todo-updated'));
+    }, [tasks]);
+
+    /**
      * 計算過濾後的任務類別
      */
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const urgentTasks = tasks.filter(t => !t.isMilestone && differenceInDays(t.date, today) <= 3);
+    // 只顯示未來 3 天內的任務（不含過期）
+    const urgentTasks = tasks.filter(t => {
+        if (t.isMilestone) return false;
+        const diff = differenceInDays(t.date, today);
+        return diff >= 0 && diff <= 3;
+    });
+    // 所有過期任務（可透過封存按鈕一鍵清除）
+    const staleTasks = tasks.filter(t => !t.isMilestone && differenceInDays(t.date, today) < 0);
     const taxTasks = tasks.filter(t => t.type === 'tax');
     const pipelineTasks = tasks.filter(t => {
         const diff = differenceInDays(t.date, today);
@@ -169,8 +225,10 @@ export function useWorkDashboard() {
         tasks,
         loading,
         urgentTasks,
+        staleTasks,
         taxTasks,
         pipelineTasks,
-        completeTask
+        completeTask,
+        archiveStaleTasks
     };
 }
