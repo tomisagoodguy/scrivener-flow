@@ -40,7 +40,7 @@ export function useBanksData() {
                 redemption_days: r?.processing_days || '',
                 redemption_location: r?.pickup_location || '',
                 redemption_note: [r?.requirements, r?.notes].filter(Boolean).join('\n'),
-                contacts: relatedContacts,
+                contacts: relatedContacts as Record<string, unknown>[],
             };
         });
     };
