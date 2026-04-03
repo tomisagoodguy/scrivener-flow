@@ -80,7 +80,8 @@ scrivener-flow/
 │   ├── types/                  # 全域 TypeScript 型別定義
 │   ├── hooks/                  # React custom hooks
 │   └── scripts/                # CLI 腳本（股票資料更新）
-├── prisma/schema.prisma        # DB Schema（PostgreSQL）
+├── prisma/schema.prisma        # ⚠️ 僅含 generator/datasource 設定，實際 Schema 在 supabase/migrations/
+├── supabase/migrations/        # 真正的 DB Schema（SQL 格式，20260111032050_recreate_full_schema.sql）
 ├── .agent/                     # AI Agent 規則與記憶庫（MUST READ）
 │   ├── rules.md                # 核心行為規則
 │   ├── ANTIGRAVITY_INTELLIGENCE.md # 專案記憶
@@ -130,6 +131,50 @@ uv run ruff check --fix && uv run ruff format  # Lint + Format
 uv run --with "finlab>=1.5.9" python <script>  # 含 FinLab 執行腳本
 ```
 
+### CI/CD（GitHub Actions）
+
+**無** TypeScript 建置或測試 CI。只有一個 workflow：
+
+```
+.github/workflows/etf_daily.yml   # 每日 UTC 14:00（台灣時間 22:00）自動執行
+                                   # Python ETF 資料同步 + FinLab 股票更新 + AI 報告產生
+```
+
+DB Schema 變更必須寫成 `.sql` 檔放入 `supabase/migrations/`，不能用 Supabase UI 手動操作。
+
+---
+
+## 環境變數（必要）
+
+`.env.local` 需包含以下變數（無 `.env.example`，以此為準）：
+
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=      # 僅 Server 端，bypass RLS
+
+# Auth
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+
+# Google
+GOOGLE_GEMINI_API_KEY=          # AI 功能（每日簡報、投資分析）
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# LINE
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+
+# 加密
+ENCRYPTION_MASTER_KEY=          # AES-256-GCM，90 天輪替
+
+# 投資
+FINLAB_API_KEY=                 # Python FinLab 股票資料
+DATABASE_URL=                   # Prisma connection string
+```
+
 ---
 
 ## 架構關鍵知識
@@ -152,7 +197,19 @@ Supabase **Row Level Security (RLS)** 在資料庫層強制 `user_id` 隔離，�
 - **里程碑（Milestone）**：合約事實（簽約日、完稅日），唯讀，不可刪除。
 - **任務（Task）**：可執行的待辦，系統會在里程碑前 3–5 天自動生成提醒任務。
 
-### 4. API 設計規則
+### 4. DB Schema 的真實位置
+
+`prisma/schema.prisma` **幾乎是空的**（只有 generator + datasource 設定）。所有表格定義、RLS Policy、Index 都在：
+
+```text
+supabase/migrations/20260111032050_recreate_full_schema.sql
+```
+
+主要表格：`cases`、`milestones`（1:1）、`financials`（1:1）、`todos`、`bank_contacts`、`team_notes`、`contract_clauses`、`encryption_keys`、ETF 投資相關表。Cases 唯一鍵為 `(user_id, case_number)`。
+
+修改 Schema 時：直接新增 `.sql` 到 `supabase/migrations/`，不能用 Prisma migrate。
+
+### 5. API 設計規則
 
 **資料突變（Mutation）優先使用 Server Actions**，禁止建立傳統 REST API Route (`route.ts`)，除非用於：
 
