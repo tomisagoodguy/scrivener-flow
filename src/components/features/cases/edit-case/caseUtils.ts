@@ -18,6 +18,22 @@ export const stripAttributesFromNotes = (rawNotes: string) => {
     return rawNotes.replace(/\[\[ATTR:.*?\]\]/, '').trim();
 };
 
+/** 移除 HTML 標籤，保留換行結構（<p>/<br> 轉換成換行） */
+export const stripHtml = (html: string): string => {
+    if (!html) return '';
+    if (!/<[a-z][\s\S]*>/i.test(html)) return html; // 純文字直接返回
+    return html
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+};
+
 export const toISODate = (val: any) => {
     if (!val) return '';
     try {

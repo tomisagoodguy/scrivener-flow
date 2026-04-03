@@ -10,6 +10,7 @@ import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
 import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 
 import { getCaseStage } from '@/lib/stageUtils';
+import CasesPendingView from '@/components/features/cases/CasesPendingView';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,6 +119,7 @@ export default async function CasesPage({
                         { label: '已結案', value: 'Closed' },
                         { label: '📋 備忘錄', value: 'Memo' },
                         { label: '📅 時程', value: 'Timeline' },
+                        { label: '⚠️ 未完成統整', value: 'Pending' },
                     ].map((tab) => (
                         <Link
                             key={tab.value}
@@ -162,8 +164,13 @@ export default async function CasesPage({
                 <TimelineHub cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
             )}
 
+            {/* Pending Items Aggregate View */}
+            {statusParam === 'Pending' && (
+                <CasesPendingView cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
+            )}
+
             {/* Monitoring View */}
-            {statusParam !== 'Closed' && statusParam !== 'Memo' && statusParam !== 'Timeline' && monitoringCases.length > 0 && (
+            {statusParam !== 'Closed' && statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && monitoringCases.length > 0 && (
                 <div className="space-y-8">
                     <GlobalPipelineChart
                         cases={monitoringCases}
@@ -173,7 +180,7 @@ export default async function CasesPage({
             )}
 
             {/* List Table */}
-            {statusParam !== 'Memo' && statusParam !== 'Timeline' && (
+            {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse table-fixed">

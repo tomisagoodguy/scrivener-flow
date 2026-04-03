@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DemoCase, Milestone } from '@/types';
+import { stripHtml } from './edit-case/caseUtils';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
     const next = getNextMilestone(milestone);
     const pendingCount = countPendingTodos(caseData.todos);
 
-    const cleanNotes = caseData.notes?.replace(/\[\[ATTR:.*?\]\]/g, '').trim() ?? '';
+    const cleanNotes = stripHtml(caseData.notes?.replace(/\[\[ATTR:.*?\]\]/g, '').trim() ?? '');
     // Preserve the [[ATTR:...]] suffix so custom attributes are not lost on save
     const attrSuffix = (() => {
         const match = caseData.notes?.match(/(\[\[ATTR:.*?\]\])/);
@@ -229,7 +230,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
             {/* 📝 其他備忘 */}
             <EditableNote
                 icon="📝"
-                value={caseData.pending_tasks ?? ''}
+                value={stripHtml(caseData.pending_tasks ?? '')}
                 placeholder="新增代辦備忘…"
                 textClassName="text-slate-600 dark:text-slate-400 italic"
                 bgClassName="bg-slate-50 dark:bg-slate-800/50 border-slate-200/60 dark:border-slate-700/40"
@@ -239,7 +240,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
             {/* 🔒 Private Notes */}
             <EditableNote
                 icon="🔒"
-                value={caseData.private_notes ?? ''}
+                value={stripHtml(caseData.private_notes ?? '')}
                 placeholder="新增私密備註…"
                 textClassName="text-slate-600 dark:text-slate-400"
                 bgClassName="bg-slate-100/80 dark:bg-slate-800/70 border-slate-300/60 dark:border-slate-600/40"

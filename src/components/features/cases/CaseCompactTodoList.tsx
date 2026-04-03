@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useCaseTodos } from '@/hooks/useCaseTodos';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 import { Plus, X, Check } from 'lucide-react';
 
 interface CaseCompactTodoListProps {
@@ -18,7 +18,7 @@ export default function CaseCompactTodoList({
     allTasks,
     hideCompleted = false,
 }: CaseCompactTodoListProps) {
-    const router = useRouter();
+    // const router = useRouter();
     const { todos: localTodos, loadingItem: updating, toggleTodo, addTodo, deleteTodo } = useCaseTodos(caseId, todos, '');
 
     // New State for adding tasks
@@ -35,7 +35,7 @@ export default function CaseCompactTodoList({
             await addTodo(newTaskName);
             setIsAdding(false);
             setNewTaskName('');
-        } catch (e) {
+        } catch (_e) {
             // Hook handles alerts
         }
     };
@@ -91,7 +91,7 @@ export default function CaseCompactTodoList({
                                 `}
                             >
                                 {isCompleted ? '✓ ' : ''}
-                                {task.replace(/^(SIG_|SEAL_|LOAN_|TAX_|HO_|S_|T_)/, '')}
+                                <span dangerouslySetInnerHTML={{ __html: task.replace(/^(SIG_|SEAL_|LOAN_|TAX_|HO_|S_|T_)/, '') }} />
                             </button>
                             {isCustom && (
                                 <button

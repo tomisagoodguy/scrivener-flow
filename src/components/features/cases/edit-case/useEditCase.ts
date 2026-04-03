@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { DemoCase } from '@/types';
 import { parseDocx } from '@/app/actions/parseDocx';
-import { parseAttributes, stripAttributesFromNotes } from './caseUtils';
+import { parseAttributes, stripAttributesFromNotes, stripHtml } from './caseUtils';
 import { caseService } from '@/services/caseService';
 import { useCaseAutoSave } from './useCaseAutoSave';
 
@@ -16,11 +16,11 @@ import { useCaseAutoSave } from './useCaseAutoSave';
 export function useEditCase(initialData: DemoCase) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [notes, setNotes] = useState(initialData.notes || '');
+    const [notes, setNotes] = useState(stripHtml(initialData.notes || ''));
     const [transferNote, setTransferNote] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [debugInfo, setDebugInfo] = useState('');
-    const [privateNotes, setPrivateNotes] = useState(initialData.private_notes || '');
+    const [privateNotes, setPrivateNotes] = useState(stripHtml(initialData.private_notes || ''));
     const [currentUserEmail, setCurrentUserEmail] = useState('');
     const [attributes, setAttributes] = useState<Record<string, any>>({});
     const [isAttributesExpanded, setIsAttributesExpanded] = useState(false);
@@ -30,7 +30,7 @@ export function useEditCase(initialData: DemoCase) {
     useEffect(() => {
         if (initialData.notes) {
             setAttributes(parseAttributes(initialData.notes));
-            setNotes(stripAttributesFromNotes(initialData.notes));
+            setNotes(stripHtml(stripAttributesFromNotes(initialData.notes)));
         }
 
         const m = initialData.milestones?.[0] || {};

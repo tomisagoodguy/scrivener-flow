@@ -89,6 +89,18 @@ export function TimelineEventBadge({ event, compact = false, showDate = false }:
                         {event.content}
                     </p>
                 )}
+                {event.pendingTodos && event.pendingTodos.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-700/50">
+                        {event.pendingTodos.map((item) => (
+                            <span
+                                key={item}
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-400/10 text-red-600 border border-red-400/20"
+                            >
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

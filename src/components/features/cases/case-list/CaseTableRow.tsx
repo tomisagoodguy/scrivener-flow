@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DemoCase } from '@/types';
+import type { DemoCase, Milestone, Financials } from '@/types';
 import CaseCompactTodoList from '@/components/features/cases/CaseCompactTodoList';
 import ExcelStep from '@/components/shared/ExcelStep';
 import HighlightableValue from '@/components/shared/HighlightableValue';
@@ -34,17 +34,17 @@ const TRANSFER_TODOS = ['整交屋', '實登', '打單', '履保', '水電', '�
  * 顯示單一案件的詳細資訊（Excel 風格）
  */
 export function CaseTableRow({ caseData }: CaseTableRowProps) {
-    const milestones = (caseData.milestones?.[0] || {}) as any;
-    const financials = (caseData.financials?.[0] || {}) as any;
+    const milestones = (caseData.milestones?.[0] || {}) as Partial<Milestone>;
+    const financials = (caseData.financials?.[0] || {}) as Partial<Financials>;
     const allTasks = [
         ...SIGNING_TODOS.map((t) => `S_${t}`),
         ...TRANSFER_TODOS.map((t) => `T_${t}`),
     ];
 
     // Filter out legacy items so they don't appear as custom items
-    const filteredTodos = { ...(caseData.todos || {}) };
-    delete (filteredTodos as any)['S_權狀印鑑'];
-    delete (filteredTodos as any)['S_稅單'];
+    const filteredTodos: Record<string, boolean> = { ...(caseData.todos || {}) };
+    delete filteredTodos['S_權狀印鑑'];
+    delete filteredTodos['S_稅單'];
 
     return (
         <tr
@@ -91,11 +91,11 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             {/* 價格/銀行/塗銷 */}
             <td className="px-1 py-1 border border-slate-100 dark:border-slate-800">
                 <div className="flex flex-col gap-0.5">
-                    {(financials.total_price || financials.contract_amount) && (
+                    {financials.total_price && (
                         <div className="flex items-center justify-between px-0.5">
                             <span className="text-[11px] text-slate-400">總</span>
                             <span className="text-[13px] font-black text-emerald-600">
-                                {financials.total_price || financials.contract_amount}萬
+                                {financials.total_price}萬
                             </span>
                         </div>
                     )}
@@ -170,16 +170,16 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
             {/* 簽 > 印 > 稅 > 過 > 交 */}
             <td className="px-0 py-0 border border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between gap-0 h-full min-h-[45px]">
-                    <ExcelStep label="簽" date={milestones.contract_date} caseId={caseData.id} />
-                    <ExcelStep label="印" date={milestones.seal_date} caseId={caseData.id} />
-                    <ExcelStep label="稅" date={milestones.tax_payment_date} caseId={caseData.id} />
+                    <ExcelStep label="簽" date={milestones.contract_date ?? undefined} caseId={caseData.id} />
+                    <ExcelStep label="印" date={milestones.seal_date ?? undefined} caseId={caseData.id} />
+                    <ExcelStep label="稅" date={milestones.tax_payment_date ?? undefined} caseId={caseData.id} />
                     <ExcelStep
                         label="過"
-                        date={milestones.transfer_date}
-                        note={milestones.transfer_note}
+                        date={milestones.transfer_date ?? undefined}
+                        note={milestones.transfer_note ?? undefined}
                         caseId={caseData.id}
                     />
-                    <ExcelStep label="交" date={milestones.handover_date} caseId={caseData.id} />
+                    <ExcelStep label="交" date={milestones.handover_date ?? undefined} caseId={caseData.id} />
                 </div>
             </td>
 
@@ -198,17 +198,19 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                                 <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[11px] px-1 rounded">
                                     📝
                                 </span>
-                                <p className="text-[12px] text-slate-600 dark:text-slate-400 leading-tight italic">
-                                    {caseData.pending_tasks}
-                                </p>
+                                <div 
+                                    className="text-[12px] text-slate-600 dark:text-slate-400 leading-tight italic"
+                                    dangerouslySetInnerHTML={{ __html: caseData.pending_tasks }}
+                                />
                             </div>
                         )}
                         {caseData.notes && caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim() && (
                             <div className="flex items-start gap-1.5">
                                 <span className="bg-rose-500/10 text-rose-500 text-[11px] px-1 rounded">⚠️</span>
-                                <p className="text-[12px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap">
-                                    {caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim()}
-                                </p>
+                                <div 
+                                    className="text-[12px] text-rose-600 dark:text-rose-400 leading-tight font-bold whitespace-pre-wrap"
+                                    dangerouslySetInnerHTML={{ __html: caseData.notes.replace(/\[\[ATTR:.*?\]\]/, '').trim() }}
+                                />
                             </div>
                         )}
                     </div>

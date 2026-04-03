@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { LandItem } from '@/lib/calculatorUtils';
 import { LeaseItem, TaxCalculationResult } from './types';
 import {
@@ -52,7 +52,6 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
     const [otherSellerPays, setOtherSellerPays] = useState<number>(0);
 
     // --- Results ---
-    const [result, setResult] = useState<TaxCalculationResult | null>(null);
 
     // --- Helper Functions ---
     const addLand = () => {
@@ -64,7 +63,7 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
 
     const removeLand = (id: string) => setLands(lands.filter(l => l.id !== id));
 
-    const updateLand = (id: string, field: keyof LandItem, value: any) => {
+    const updateLand = (id: string, field: keyof LandItem, value: LandItem[keyof LandItem]) => {
         setLands(lands.map(l => l.id === id ? { ...l, [field]: value } : l));
     };
 
@@ -77,7 +76,7 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
 
     const removeLease = (id: string) => setLeases(leases.filter(l => l.id !== id));
 
-    const updateLease = (id: string, field: keyof LeaseItem, value: any) => {
+    const updateLease = (id: string, field: keyof LeaseItem, value: LeaseItem[keyof LeaseItem]) => {
         setLeases(leases.map(l => l.id === id ? { ...l, [field]: value } : l));
     };
 
@@ -103,15 +102,11 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
         setLeases([]);
         setOtherBuyerPays(0);
         setOtherSellerPays(0);
-        setResult(null);
     };
 
-    // --- Main Calculation Effect ---
-    useEffect(() => {
-        if (!regDate || !handoverDate) {
-            setResult(null);
-            return;
-        }
+    // --- Main Calculation (derived, no side effects) ---
+    const result = useMemo<TaxCalculationResult | null>(() => {
+        if (!regDate || !handoverDate) return null;
 
         const rDate = new Date(regDate);
         const hDate = new Date(handoverDate);
@@ -234,7 +229,7 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
 
         const net = totalBuyerPays - totalSellerPays;
 
-        setResult({
+        return {
             land: landRes,
             house: houseRes,
             mgmt: mgmtRes,
@@ -246,8 +241,7 @@ export function useTaxCalculation(initialRegDate?: string, initialHandoverDate?:
                 sellerPays: totalSellerPays,
                 net: net
             }
-        });
-
+        };
     }, [regDate, handoverDate, handoverToBuyer, landTaxMode, quickLandTax, lands, progStartValue, houseTaxMode, quickHouseTax, housePV, houseRateIdx, mgmtFee, mgmtPaidUntil, parkFee, parkPaidUntil, waterOverpay, elecOverpay, gasOverpay, leases, otherBuyerPays, otherSellerPays]);
 
     return {

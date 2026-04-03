@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { DemoCase } from '@/types';
+import React, { useEffect, useState, useMemo } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { DemoCase, TodoRecord } from '@/types';
 import { useTimelineHub } from './useTimelineHub';
 import { TodayFocus } from './TodayFocus';
-import { MonthCalendar } from './MonthCalendar';
 import { DailyList } from './DailyList';
 
 interface TimelineHubProps {
@@ -14,9 +14,51 @@ interface TimelineHubProps {
 /**
  * 時程總覽 — 主容器
  * 三段式：① 今日焦點 → ② 月曆格 → ③ 跨案件甘特圖
+ *
+ * todos_list 直接從 browser client 抓，繞過 Server Component prop 的 Router Cache，
+ * 確保「主頁面標記完成」後切換到 Timeline 時即時反映。
  */
 export default function TimelineHub({ cases }: TimelineHubProps) {
-    const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(cases);
+    // 用 server prop 的 todos_list 初始化，避免 hydration 閃爍
+    const [clientTodos, setClientTodos] = useState<TodoRecord[]>(() =>
+        cases.flatMap((c) => c.todos_list || [])
+    );
+
+    // Mount 時立即抓最新 todos（繞過 Router Cache）
+    // 並訂閱 Realtime，兩頁面同時開著時也能即時同步
+    useEffect(() => {
+        const fetchTodos = async () => {
+            const { data } = await supabase
+                .from('todos')
+                .select('*')
+                .eq('is_deleted', false);
+            if (data) setClientTodos(data as TodoRecord[]);
+        };
+
+        fetchTodos();
+
+        const channel = supabase
+            .channel('timeline-todos-live')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, fetchTodos)
+            .subscribe();
+
+        window.addEventListener('todo-updated', fetchTodos);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('todo-updated', fetchTodos);
+        };
+    }, []);
+
+    // 把 client-side 最新 todos 合併回 cases prop
+    const mergedCases = useMemo<DemoCase[]>(() => {
+        return cases.map((c) => ({
+            ...c,
+            todos_list: clientTodos.filter((t) => t.case_id === c.id),
+        }));
+    }, [cases, clientTodos]);
+
+    const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(mergedCases);
 
     return (
         <div className="space-y-6">
@@ -45,10 +87,7 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
             {/* ① 今日焦點 */}
             <TodayFocus events={allEvents} today={today} upcomingAttentions={upcomingAttentions} />
 
-            {/* ② 月曆格 */}
-            <MonthCalendar events={allEvents} today={today} />
-
-            {/* ③ 每日列表 */}
+            {/* ② 每日列表 */}
             <DailyList dayGroups={dayGroups} today={today} />
         </div>
     );

@@ -20,6 +20,7 @@ import { FormActions } from './edit-case/FormActions';
 
 // Hook & Types
 import { useEditCase } from './edit-case/useEditCase';
+import { stripHtml } from './edit-case/caseUtils';
 import { DemoCase } from '@/types';
 
 interface EditCaseFormProps {
@@ -134,7 +135,7 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 notes={notes}
                 setNotes={setNotes}
                 status={initialData.status}
-                pendingTasks={initialData.pending_tasks || ''}
+                pendingTasks={stripHtml(initialData.pending_tasks || '')}
                 privateNotes={privateNotes}
                 setPrivateNotes={setPrivateNotes}
                 cancellationType={initialData.cancellation_type || ''}

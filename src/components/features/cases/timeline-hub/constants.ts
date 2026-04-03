@@ -19,6 +19,7 @@ export interface TimelineEvent {
     shape: EventShape;
     isCompleted: boolean;
     content?: string;    // 額外說明 (for todos)
+    pendingTodos?: string[]; // 該案件未完成的 checklist 項目（只掛在最近的里程碑上）
 }
 
 /** 日期分組後的結構 */

@@ -11,12 +11,12 @@ export interface UseCaseTodosReturn {
 
 export const useCaseTodos = (
     caseId: string,
-    initialTodos: Record<string, boolean> | any = {},
+    initialTodos: Record<string, boolean> = {},
     prefix: string = ''
 ): UseCaseTodosReturn => {
 
     // Helper to normalize todos
-    const normalizeTodos = useCallback((data: any): Record<string, boolean> => {
+    const normalizeTodos = useCallback((data: unknown): Record<string, boolean> => {
         if (Array.isArray(data)) {
             return data.reduce((acc, key) => {
                 if (typeof key === 'string') acc[key] = true;
@@ -26,8 +26,9 @@ export const useCaseTodos = (
         // Ensure values are boolean if data is object
         if (data && typeof data === 'object') {
             const normalized: Record<string, boolean> = {};
-            Object.keys(data).forEach(key => {
-                normalized[key] = !!data[key];
+            const record = data as Record<string, unknown>;
+            Object.keys(record).forEach(key => {
+                normalized[key] = !!record[key];
             });
             return normalized;
         }
@@ -77,7 +78,7 @@ export const useCaseTodos = (
                     filter: `id=eq.${caseId}`,
                 },
                 (payload) => {
-                    const newCase = payload.new as any;
+                    const newCase = payload.new as Record<string, unknown>;
                     // Only update if we are not currently updating locally
                     if (newCase && newCase.todos && !loadingRef.current) {
                         setTodos(normalizeTodos(newCase.todos));
@@ -121,11 +122,11 @@ export const useCaseTodos = (
                 setTodos(todos); 
                 throw error;
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error updating todo:', error);
             // Revert by re-fetching essentially or simple toggle back
             fetchLatestTodos();
-            const msg = error?.message || '未知錯誤';
+            const msg = error instanceof Error ? error.message : '未知錯誤';
             // 防止 alert 造成某些環境閃退，改用 console error (或者視情況 alert)
             console.error(`更新狀態失敗: ${msg}`);
             // alert(`更新狀態失敗: ${msg}`); 
@@ -155,7 +156,7 @@ export const useCaseTodos = (
 
             const { error } = await supabase.from('cases').update({ todos: mergedTodos }).eq('id', caseId);
             if (error) throw error;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error adding task:', error);
             fetchLatestTodos(); // Revert/Sync
             // alert('新增失敗'); 
@@ -176,7 +177,7 @@ export const useCaseTodos = (
 
             const { error } = await supabase.from('cases').update({ todos: updatedTodos }).eq('id', caseId);
             if (error) throw error;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error deleting task:', error);
             fetchLatestTodos();
             // alert('刪除失敗');

@@ -7,7 +7,9 @@
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 新增 /auth/set-password 頁面（密碼重設後設定新密碼）\")",
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 設定密碼頁改為自動生成 8 碼密碼，一鍵確認\")",
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: 密碼登入成功後加入跳轉至主畫面\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\")",
+      "Skill(reflect)",
+      "Skill(reflect:*)"
     ]
   }
 }

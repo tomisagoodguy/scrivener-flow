@@ -3,7 +3,7 @@ import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
     List, ListOrdered, Quote, Heading1, Heading2,
     CheckSquare, Code, Minus, Table as TableIcon,
-    Sparkles, Loader2, Highlighter, Maximize2, Minimize2, Image as ImageIcon, Link as LinkIcon,
+    Sparkles, Loader2, Highlighter, Maximize2, Minimize2, Image as ImageIcon,
     Undo, Redo, Trash2
 } from 'lucide-react';
 import { useAIOptimizer } from './useAIOptimizer';
@@ -112,7 +112,7 @@ export function EditorToolbar({ editor, isFullScreen, onToggleFullScreen }: Edit
                         active={editor.isActive('highlight')}
                         icon={<Highlighter size={18} />}
                         title="螢光筆"
-                        className={editor.isActive('highlight') ? '!bg-yellow-200 dark:!bg-yellow-900 !text-yellow-900 dark:!text-yellow-100' : ''}
+                        className={editor.isActive('highlight') ? 'bg-yellow-200! dark:bg-yellow-900! text-yellow-900! dark:text-yellow-100!' : ''}
                     />
 
                     <Divider />

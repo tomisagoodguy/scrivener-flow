@@ -11,6 +11,27 @@ import {
     TAX_DEADLINE_FIELDS,
 } from './constants';
 
+// field.key → system todo source_key 對照表
+const FIELD_TO_SOURCE_KEY: Record<string, string> = {
+    // Appointments
+    sign_appointment: 'sign_appt',
+    seal_appointment: 'seal_appt',
+    tax_appointment: 'tax_appt',
+    handover_appointment: 'handover_appt',
+    // Tax deadlines
+    land_value_tax_deadline: 'land_val_tax',
+    deed_tax_deadline: 'deed_tax',
+    land_tax_deadline: 'land_tax',
+    house_tax_deadline: 'house_tax',
+    // Milestones (source_key 與 field.key 相同)
+    sign_diff_date: 'sign_diff_date',
+    seal_date: 'seal_date',
+    tax_payment_date: 'tax_payment_date',
+    transfer_date: 'transfer_date',
+    redemption_date: 'redemption_date',
+    handover_date: 'handover_date',
+};
+
 /**
  * useTimelineHub
  * 將所有案件的 Milestone/Appointment/Tax/Todo 整合為統一的 TimelineEvent[]
@@ -26,18 +47,32 @@ export function useTimelineHub(cases: DemoCase[]) {
             const m = ((Array.isArray(c.milestones) ? c.milestones[0] : c.milestones) || {}) as Record<string, unknown>;
             const f = ((Array.isArray(c.financials) ? c.financials[0] : c.financials) || {}) as Record<string, unknown>;
 
+            // 預先建立「已完成系統 todo」的 source_key 集合，供後續比對
+            const completedSourceKeys = new Set<string>(
+                (c.todos_list || [])
+                    .filter(t => t.source_type === 'system' && t.is_completed && !t.is_deleted && t.source_key)
+                    .map(t => t.source_key as string)
+            );
+
+            const isEventCompleted = (fieldKey: string, date: Date): boolean => {
+                if (date < today) return true;
+                const sourceKey = FIELD_TO_SOURCE_KEY[fieldKey];
+                return sourceKey ? completedSourceKeys.has(sourceKey) : false;
+            };
+
             // 1. Milestones
             MILESTONE_FIELDS.forEach((field) => {
                 const dateStr = m[field.key] as string | undefined;
                 if (!dateStr) return;
                 try {
+                    const parsedDate = parseISO(dateStr);
                     events.push({
                         id: `${c.id}-${field.key}`,
                         caseId: c.id,
                         caseNumber: c.case_number,
                         buyerName: c.buyer_name,
                         sellerName: c.seller_name,
-                        date: parseISO(dateStr),
+                        date: parsedDate,
                         category: 'milestone',
                         key: field.key,
                         label: field.label,
@@ -45,7 +80,7 @@ export function useTimelineHub(cases: DemoCase[]) {
                         color: field.bg,
                         textColor: field.text,
                         shape: 'square',
-                        isCompleted: parseISO(dateStr) < today,
+                        isCompleted: isEventCompleted(field.key, parsedDate),
                     });
                 } catch { /* skip invalid dates */ }
             });
@@ -72,7 +107,7 @@ export function useTimelineHub(cases: DemoCase[]) {
                         color: field.bg,
                         textColor: field.text,
                         shape: 'circle',
-                        isCompleted: parsedDate < today,
+                        isCompleted: isEventCompleted(field.key, parsedDate),
                         // For appointments, show the time in the content if available
                         content: dateStr.includes('T') ? `⏰ 時間: ${format(parsedDate, 'HH:mm')}` : undefined,
                     });
@@ -84,13 +119,14 @@ export function useTimelineHub(cases: DemoCase[]) {
                 const dateStr = f[field.key] as string | undefined;
                 if (!dateStr) return;
                 try {
+                    const parsedDate = parseISO(dateStr);
                     events.push({
                         id: `${c.id}-${field.key}`,
                         caseId: c.id,
                         caseNumber: c.case_number,
                         buyerName: c.buyer_name,
                         sellerName: c.seller_name,
-                        date: parseISO(dateStr),
+                        date: parsedDate,
                         category: 'tax_deadline',
                         key: field.key,
                         label: field.label,
@@ -98,7 +134,7 @@ export function useTimelineHub(cases: DemoCase[]) {
                         color: field.bg,
                         textColor: field.text,
                         shape: 'triangle',
-                        isCompleted: parseISO(dateStr) < today,
+                        isCompleted: isEventCompleted(field.key, parsedDate),
                     });
                 } catch { /* skip */ }
             });
@@ -149,7 +185,32 @@ export function useTimelineHub(cases: DemoCase[]) {
             }
         });
 
-        return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+        const sorted = events.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+        // 將每個案件的未完成 checklist 掛在「最近的未來里程碑」上
+        const pendingByCase = new Map<string, string[]>();
+        cases.forEach((c) => {
+            const todoMap = (c.todos || {}) as Record<string, boolean>;
+            const pending = Object.entries(todoMap)
+                .filter(([key, done]) => !done && isNaN(Number(key)))
+                .map(([key]) => key.replace(/^(SIG_|SEAL_|LOAN_|TAX_|HO_|S_|T_)/, ''))
+                .filter(Boolean);
+            if (pending.length > 0) pendingByCase.set(c.id, pending);
+        });
+
+        const attachedCases = new Set<string>();
+        sorted
+            .filter((e) => e.category === 'milestone' && e.date.getTime() >= today.getTime())
+            .forEach((evt) => {
+                if (attachedCases.has(evt.caseId)) return;
+                const pending = pendingByCase.get(evt.caseId);
+                if (pending) {
+                    evt.pendingTodos = pending;
+                    attachedCases.add(evt.caseId);
+                }
+            });
+
+        return sorted;
     }, [cases, today]);
 
     /** 按日期分組 */
