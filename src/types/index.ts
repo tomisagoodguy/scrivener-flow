@@ -240,6 +240,17 @@ export interface Bank {
     user_id?: string;
 }
 
+export interface RedemptionStep {
+    id: string;
+    case_id: string;
+    user_id: string;
+    step_number: number;
+    is_done: boolean;
+    note: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface BankRedemptionInfo {
     bank_name: string;
     phone: string;

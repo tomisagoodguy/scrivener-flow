@@ -17,6 +17,7 @@ import { TaxDeadlinesSection } from './edit-case/TaxDeadlinesSection';
 import { NotesSection } from './edit-case/NotesSection';
 import { AuditLogSection } from './edit-case/AuditLogSection';
 import { FormActions } from './edit-case/FormActions';
+import { RedemptionProgressTracker } from '@/components/features/redemptions/RedemptionProgressTracker';
 
 // Hook & Types
 import { useEditCase } from './edit-case/useEditCase';
@@ -104,6 +105,9 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
                 transferNote={transferNote}
                 setTransferNote={setTransferNote}
             />
+
+            {/* 代償進度追蹤 */}
+            <RedemptionProgressTracker caseId={initialData.id} />
 
             {/* 與客戶約定時間 */}
             <AppointmentsSection milestones={milestones} />
