@@ -1,36 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 export default function WelcomeHeader() {
-    const [userName, setUserName] = useState('...');
+    const { user } = useAuthUser();
     const hours = new Date().getHours();
     const greeting = hours < 12 ? '早安' : hours < 18 ? '午安' : '晚安';
 
-    useEffect(() => {
-        const updateUserName = (user: any) => {
-            if (user?.user_metadata?.full_name) {
-                setUserName(user.user_metadata.full_name);
-            } else if (user?.email) {
-                setUserName(user.email.split('@')[0]);
-            } else {
-                setUserName('Administrator');
-            }
-        };
-
-        // Initial check
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            updateUserName(user);
-        });
-
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            updateUserName(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
+    const userName = user?.user_metadata?.full_name
+        ?? user?.email?.split('@')[0]
+        ?? '...';
 
     return (
         <div className="mb-8 pl-1">

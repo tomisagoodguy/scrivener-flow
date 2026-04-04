@@ -8,6 +8,7 @@ import { parseDocx } from '@/app/actions/parseDocx';
 import { parseAttributes, stripAttributesFromNotes, stripHtml } from './caseUtils';
 import { caseService } from '@/services/caseService';
 import { useCaseAutoSave } from './useCaseAutoSave';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 /**
  * 編輯案件邏輯 Hook
@@ -21,7 +22,8 @@ export function useEditCase(initialData: DemoCase) {
     const [errorMsg, setErrorMsg] = useState('');
     const [debugInfo, setDebugInfo] = useState('');
     const [privateNotes, setPrivateNotes] = useState(stripHtml(initialData.private_notes || ''));
-    const [currentUserEmail, setCurrentUserEmail] = useState('');
+    const { user } = useAuthUser();
+    const currentUserEmail = user?.email ?? '';
     const [attributes, setAttributes] = useState<Record<string, any>>({});
     const [isAttributesExpanded, setIsAttributesExpanded] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -36,12 +38,6 @@ export function useEditCase(initialData: DemoCase) {
         const m = initialData.milestones?.[0] || {};
         // 這裡暫時使用類型斷言，因為 Milestone 的結構可能比較複雜
         setTransferNote((m as Record<string, unknown>).transfer_note as string || '');
-
-        supabase.auth.getUser().then(({ data }) => {
-            if (data?.user?.email) {
-                setCurrentUserEmail(data.user.email);
-            }
-        });
     }, [initialData.id, initialData.notes, initialData.milestones]);
 
     // --- 自動存檔邏輯 ---

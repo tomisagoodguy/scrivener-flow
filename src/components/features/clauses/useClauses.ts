@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-
+import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
+import { useCrudDelete } from '@/hooks/useCrudDelete';
+import { useAuthUser } from '@/hooks/useAuthUser';
 export interface Clause {
     id: string;
     title: string;
@@ -11,45 +13,22 @@ export interface Clause {
 }
 
 export function useClauses() {
-    const [clauses, setClauses] = useState<Clause[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: clauses, loading, refetch: fetchClauses } = useSupabaseQuery<Clause>({
+        table: 'contract_clauses',
+        order: { column: 'usage_count', ascending: false },
+    });
+
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-    // Copy feedback state
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-    const fetchClauses = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('contract_clauses')
-                .select('*')
-                .order('usage_count', { ascending: false });
+    const { requireUser } = useAuthUser();
 
-            if (error) throw error;
-            setClauses(data || []);
-        } catch (error) {
-            console.error('Error fetching clauses:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchClauses();
-    }, []);
-
-    const handleDelete = async (id: string) => {
-        if (!confirm('確定要刪除這條常用條文嗎？')) return;
-        try {
-            const { error } = await supabase.from('contract_clauses').delete().eq('id', id);
-            if (error) throw error;
-            fetchClauses();
-        } catch (error: unknown) {
-            alert('刪除失敗：' + (error as Error).message);
-        }
-    };
+    const { handleDelete } = useCrudDelete({
+        table: 'contract_clauses',
+        confirmMessage: '確定要刪除這條常用條文嗎？',
+        onSuccess: fetchClauses,
+    });
 
     const handleCopy = async (text: string, id: string) => {
         try {
@@ -66,10 +45,7 @@ export function useClauses() {
 
     const handleSaveClause = async (clause: Partial<Clause>, _isNew: boolean) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                throw new Error('請先登入');
-            }
+            const user = await requireUser();
 
             const payload = {
                 ...clause,

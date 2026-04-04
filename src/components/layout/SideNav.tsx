@@ -3,7 +3,8 @@
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { Send, MessageSquareText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -12,15 +13,10 @@ import GoogleDriveUpload from '../features/cases/GoogleDriveUpload';
 export const SideNav = () => {
     const pathname = usePathname();
     const router = useRouter();
-    const [email, setEmail] = useState<string | null>(null);
+    const { user } = useAuthUser();
+    const email = user?.email ?? null;
     const [lineMsg, setLineMsg] = useState('');
     const [sending, setSending] = useState(false);
-
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setEmail(user?.email || null);
-        });
-    }, []);
 
     const handleQuickLine = async (e: React.FormEvent) => {
         e.preventDefault();

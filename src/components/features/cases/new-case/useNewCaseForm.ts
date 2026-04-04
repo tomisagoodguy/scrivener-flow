@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { CaseFormData, initialFormData } from './types';
 
 /**
@@ -9,6 +10,7 @@ import { CaseFormData, initialFormData } from './types';
  */
 export function useNewCaseForm() {
     const router = useRouter();
+    const { requireUser } = useAuthUser();
     const [formData, setFormData] = useState<CaseFormData>(initialFormData);
     const [errorMsg, setErrorMsg] = useState('');
     const [isDuplicate, setIsDuplicate] = useState(false);
@@ -63,7 +65,7 @@ export function useNewCaseForm() {
             return;
         }
         setIsChecking(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await requireUser();
 
         const { data, error } = await supabase
             .from('cases')
@@ -87,7 +89,7 @@ export function useNewCaseForm() {
      */
     const saveCaseData = async (data: CaseFormData) => {
         const formatDate = (val: string) => (val ? val : null);
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await requireUser();
 
         // 1. 建立或更新 Case
         let finalNotes = data.notes;

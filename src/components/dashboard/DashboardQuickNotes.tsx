@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { StickyNote, ListTodo } from 'lucide-react';
 import { QuickNotesSection } from './quick-notes/QuickNotesSection';
 import { QuickTasksSection } from './quick-notes/QuickTasksSection';
@@ -21,6 +22,7 @@ interface PersonalTask {
 }
 
 export default function DashboardQuickNotes() {
+    const { user } = useAuthUser();
     const [activeTab, setActiveTab] = useState<'notes' | 'tasks'>('notes');
 
     // Notes State
@@ -46,51 +48,47 @@ export default function DashboardQuickNotes() {
     };
 
     useEffect(() => {
-        // Load initial settings
-        const loadSettings = async () => {
-            const user = (await supabase.auth.getUser()).data.user;
-            if (!user) {
-                const saved = localStorage.getItem('dashboard_quick_notes');
-                if (saved) setNotes(JSON.parse(saved));
-                return;
+        if (user === undefined) return; // still loading
+
+        if (!user) {
+            const saved = localStorage.getItem('dashboard_quick_notes');
+            if (saved) {
+                const parsed = JSON.parse(saved) as Note[];
+                queueMicrotask(() => setNotes(parsed));
             }
+            return;
+        }
 
-            // Load Notes
-            const { data } = await supabase
-                .from('user_settings')
-                .select('dashboard_notes')
-                .eq('user_id', user.id)
-                .single();
+        // Load Notes
+        supabase
+            .from('user_settings')
+            .select('dashboard_notes')
+            .eq('user_id', user.id)
+            .single()
+            .then(({ data }) => {
+                if (data?.dashboard_notes) setNotes(data.dashboard_notes as Note[]);
+            });
 
-            if (data?.dashboard_notes) {
-                setNotes(data.dashboard_notes as Note[]);
-            }
-
-            // Load Tasks
-            fetchTasks(user.id);
-        };
-        loadSettings();
+        // Load Tasks
+        queueMicrotask(() => fetchTasks(user.id));
 
         // Task Realtime Subscription
         const channel = supabase
             .channel('dashboard-tasks')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => {
-                supabase.auth.getUser().then(({ data }) => {
-                    if (data.user) fetchTasks(data.user.id);
-                });
+                fetchTasks(user.id);
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [user]);
 
     // Auto-save logic for Notes
     useEffect(() => {
         const saveToSupabase = async () => {
             setStatus('saving');
-            const user = (await supabase.auth.getUser()).data.user;
             if (user) {
                 await supabase
                     .from('user_settings')
@@ -104,12 +102,10 @@ export default function DashboardQuickNotes() {
 
         const timer = setTimeout(saveToSupabase, 2000);
         return () => clearTimeout(timer);
-    }, [notes]);
+    }, [notes, user]);
 
     const handleAddTask = async () => {
         if (!newTaskContent.trim()) return;
-
-        const user = (await supabase.auth.getUser()).data.user;
         if (!user) return alert('請先登入');
 
         // If no date selected, default to today 9:00 AM
