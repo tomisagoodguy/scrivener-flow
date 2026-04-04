@@ -18,9 +18,10 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Trophy, ChevronDown, ChevronUp, Users, Target, Zap } from 'lucide-react';
 import { getWinRateData } from '@/app/actions/revenueLabActions';
 import type { WinRateYearData, WinRateBucket } from '@/types/revenuelab';
+import { WIN_RATE_LAB_YEARS } from '@/lib/investment/yearUtils';
 
-// 目前僅支援 2025 年（stock_prices_daily 從 2025-06 起有資料）
-const AVAILABLE_YEARS = [2025];
+// 目前僅支援 2025 年起（stock_prices_daily 從 2025-06 起有資料）
+const AVAILABLE_YEARS = WIN_RATE_LAB_YEARS;
 
 interface WinRateLabProps {
   initialData: WinRateYearData | null;

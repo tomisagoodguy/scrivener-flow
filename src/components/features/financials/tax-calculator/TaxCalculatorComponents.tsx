@@ -17,14 +17,25 @@ export const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     />
 );
 
-export const InputGroup = ({ label, ...props }: any) => (
+interface InputGroupProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+}
+
+export const InputGroup = ({ label, ...props }: InputGroupProps) => (
     <div>
         <Label>{label}</Label>
         <Input {...props} />
     </div>
 );
 
-export const TabButton = ({ active, label, color, onClick }: any) => {
+interface TabButtonProps {
+    active: boolean;
+    label: string;
+    color: 'blue' | 'pink';
+    onClick: () => void;
+}
+
+export const TabButton = ({ active, label, color, onClick }: TabButtonProps) => {
     const activeClass = color === 'blue' ? 'bg-blue-100 text-blue-700 shadow-sm' : 'bg-pink-100 text-pink-700 shadow-sm';
     return (
         <button

@@ -33,8 +33,8 @@ export function usePriceData(stockCode: string | null, isActive = true): UsePric
             if (result.length === 0) throw new Error('查無歷史數據');
             
             setData(result);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : String(err));
             setData([]);
         } finally {
             setLoading(false);

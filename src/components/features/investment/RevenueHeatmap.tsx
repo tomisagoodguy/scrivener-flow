@@ -4,8 +4,9 @@ import React, { useState, useTransition, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getHeatmapData } from '@/app/actions/revenueLabActions';
 import type { HeatmapYearData, HeatmapStatMode, HeatmapCell, ReturnBin } from '@/types/revenuelab';
+import { REVENUE_HEATMAP_YEARS } from '@/lib/investment/yearUtils';
 
-const AVAILABLE_YEARS = [2024, 2023, 2022, 2021, 2020];
+const AVAILABLE_YEARS = REVENUE_HEATMAP_YEARS;
 
 const STAT_MODES: { value: HeatmapStatMode; label: string }[] = [
   { value: 'median', label: '中位數 YOY' },

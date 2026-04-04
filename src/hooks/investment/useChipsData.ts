@@ -45,8 +45,8 @@ export function useChipsData(
 
             const result: ShareholderData[] = await response.json();
             setData(result);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : String(err));
             setData([]);
         } finally {
             setLoading(false);

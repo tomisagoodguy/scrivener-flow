@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+此檔案提供 Claude Code 在本專案中工作的指引。
 
 ---
 
@@ -57,7 +57,9 @@ scrivener-flow/
 │   │   ├── guidelines/         # 作業指引
 │   │   ├── identify/           # 標的物辨識
 │   │   ├── admin/import/       # 管理員資料匯入
-│   │   └── auth/               # 登入 / OAuth callback
+│   │   ├── login/              # 登入頁
+│   │   │   └── components/     # 拆解的登入子元件（MfaTotpForm、PasswordLoginForm 等）
+│   │   └── auth/               # OAuth callback
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件（案件、投資、知識庫）
 │   │   ├── layout/             # Header、SideNav、Footer
@@ -74,7 +76,9 @@ scrivener-flow/
 │   │   ├── crypto/             # E2EE（AES-256）
 │   │   ├── ai/                 # Gemini API
 │   │   ├── google/             # Sheets / Drive API
-│   │   ├── investment/         # FinLab、技術指標
+│   │   ├── investment/         # FinLab、技術指標、yearUtils.ts（年份常數）
+│   │   ├── calculator/         # 稅費計算工具（taxConstants.ts）
+│   │   ├── constants/          # 業務常數（caseConstants.ts、TODO_SOURCE_TYPES）
 │   │   └── docx-parser/        # Word 文件解析
 │   ├── domain/case/types.ts    # 案件領域模型（Single Source of Truth）
 │   ├── types/                  # 全域 TypeScript 型別定義
@@ -214,7 +218,7 @@ supabase/migrations/20260111032050_recreate_full_schema.sql
 - 優先使用 Supabase RPC（PL/pgSQL Transaction）
 - 若在 Server Action 處理，必須實作 `try/catch` 與補償機制清除失敗的髒資料
 
-### 5. 投資模組
+### 5-2. 投資模組
 
 投資儀表板（`src/app/investment/`）採 Repository Pattern，`repositories/` 下有獨立的 `priceRepo`、`revenueRepo`、`stockRepo`。後端股票資料由 Python FinLab 腳本定期同步，存入 Supabase。
 
@@ -269,6 +273,9 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | :--- | :--- | :--- |
 | 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
+| 3 | `src/lib/constants/caseConstants.ts` | 案件狀態、待辦來源型別常數（DB 值必須與此一致） |
+| 4 | `src/lib/investment/yearUtils.ts` | 投資模組年份常數（`generateAvailableYears`） |
+| 5 | `src/lib/calculator/taxConstants.ts` | 稅費計算基準常數（印花稅率、地價稅層距） |
 
 ---
 
@@ -293,6 +300,10 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 | `CaseStatus` 使用中文字串比對 | `CaseStatus` 型別混用中英文值（`'辦理中'` 和 `'Processing'` 並存），寫 filter 條件時注意資料來源實際儲存的是哪一種 |
 | localhost 登入後無限重導向 `/login` | 根頁面 `/` 無 session 時自動跳轉登入。若已登入仍 404，直接訪問 `/cases` 或 `/dashboard`。遇到 `/login` 重導向時**停止重試**，告知使用者需在瀏覽器手動登入，不要盲目重試 |
 | 新增系統自動任務時重複產生 | 系統任務（里程碑提醒）必須以 `source_key`（`caseId + milestone_type`）為複合唯一鍵去重；發現舊資料缺鍵時需清理 DB，不能只從 UI 過濾 |
+| `catch (err: any)` | catch 變數使用 `unknown` 而非 `any`；存取 `err.message` 前必須加 `err instanceof Error ?` guard |
+| 硬編碼年份陣列 `[2025]` | 使用 `src/lib/investment/yearUtils.ts` 的 `generateAvailableYears()` 或預定義常數 |
+| 案件狀態字串散落各處 | 使用 `src/lib/constants/caseConstants.ts` 的 `CASE_STATUS_ACTIVE` 等常數，確保 DB 值一致 |
+| 登入頁面直接在 `ModernLogin.tsx` 寫表單 | 表單元件已拆至 `src/app/login/components/`，修改對應子元件即可 |
 
 ---
 

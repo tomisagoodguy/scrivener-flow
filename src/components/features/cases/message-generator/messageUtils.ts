@@ -56,7 +56,7 @@ export const formatMoneySpoken = (val: string | number): string => {
 /**
  * 根據案件狀態自動推測下一階段款項類型
  */
-export const guessNextPaymentType = (caseData: any): string => {
+export const guessNextPaymentType = (caseData: { status: string }): string => {
     const stage = caseData.status;
     if (stage === 'Processing') return '用印款';
     return '尾款';

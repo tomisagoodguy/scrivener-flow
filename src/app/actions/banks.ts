@@ -2,7 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server';
 
-export async function seedBankContacts(contacts: any[]) {
+interface BankContactCsvRow {
+    Bank: string;
+    Branch?: string;
+    Name: string;
+    Email?: string;
+}
+
+export async function seedBankContacts(contacts: BankContactCsvRow[]) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Unauthorized' };
