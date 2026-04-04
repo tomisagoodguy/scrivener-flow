@@ -1,6 +1,6 @@
 # Scrivener Flow - 專業代書案件管理系統 🚀
 
-Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追蹤與代辦管理系統。結合合約里程碑監控、智慧任務提醒及團隊知識庫，協助您精確掌握每一個案件細節，從簽約到交屋全程無憂。
+Scrivener Flow 是一款專為地政士（代書）量身打造的高效率、視窗化案件管理與時程監控系統。透過規格驅動開發 (SDD) 與 AI 代理組件，我們將繁瑣的法定流程轉化為直觀的戰情中心，協助您精確掌握每一個案件細節，從簽約到交屋全程無憂。
 
 > 🗺️ **[文件導覽地圖 (DOCS_MAP)](./DOCS_MAP.md)**：如果您迷路了，可以在這裡找到所有的專案手冊與規範。
 
@@ -8,86 +8,89 @@ Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追�
 
 ## 🌟 核心功能 (Core Features)
 
-### 1. 專業工作面板 (Workflow Dashboard)
+### 1. 全方位案件監控 (Advanced Monitoring)
 
-* **緊急戰情室**：自動篩選 3 天內需完成的「待辦任務」，支援一鍵完成同步更新。
-* **未來七日預告**：結合「行動任務」與「合約里程碑 (用印/完稅/交屋)」，以時序圖呈現一週進度。
-* **稅單限繳監控**：土增稅、契稅、地價稅及房屋稅限繳日期自動 5 天前提醒。
-* **即時統計圖表**：一眼掌握全案進度、財務狀況及任務分布。
+- **全流程 Pipeline 戰情室**：將案件分類為「簽、印、稅、過、交」五大階段，透過動態圖表一目了然各階段存量，支援點擊圓圈立即篩選對應案件。
+- **多維度檢視切換**：
+  - **承辦中/已結案**：傳統清單模式，快速查閱案件基本資訊、價格與銀行。
+  - **時程 (Timeline)**：基於日期的高密度任務列表。
+  - **備忘錄 (Memo)**：集中管理案件記事，適合處理複雜的非結構化資訊。
+  - **未完成統整 (Pending)**：自動掃描各案件 checklist，將落後進度集中呈現。
 
-### 2. 精確案件管理 (Case Management)
+### 2. 時程總覽中心 (Timeline Hub)
 
-* **合約里程碑基準**：手動錄入合約規定的簽約、用印、完稅、代償、交屋日期作為法定基準。
-* **預收規費自動化**：支援便捷金額格式（如輸入 `5` 自動轉為 `50,000`），支撐整數與小數點輸入。
-* **進度與任務隔離**：里程碑為「法定事實」（唯讀），待辦事項為「可執行的任務」，確保資料嚴謹。
-* **即時備註與標記**：自定義標籤（如：訴訟、卡營業登記等）與案件即時備註。
+- **今日焦點 (Today's Focus)**：聚合「逾期警示」、「近期注意事項推播」、「今日任務」與「明日預告」，讓您在開工前 1 分鐘掌握全天重點。
+- **智能注意事項推播**：
+  - **約客 (Appointment)**：提前 3 天開始提醒。
+  - **稅單限繳 (Tax Deadline)**：提前 5 天開始提醒。
+  - **里程碑 (Milestone)**：今日與明日發生時即刻呈報。
+- **高密度列表 (Daily List)**：每日任務按類別（里程碑、約客、截止、待辦）顏色與圖標區分，支援一鍵過濾單一類別。
 
-### 3. 智慧代辦中心 (Todo Center)
+### 3. 精確案件管理 (Case Management)
 
-* **多維度檢視**：
-  * **清單模式 (List)**：詳盡的任務細節。
-  * **矩陣模式 (Matrix)**：依衝突優先級區分重要性。
-  * **日曆模式 (Calendar)**：全局時程掌控。
-* **系統自動任務**：根據填寫的案件日期，自動在 3-5 天前產生系統提醒任務。
-* **自定義任務**：支援快速新增個人或案件相關的非標任務。
+- **法定事實 vs 執行任務**：里程碑為「法定基準」，待辦事項為「行動任務」。
+- **Checklist 自動關聯**：未完成的 checklist 項目會自動掛載於時程中最接近的里程碑上，確保流程不中斷。
+- **財務與規費自動化**：支援專業輸入縮寫（如 `5` 轉 `50,000`），內建土地增值稅、契稅限繳日期監控。
+- **Excel 匯出與模板產表**：一鍵產生案件報表或填入 Word 模板（合約摘要等）。
 
-### 4. 團隊知識庫與檔案 (Knowledge Base & Files)
+### 4. 團隊協作與安全 (Security & Collaboration)
 
-* **Word 級編輯器**：內建富文本編輯器，支援格式豐富的作業規範與筆記。
-* **團隊共編**：所有登入成員皆可更新維護作業手冊、銀行窗口資訊。
-* **表單自動生成**：一鍵將案件數據填入 Word 模板（合約摘要等）。
-* **Excel 匯出**：完整案件資料匯出，方便進行行政匯報與離線歸檔。
-
-### 5. 安全與架構 (Security & Infra)
-
-* **Google OAuth**：快速登入，無需排他性權限。
-* **資料隔離 (RLS)**：內建 Row Level Security，確保各個代書者的資料完全獨立。
-* **即時數據同步**：基於 Supabase Realtime 技術，多裝置操作同步不延遲。
+- **Google OAuth 2.0**：無感登入，安全可靠。
+- **Row Level Security (RLS)**：基於 Supabase 內建資料隔離技術，確保不同使用者（地政士）的案件資料完全獨立，絕不越權。
+- **即時數據同步 (Realtime)**：多裝置操作、標記完成後即時同步至時程看板，免手動重新整理。
 
 ---
 
 ## 🛠 技術堆疊 (Tech Stack)
 
-* **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-* **Backend**: Supabase (Auth, PostgreSQL, Realtime, Storage)
-* **ORM**: Prisma (Schema definition & local exploration)
-* **UI Components**: Lucide React Icons, Radix UI (Headless components)
-* **Utils**: date-fns, docxtemplater (Word gen), xlsx (Excel export)
+- **Frontend**: Next.js 14 (App Router), TypeScript, Vanilla CSS (Refined Vibe)
+- **Backend**: Supabase (Auth, PostgreSQL, Realtime, Storage)
+- **Utils**: date-fns (Time matrix), docxtemplater (Word gen), xlsx (Excel export), Zod (Data Validation)
+- **Design Paradigm**: Glassmorphism (玻璃擬態), Modern Minimalist, Responsive for Mobile/Tablet
 
 ---
 
 ## 🚀 快速啟動 (Quick Start)
 
 1. **安裝依賴**:
-
-    ```bash
-    yarn install
-    ```
+   ```bash
+   yarn install
+   ```
 
 2. **環境變數設定**:
-    複製 `.env.example` 並更名為 `.env.local`，填入您的 Supabase 憑證。
-3. **開發模式**:
+   複製 `.env.example` 並更名為 `.env.local`，填入您的 Supabase 憑證。
 
-    ```bash
-    yarn dev
-    ```
+3. **開發模式**:
+   ```bash
+   yarn dev
+   ```
 
 4. **構建與生產**:
+   ```bash
+   yarn build
+   yarn start
+   ```
 
-    ```bash
-    yarn build
-    yarn start
-    ```
+---
+
+## 🏗️ 代理開發流程 (ECC Protocol)
+
+本專案採用 **OpenSpec** 規格驅動開發 (Specification Driven Development)。所有重大變更皆遵循以下流程：
+
+1. **Proposal**: 建立 `/openspec/changes/[name]` 提案文件。
+2. **Implement**: 由 AI 代理 (Antigravity) 根據 `tasks.md` 執行變更。
+3. **Validate**: 執行 TypeScript 與 Lint 檢查，驗證介面 Vibe。
+4. **Archive**: 歸檔變更，更新 `specs/` 下的系統真相。
 
 ---
 
 ## 📝 待辦與上線前確認 (Launch Checklist)
 
-* [ ] 測試 Google OAuth 登入流程。
-* [ ] 驗證 RLS 限制是否正確隔離不同使用者的案件。
-* [ ] 測試 Excel 匯出與 Word 產表是否格式正確。
-* [ ] 檢查「進度日期」修改後，儀表板提醒是否即時更新。
-* [ ] 確認「緊急戰情室」僅顯示可執行的 Tasks 而非 Milestones。
+- [ ] 測試 Google OAuth 登入流程。
+- [ ] 驗證 RLS 限制是否正確隔離不同使用者的案件。
+- [ ] 測試 Excel 匯出與 Word 產表是否格式正確。
+- [ ] 檢查「進度日期」修改後，儀表板提醒是否即時更新。
+- [ ] 確認「緊急戰情室」僅顯示可執行的 Tasks 而非 Milestones。
 
 ---
 
@@ -98,59 +101,10 @@ Scrivener Flow 是一款專為代書（地政士）設計的高效率案件追�
 ### 環境變數設定
 
 在 Vercel Dashboard 的 Environment Variables 中需設定：
-
-* `NEXT_PUBLIC_SUPABASE_URL`
-* `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-* `LINE_CHANNEL_ACCESS_TOKEN`
-* `LINE_USER_ID`
-
-**注意**：設定環境變數後，務必執行 Redeploy 才會生效。
-
----
-
-## 🛠 開發規範：OpenSpec 規格驅動開發 (SDD)
-
-本專案採用 **OpenSpec** 進行規格驅動開發 (Specification Driven Development)。這能確保功能在實作前已有明確規格，並讓 AI 助理能精確執行任務。
-
-### 1. 安裝與初始化
-
-如果您在新的環境開發，請先安裝 OpenSpec：
-
-```bash
-# 全域安裝
-npm install -g @fission-ai/openspec@latest
-
-# 專案初始化 (僅需執行一次)
-openspec init
-```
-
-### 2. 三階段工作流程
-
-#### **Stage 1: 建立提案 (Draft Proposal)**
-
-當要新增功能或改變系統行為時，先建立提案：
-
-* **指令**：`幫我建立一個 OpenSpec 提案，我想新增 [功能名稱]`
-* **產出**：會在 `openspec/changes/` 產生提案文件、任務清單與規格差異。
-
-#### **Stage 2: 實作功能 (Implement)**
-
-提案確認後，啟動 AI 進行實作：
-
-* **指令**：`請根據 openspec/changes/[提案名稱] 開始實作`
-* **過程**：AI 會依照 `tasks.md` 逐項完成，並確保符合規格定義。
-
-#### **Stage 3: 歸檔變更 (Archive)**
-
-實作完成且測試通過後，將變更合併回系統真相：
-
-* **指令**：`openspec archive [提案名稱]`
-* **結果**：提案會移入 `archive/` 歷史，規格會正式生效於 `openspec/specs/`。
-
-### 3. 用途判斷
-
-* ✅ **需建立提案**：新增頁面、改動 API 邏輯、修改資料庫 Schema、變更計算規則。
-* ❌ **不需建立提案**：修正純程式碼 Bug、調整 CSS 樣式、改錯字、補測試。
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `LINE_CHANNEL_ACCESS_TOKEN`
+- `LINE_USER_ID`
 
 ---
 
