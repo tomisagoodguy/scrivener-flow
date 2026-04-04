@@ -3,13 +3,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { resizeImage } from '@/utils/imageUtils';
 
-export type ParsedPerson = {
+export interface ParsedPerson {
     name: string | null;
     dob: string | null;
     id_number: string | null;
     address: string | null;
     confidence?: number;
-};
+}
 
 const LOADING_STAGES = [
     { progress: 10, text: '☁️ 正在上傳檔案...' },

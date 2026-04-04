@@ -27,7 +27,7 @@ interface QuickNotesProps {
 }
 
 export default function QuickNotes({ onSelect }: QuickNotesProps) {
-    const supabase = useMemo(() => createClient(), []);
+    const supabase = React.useMemo(() => createClient(), []);
     const [customNotes, setCustomNotes] = React.useState<string[]>([]);
     const [isAdding, setIsAdding] = React.useState(false);
     const [newNote, setNewNote] = React.useState('');
@@ -60,7 +60,7 @@ export default function QuickNotes({ onSelect }: QuickNotesProps) {
             }
         };
         loadNotes();
-    }, []);
+    }, [supabase]);
 
     const saveNotesToCloud = async (notes: string[]) => {
         try {

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import RichTextEditor from '@/components/knowledge/RichTextEditor';
 
 // Helper to strip HTML for preview
-const stripHtml = (html: string | any) => {
+const stripHtml = (html: string | unknown) => {
     if (!html) return '';
     if (typeof html !== 'string') {
         return '...';
@@ -92,7 +92,7 @@ export default function NotesPage() {
         };
 
         fetchNotes();
-    }, []);
+    }, [supabase]);
 
     // Selection helper
     const activeNote = notes.find((n) => n.id === activeNoteId) || null;
@@ -125,7 +125,7 @@ export default function NotesPage() {
         }, 1500);
 
         return () => clearTimeout(timer);
-    }, [notes, isLoading]);
+    }, [notes, isLoading, supabase]);
 
     const handleAddNote = () => {
         const newNote: Note = {

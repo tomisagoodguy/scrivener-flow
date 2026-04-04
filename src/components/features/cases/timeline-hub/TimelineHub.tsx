@@ -19,7 +19,7 @@ interface TimelineHubProps {
  * 確保「主頁面標記完成」後切換到 Timeline 時即時反映。
  */
 export default function TimelineHub({ cases }: TimelineHubProps) {
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
     // 用 server prop 的 todos_list 初始化，避免 hydration 閃爍
     const [clientTodos, setClientTodos] = useState<TodoRecord[]>(() =>
         cases.flatMap((c) => c.todos_list || [])
@@ -49,7 +49,7 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
             supabase.removeChannel(channel);
             window.removeEventListener('todo-updated', fetchTodos);
         };
-    }, []);
+    }, [supabase]);
 
     // 把 client-side 最新 todos 合併回 cases prop
     const mergedCases = useMemo<DemoCase[]>(() => {
