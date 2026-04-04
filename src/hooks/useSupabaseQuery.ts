@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 interface QueryOptions {
     /** 要查詢的 table 名稱 */
@@ -31,6 +31,7 @@ interface UseSupabaseQueryResult<T> {
 export function useSupabaseQuery<T = Record<string, unknown>>(
     options: QueryOptions
 ): UseSupabaseQueryResult<T> {
+    const supabase = useMemo(() => createClient(), []);
     const { table, select = '*', order, immediate = true } = options;
 
     const [data, setData] = useState<T[]>([]);
@@ -55,7 +56,7 @@ export function useSupabaseQuery<T = Record<string, unknown>>(
         } finally {
             setLoading(false);
         }
-    }, [table, select, order]);
+    }, [table, select, order, supabase]);
 
     useEffect(() => {
         if (immediate) refetch();

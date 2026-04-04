@@ -1,184 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, ShieldCheck, Mail, LogIn, X, Lock, Command, Sparkles } from 'lucide-react';
-import { createClient } from '@/lib/auth/client';
-
-type LoginMode = 'password' | 'otp' | 'reset';
-type MfaStep = 'none' | 'totp';
+import { useLoginFlow } from '@/hooks/useLoginFlow';
 
 export function ModernLogin() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [totpCode, setTotpCode] = useState('');
-    const [loginMode, setLoginMode] = useState<LoginMode>('password');
-    const [mfaStep, setMfaStep] = useState<MfaStep>('none');
-    const [mfaFactorId, setMfaFactorId] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState<'info' | 'error'>('info');
-    const [showAppleModal, setShowAppleModal] = useState(false);
-    const supabase = createClient();
-    const router = useRouter();
-
-    const handleGoogleLogin = async () => {
-        try {
-            setLoading(true);
-            await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
-                        scopes: 'https://www.googleapis.com/auth/drive.file email openid profile',
-                    },
-                },
-            });
-        } catch (error) {
-            console.error('Login error:', error);
-        }
-    };
-
-    const handlePasswordLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email || !password) return;
-
-        setLoading(true);
-        setMessage('');
-
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                setMessageType('error');
-                setMessage(error.message === 'Invalid login credentials' ? 'Email 或密碼錯誤' : error.message);
-                setLoading(false);
-                return;
-            }
-
-            if (data.session?.user) {
-                const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
-                if (factorsError) {
-                    console.error('List factors error:', factorsError);
-                }
-                const totpFactor = factorsData?.totp?.[0];
-                if (totpFactor && totpFactor.status === 'verified') {
-                    setMfaFactorId(totpFactor.id);
-                    setMfaStep('totp');
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            setMessageType('info');
-            setMessage('登入成功，正在導向...');
-            router.refresh();
-            setTimeout(() => {
-                router.push('/');
-            }, 300);
-        } catch (error: unknown) {
-            console.error('Login exception:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            setMessageType('error');
-            setMessage(errorMessage || '網路異常，無法連線至認證伺服器');
-            setLoading(false);
-        }
-    };
-
-    const handleTotpVerify = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!totpCode || !mfaFactorId) return;
-
-        setLoading(true);
-        setMessage('');
-
-        try {
-            const { error } = await supabase.auth.mfa.challengeAndVerify({
-                factorId: mfaFactorId,
-                code: totpCode,
-            });
-
-            if (error) {
-                setLoading(false);
-                setMessageType('error');
-                setMessage('驗證碼錯誤，請重新輸入');
-            } else {
-                setMessageType('info');
-                setMessage('驗證成功，正在導向...');
-                router.refresh();
-                setTimeout(() => {
-                    router.push('/');
-                }, 300);
-            }
-        } catch (error: unknown) {
-            console.error('TOTP Verify exception:', error);
-            setMessageType('error');
-            setMessage('驗證異常，無法連線伺服器');
-            setLoading(false);
-        }
-    };
-
-    const handleResetPassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email) return;
-        
-        setLoading(true);
-        setMessage('');
-        
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/auth/callback?next=/auth/set-password`,
-            });
-            setLoading(false);
-            if (error) {
-                setMessageType('error');
-                setMessage(error.message);
-            } else {
-                setMessageType('info');
-                setMessage('密碼設定信已寄出，請至信箱點擊連結（有效 1 小時）');
-            }
-        } catch (error: unknown) {
-            console.error('Reset Password exception:', error);
-            setMessageType('error');
-            setMessage('重設請求異常，無法連線伺服器');
-            setLoading(false);
-        }
-    };
-
-    const handleEmailLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email) return;
-
-        setLoading(true);
-        setMessage('');
-        
-        try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
-                },
-            });
-
-            setLoading(false);
-            if (error) {
-                setMessageType('error');
-                setMessage(error.message);
-            } else {
-                setMessageType('info');
-                setMessage('驗證信已寄出，請檢查您的信箱');
-            }
-        } catch (error: unknown) {
-            console.error('Email Login exception:', error);
-            setMessageType('error');
-            setMessage('登入請求異常，無法連線伺服器');
-            setLoading(false);
-        }
-    };
+    const {
+        email, setEmail, password, setPassword, totpCode, setTotpCode,
+        loginMode, setMode, mfaStep, resetMfa,
+        loading, message, messageType,
+        showAppleModal, setShowAppleModal,
+        handleGoogleLogin, handlePasswordLogin, handleTotpVerify,
+        handleResetPassword, handleEmailLogin,
+    } = useLoginFlow();
 
     return (
         <div className="relative w-full min-h-screen flex items-center justify-center p-6 overflow-hidden bg-slate-50 dark:bg-slate-100">
@@ -284,14 +119,14 @@ export function ModernLogin() {
                                 <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
                                     <button
                                         type="button"
-                                        onClick={() => { setLoginMode('password'); setMessage(''); }}
+                                        onClick={() => setMode('password')}
                                         className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'password' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
                                         <span className="flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" />帳號登入</span>
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => { setLoginMode('otp'); setMessage(''); }}
+                                        onClick={() => setMode('otp')}
                                         className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${loginMode === 'otp' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
                                         <span className="flex items-center justify-center gap-1.5"><Mail className="w-3 h-3" />一次性連結</span>
@@ -321,7 +156,7 @@ export function ModernLogin() {
                                         >
                                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>驗證並登入</span></>}
                                         </button>
-                                        <button type="button" onClick={() => { setMfaStep('none'); setTotpCode(''); }} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">返回</button>
+                                        <button type="button" onClick={() => resetMfa()} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">返回</button>
                                     </motion.form>
                                 ) : loginMode === 'password' ? (
                                     /* 密碼登入表單 */
@@ -355,7 +190,7 @@ export function ModernLogin() {
                                         >
                                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-5 h-5" /><span>登入</span></>}
                                         </button>
-                                        <button type="button" onClick={() => { setLoginMode('reset'); setMessage(''); }} className="w-full text-xs text-slate-400 hover:text-blue-600 font-bold py-1 transition-colors">
+                                        <button type="button" onClick={() => setMode('reset')} className="w-full text-xs text-slate-400 hover:text-blue-600 font-bold py-1 transition-colors">
                                             首次使用？忘記密碼？→ 設定密碼
                                         </button>
                                     </motion.form>
@@ -381,7 +216,7 @@ export function ModernLogin() {
                                         >
                                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Mail className="w-5 h-5" /><span>寄送密碼設定信</span></>}
                                         </button>
-                                        <button type="button" onClick={() => { setLoginMode('password'); setMessage(''); }} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">← 返回登入</button>
+                                        <button type="button" onClick={() => setMode('password')} className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1">← 返回登入</button>
                                     </motion.form>
                                 ) : (
                                     /* Magic Link 表單 */

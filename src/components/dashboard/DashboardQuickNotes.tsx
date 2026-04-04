@@ -1,27 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { StickyNote, ListTodo } from 'lucide-react';
 import { QuickNotesSection } from './quick-notes/QuickNotesSection';
 import { QuickTasksSection } from './quick-notes/QuickTasksSection';
+import { todoService, ManualTodo } from '@/services/todoService';
+import { dashboardNotesService, DashboardNote } from '@/services/dashboardNotesService';
 
-interface Note {
-    id: string;
-    title: string;
-    content: string;
-}
-
-interface PersonalTask {
-    id: string;
-    content: string;
-    due_date: string;
-    is_completed: boolean;
-    priority: string;
-}
+type Note = DashboardNote;
+type PersonalTask = ManualTodo;
 
 export default function DashboardQuickNotes() {
+    const supabase = createClient();
     const { user } = useAuthUser();
     const [activeTab, setActiveTab] = useState<'notes' | 'tasks'>('notes');
 
@@ -37,14 +29,8 @@ export default function DashboardQuickNotes() {
     const [newTaskDate, setNewTaskDate] = useState('');
 
     const fetchTasks = async (userId: string) => {
-        const { data } = await supabase
-            .from('todos')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('source_type', 'manual') // Only show manually added tasks here
-            .order('due_date', { ascending: true });
-
-        if (data) setTasks(data);
+        const data = await todoService.fetchManualTodos(supabase, userId);
+        setTasks(data);
     };
 
     useEffect(() => {
@@ -60,55 +46,50 @@ export default function DashboardQuickNotes() {
         }
 
         // Load Notes
-        supabase
-            .from('user_settings')
-            .select('dashboard_notes')
-            .eq('user_id', user.id)
-            .single()
-            .then(({ data }) => {
-                if (data?.dashboard_notes) setNotes(data.dashboard_notes as Note[]);
-            });
+        dashboardNotesService.loadDashboardNotes(supabase, user.id).then((data) => {
+            if (data) setNotes(data);
+        });
 
         // Load Tasks
         queueMicrotask(() => fetchTasks(user.id));
 
         // Task Realtime Subscription
-        const channel = supabase
-            .channel('dashboard-tasks')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => {
-                fetchTasks(user.id);
-            })
-            .subscribe();
+        const channel = todoService.subscribeToTodos(supabase, user.id, () => {
+            fetchTasks(user.id);
+        });
 
         return () => {
             supabase.removeChannel(channel);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     // Auto-save logic for Notes
     useEffect(() => {
-        const saveToSupabase = async () => {
+        const save = async () => {
             setStatus('saving');
-            if (user) {
-                await supabase
-                    .from('user_settings')
-                    .upsert({ user_id: user.id, dashboard_notes: notes });
-            } else {
-                localStorage.setItem('dashboard_quick_notes', JSON.stringify(notes));
+            try {
+                if (user) {
+                    await dashboardNotesService.saveDashboardNotes(supabase, user.id, notes);
+                } else {
+                    localStorage.setItem('dashboard_quick_notes', JSON.stringify(notes));
+                }
+                setLastSaved(new Date());
+                setStatus('saved');
+            } catch {
+                setStatus('error');
             }
-            setLastSaved(new Date());
-            setStatus('saved');
         };
 
-        const timer = setTimeout(saveToSupabase, 2000);
+        const timer = setTimeout(save, 2000);
         return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notes, user]);
 
     const handleAddTask = async () => {
         if (!newTaskContent.trim()) return;
         if (!user) return alert('請先登入');
 
-        // If no date selected, default to today 9:00 AM
         let targetDate = new Date();
         if (newTaskDate) {
             targetDate = new Date(newTaskDate);
@@ -116,38 +97,35 @@ export default function DashboardQuickNotes() {
             targetDate.setHours(9, 0, 0, 0);
         }
 
-        const newTask = {
-            user_id: user.id,
-            content: newTaskContent,
-            due_date: targetDate.toISOString(),
-            source_type: 'manual',
-            is_completed: false,
-            priority: 'not-urgent-important'
-        };
-
-        const { error } = await supabase.from('todos').insert([newTask]);
-
-        if (error) {
-            console.error('Add task error:', error);
-            alert('新增失敗');
-        } else {
+        try {
+            await todoService.createTodo(supabase, {
+                user_id: user.id,
+                content: newTaskContent,
+                due_date: targetDate.toISOString(),
+                source_type: 'manual',
+                is_completed: false,
+                priority: 'not-urgent-important',
+            });
             setNewTaskContent('');
             setNewTaskDate('');
             fetchTasks(user.id);
+        } catch (err) {
+            console.error('Add task error:', err);
+            alert('新增失敗');
         }
     };
 
     const toggleTask = async (id: string, currentStatus: boolean) => {
         // Optimistic update
         setTasks(prev => prev.map(t => t.id === id ? { ...t, is_completed: !currentStatus } : t));
-        await supabase.from('todos').update({ is_completed: !currentStatus }).eq('id', id);
+        await todoService.toggleTodo(supabase, id, currentStatus);
     };
 
     const deleteTask = async (id: string) => {
         if (!confirm('確定刪除?')) return;
         // Optimistic update
         setTasks(prev => prev.filter(t => t.id !== id));
-        await supabase.from('todos').delete().eq('id', id);
+        await todoService.deleteTodo(supabase, id);
     };
 
     const updateActiveNoteContent = (newContent: string) => {

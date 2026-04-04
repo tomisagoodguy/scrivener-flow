@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import GoogleDriveUpload from '../features/cases/GoogleDriveUpload';
 
 export const SideNav = () => {
+    const supabase = createClient();
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useAuthUser();

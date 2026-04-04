@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 import { useCrudDelete } from '@/hooks/useCrudDelete';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -13,6 +13,7 @@ export interface Clause {
 }
 
 export function useClauses() {
+    const supabase = createClient();
     const { data: clauses, loading, refetch: fetchClauses } = useSupabaseQuery<Clause>({
         table: 'contract_clauses',
         order: { column: 'usage_count', ascending: false },

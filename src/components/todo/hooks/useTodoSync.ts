@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { TodoTask } from '../types';
 import { mapTodosToState, RawTodoRow } from './sync/todoMapper';
 import { generateSystemTasks } from './sync/systemTaskGenerator';
 
 export function useTodoSync() {
+    const supabase = useMemo(() => createClient(), []);
     const [tasks, setTasks] = useState<TodoTask[]>([]);
     const [loading, setLoading] = useState(true);
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { CaseFormData, initialFormData } from './types';
 
@@ -9,6 +9,7 @@ import { CaseFormData, initialFormData } from './types';
  * 處理新增案件表單的所有邏輯
  */
 export function useNewCaseForm() {
+    const supabase = useMemo(() => createClient(), []);
     const router = useRouter();
     const { requireUser } = useAuthUser();
     const [formData, setFormData] = useState<CaseFormData>(initialFormData);

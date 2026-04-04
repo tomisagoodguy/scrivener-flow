@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { caseService } from '@/services/caseService';
 import { DemoCase, Milestone } from '@/types';
 import { stripHtml } from './edit-case/caseUtils';
 
@@ -172,16 +173,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
 
     const save = useCallback(
         async (field: 'notes' | 'pending_tasks' | 'private_notes', value: string) => {
-            const payload: Record<string, string> = {
-                updated_at: new Date().toISOString(),
-            };
-            if (field === 'notes') {
-                payload.notes = value ? `${value}${attrSuffix}` : attrSuffix.trim();
-            } else {
-                payload[field] = value;
-            }
-            const { error } = await supabase.from('cases').update(payload).eq('id', caseData.id);
-            if (error) throw error;
+            await caseService.updateCaseMemo(supabase, caseData.id, field, value, attrSuffix);
         },
         [supabase, caseData.id, attrSuffix]
     );

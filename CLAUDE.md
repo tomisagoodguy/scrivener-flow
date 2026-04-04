@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 技術堆疊（含版本號）
 
 | 技術 | 版本 | 在此專案的用途 |
-|------|------|--------------|
+| :--- | :--- | :--- |
 | **Next.js** | **16.1.1** | App Router、Server Components、API Routes、Server Actions |
 | **React** | **19.2.3** | UI 元件樹 |
 | **TypeScript** | **^5** | 嚴格型別（禁用 `any`，改用 `unknown` + type guards） |
@@ -32,9 +32,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 目錄結構
+### 目錄結構
 
-```
+```text
 scrivener-flow/
 ├── src/
 │   ├── app/                    # Next.js App Router 頁面與路由
@@ -125,11 +125,9 @@ uv run ruff check --fix && uv run ruff format  # Lint + Format
 uv run --with "finlab>=1.5.9" python <script>  # 含 FinLab 執行腳本
 ```
 
-### CI/CD（GitHub Actions）
-
 **無** TypeScript 建置或測試 CI。只有一個 workflow：
 
-```
+```yaml
 .github/workflows/etf_daily.yml   # 每日 UTC 14:00（台灣時間 22:00）自動執行
                                    # Python ETF 資料同步 + FinLab 股票更新 + AI 報告產生
 ```
@@ -175,7 +173,7 @@ DATABASE_URL=                   # Prisma connection string
 
 ### 1. 資料流
 
-```
+```mermaid
 React Component → Service（caseService/syncService）→ API Route → Supabase（RLS 隔離）
                                                                 ↓
                                               Realtime Subscription → Component 即時更新
@@ -189,6 +187,7 @@ Supabase **Row Level Security (RLS)** 在資料庫層強制 `user_id` 隔離，�
 
 這是核心領域概念：
 - **里程碑（Milestone）**：合約事實（簽約日、完稅日），唯讀，不可刪除。
+
 - **任務（Task）**：可執行的待辦，系統會在里程碑前 3–5 天自動生成提醒任務。
 
 ### 4. DB Schema 的真實位置
@@ -251,7 +250,7 @@ AI 功能（每日簡報、文字優化、投資分析）由 `src/lib/ai/geminiC
 ### 9. Supabase Client 三種用法
 
 | 檔案 | 用途 | 注意 |
-|------|------|------|
+| :--- | :--- | :--- |
 | `src/lib/supabase/client.ts` | Browser（Client Component） | 受 RLS 限制，使用登入 session |
 | `src/lib/supabase/server.ts` | Server Component / Server Action | 受 RLS 限制，使用 session cookie |
 | `src/lib/supabase/service.ts` | 管理員操作（bypass RLS） | **只能在 Server 端使用**，勿暴露於 Client |
@@ -267,7 +266,7 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 ## 重要文件索引
 
 | 優先 | 檔案 | 說明 |
-|------|------|------|
+| :--- | :--- | :--- |
 | 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 
@@ -276,7 +275,7 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 ## 容易踩坑的地方
 
 | ❌ 錯誤 | ✅ 正確 |
-|---------|--------|
+| :--- | :--- | :--- |
 | 用 `npm install` | 嚴格使用 `yarn`，禁止 npm |
 | 直接 `pip install` | 用 `uv add` 管理 Python 依賴 |
 | 使用 `any` 型別 | 用 `unknown` + type guard |

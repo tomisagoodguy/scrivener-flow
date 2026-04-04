@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export interface UseCaseTodosReturn {
     todos: Record<string, boolean>;
@@ -14,6 +14,7 @@ export const useCaseTodos = (
     initialTodos: Record<string, boolean> = {},
     prefix: string = ''
 ): UseCaseTodosReturn => {
+    const supabase = useMemo(() => createClient(), []);
 
     // Helper to normalize todos
     const normalizeTodos = useCallback((data: unknown): Record<string, boolean> => {
@@ -55,7 +56,7 @@ export const useCaseTodos = (
         if (data && !error) {
             setTodos(normalizeTodos(data.todos));
         }
-    }, [caseId, normalizeTodos]);
+    }, [caseId, normalizeTodos, supabase]);
 
     // Sync with props
     const initialTodosJson = JSON.stringify(initialTodos);
@@ -90,7 +91,7 @@ export const useCaseTodos = (
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [caseId, fetchLatestTodos, normalizeTodos]);
+    }, [caseId, fetchLatestTodos, normalizeTodos, supabase]);
 
     const toggleTodo = async (item: string) => {
         if (loadingRef.current) return; // Prevent double clicks / race conditions locally

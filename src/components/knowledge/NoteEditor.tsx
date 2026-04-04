@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
+import { noteService } from '@/services/noteService';
 import { useRouter } from 'next/navigation';
 import { Save, X, Tag, Folder } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -17,6 +18,7 @@ interface NoteEditorProps {
 }
 
 export default function NoteEditor({ noteId }: NoteEditorProps) {
+    const supabase = createClient();
     const router = useRouter();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -26,32 +28,26 @@ export default function NoteEditor({ noteId }: NoteEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Load existing note if editing
     useEffect(() => {
-        if (noteId) {
-            loadNote();
-        }
-    }, [noteId]);
-
-    const loadNote = async () => {
+        if (!noteId) return;
         setLoading(true);
-        const { data, error } = await supabase
-            .from('team_notes')
-            .select('*')
-            .eq('id', noteId)
-            .single();
-
-        if (error) {
-            console.error('Error loading note:', error);
+        noteService.getNote(supabase, noteId).then((data) => {
+            if (data) {
+                setTitle(data.title);
+                setContent(data.content || '');
+                setCategory(data.category ?? '');
+                setTags(data.tags || []);
+            } else {
+                alert('找不到此筆記');
+            }
+            setLoading(false);
+        }).catch((err) => {
+            console.error('Error loading note:', err);
             alert('載入筆記失敗');
-        } else if (data) {
-            setTitle(data.title);
-            setContent(data.content || '');
-            setCategory(data.category);
-            setTags(data.tags || []);
-        }
-        setLoading(false);
-    };
+            setLoading(false);
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [noteId]);
 
     const handleAddTag = () => {
         const trimmedTag = tagInput.trim();
@@ -66,55 +62,25 @@ export default function NoteEditor({ noteId }: NoteEditorProps) {
     };
 
     const handleSave = async () => {
-        if (!title.trim()) {
-            alert('請輸入標題');
-            return;
-        }
-
+        if (!title.trim()) { alert('請輸入標題'); return; }
         setIsSaving(true);
 
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { alert('請先登入'); return; }
 
-        if (!user) {
-            alert('請先登入');
-            setIsSaving(false);
-            return;
-        }
-
-        const noteData = {
-            title: title.trim(),
-            content: content,
-            category,
-            tags,
-            author_id: user.id,
-        };
-
-        let error;
-
-        if (noteId) {
-            // Update existing note
-            const result = await supabase
-                .from('team_notes')
-                .update(noteData)
-                .eq('id', noteId);
-            error = result.error;
-        } else {
-            // Create new note
-            const result = await supabase.from('team_notes').insert([noteData]);
-            error = result.error;
-        }
-
-        if (error) {
-            console.error('Error saving note:', error);
-            alert('儲存失敗: ' + error.message);
-        } else {
-            // alert(noteId ? '更新成功!' : '發布成功!');
+            if (noteId) {
+                await noteService.updateNote(supabase, noteId, { title: title.trim(), content, category, tags });
+            } else {
+                await noteService.createNote(supabase, { title: title.trim(), content, category, tags, author_id: user.id });
+            }
             router.push('/knowledge');
+        } catch (err) {
+            console.error('Error saving note:', err);
+            alert('儲存失敗');
+        } finally {
+            setIsSaving(false);
         }
-
-        setIsSaving(false);
     };
 
     if (loading) {

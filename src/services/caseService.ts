@@ -203,6 +203,29 @@ export const caseService = {
     },
 
     /**
+     * 更新案件備忘欄位（notes / pending_tasks / private_notes）
+     * notes 欄位會自動保留 [[ATTR:...]] 屬性後綴
+     */
+    async updateCaseMemo(
+        supabase: SupabaseClient,
+        caseId: string,
+        field: 'notes' | 'pending_tasks' | 'private_notes',
+        value: string,
+        attrSuffix: string = ''
+    ): Promise<void> {
+        const payload: Record<string, string> = {
+            updated_at: new Date().toISOString(),
+        };
+        if (field === 'notes') {
+            payload.notes = value ? `${value}${attrSuffix}` : attrSuffix.trim();
+        } else {
+            payload[field] = value;
+        }
+        const { error } = await supabase.from('cases').update(payload).eq('id', caseId);
+        if (error) throw error;
+    },
+
+    /**
      * 刪除案件
      */
     async deleteCase(supabase: SupabaseClient, caseId: string) {

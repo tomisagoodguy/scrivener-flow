@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ScheduleItem, FilterType } from './types';
 import { format } from 'date-fns';
 
 export function useCaseSchedule(caseId: string) {
+    const supabase = useMemo(() => createClient(), []);
     const router = useRouter();
     const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);

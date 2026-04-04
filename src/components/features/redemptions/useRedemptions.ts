@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { RedemptionInfo } from './types';
 
 export function useRedemptions() {
+    const supabase = useMemo(() => createClient(), []);
     const [redemptions, setRedemptions] = useState<RedemptionInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);

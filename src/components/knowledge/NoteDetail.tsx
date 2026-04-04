@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
+import { noteService } from '@/services/noteService';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit2, Trash2, Heart, MessageCircle, Eye, Tag, Calendar, User, Download } from 'lucide-react';
 import { format } from 'date-fns';
@@ -15,23 +16,20 @@ interface NoteDetailProps {
 }
 
 export default function NoteDetail({ noteId }: NoteDetailProps) {
+    const supabase = createClient();
     const router = useRouter();
     const [note, setNote] = useState<TeamNote | null>(null);
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
 
     // Word 匯出功能
     const { exportToWord, isExporting, error: exportError, progress } = useWordExport();
 
     const handleExportWord = async () => {
         if (!note) return;
-
-        const result = await exportToWord({
-            title: note.title,
-            htmlContent: note.content || '',
-        });
-
+        const result = await exportToWord({ title: note.title, htmlContent: note.content || '' });
         if (result.success) {
             alert('✅ Word 文件已下載！');
         } else {
@@ -40,109 +38,61 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
     };
 
     useEffect(() => {
-        loadNote();
-        checkIfLiked();
-    }, [noteId]);
-
-    const loadNote = async () => {
         if (!noteId) return;
         setLoading(true);
 
-        try {
-            // Get current user
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id || null);
+        const init = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUserId(user?.id ?? null);
 
-            // Load note
-            const { data, error } = await supabase
-                .from('team_notes')
-                .select('*')
-                .eq('id', noteId)
-                .single();
-
-            if (error) {
-                if (error.code === 'PGRST116') {
-                    // Note not found
-                    console.log('Note not found:', noteId);
-                    setNote(null);
-                } else {
-                    console.error('Error loading note:', JSON.stringify(error, null, 2));
-                    alert(`載入筆記失敗: ${error.message || '未知錯誤'}`);
-                }
-            } else if (data) {
-                setNote({
-                    ...data,
-                    author_name: '匿名',
-                });
+            try {
+                const data = await noteService.getNote(supabase, noteId);
+                setNote(data);
+            } catch (err) {
+                console.error('Error loading note:', err);
+                alert('載入筆記失敗');
             }
-        } catch (err) {
-            console.error('Unexpected error in loadNote:', err);
-        }
 
-        setLoading(false);
-    };
+            if (user) {
+                const liked = await noteService.getLikeStatus(supabase, noteId, user.id);
+                setIsLiked(liked);
+            }
 
-    const checkIfLiked = async () => {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
+            setLoading(false);
+        };
 
-        const { data } = await supabase
-            .from('note_likes')
-            .select('id')
-            .eq('note_id', noteId)
-            .eq('user_id', user.id)
-            .single();
-
-        setIsLiked(!!data);
-    };
+        init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [noteId]);
 
     const handleLike = async () => {
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-            alert('請先登入');
-            return;
-        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { alert('請先登入'); return; }
 
-        if (isLiked) {
-            // Unlike
-            await supabase.from('note_likes').delete().eq('note_id', noteId).eq('user_id', user.id);
-            setIsLiked(false);
+        try {
+            await noteService.toggleLike(supabase, noteId, user.id, isLiked);
+            setIsLiked(!isLiked);
             if (note) {
-                setNote({ ...note, like_count: (note.like_count || 0) - 1 });
+                setNote({ ...note, like_count: (note.like_count || 0) + (isLiked ? -1 : 1) });
             }
-        } else {
-            // Like
-            await supabase.from('note_likes').insert([{ note_id: noteId, user_id: user.id }]);
-            setIsLiked(true);
-            if (note) {
-                setNote({ ...note, like_count: (note.like_count || 0) + 1 });
-            }
+        } catch (err) {
+            console.error('Like error:', err);
         }
     };
-
-    const [deleteConfirm, setDeleteConfirm] = useState(false);
 
     const handleDelete = async () => {
         if (!deleteConfirm) {
             setDeleteConfirm(true);
-            setTimeout(() => setDeleteConfirm(false), 3000); // Reset after 3 seconds
+            setTimeout(() => setDeleteConfirm(false), 3000);
             return;
         }
 
-        console.log('Deleting note:', noteId);
-        const { error } = await supabase.from('team_notes').delete().eq('id', noteId);
-
-        if (error) {
-            console.error('Error deleting note:', error);
-            alert('刪除失敗: ' + error.message);
-        } else {
+        try {
+            await noteService.deleteNote(supabase, noteId);
             router.push('/knowledge');
+        } catch (err) {
+            console.error('Error deleting note:', err);
+            alert('刪除失敗');
         }
     };
 

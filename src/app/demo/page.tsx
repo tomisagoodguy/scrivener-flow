@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useEffect, useState, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { DemoCase } from '@/types';
 import { DemoHeader } from '@/components/features/demo/DemoHeader';
 import { CaseDetailCard } from '@/components/features/demo/CaseDetailCard';
 import { DemoCaseTabs } from '@/components/features/demo/DemoCaseTabs';
 
 export default function DemoPage() {
+    const supabase = useMemo(() => createClient(), []);
     const [cases, setCases] = useState<DemoCase[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [loading, setLoading] = useState(true);

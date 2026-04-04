@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 
 const DEFAULT_NOTES = [
     '報稅前檢查是否要退稅',
@@ -27,6 +27,7 @@ interface QuickNotesProps {
 }
 
 export default function QuickNotes({ onSelect }: QuickNotesProps) {
+    const supabase = useMemo(() => createClient(), []);
     const [customNotes, setCustomNotes] = React.useState<string[]>([]);
     const [isAdding, setIsAdding] = React.useState(false);
     const [newNote, setNewNote] = React.useState('');

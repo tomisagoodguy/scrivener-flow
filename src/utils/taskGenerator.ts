@@ -1,8 +1,35 @@
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { TodoTask } from '@/components/todo/types';
 
+interface CaseQueryResult {
+    id: string;
+    case_number: string;
+    buyer_name: string;
+    seller_name: string;
+    status: string;
+    milestones: {
+        contract_date: string | null;
+        seal_date: string | null;
+        tax_payment_date: string | null;
+        transfer_date: string | null;
+        redemption_date: string | null;
+        handover_date: string | null;
+        sign_diff_date: string | null;
+        seal_appointment: string | null;
+        tax_appointment: string | null;
+        handover_appointment: string | null;
+    }[];
+    financials: {
+        land_value_tax_deadline: string | null;
+        deed_tax_deadline: string | null;
+        land_tax_deadline: string | null;
+        house_tax_deadline: string | null;
+    }[];
+}
+
 export async function fetchSystemTasks(): Promise<TodoTask[]> {
-    const { data: cases, error } = await supabase
+    const supabase = createClient();
+    const { data: casesData, error } = await supabase
         .from('cases')
         .select(
             `
@@ -23,11 +50,12 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
         console.error('Error fetching system tasks:', error);
         return [];
     }
-    if (!cases) return [];
+    if (!casesData) return [];
 
+    const cases = casesData as unknown as CaseQueryResult[];
     const tasks: TodoTask[] = [];
 
-    cases.forEach((c: any) => {
+    cases.forEach((c) => {
         const m = c.milestones?.[0] || {};
         const f = c.financials?.[0] || {};
         const caseName = `${c.case_number ? c.case_number + ' ' : ''}${c.buyer_name}/${c.seller_name}`;
@@ -45,7 +73,6 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
         ) => {
             if (!dateStr) return;
             const targetDate = new Date(dateStr);
-            const now = new Date();
 
             // Calculate Reminder Start Date
             const reminderStart = new Date(targetDate);

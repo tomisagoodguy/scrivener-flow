@@ -13,8 +13,8 @@ interface AuthGateContextType {
 
 const AuthGateContext = createContext<AuthGateContextType | undefined>(undefined);
 
-const PASSPHRASE = '自由在邊界之外';
-const OLD_PASSPHRASE = '長的是磨難，短的是人生';
+const PASSPHRASE = process.env.NEXT_PUBLIC_APP_PASSPHRASE ?? '';
+const OLD_PASSPHRASE = process.env.NEXT_PUBLIC_APP_OLD_PASSPHRASE ?? '';
 const AUTH_KEY = 'app_passphrase_authorized_v2';
 
 
@@ -159,9 +159,8 @@ function PassphraseScreen({ onVerify }: { onVerify: (pass: string) => boolean })
                                     </div>
                                     <p className="text-slate-300 text-xs leading-relaxed font-bold">
                                         因應資安升級，為了保護您的隱私，<br />
-                                        <span className="text-amber-400">請避免使用公司設備</span>並改用新語：<br />
-                                        <span className="text-lg text-white block mt-2 mb-2 select-all ring-1 ring-white/20 p-2 rounded-lg bg-white/5 cursor-pointer hover:bg-white/10 transition-colors">自由在邊界之外</span>
-                                        <span className="text-[9px] opacity-50 font-normal">提示：點擊上方可複製，輸入新密語即可進入。</span>
+                                        <span className="text-amber-400">請避免使用公司設備</span>並改用新密語。<br />
+                                        <span className="text-[11px] opacity-70 font-normal block mt-2">如不知道新密語，請聯繫管理員取得授權。</span>
                                     </p>
                                 </motion.div>
                             ) : (

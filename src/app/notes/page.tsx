@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import RichTextEditor from '@/components/knowledge/RichTextEditor';
 
 // Helper to strip HTML for preview
@@ -21,6 +21,7 @@ interface Note {
 }
 
 export default function NotesPage() {
+    const supabase = useMemo(() => createClient(), []);
     const [notes, setNotes] = useState<Note[]>([]);
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);

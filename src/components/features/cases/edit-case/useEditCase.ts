@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { DemoCase } from '@/types';
 import { parseDocx } from '@/app/actions/parseDocx';
 import { parseAttributes, stripAttributesFromNotes, stripHtml } from './caseUtils';
@@ -15,6 +15,7 @@ import { useAuthUser } from '@/hooks/useAuthUser';
  * 已將資料持久化邏輯提取至 caseService，自動存檔邏輯提取至 useCaseAutoSave
  */
 export function useEditCase(initialData: DemoCase) {
+    const supabase = createClient();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [notes, setNotes] = useState(stripHtml(initialData.notes || ''));

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 
 interface UseAuthUserResult {
     user: User | null;
@@ -15,6 +15,7 @@ interface UseAuthUserResult {
  * - `requireUser`：在 async 操作中使用，未登入直接 throw Error('請先登入')
  */
 export function useAuthUser(): UseAuthUserResult {
+    const supabase = useMemo(() => createClient(), []);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -29,7 +30,7 @@ export function useAuthUser(): UseAuthUserResult {
         );
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [supabase]);
 
     const requireUser = async (): Promise<User> => {
         const { data } = await supabase.auth.getUser();

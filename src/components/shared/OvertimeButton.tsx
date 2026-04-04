@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 
 interface OvertimeButtonProps {
     caseId: string;
@@ -12,6 +12,7 @@ interface OvertimeButtonProps {
 }
 
 export default function OvertimeButton({ caseId, hasKeyed, sealDate }: OvertimeButtonProps) {
+    const supabase = createClient();
     // Local state for immediate UI feedback (Optimistic UI)
     const [localStatus, setLocalStatus] = useState(hasKeyed);
     const [loading, setLoading] = useState(false);

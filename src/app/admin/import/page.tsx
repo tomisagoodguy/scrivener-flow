@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import * as ExcelJS from 'exceljs';
 import { ImportLogs } from '@/components/features/admin-import/ImportLogs';
 import { ImportFileUpload } from '@/components/features/admin-import/ImportFileUpload';
 
 export default function ImportPage() {
+    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
 

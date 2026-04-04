@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 
 interface UseCrudDeleteOptions {
     /** 要刪除的 table 名稱 */
@@ -34,6 +34,7 @@ export function useCrudDelete({
     onSuccess,
     errorPrefix = '刪除失敗',
 }: UseCrudDeleteOptions): UseCrudDeleteResult {
+    const supabase = createClient();
     const [deleting, setDeleting] = useState(false);
 
     const handleDelete = async (id: string) => {

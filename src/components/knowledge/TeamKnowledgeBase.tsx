@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { Search, Plus, X, Folder, Tag, BookOpen, Star } from 'lucide-react';
 import NoteCard, { TeamNote } from './NoteCard';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import AIWorkAssistant from '../dashboard/AIWorkAssistant';
 
 export default function TeamKnowledgeBase() {
+    const supabase = createClient();
     const router = useRouter();
     const [notes, setNotes] = useState<TeamNote[]>([]);
     const [loading, setLoading] = useState(true);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { DemoCase, TodoRecord } from '@/types';
 import { useTimelineHub } from './useTimelineHub';
 import { TodayFocus } from './TodayFocus';
@@ -19,6 +19,7 @@ interface TimelineHubProps {
  * 確保「主頁面標記完成」後切換到 Timeline 時即時反映。
  */
 export default function TimelineHub({ cases }: TimelineHubProps) {
+    const supabase = createClient();
     // 用 server prop 的 todos_list 初始化，避免 hydration 閃爍
     const [clientTodos, setClientTodos] = useState<TodoRecord[]>(() =>
         cases.flatMap((c) => c.todos_list || [])

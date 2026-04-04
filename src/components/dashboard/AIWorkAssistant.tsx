@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { generateAIBriefing } from '@/app/actions/ai';
 import { sendLineMessage } from '@/app/actions/lineNotify';
 import { Sparkles, Send, Loader2, Calendar, User, ChevronDown, ChevronUp, Bot } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
 export default function AIWorkAssistant() {
+    const supabase = createClient();
     const [isVisible, setIsVisible] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);

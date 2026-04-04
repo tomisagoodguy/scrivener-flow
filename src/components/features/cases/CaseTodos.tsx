@@ -12,7 +12,7 @@ interface CaseTodosProps {
     allowAdd?: boolean;
     prefix?: string; // e.g. "SIG_" for Signing, "SEAL_" for Sealing…
     catchUncategorized?: boolean; // If true, show items that don't match any standard list or known prefix
-    allKnownPrefixes?: string[]; // All known prefixes across all stages (for uncategorized detection)
+    allKnownPrefixes?: readonly string[]; // All known prefixes across all stages (for uncategorized detection)
     onCountChange?: (completed: number, total: number) => void;
 }
 

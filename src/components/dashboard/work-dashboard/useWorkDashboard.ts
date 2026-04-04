@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { differenceInDays } from 'date-fns';
 import { TodoTask, TaskType, Priority } from '@/components/todo/types';
 
@@ -40,6 +40,7 @@ interface RawTodo {
  * 處理所有工作儀表板的資料抓取、過濾與狀態管理
  */
 export function useWorkDashboard() {
+    const supabase = useMemo(() => createClient(), []);
     const [tasks, setTasks] = useState<TodoTask[]>([]);
     const [loading, setLoading] = useState(true);
 

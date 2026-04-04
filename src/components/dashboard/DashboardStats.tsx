@@ -1,6 +1,7 @@
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/server';
 
 export const DashboardStats = async () => {
+    const supabase = await createClient();
     const { data: cases, error } = await supabase.from('cases').select('*');
 
     if (error) {
