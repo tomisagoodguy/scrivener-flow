@@ -85,7 +85,7 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
 
             {/* Price */}
             <td className="px-2 py-3 text-right">
-                <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
                     {formatNumber(item.price)}
                 </span>
             </td>

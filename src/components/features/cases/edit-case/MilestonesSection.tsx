@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { toISODate } from './caseUtils';
+import MilestoneCountdown from '@/components/shared/MilestoneCountdown';
 
 interface MilestonesSectionProps {
     milestones: any;
@@ -25,7 +26,10 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <div className="space-y-1">
-                    <label className="text-sm font-bold text-amber-600 dark:text-white!">簽約日/款</label>
+                    <label className="text-sm font-bold text-amber-600 dark:text-white! flex items-center gap-1">
+                        <span>簽約日/款</span>
+                        <MilestoneCountdown date={milestones?.contract_date} />
+                    </label>
                     <input
                         name="contract_date"
                         defaultValue={toISODate(milestones?.contract_date)}
@@ -60,7 +64,10 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-sm font-bold text-blue-600">用印日/款</label>
+                    <label className="text-sm font-bold text-blue-600 flex items-center gap-1">
+                        <span>用印日/款</span>
+                        <MilestoneCountdown date={milestones?.seal_date} />
+                    </label>
                     <input
                         name="seal_date"
                         defaultValue={toISODate(milestones?.seal_date)}
@@ -77,7 +84,10 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-sm font-bold text-emerald-600">完稅日/款</label>
+                    <label className="text-sm font-bold text-emerald-600 flex items-center gap-1">
+                        <span>完稅日/款</span>
+                        <MilestoneCountdown date={milestones?.tax_payment_date} />
+                    </label>
                     <input
                         name="tax_payment_date"
                         defaultValue={toISODate(milestones?.tax_payment_date)}
@@ -94,8 +104,11 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-sm font-bold text-foreground/40 flex justify-between">
-                        <span>過戶日</span>
+                    <label className="text-sm font-bold text-foreground/40 flex justify-between items-center">
+                        <span className="flex items-center gap-1">
+                            <span>過戶日</span>
+                            <MilestoneCountdown date={milestones?.transfer_date} />
+                        </span>
                         <span className="text-[9px] text-purple-500">備註</span>
                     </label>
                     <input
@@ -129,7 +142,10 @@ export const MilestonesSection: React.FC<MilestonesSectionProps> = ({
                 </div>
                 {/* 6th: Redemption/Handover/Balance */}
                 <div className="space-y-1">
-                    <label className="text-sm font-bold text-red-600">代償/交屋/尾款</label>
+                    <label className="text-sm font-bold text-red-600 flex items-center gap-1">
+                        <span>代償/交屋/尾款</span>
+                        <MilestoneCountdown date={milestones?.handover_date} />
+                    </label>
                     <input
                         name="redemption_date"
                         defaultValue={toISODate(milestones?.redemption_date)}

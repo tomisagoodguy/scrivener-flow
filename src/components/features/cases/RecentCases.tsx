@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase, Milestone } from '@/types';
 import Link from 'next/link';
+import MilestoneCountdown from '@/components/shared/MilestoneCountdown';
 
 export const RecentCases = async () => {
     const supabase = await createClient();
@@ -53,6 +54,15 @@ export const RecentCases = async () => {
             Rollback: '撤件',
         };
         return map[status] ?? status;
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'Cancelled': return '✕ ';
+            case 'Rollback': return '↩ ';
+            case 'Closed': return '✓ ';
+            default: return '● ';
+        }
     };
 
     const formatMD = (dateStr?: string | null) => {
@@ -123,7 +133,7 @@ export const RecentCases = async () => {
                                         )}
                                         {/* Status badge inline */}
                                         <span className={`ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${getStatusStyle(item.status)}`}>
-                                            {getStatusLabel(item.status)}
+                                            {getStatusIcon(item.status)}{getStatusLabel(item.status)}
                                         </span>
                                     </div>
 
@@ -139,7 +149,8 @@ export const RecentCases = async () => {
                                     {/* Row 3: milestones */}
                                     <div className="flex items-center gap-1 mt-2">
                                         {STEPS.map(({ label, key }, idx) => {
-                                            const date = formatMD(ms[key] as string | null | undefined);
+                                            const rawDate = ms[key] as string | null | undefined;
+                                            const date = formatMD(rawDate);
                                             const hasDate = !!date;
                                             return (
                                                 <div key={label} className="flex items-center gap-1">
@@ -156,6 +167,11 @@ export const RecentCases = async () => {
                                                         <span className={`text-[11px] font-bold leading-tight mt-0.5 font-mono ${hasDate ? 'text-gray-800 dark:text-gray-200' : 'text-gray-300 dark:text-slate-600'}`}>
                                                             {date ?? '--'}
                                                         </span>
+                                                        {hasDate && (
+                                                            <div className="mt-0.5">
+                                                                <MilestoneCountdown date={rawDate} />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     {idx < STEPS.length - 1 && (
                                                         <span className="text-gray-200 dark:text-slate-700 text-[10px]">›</span>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FC, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { useWeather } from '@/hooks/useWeather';
@@ -13,16 +13,12 @@ import { ThemeToggler } from '@/components/ui/ThemeToggler';
 export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
     const weather = useWeather();
-    useEffect(() => {
-        setSearchTerm(searchParams.get('q') || '');
-    }, [searchParams]);
 
     // Live Clock Logic
     const [now, setNow] = useState<Date | null>(null);
     useEffect(() => {
-        setNow(new Date());
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);

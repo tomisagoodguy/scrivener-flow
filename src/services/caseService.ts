@@ -169,7 +169,17 @@ export const caseService = {
             });
         };
 
+        // 申報準備提醒：用印日前 3 天
+        const sealPrepDate = milestoneData.seal_date
+            ? (() => {
+                const d = new Date(milestoneData.seal_date);
+                d.setDate(d.getDate() - 3);
+                return d.toISOString().slice(0, 10);
+            })()
+            : null;
+
         // 映射關係
+        addSystemTodo('tax_prep', sealPrepDate, '報稅');
         addSystemTodo('seal_appt', milestoneData.seal_appointment, '用印約定');
         addSystemTodo('tax_appt', milestoneData.tax_appointment, '完稅約定');
         addSystemTodo('handover_appt', milestoneData.handover_appointment, '交屋約定');

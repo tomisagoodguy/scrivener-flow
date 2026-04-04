@@ -1,0 +1,59 @@
+/* ============================================================
+   字體縮放模式 — 由 JS 直接設定 html[style="font-size: X%"]
+   不再使用 CSS class，保留此區塊供備查
+   ============================================================ */
+
+/* ============================================================
+   高對比模式 — 提升文字與背景對比度至 WCAG AA 標準
+   ============================================================ */
+
+/* 淺色主題高對比 */
+html.high-contrast body,
+html.high-contrast .glass-card,
+html.high-contrast [class*="bg-white"],
+html.high-contrast [class*="bg-slate-50"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+html.high-contrast p,
+html.high-contrast span:not([class*="text-"]),
+html.high-contrast label,
+html.high-contrast h1,
+html.high-contrast h2,
+html.high-contrast h3,
+html.high-contrast h4 {
+    color: #000000 !important;
+}
+
+html.high-contrast [class*="text-slate-"],
+html.high-contrast [class*="text-gray-"] {
+    color: #111111 !important;
+}
+
+html.high-contrast [class*="border-slate-"],
+html.high-contrast [class*="border-gray-"] {
+    border-color: #555555 !important;
+}
+
+/* 深色主題高對比 */
+html.dark.high-contrast body,
+html.dark.high-contrast .glass-card {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+html.dark.high-contrast p,
+html.dark.high-contrast span:not([class*="text-"]),
+html.dark.high-contrast label,
+html.dark.high-contrast h1,
+html.dark.high-contrast h2,
+html.dark.high-contrast h3,
+html.dark.high-contrast h4 {
+    color: #ffffff !important;
+}
+
+html.dark.high-contrast [class*="text-slate-"],
+html.dark.high-contrast [class*="text-gray-"] {
+    color: #eeeeee !important;
+}

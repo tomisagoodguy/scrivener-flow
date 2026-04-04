@@ -137,7 +137,7 @@ export default function CasesPendingView({ cases }: CasesPendingViewProps) {
                                             {/* 未完成數 */}
                                             <td className="px-3 py-2 border border-slate-100 dark:border-slate-800 text-center align-top pt-3">
                                                 <span className="inline-block bg-red-100 text-red-600 font-black text-sm px-2 py-0.5 rounded-full border border-red-200">
-                                                    {caseData.pendingCount}
+                                                    ⚠ {caseData.pendingCount}
                                                 </span>
                                             </td>
                                             {/* 待辦事項 */}
