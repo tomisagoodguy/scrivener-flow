@@ -82,12 +82,6 @@ scrivener-flow/
 │   └── scripts/                # CLI 腳本（股票資料更新）
 ├── prisma/schema.prisma        # ⚠️ 僅含 generator/datasource 設定，實際 Schema 在 supabase/migrations/
 ├── supabase/migrations/        # 真正的 DB Schema（SQL 格式，20260111032050_recreate_full_schema.sql）
-├── .agent/                     # AI Agent 規則與記憶庫（MUST READ）
-│   ├── rules.md                # 核心行為規則
-│   ├── ANTIGRAVITY_INTELLIGENCE.md # 專案記憶
-│   ├── domain_expertise.md    # 技術選型細節指引
-│   ├── LEARNINGS.md            # 開發過程觀念升級與錯誤反思
-│   └── PROACTIVE_SUGGESTIONS.md # 智能場景建議系統
 ├── migrations/                 # SQL migration 腳本
 ├── .github/workflows/          # CI/CD Pipelines
 └── pyproject.toml              # Python 依賴（uv 管理）
@@ -274,12 +268,8 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 | 優先 | 檔案 | 說明 |
 |------|------|------|
-| 1 | `.agent/rules.md` | **MUST READ**：AI Agent 完整行為準則與 ECC 協議 |
-| 2 | `.agent/ANTIGRAVITY_INTELLIGENCE.md` | **MUST READ**：專案特定記憶與過往修正紀錄 |
-| 3 | `.agent/domain_expertise.md` | 各技術層（Next.js、Python、測試）的選型細節 |
-| 4 | `.agent/LEARNINGS.md` | 開發觀念升級與最佳實踐累積 |
-| 5 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
-| 6 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
+| 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
+| 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 
 ---
 
