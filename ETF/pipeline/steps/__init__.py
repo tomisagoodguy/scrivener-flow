@@ -14,6 +14,7 @@ from .sync_ohlcv_step import SyncOHLCVStep
 from .notify_step import NotifyStep
 from .cleanup_step import CleanupStep
 from .weight_history_step import WeightHistoryStep
+from .multi_etf_step import MultiEtfStep
 
 __all__ = [
     "BaseStep",
@@ -24,6 +25,7 @@ __all__ = [
     "SyncCompanyStep",
     "SyncOHLCVStep",
     "WeightHistoryStep",
+    "MultiEtfStep",
     "NotifyStep",
     "CleanupStep",
 ]

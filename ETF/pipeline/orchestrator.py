@@ -17,6 +17,7 @@ from .steps import (
     SyncCompanyStep,
     SyncOHLCVStep,
     WeightHistoryStep,
+    MultiEtfStep,
     NotifyStep,
     CleanupStep,
 )
@@ -39,6 +40,7 @@ class PipelineOrchestrator:
         DiffComputeStep,
         SaveSnapshotStep,
         WeightHistoryStep,   # 快照存完後聚合排名→走勢表
+        MultiEtfStep,        # 爬取 00980A / 00991A 持股、AUM、產業
         SyncCompanyStep,
         SyncOHLCVStep,
         NotifyStep,

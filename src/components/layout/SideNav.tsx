@@ -28,7 +28,7 @@ export const SideNav = () => {
             // E2EE 加密傳輸
             // 動態匯入確保在 Client 端執行
             const { SecureApi } = await import('@/lib/crypto/secureApi');
-            const res = await SecureApi.post<any>('/api/line/secure', {
+            const res = await SecureApi.post<{ success: boolean; error?: string }>('/api/line/secure', {
                 text: lineMsg.trim()
             });
 
@@ -57,6 +57,7 @@ export const SideNav = () => {
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
         { name: '投資監控', href: '/investment', icon: '📈' },
+        { name: 'ETF 對比', href: '/investment/compare', icon: '⚖️' },
     ];
 
     const handleLogout = async () => {
