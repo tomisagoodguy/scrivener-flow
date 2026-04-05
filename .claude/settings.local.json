@@ -27,7 +27,16 @@
       "Bash(sed -i 's/- \\\\[ \\\\] 5\\\\.1/- [x] 5.1/' openspec/changes/etf-ui-upgrade/tasks.md)",
       "Bash(sed -i 's/- \\\\[ \\\\] 5\\\\.2/- [x] 5.2/' openspec/changes/etf-ui-upgrade/tasks.md)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: upgrade ETF UI with ranking trend chart Top-N filter and CLOSE diff log support\")",
-      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: upgrade ETF UI with ranking trend chart Top-N filter and CLOSE diff log support\")"
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: upgrade ETF UI with ranking trend chart Top-N filter and CLOSE diff log support\")",
+      "mcp__firecrawl__firecrawl_scrape",
+      "mcp__tavily__tavily_crawl",
+      "mcp__tavily__tavily_extract",
+      "mcp__firecrawl__firecrawl_map",
+      "mcp__tavily__tavily_search",
+      "mcp__firecrawl__firecrawl_agent",
+      "mcp__firecrawl__firecrawl_agent_status",
+      "Read(//tmp/**)",
+      "Read(//c/tmp/**)"
     ]
   }
 }
