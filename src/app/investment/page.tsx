@@ -11,8 +11,20 @@ import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs'
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
 import { EtfComparePanel } from '@/components/features/investment/EtfComparePanel';
+import { EtfSelector } from '@/components/features/investment/EtfSelector';
 import React from 'react';
 import { Holding } from '@/types/investment';
+
+// ── ETF 設定 ────────────────────────────────────────────────────────────────
+
+const SUPPORTED_ETFS = ['00980A', '00981A', '00991A'] as const;
+const DEFAULT_ETF = '00981A';
+
+const ETF_META: Record<string, { shortCode: string; name: string; manager: string }> = {
+    '00980A': { shortCode: '00980', name: '野村智慧優選', manager: '野村投信' },
+    '00981A': { shortCode: '00981', name: '主動統一台股增長', manager: '統一投信' },
+    '00991A': { shortCode: '00991', name: '復華未來50', manager: '復華投信' },
+};
 
 // ── ETF 對比資料（00980A / 00981A / 00991A）────────────────────────────────
 
@@ -113,17 +125,18 @@ async function getCompareData() {
 }
 
 // Fetch data on server
-async function getHoldings() {
+async function getHoldings(etfCode: string) {
     const supabase = await createClient();
-    
+
     // First, get the latest 2 available dates to check data integrity
     const { data: dateCandidates } = await supabase
         .from('etf_holdings_snapshot')
         .select('data_date, updated_at')
+        .eq('etf_code', etfCode)
         .order('data_date', { ascending: false })
         .order('updated_at', { ascending: false })
         .limit(2); // Fetch top 2
-    
+
     if (!dateCandidates || dateCandidates.length === 0) return { holdings: [], updatedAt: null, dataDate: null };
 
     // Helper to fetch holdings for a specific date
@@ -131,7 +144,7 @@ async function getHoldings() {
         const { data } = await supabase
             .from('etf_holdings_snapshot')
             .select('*')
-            .eq('etf_code', '00981A')
+            .eq('etf_code', etfCode)
             .eq('data_date', date)
             .order('weight', { ascending: false });
         return data || [];
@@ -308,29 +321,32 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
 }
 
 
-async function getRankingHistory() {
+async function getRankingHistory(etfCode: string) {
     const supabase = await createClient();
 
     // 優先從 etf_weight_history 撈（有預計算 rank）
     const { count } = await supabase
         .from('etf_weight_history')
         .select('*', { count: 'exact', head: true })
-        .eq('etf_code', '00981A');
+        .eq('etf_code', etfCode);
 
     if (count && count > 0) {
-        const { data } = await supabase
+        // 確認 etf_weight_history 有多個日期才使用，否則圖表會是水平線
+        const { data: historyData } = await supabase
             .from('etf_weight_history')
             .select('data_date, stock_code, stock_name, weight, rank')
-            .eq('etf_code', '00981A')
+            .eq('etf_code', etfCode)
             .order('data_date', { ascending: true });
-        return data ?? [];
+
+        const distinctDates = new Set((historyData ?? []).map(r => r.data_date)).size;
+        if (distinctDates > 1) return historyData ?? [];
     }
 
     // Fallback：從 etf_holdings_snapshot 聚合，補算 rank
     const { data } = await supabase
         .from('etf_holdings_snapshot')
         .select('data_date, stock_code, stock_name, weight')
-        .eq('etf_code', '00981A')
+        .eq('etf_code', etfCode)
         .order('data_date', { ascending: true });
 
     if (!data || data.length === 0) return [];
@@ -354,18 +370,18 @@ async function getRankingHistory() {
     return withRank;
 }
 
-async function getDiffLogs() {
+async function getDiffLogs(etfCode: string) {
     const supabase = await createClient();
-    
+
     // 1. Fetch logs
     const { data: logsData } = await supabase
         .from('etf_diff_logs')
         .select('id, etf_code, data_date, change_type, stock_code, stock_name, diff_shares, diff_weight, description, created_at, prev_shares, curr_shares, prev_weight, curr_weight, is_significant')
-        .eq('etf_code', '00981A')
+        .eq('etf_code', etfCode)
         .order('data_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(500);
-    
+
     if (!logsData) return [];
 
     // 2. Fetch all snapshot data for these dates to calculate rank
@@ -374,7 +390,7 @@ async function getDiffLogs() {
         .from('etf_holdings_snapshot')
         .select('data_date, stock_code, weight')
         .in('data_date', uniqueDates)
-        .eq('etf_code', '00981A');
+        .eq('etf_code', etfCode);
 
     // 3. Build ranking map: { date: { stock_code: rank } }
     const dateRankMap: Record<string, Record<string, number>> = {};
@@ -407,13 +423,17 @@ async function getDiffLogs() {
     }));
 }
 
-export default async function InvestmentPage() {
-    const { holdings, updatedAt, dataDate } = await getHoldings();
+export default async function InvestmentPage({ searchParams }: { searchParams: Promise<{ etf?: string; tab?: string }> }) {
+    const params = await searchParams;
+    const etfCode = (SUPPORTED_ETFS as readonly string[]).includes(params.etf ?? '') ? (params.etf as string) : DEFAULT_ETF;
+    const etfMeta = ETF_META[etfCode] ?? ETF_META[DEFAULT_ETF];
+
+    const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
 
     // 並行計算三大量化 Filter（不阻塞其他 fetch）
     const [logs, rankingHistory, goldenZoneStats, quantFilters, compareData] = await Promise.all([
-        getDiffLogs(),
-        getRankingHistory(),
+        getDiffLogs(etfCode),
+        getRankingHistory(etfCode),
         getGoldenZoneStats(),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
         getCompareData(),
@@ -442,11 +462,14 @@ export default async function InvestmentPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        00981A 投資監控
+                        {etfMeta.shortCode} 投資監控
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        主動統一台股增長 • 即時追蹤持股異動與投資策略
+                        {etfMeta.name} · {etfMeta.manager} • 即時追蹤持股異動與投資策略
                     </p>
+                    <div className="mt-3">
+                        <EtfSelector currentEtf={etfCode} />
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -486,17 +509,20 @@ export default async function InvestmentPage() {
                     }
                     ledgerContent={
                         <div className="w-full space-y-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <RankingTrendChart data={rankingHistory} />
-                                <ChangeImpactChart logs={logs} />
-                            </div>
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            {/* 區塊 1：持股排名走勢 */}
+                            <RankingTrendChart data={rankingHistory} />
+
+                            {/* 區塊 2：資金影響力排行 */}
+                            <ChangeImpactChart logs={logs} />
+
+                            {/* 區塊 3：近期異動紀錄 */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
                                     <ClockIcon className="w-5 h-5 text-indigo-500" />
-                                    近期異動紀錄
-                                </h3>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">近期異動紀錄</h3>
+                                </div>
+                                <DiffLedger logs={logs} />
                             </div>
-                            <DiffLedger logs={logs} />
                         </div>
                     }
                 />
