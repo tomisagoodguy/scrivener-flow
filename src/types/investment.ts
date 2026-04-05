@@ -1,7 +1,7 @@
 export interface DiffLog {
     id: string;
     data_date: string;
-    change_type: 'IN' | 'OUT' | 'BUY' | 'SELL';
+    change_type: 'IN' | 'OUT' | 'BUY' | 'SELL' | 'CLOSE';
     stock_code: string;
     stock_name: string;
     diff_shares: number;
@@ -9,6 +9,11 @@ export interface DiffLog {
     description: string;
     industry?: string;
     rank?: number | null;
+    prev_weight?: number | null;
+    curr_weight?: number | null;
+    prev_shares?: number | null;
+    curr_shares?: number | null;
+    is_significant?: boolean | null;
 }
 
 export interface Holding {

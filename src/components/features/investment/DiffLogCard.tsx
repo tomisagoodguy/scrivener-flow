@@ -3,14 +3,15 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-    ClockIcon, 
-    ArrowRightIcon, 
-    TrendingUpIcon, 
-    TrendingDownIcon, 
-    TrashIcon, 
-    RocketIcon, 
-    TagIcon 
+import {
+    ClockIcon,
+    ArrowRightIcon,
+    TrendingUpIcon,
+    TrendingDownIcon,
+    TrashIcon,
+    RocketIcon,
+    MinusCircleIcon,
+    LucideIcon,
 } from 'lucide-react';
 
 import { DiffLog } from '@/types/investment';
@@ -19,7 +20,7 @@ export interface DiffLogCardProps {
     log: DiffLog;
     index: number;
     dateIndex: number;
-    getBehaviorTags: (stockCode: string, currentLog: DiffLog) => { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: any }[];
+    getBehaviorTags: (stockCode: string, currentLog: DiffLog) => { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: LucideIcon }[];
 }
 
 export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogCardProps) {
@@ -62,6 +63,15 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
                     badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                     label: '減碼',
                     color: 'text-emerald-600'
+                };
+            case 'CLOSE':
+                return {
+                    icon: MinusCircleIcon,
+                    bg: 'bg-amber-50 dark:bg-amber-950/40',
+                    iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-800/50 dark:text-amber-300',
+                    badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                    label: '大幅縮減',
+                    color: 'text-amber-600'
                 };
             default:
                 return {
@@ -137,8 +147,8 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
                                  {log.change_type}
                              </span>
                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                 {log.change_type === 'IN' || log.change_type === 'OUT' 
-                                     ? config.label 
+                                 {log.change_type === 'IN' || log.change_type === 'OUT' || log.change_type === 'CLOSE'
+                                     ? config.label
                                      : `${config.label} ${Math.abs(log.diff_shares).toLocaleString()} 股`}
                              </span>
                          </div>
@@ -150,8 +160,10 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
                                     key={tIdx}
                                     className={`
                                         flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border
-                                        ${tag.color === 'red' 
-                                            ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-800' 
+                                        ${tag.color === 'red'
+                                            ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-800'
+                                            : tag.color === 'amber'
+                                            ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
                                             : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
                                         }
                                     `}
@@ -169,14 +181,20 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
                         {log.diff_weight > 0 ? '▲' : log.diff_weight < 0 ? '▼' : ''}
                         {Math.abs(log.diff_weight)}%
                     </div>
-                    <div className="text-[10px] font-bold text-slate-400 flex items-center justify-end gap-1">
-                        <div className="flex -space-x-1 mr-1">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className={`w-1 h-1 rounded-full ${log.diff_weight > 0 ? 'bg-rose-400' : 'bg-emerald-400'} opacity-${60 - (i*20)}`} />
-                            ))}
+                    {(log.prev_weight != null || log.curr_weight != null) ? (
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            {log.prev_weight ?? '—'}% → {log.curr_weight ?? '—'}%
                         </div>
-                        權重變動
-                    </div>
+                    ) : (
+                        <div className="text-[10px] font-bold text-slate-400 flex items-center justify-end gap-1">
+                            <div className="flex -space-x-1 mr-1">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className={`w-1 h-1 rounded-full ${log.diff_weight > 0 ? 'bg-rose-400' : 'bg-emerald-400'} opacity-${60 - (i*20)}`} />
+                                ))}
+                            </div>
+                            權重變動
+                        </div>
+                    )}
                 </div>
             </div>
             

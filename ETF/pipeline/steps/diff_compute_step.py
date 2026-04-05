@@ -6,22 +6,21 @@ Diff Compute Step
 
 from .base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from ETF.processors.diff_engine import compute_diff, filter_significant
 import pandas as pd
 
 
 class DiffComputeStep(BaseStep):
     """計算持股異動"""
-    
+
     @property
     def name(self) -> str:
         return "Compute Diff"
-    
+
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
-    
+
     def execute(self, ctx: PipelineContext) -> PipelineContext:
-        from ETF.processors.diff_engine import compute_diff
-        
         if ctx.df is None:
             raise ValueError("No DataFrame available for diff computation")
         
@@ -54,11 +53,18 @@ class DiffComputeStep(BaseStep):
             self.logger.warning("No suitable previous snapshot found. This will result in all 'New Entry' logs.")
 
         
-        # 計算異動
-        ctx.diff_logs = compute_diff(prev_df, ctx.df, ctx.etf_code, ctx.date_str)
-        
-        if ctx.diff_logs:
-            self.logger.info(f"Found {len(ctx.diff_logs)} diff events.")
+        # 計算異動（含 CLOSE 判定、0.10% 閾值過濾）
+        all_logs = compute_diff(prev_df, ctx.df, ctx.etf_code, ctx.date_str)
+        ctx.diff_logs = all_logs  # 保留全部（含 TRIM）供後續分析
+
+        significant = filter_significant(all_logs)
+        trim_count = len(all_logs) - len(significant)
+
+        if significant:
+            self.logger.info(
+                f"Found {len(all_logs)} diff events "
+                f"({len(significant)} significant, {trim_count} minor trims suppressed)."
+            )
         else:
             self.logger.info("No significant changes found.")
         

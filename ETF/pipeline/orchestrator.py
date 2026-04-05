@@ -5,7 +5,6 @@ Pipeline Orchestrator
 """
 
 import logging
-import sys
 from typing import List, Type
 
 from .context import PipelineContext
@@ -17,6 +16,7 @@ from .steps import (
     SaveSnapshotStep,
     SyncCompanyStep,
     SyncOHLCVStep,
+    WeightHistoryStep,
     NotifyStep,
     CleanupStep,
 )
@@ -38,6 +38,7 @@ class PipelineOrchestrator:
         PriceAttachStep,
         DiffComputeStep,
         SaveSnapshotStep,
+        WeightHistoryStep,   # 快照存完後聚合排名→走勢表
         SyncCompanyStep,
         SyncOHLCVStep,
         NotifyStep,

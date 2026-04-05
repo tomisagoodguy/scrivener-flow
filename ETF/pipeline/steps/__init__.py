@@ -13,6 +13,7 @@ from .sync_company_step import SyncCompanyStep
 from .sync_ohlcv_step import SyncOHLCVStep
 from .notify_step import NotifyStep
 from .cleanup_step import CleanupStep
+from .weight_history_step import WeightHistoryStep
 
 __all__ = [
     "BaseStep",
@@ -22,6 +23,7 @@ __all__ = [
     "SaveSnapshotStep",
     "SyncCompanyStep",
     "SyncOHLCVStep",
+    "WeightHistoryStep",
     "NotifyStep",
     "CleanupStep",
 ]

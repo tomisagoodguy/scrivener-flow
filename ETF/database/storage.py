@@ -235,17 +235,49 @@ class ETFStorage:
     def save_diff_logs(self, diffs: List[Dict[str, Any]]):
         """
         Save diff events via REST API.
+        新版支援 prev_shares / curr_shares / prev_weight / curr_weight / is_significant 欄位。
         """
         if not diffs:
             return
-        
+
+        # 過濾掉 DB schema 不認識的 key（避免 insert 錯誤）
+        ALLOWED_KEYS = {
+            "etf_code", "data_date", "change_type", "stock_code", "stock_name",
+            "diff_shares", "diff_weight", "description",
+            "prev_shares", "curr_shares", "prev_weight", "curr_weight", "is_significant",
+        }
+        safe_diffs = [{k: v for k, v in d.items() if k in ALLOWED_KEYS} for d in diffs]
+
         try:
             url = f"{self.supabase_url}/rest/v1/etf_diff_logs"
-            requests.post(url, headers=self.headers, json=diffs).raise_for_status()
-            logger.info(f"Saved {len(diffs)} diff logs via REST.")
+            requests.post(url, headers=self.headers, json=safe_diffs).raise_for_status()
+            logger.info(f"Saved {len(safe_diffs)} diff logs via REST.")
         except Exception as e:
             logger.error(f"Failed to save diff logs via REST: {e}")
             raise
+
+    def save_weight_history(self, records: List[Dict[str, Any]]):
+        """
+        Upsert 持股權重走勢記錄至 etf_weight_history 表。
+        records 需含欄位：etf_code, stock_code, stock_name, data_date, weight, shares, rank
+        """
+        if not records:
+            return
+
+        url = f"{self.supabase_url}/rest/v1/etf_weight_history"
+        headers = self.headers.copy()
+        headers["Prefer"] = "resolution=merge-duplicates"
+
+        batch_size = 500
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i + batch_size]
+            try:
+                resp = requests.post(url, headers=headers, json=batch)
+                resp.raise_for_status()
+            except Exception as e:
+                logger.error(f"Failed to save weight history batch (offset {i}): {e}")
+
+        logger.info(f"✅ 權重走勢已寫入 {len(records)} 筆")
 
     def update_holding_periods(self, diffs: List[Dict[str, Any]]):
         """

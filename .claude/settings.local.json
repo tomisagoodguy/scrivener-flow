@@ -14,7 +14,20 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(clauses\\): 移除基本特約強制置頂邏輯，改為依篩選條件顯示\")",
-      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"style\\(clauses\\): 修復深色模式基本特約卡片背景色，改用深海軍藍漸層\")"
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"style\\(clauses\\): 修復深色模式基本特約卡片背景色，改用深海軍藍漸層\")",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 1\\\\.1/- [x] 1.1/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 1\\\\.2/- [x] 1.2/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 3\\\\.1/- [x] 3.1/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 3\\\\.2/- [x] 3.2/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 3\\\\.3/- [x] 3.3/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 4\\\\.1/- [x] 4.1/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 4\\\\.2/- [x] 4.2/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 5\\\\.1/- [x] 5.1/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(sed -i 's/- \\\\[ \\\\] 5\\\\.2/- [x] 5.2/' openspec/changes/etf-ui-upgrade/tasks.md)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: upgrade ETF UI with ranking trend chart Top-N filter and CLOSE diff log support\")",
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: upgrade ETF UI with ranking trend chart Top-N filter and CLOSE diff log support\")"
     ]
   }
 }

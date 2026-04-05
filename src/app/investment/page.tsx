@@ -211,15 +211,48 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
 
 async function getRankingHistory() {
     const supabase = await createClient();
+
+    // 優先從 etf_weight_history 撈（有預計算 rank）
+    const { count } = await supabase
+        .from('etf_weight_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('etf_code', '00981A');
+
+    if (count && count > 0) {
+        const { data } = await supabase
+            .from('etf_weight_history')
+            .select('data_date, stock_code, stock_name, weight, rank')
+            .eq('etf_code', '00981A')
+            .order('data_date', { ascending: true });
+        return data ?? [];
+    }
+
+    // Fallback：從 etf_holdings_snapshot 聚合，補算 rank
     const { data } = await supabase
         .from('etf_holdings_snapshot')
         .select('data_date, stock_code, stock_name, weight')
         .eq('etf_code', '00981A')
         .order('data_date', { ascending: true });
-    
+
     if (!data || data.length === 0) return [];
-    
-    return data;
+
+    // 依日期分組，補算 rank（weight 降序，1 = 最大）
+    const byDate: Record<string, typeof data> = {};
+    for (const row of data) {
+        const d = row.data_date as string;
+        if (!byDate[d]) byDate[d] = [];
+        byDate[d].push(row);
+    }
+
+    const withRank: (typeof data[number] & { rank: number })[] = [];
+    for (const rows of Object.values(byDate)) {
+        const sorted = [...rows].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+        sorted.forEach((row, i) => {
+            withRank.push({ ...row, rank: i + 1 });
+        });
+    }
+
+    return withRank;
 }
 
 async function getDiffLogs() {
@@ -228,7 +261,7 @@ async function getDiffLogs() {
     // 1. Fetch logs
     const { data: logsData } = await supabase
         .from('etf_diff_logs')
-        .select('*')
+        .select('id, etf_code, data_date, change_type, stock_code, stock_name, diff_shares, diff_weight, description, created_at, prev_shares, curr_shares, prev_weight, curr_weight, is_significant')
         .eq('etf_code', '00981A')
         .order('data_date', { ascending: false })
         .order('created_at', { ascending: false })
@@ -270,7 +303,7 @@ async function getDiffLogs() {
 
     return logsData.map(l => ({
         ...l,
-        industry: industryMap[l.stock_code] || null,
+        industry: industryMap[l.stock_code] || undefined,
         rank: dateRankMap[l.data_date]?.[l.stock_code] || null
     }));
 }

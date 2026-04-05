@@ -7,8 +7,8 @@ import {
     TrashIcon, 
     RocketIcon,
     CalendarIcon,
+    LucideIcon
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { DiffLogCard } from './DiffLogCard';
 import { DiffLog } from '@/types/investment';
 
@@ -17,7 +17,6 @@ interface DiffLedgerProps {
 }
 
 export function DiffLedger({ logs }: DiffLedgerProps) {
-    const router = useRouter();
     if (!logs || logs.length === 0) {
         return (
             <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -41,14 +40,17 @@ export function DiffLedger({ logs }: DiffLedgerProps) {
         .slice(0, 10);
 
     const getBehaviorTags = (stockCode: string, currentLog: DiffLog) => {
-        const tags: { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: any }[] = [];
+        const tags: { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: LucideIcon }[] = [];
         
-        // 1. Action Types (IN/OUT)
+        // 1. Action Types (IN/OUT/CLOSE)
         if (currentLog.change_type === 'IN') {
             tags.push({ label: '首次建倉', color: 'red', icon: RocketIcon });
         }
         if (currentLog.change_type === 'OUT') {
             tags.push({ label: '全數清倉', color: 'green', icon: TrashIcon });
+        }
+        if (currentLog.change_type === 'CLOSE') {
+            tags.push({ label: '大幅縮減', color: 'amber' });
         }
 
         // 2. Aggressive Intensity (Weight Diff)

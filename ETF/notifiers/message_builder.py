@@ -5,7 +5,7 @@ Flex Message Builders
 將視覺呈現層 (Presentation) 與發送層 (Transport) 分離，避免 LineNotifier 過度膨脹。
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 class FlexMessageBuilder:
     """Flex Message 建構器基類"""
@@ -58,47 +58,62 @@ class DiffMessageBuilder(FlexMessageBuilder):
         if not diff_logs:
             return None
 
+        # 只顯示顯著異動，過濾 TRIM（微調）
+        significant = [d for d in diff_logs if d.get('is_significant', True) and d['change_type'] != 'TRIM']
+
+        if not significant:
+            return None
+
         # Categorize
-        in_stocks = [d for d in diff_logs if d['change_type'] == 'IN']
-        out_stocks = [d for d in diff_logs if d['change_type'] == 'OUT']
-        buy_stocks = [d for d in diff_logs if d['change_type'] == 'BUY']
-        sell_stocks = [d for d in diff_logs if d['change_type'] == 'SELL']
-        
-        # Sort
+        in_stocks    = [d for d in significant if d['change_type'] == 'IN']
+        out_stocks   = [d for d in significant if d['change_type'] == 'OUT']
+        close_stocks = [d for d in significant if d['change_type'] == 'CLOSE']
+        buy_stocks   = [d for d in significant if d['change_type'] == 'BUY']
+        sell_stocks  = [d for d in significant if d['change_type'] == 'SELL']
+
+        # Sort by abs weight change
         buy_stocks.sort(key=lambda x: abs(x.get('diff_weight', 0)), reverse=True)
         sell_stocks.sort(key=lambda x: abs(x.get('diff_weight', 0)), reverse=True)
 
         rows = []
-        
-        # Helper to add section
-        def _add_section(title, stocks, color, icon, is_out=False):
-            if not stocks: return
-            
-            # Header
+
+        def _weight_label(s: Dict[str, Any], show_prev: bool = False) -> str:
+            """格式化權重變動標籤，若有前後值則顯示 prev→curr"""
+            prev = s.get('prev_weight')
+            curr = s.get('curr_weight')
+            diff = s.get('diff_weight', 0)
+            if show_prev and prev is not None and curr is not None:
+                return f"{prev:.2f}%→{curr:.2f}%"
+            return f"{diff:+.2f}%"
+
+        def _add_section(title, stocks, color, icon, is_out=False, show_prev=False):
+            if not stocks:
+                return
+
             rows.append(cls._text(f"{icon} {title}", weight="bold", color=color, size="sm", margin="md"))
-            
-            # List (Top 10)
+
             display_list = stocks[:10]
             for s in display_list:
-                name_style = {"size": "sm", "flex": 4, "color": "#333333"}
+                name_style: Dict[str, Any] = {"size": "sm", "flex": 4, "color": "#333333"}
                 if is_out:
                     name_style["decoration"] = "line-through"
                     name_style["color"] = "#999999"
-                
+
                 rows.append(cls._box_horizontal([
                     cls._text(s['stock_name'], **name_style),
                     cls._text(s['stock_code'], size="xs", color="#aaaaaa", flex=2, align="end"),
-                    cls._text(f"{s['diff_weight']:+.2f}%", size="sm", align="end", flex=2, color=color)
+                    cls._text(_weight_label(s, show_prev), size="sm", align="end", flex=3, color=color),
                 ]))
-                
+
             if len(stocks) > 10:
                 rows.append(cls._text(f"...還有 {len(stocks)-10} 檔", size="xs", color="#aaaaaa", align="end"))
 
         # Build Sections
         _add_section("新增成分股", in_stocks, "#1DB446", "🚀")
         _add_section("剔除成分股", out_stocks, "#FF334B", "🗑️", is_out=True)
-        _add_section("權重加碼 (Top 10)", buy_stocks, "#F59E0B", "📈")
-        _add_section("權重減碼 (Top 10)", sell_stocks, "#64748B", "📉")
+        _add_section("近乎清倉 ⚠️", close_stocks, "#DC2626", "🚨", is_out=True, show_prev=True)
+        _add_section("權重加碼 (Top 10)", buy_stocks, "#F59E0B", "📈", show_prev=True)
+        _add_section("權重減碼 (Top 10)", sell_stocks, "#64748B", "📉", show_prev=True)
 
         if not rows:
             return None
