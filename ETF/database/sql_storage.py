@@ -30,7 +30,10 @@ class SQLStorage:
             
             self.db_url = f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres"
             
-        self.engine = sqlalchemy.create_engine(self.db_url)
+        self.engine = sqlalchemy.create_engine(
+            self.db_url,
+            connect_args={"client_encoding": "utf8"},
+        )
         self._ensure_tables()
 
     def _ensure_tables(self):

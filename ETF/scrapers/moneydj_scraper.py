@@ -43,8 +43,9 @@ def _fetch_page(url: str, params: dict) -> Optional[BeautifulSoup]:
         try:
             resp = session.get(url, params=params, timeout=30, verify=False)
             resp.raise_for_status()
-            resp.encoding = "utf-8"
-            return BeautifulSoup(resp.text, "lxml")
+            # MoneyDJ 頁面實際為 UTF-8，但 HTTP header 未宣告，需明確指定
+            # 用 from_encoding 避免 lxml 自行偵測覆蓋
+            return BeautifulSoup(resp.content, "lxml", from_encoding="utf-8")
         except Exception as e:
             logger.warning(f"Attempt {attempt + 1}/{MAX_RETRIES} failed: {e}")
             if attempt < MAX_RETRIES - 1:
@@ -53,22 +54,21 @@ def _fetch_page(url: str, params: dict) -> Optional[BeautifulSoup]:
 
 
 def _extract_date_from_soup(soup: BeautifulSoup) -> Optional[str]:
-    """從頁面中提取資料日期（格式 YYYY-MM-DD）"""
-    # MoneyDJ 通常在頁面某處顯示「資料日期：YYYY/MM/DD」
+    """從頁面中提取資料日期（格式 YYYY-MM-DD），取頁面所有日期中的最大值"""
     text_content = soup.get_text()
-    patterns = [
-        r"資料日期[：:]\s*(\d{4})[/-](\d{2})[/-](\d{2})",
-        r"基準日[：:]\s*(\d{4})[/-](\d{2})[/-](\d{2})",
-        r"(\d{4})/(\d{2})/(\d{2})",  # fallback: first date-like string
+
+    # 取頁面所有合法日期，返回最大值（= 最新資料日期）
+    # 不用 labeled pattern，因為 Big5/UTF-8 編碼問題導致關鍵字可能亂碼
+    all_dates = re.findall(r"(\d{4})[/-](\d{2})[/-](\d{2})", text_content)
+    valid = [
+        f"{y}-{mo}-{d_val}"
+        for y, mo, d_val in all_dates
+        if 2020 <= int(y) <= 2030 and 1 <= int(mo) <= 12 and 1 <= int(d_val) <= 31
     ]
-    for pat in patterns:
-        m = re.search(pat, text_content)
-        if m:
-            y, mo, d_val = m.group(1), m.group(2), m.group(3)
-            # 簡單驗證
-            if 2020 <= int(y) <= 2030 and 1 <= int(mo) <= 12 and 1 <= int(d_val) <= 31:
-                return f"{y}-{mo}-{d_val}"
-    # 最後 fallback：前一個交易日（週末時回推到週五）
+    if valid:
+        return max(valid)
+
+    # 最後 fallback：前一個交易日
     today = date.today()
     offset = 1
     if today.weekday() == 0:  # Monday
@@ -99,49 +99,65 @@ def scrape_holdings(etf_code: str) -> Tuple[pd.DataFrame, Optional[str]]:
 
     data_date = _extract_date_from_soup(soup)
 
-    # 找持股表格：MoneyDJ 前10大持股表格 class 含 "et-tbody"
-    # 或直接找包含 "股票代號" 的 table
+    # MoneyDJ 前10大持股表格格式：
+    #   欄位：股東名稱(含代號，格式「股名(1234.TW)」) | 持股比例(%) | 持股張數
+    # 由於頁面 Big5 編碼導致部分中文亂碼，直接以 (XXXX.TW) pattern 定位持股 table
     rows = []
     tables = soup.find_all("table")
     for table in tables:
-        headers = [th.get_text(strip=True) for th in table.find_all("th")]
-        header_text = " ".join(headers)
-        if "代號" in header_text or "股票" in header_text or "名稱" in header_text:
-            for tr in table.find_all("tr")[1:]:  # skip header row
-                tds = tr.find_all("td")
-                if len(tds) < 3:
+        table_text = table.get_text()
+        if not re.search(r"\(\d{4,6}\.TW\)", table_text):
+            continue
+
+        for tr in table.find_all("tr"):
+            tds = tr.find_all("td")
+            if len(tds) < 2:
+                continue
+
+            # 第一欄：「股名(代號.TW)」格式，如「台積電(2330.TW)」
+            first_col = tds[0].get_text(strip=True)
+            code_match = re.search(r"\((\d{4,6})\.TW\)", first_col)
+            if not code_match:
+                continue
+            code_text = code_match.group(1)
+            # 名稱 = 括號前的文字，去掉亂碼後只保留可辨識部分
+            raw_name = first_col[:first_col.rfind("(")].strip()
+            # 過濾掉替換字元 \ufffd，保留正常字元
+            name_text = "".join(c for c in raw_name if c != "\ufffd").strip() or code_text
+
+            # 第二欄：比重 %
+            weight_text = ""
+            for td in tds[1:]:
+                t = td.get_text(strip=True).replace("%", "").replace(",", "")
+                try:
+                    float(t)
+                    weight_text = t
+                    break
+                except ValueError:
                     continue
-                # 嘗試從不同欄位位置抽取代號、名稱、比重
-                # MoneyDJ 格式通常是：排名 | 股票代號 | 股票名稱 | 持股比例
-                code_text = ""
-                name_text = ""
-                weight_text = ""
 
-                for i, td in enumerate(tds):
-                    t = td.get_text(strip=True)
-                    # 找股票代號：4-5位數字
-                    if re.match(r"^\d{4,6}$", t):
-                        code_text = t
-                    # 找比重：含 % 或小數點的數字
-                    elif re.match(r"^\d{1,3}\.\d+%?$", t) and not weight_text:
-                        weight_text = t.replace("%", "")
-                    # 找名稱：中文字元 + 可能有英文
-                    elif re.search(r"[\u4e00-\u9fff]", t) and not name_text and len(t) >= 2:
-                        name_text = t
+            # 第三欄（若有）：持股張數
+            shares = 0
+            if len(tds) >= 3:
+                shares_text = tds[2].get_text(strip=True).replace(",", "")
+                try:
+                    shares = int(float(shares_text))
+                except ValueError:
+                    shares = 0
 
-                if code_text and name_text:
-                    try:
-                        w = float(weight_text) if weight_text else 0.0
-                        rows.append({
-                            "code": code_text,
-                            "name": name_text,
-                            "weight": w,
-                            "shares": 0,  # MoneyDJ 不提供股數，設為 0
-                        })
-                    except ValueError:
-                        continue
-            if rows:
-                break
+            if code_text:
+                try:
+                    w = float(weight_text) if weight_text else 0.0
+                    rows.append({
+                        "code": code_text,
+                        "name": name_text,
+                        "weight": w,
+                        "shares": shares,
+                    })
+                except ValueError:
+                    continue
+        if rows:
+            break
 
     if not rows:
         logger.error(f"Could not parse holdings table for {etf_code}")
@@ -156,6 +172,9 @@ def scrape_aum(etf_code: str) -> Optional[float]:
     """
     從 MoneyDJ 爬取 ETF AUM（億元台幣）。
 
+    MoneyDJ 格式為「359.48M(台幣)」或「3.59B(台幣)」，
+    M = 百萬元，B = 十億元，都需轉換為億元。
+
     Returns:
         AUM in 億元，或 None
     """
@@ -166,22 +185,27 @@ def scrape_aum(etf_code: str) -> Optional[float]:
         return None
 
     text_content = soup.get_text()
-    # 找「基金規模」或「淨資產」後面的數字（億元）
+
+    # MoneyDJ 格式：「359.48M(台幣)」或「3.59B(台幣)」
+    m = re.search(r"([\d,]+(?:\.\d+)?)\s*([MBmb])\s*\(", text_content)
+    if m:
+        val = float(m.group(1).replace(",", ""))
+        unit = m.group(2).upper()
+        if unit == "M":
+            return round(val / 100, 2)   # 百萬 → 億
+        elif unit == "B":
+            return round(val * 10, 2)    # 十億 → 億
+
+    # 備用：找「XXX 億」
     patterns = [
         r"基金規模[^0-9]*?([\d,]+(?:\.\d+)?)\s*億",
         r"淨資產[^0-9]*?([\d,]+(?:\.\d+)?)\s*億",
         r"資產規模[^0-9]*?([\d,]+(?:\.\d+)?)\s*億",
-        # 備用：找「XXX 百萬」並轉換
-        r"基金規模[^0-9]*?([\d,]+(?:\.\d+)?)\s*百萬",
     ]
-    for i, pat in enumerate(patterns):
-        m = re.search(pat, text_content)
-        if m:
-            val_str = m.group(1).replace(",", "")
-            val = float(val_str)
-            if i == 3:  # 百萬 → 億
-                val = val / 100
-            return round(val, 2)
+    for pat in patterns:
+        m2 = re.search(pat, text_content)
+        if m2:
+            return round(float(m2.group(1).replace(",", "")), 2)
 
     logger.warning(f"Could not extract AUM for {etf_code}")
     return None

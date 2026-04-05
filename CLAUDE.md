@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 此檔案提供 Claude Code 在本專案中工作的指引。
 
 ---
@@ -312,3 +314,63 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 1. **資料優先**：先定義 Zod Schema / TypeScript interface，再實作 UI 與業務邏輯。
 2. **單一事實來源**：同一概念只能有一個實作，在 `domain/` 或 `types/` 定義，不要複製型別。
 3. **修改前先搜尋**：用 `Grep` / `Glob` 確認現有實作，能擴充就不新建。
+
+---
+
+## ETF Python Pipeline 架構
+
+每日 UTC 14:00 自動執行（`ETF/main.py`），追蹤三支 ETF：
+
+| ETF | 名稱 | 資料來源 |
+| :--- | :--- | :--- |
+| **00981A** | 半導體收益 ETF | `fhtrust_scraper.py`（復華投信） |
+| **00980A** | 野村智慧優選 | `moneydj_scraper.py`（MoneyDJ） |
+| **00991A** | 復華未來50 | `moneydj_scraper.py`（MoneyDJ） |
+
+### Pipeline 步驟（00981A 主流程）
+
+```text
+ScrapeStep → PriceAttachStep → DiffComputeStep → SaveSnapshotStep
+→ WeightHistoryStep → MultiEtfStep → SyncCompanyStep → SyncOHLCVStep
+→ NotifyStep → CleanupStep
+```
+
+`MultiEtfStep` 在主流程中處理 00980A / 00991A（快照、AUM、產業分布）。
+
+### 關鍵模組
+
+| 路徑 | 說明 |
+| :--- | :--- |
+| `ETF/pipeline/context.py` | `PipelineContext`：步驟間共享狀態（df、date_str、diff_logs 等） |
+| `ETF/pipeline/orchestrator.py` | 步驟執行順序 |
+| `ETF/processors/diff_engine.py` | `compute_diff()`：計算持股 IN/OUT/BUY/SELL |
+| `ETF/services/finlab/facade.py` | FinLab 股價 / OHLCV / 公司資料統一入口 |
+| `ETF/database/sql_storage.py` | SQLAlchemy 直接操作 Supabase（繞過 RLS） |
+| `ETF/daily_ai_report.py` | Gemini AI 報告產生 + LINE 發送 |
+| `ETF/ai_report/fetcher.py` | 從 DB 取快照 / diff_logs 供 AI 分析 |
+
+### ETF 常用指令
+
+```bash
+uv run python ETF/main.py --days 30        # 正常執行（同步最近 30 天）
+uv run python ETF/main.py --dry-run        # 只跑 ScrapeStep，不寫 DB
+uv run python ETF/daily_ai_report.py       # 單獨執行 AI 報告
+uv run python ETF/sync_stock_financials.py --days 60  # 同步股票財務資料
+```
+
+---
+
+## 功能變更流程（openspec）
+
+**所有功能開發 / 修改必須走 openspec 流程**，不使用 `/plan`。
+
+```bash
+openspec new change "<name>"          # 建立新 change
+openspec status --change "<name>"     # 查看 artifact 進度
+openspec instructions <artifact> --change "<name>"  # 取得撰寫指引
+openspec apply --change "<name>"      # 開始執行 tasks
+```
+
+Change 目錄：`openspec/changes/<name>/`，Artifact 順序：`proposal → design → specs → tasks`。
+
+進行中的 change 可用 `openspec status --change "<name>"` 確認進度，tasks.md 用 checkbox 追蹤。
