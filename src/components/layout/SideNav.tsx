@@ -57,7 +57,6 @@ export const SideNav = () => {
         { name: '共筆', href: '/knowledge', icon: '📚' },
         { name: '稅費試算', href: '/calculator', icon: '🧮' },
         { name: '投資監控', href: '/investment', icon: '📈' },
-        { name: 'ETF 對比', href: '/investment/compare', icon: '⚖️' },
     ];
 
     const handleLogout = async () => {

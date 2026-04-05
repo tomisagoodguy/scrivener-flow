@@ -110,7 +110,7 @@ export default async function EtfComparePage() {
     const data = await getCompareData();
 
     const displayDate = data?.date
-        ? new Date(data.date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+        ? new Date(data.date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
         : 'N/A';
 
     return (

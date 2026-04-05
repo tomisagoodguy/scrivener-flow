@@ -9,6 +9,7 @@ interface InvestmentTabsProps {
   revenueLabContent: React.ReactNode;
   holdingsContent: React.ReactNode;
   ledgerContent: React.ReactNode;
+  compareContent: React.ReactNode;
 }
 
 export function InvestmentTabs({
@@ -16,6 +17,7 @@ export function InvestmentTabs({
   revenueLabContent,
   holdingsContent,
   ledgerContent,
+  compareContent,
 }: InvestmentTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,7 +25,7 @@ export function InvestmentTabs({
   // 直接從 URL 衍生 activeTab，避免 useEffect + setState 引發的 cascading renders
   const activeTab = useMemo(() => {
     const tab = searchParams.get('tab');
-    return tab && ['analysis', 'revenue-lab', 'holdings', 'ledger'].includes(tab) ? tab : 'analysis';
+    return tab && ['analysis', 'revenue-lab', 'holdings', 'ledger', 'compare'].includes(tab) ? tab : 'analysis';
   }, [searchParams]);
 
   // 監控 Hash 變化並在 Tab 切換後手動捲動（此 effect 只與外部系統 DOM 互動，無 setState）
@@ -70,7 +72,7 @@ export function InvestmentTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-4 max-w-[800px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+      <TabsList className="grid w-full grid-cols-5 max-w-[1000px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
         <TabsTrigger
           value="analysis"
           className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
@@ -95,12 +97,19 @@ export function InvestmentTabs({
         >
           異動紀錄
         </TabsTrigger>
+        <TabsTrigger
+          value="compare"
+          className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
+        >
+          ETF 對比
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="analysis">{analysisContent}</TabsContent>
       <TabsContent value="revenue-lab">{revenueLabContent}</TabsContent>
       <TabsContent value="holdings">{holdingsContent}</TabsContent>
       <TabsContent value="ledger">{ledgerContent}</TabsContent>
+      <TabsContent value="compare">{compareContent}</TabsContent>
     </Tabs>
   );
 }
