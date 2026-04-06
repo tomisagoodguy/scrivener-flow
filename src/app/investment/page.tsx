@@ -5,11 +5,12 @@ import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZ
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { EtfComparePanel } from '@/components/features/investment/EtfComparePanel';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
-import { ClockIcon, FlaskConicalIcon } from 'lucide-react';
+import { ClockIcon, FlaskConicalIcon, HistoryIcon } from 'lucide-react';
 import React from 'react';
 import { Holding, DiffLog } from '@/types/investment';
 import { ETF_REGISTRY, ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistry';
 import Link from 'next/link';
+import { ConsensusPanel, type ConsensusRow } from '@/components/features/investment/ConsensusPanel';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -251,6 +252,52 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
     return result;
 }
 
+async function fetchConsensusData(): Promise<{ data: ConsensusRow[]; date: string }> {
+    const supabase = await createClient();
+
+    const { data: latest } = await supabase
+        .from('etf_stock_overlap')
+        .select('data_date')
+        .order('data_date', { ascending: false })
+        .limit(1);
+
+    if (!latest || latest.length === 0) return { data: [], date: '' };
+    const queryDate: string = latest[0].data_date;
+
+    const { data: overlapData } = await supabase
+        .from('etf_stock_overlap')
+        .select('stock_code, etf_count, total_weight, etf_list')
+        .eq('data_date', queryDate)
+        .gte('etf_count', 1)
+        .order('etf_count', { ascending: false })
+        .order('total_weight', { ascending: false })
+        .limit(200);
+
+    if (!overlapData || overlapData.length === 0) return { data: [], date: queryDate };
+
+    const stockCodes = overlapData.map((r) => r.stock_code);
+    const { data: nameData } = await supabase
+        .from('etf_holdings_snapshot')
+        .select('stock_code, stock_name')
+        .in('stock_code', stockCodes)
+        .eq('data_date', queryDate);
+
+    const nameMap: Record<string, string> = {};
+    for (const row of nameData ?? []) {
+        nameMap[row.stock_code] = row.stock_name;
+    }
+
+    const data: ConsensusRow[] = overlapData.map((row) => ({
+        stock_code: row.stock_code,
+        stock_name: nameMap[row.stock_code] ?? '',
+        etf_count: row.etf_count,
+        total_weight: Number(row.total_weight),
+        etf_list: (row.etf_list as ConsensusRow['etf_list']) ?? [],
+    }));
+
+    return { data, date: queryDate };
+}
+
 async function getAllDiffLogs(): Promise<DiffLog[]> {
     const supabase = await createClient();
 
@@ -373,11 +420,12 @@ export default async function InvestmentPoolPage() {
     const unionHoldings = buildUnionHoldings(byEtf);
     const allCodes = unionHoldings.map(h => h.stock_code);
 
-    const [quantFilters, allLogs, goldenZoneStats, compareData] = await Promise.all([
+    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult] = await Promise.all([
         fetchQuantFilters(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
         getCompareData(),
+        fetchConsensusData(),
     ]);
 
     const unionWithFilters = unionHoldings.map(h => ({
@@ -423,6 +471,13 @@ export default async function InvestmentPoolPage() {
                         資料日期: {displayDate}
                     </div>
                     {/* Task 5.3: Revenue Lab 入口 */}
+                    <Link
+                        href="/investment/history"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-400 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                        <HistoryIcon className="w-4 h-4" />
+                        持倉歷史
+                    </Link>
                     <Link
                         href="/investment/revenue-lab"
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 transition-colors"
@@ -481,6 +536,9 @@ export default async function InvestmentPoolPage() {
                                 <p className="text-sm mt-2">系統每日 22:00 自動更新</p>
                             </div>
                         )
+                    }
+                    consensusContent={
+                        <ConsensusPanel data={consensusResult.data} date={consensusResult.date} />
                     }
                 />
             </React.Suspense>

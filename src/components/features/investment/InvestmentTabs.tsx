@@ -9,15 +9,17 @@ interface InvestmentTabsProps {
     analysisContent: React.ReactNode;
     ledgerContent: React.ReactNode;
     compareContent: React.ReactNode;
+    consensusContent: React.ReactNode;
 }
 
-const VALID_TABS = ['stock-picker', 'analysis', 'ledger', 'compare'] as const;
+const VALID_TABS = ['stock-picker', 'analysis', 'ledger', 'compare', 'consensus'] as const;
 
 export function InvestmentTabs({
     stockPickerContent,
     analysisContent,
     ledgerContent,
     compareContent,
+    consensusContent,
 }: InvestmentTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -61,7 +63,7 @@ export function InvestmentTabs({
 
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 max-w-2xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <TabsList className="grid w-full grid-cols-5 max-w-3xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                 <TabsTrigger
                     value="stock-picker"
                     className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
@@ -86,12 +88,19 @@ export function InvestmentTabs({
                 >
                     ETF 對比
                 </TabsTrigger>
+                <TabsTrigger
+                    value="consensus"
+                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
+                >
+                    共識持股
+                </TabsTrigger>
             </TabsList>
 
             <TabsContent value="stock-picker">{stockPickerContent}</TabsContent>
             <TabsContent value="analysis">{analysisContent}</TabsContent>
             <TabsContent value="ledger">{ledgerContent}</TabsContent>
             <TabsContent value="compare">{compareContent}</TabsContent>
+            <TabsContent value="consensus">{consensusContent}</TabsContent>
         </Tabs>
     );
 }

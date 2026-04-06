@@ -15,6 +15,7 @@ from .notify_step import NotifyStep
 from .cleanup_step import CleanupStep
 from .weight_history_step import WeightHistoryStep
 from .multi_etf_step import MultiEtfStep
+from .overlap_compute_step import OverlapComputeStep
 
 __all__ = [
     "BaseStep",
@@ -26,6 +27,7 @@ __all__ = [
     "SyncOHLCVStep",
     "WeightHistoryStep",
     "MultiEtfStep",
+    "OverlapComputeStep",
     "NotifyStep",
     "CleanupStep",
 ]

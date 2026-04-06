@@ -18,6 +18,14 @@ const ETF_CONFIG: Record<string, { color: string; label: string }> = {
     '00981A': { color: '#8b5cf6', label: '00981A 統一台股增長' },
     '00980A': { color: '#3b82f6', label: '00980A 野村智慧優選' },
     '00991A': { color: '#f59e0b', label: '00991A 復華未來50' },
+    '00982A': { color: '#10b981', label: '00982A 中信優選成長' },
+    '00984A': { color: '#f43f5e', label: '00984A 群益主動優選' },
+    '00985A': { color: '#06b6d4', label: '00985A 元大主動選股' },
+    '00987A': { color: '#84cc16', label: '00987A 凱基主動精選' },
+    '00992A': { color: '#a855f7', label: '00992A 統一主動選股' },
+    '00993A': { color: '#fb923c', label: '00993A 永豐主動選股' },
+    '00994A': { color: '#64748b', label: '00994A 新光主動選股' },
+    '00995A': { color: '#ec4899', label: '00995A 台新主動選股' },
 };
 
 type ViewMode = 'rank' | 'weight';

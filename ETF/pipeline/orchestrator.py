@@ -18,6 +18,7 @@ from .steps import (
     SyncOHLCVStep,
     WeightHistoryStep,
     MultiEtfStep,
+    OverlapComputeStep,
     NotifyStep,
     CleanupStep,
 )
@@ -43,6 +44,7 @@ class PipelineOrchestrator:
         MultiEtfStep,        # 爬取 00980A / 00991A 持股、AUM、產業
         SyncCompanyStep,
         SyncOHLCVStep,
+        OverlapComputeStep,  # 聚合跨 ETF 共識持股 → etf_stock_overlap
         NotifyStep,
         CleanupStep,
     ]
