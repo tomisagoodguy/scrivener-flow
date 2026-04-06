@@ -83,7 +83,7 @@ class OverlapComputeStep(BaseStep):
             INSERT INTO etf_stock_overlap
                 (stock_code, data_date, etf_count, total_weight, etf_list)
             VALUES
-                (:stock_code, :data_date, :etf_count, :total_weight, :etf_list::jsonb)
+                (:stock_code, :data_date, :etf_count, :total_weight, CAST(:etf_list AS jsonb))
             ON CONFLICT (stock_code, data_date) DO UPDATE SET
                 etf_count    = EXCLUDED.etf_count,
                 total_weight = EXCLUDED.total_weight,
