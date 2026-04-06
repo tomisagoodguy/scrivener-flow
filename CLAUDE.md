@@ -223,7 +223,13 @@ supabase/migrations/20260111032050_recreate_full_schema.sql
 
 ### 5-2. 投資模組
 
-投資儀表板（`src/app/investment/`）採 Repository Pattern，`repositories/` 下有獨立的 `priceRepo`、`revenueRepo`、`stockRepo`。後端股票資料由 Python FinLab 腳本定期同步，存入 Supabase。
+投資儀表板路由結構：
+- `src/app/investment/[etf]/page.tsx` — ETF 持股監控頁（00980A / 00981A / 00991A 三支，動態路由）
+- `src/app/investment/stock/[code]/page.tsx` — 個股詳情頁（從持股明細點入）
+
+採 Repository Pattern，`repositories/` 下有獨立的 `priceRepo`、`revenueRepo`、`stockRepo`。`hooks/investment/` 下有對應的資料 hook（`useHoldingsFilter`、`useStockDashboard`、`usePriceData` 等）。後端股票資料由 Python FinLab 腳本定期同步，存入 Supabase。
+
+**00980A / 00991A 股價資料補充機制**：這兩支 ETF 的 `etf_holdings_snapshot` 只有 `weight/shares`，`price` 等欄位為 null。`getHoldings()` 在 Server 端會偵測 `price = null` 的持股，從 `stock_prices_daily` 補充最新的 `price`、`change_percent`、`amount`、`margin_ratio`。此表的資料由 `SyncOHLCVStep` 透過 `ctx.secondary_stock_codes` 合併後 sync。
 
 ### 6. E2EE 敏感資料
 
@@ -274,11 +280,12 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 | 優先 | 檔案 | 說明 |
 | :--- | :--- | :--- |
-| 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial 等） |
+| 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial、Holding 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 | 3 | `src/lib/constants/caseConstants.ts` | 案件狀態、待辦來源型別常數（DB 值必須與此一致） |
 | 4 | `src/lib/investment/yearUtils.ts` | 投資模組年份常數（`generateAvailableYears`） |
 | 5 | `src/lib/calculator/taxConstants.ts` | 稅費計算基準常數（印花稅率、地價稅層距） |
+| 6 | `ETF/pipeline/context.py` | Pipeline 步驟間共享狀態，含 `secondary_stock_codes` |
 
 ---
 
@@ -324,7 +331,7 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 | ETF | 名稱 | 資料來源 |
 | :--- | :--- | :--- |
-| **00981A** | 半導體收益 ETF | `fhtrust_scraper.py`（復華投信） |
+| **00981A** | 主動統一台股增長 | `fhtrust_scraper.py`（復華投信） |
 | **00980A** | 野村智慧優選 | `moneydj_scraper.py`（MoneyDJ） |
 | **00991A** | 復華未來50 | `moneydj_scraper.py`（MoneyDJ） |
 
@@ -336,7 +343,7 @@ ScrapeStep → PriceAttachStep → DiffComputeStep → SaveSnapshotStep
 → NotifyStep → CleanupStep
 ```
 
-`MultiEtfStep` 在主流程中處理 00980A / 00991A（快照、AUM、產業分布）。
+`MultiEtfStep` 在主流程中處理 00980A / 00991A（快照、AUM、產業分布），並將成分股代碼存入 `ctx.secondary_stock_codes`。後續 `SyncOHLCVStep` 會合併 00981A 與次要 ETF 的全部代碼一起 sync 進 `stock_prices_daily`，確保前端持股明細可顯示現價等資料。
 
 ### 關鍵模組
 

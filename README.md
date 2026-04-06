@@ -1,110 +1,113 @@
-# Scrivener Flow - 專業代書案件管理系統 🚀
+# Scrivener Flow - 專業代書案件管理系統
 
-Scrivener Flow 是一款專為地政士（代書）量身打造的高效率、視窗化案件管理與時程監控系統。透過規格驅動開發 (SDD) 與 AI 代理組件，我們將繁瑣的法定流程轉化為直觀的戰情中心，協助您精確掌握每一個案件細節，從簽約到交屋全程無憂。
+Scrivener Flow 是一套面向台灣代書（地政士）的不動產案件管理系統。核心命題：把簽約→用印→完稅→代償→交屋的整個作業流程，從 Excel + 便利貼轉移到一個具備即時同步、自動提醒、投資組合追蹤與 AI 輔助的 Web App。
 
-> 🗺️ **[文件導覽地圖 (DOCS_MAP)](./DOCS_MAP.md)**：如果您迷路了，可以在這裡找到所有的專案手冊與規範。
-
----
-
-## 🌟 核心功能 (Core Features)
-
-### 1. 全方位案件監控 (Advanced Monitoring)
-
-- **全流程 Pipeline 戰情室**：將案件分類為「簽、印、稅、過、交」五大階段，透過動態圖表一目了然各階段存量，支援點擊圓圈立即篩選對應案件。
-- **多維度檢視切換**：
-  - **承辦中/已結案**：傳統清單模式，快速查閱案件基本資訊、價格與銀行。
-  - **時程 (Timeline)**：基於日期的高密度任務列表。
-  - **備忘錄 (Memo)**：集中管理案件記事，適合處理複雜的非結構化資訊。
-  - **未完成統整 (Pending)**：自動掃描各案件 checklist，將落後進度集中呈現。
-
-### 2. 時程總覽中心 (Timeline Hub)
-
-- **今日焦點 (Today's Focus)**：聚合「逾期警示」、「近期注意事項推播」、「今日任務」與「明日預告」，讓您在開工前 1 分鐘掌握全天重點。
-- **智能注意事項推播**：
-  - **約客 (Appointment)**：提前 3 天開始提醒。
-  - **稅單限繳 (Tax Deadline)**：提前 5 天開始提醒。
-  - **里程碑 (Milestone)**：今日與明日發生時即刻呈報。
-- **高密度列表 (Daily List)**：每日任務按類別（里程碑、約客、截止、待辦）顏色與圖標區分，支援一鍵過濾單一類別。
-
-### 3. 精確案件管理 (Case Management)
-
-- **法定事實 vs 執行任務**：里程碑為「法定基準」，待辦事項為「行動任務」。
-- **Checklist 自動關聯**：未完成的 checklist 項目會自動掛載於時程中最接近的里程碑上，確保流程不中斷。
-- **財務與規費自動化**：支援專業輸入縮寫（如 `5` 轉 `50,000`），內建土地增值稅、契稅限繳日期監控。
-- **Excel 匯出與模板產表**：一鍵產生案件報表或填入 Word 模板（合約摘要等）。
-
-### 4. 團隊協作與安全 (Security & Collaboration)
-
-- **Google OAuth 2.0**：無感登入，安全可靠。
-- **Row Level Security (RLS)**：基於 Supabase 內建資料隔離技術，確保不同使用者（地政士）的案件資料完全獨立，絕不越權。
-- **即時數據同步 (Realtime)**：多裝置操作、標記完成後即時同步至時程看板，免手動重新整理。
+部署目標：Vercel (`scrivener-flow.vercel.app`)
 
 ---
 
-## 🛠 技術堆疊 (Tech Stack)
+## 核心功能
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Vanilla CSS (Refined Vibe)
-- **Backend**: Supabase (Auth, PostgreSQL, Realtime, Storage)
-- **Utils**: date-fns (Time matrix), docxtemplater (Word gen), xlsx (Excel export), Zod (Data Validation)
-- **Design Paradigm**: Glassmorphism (玻璃擬態), Modern Minimalist, Responsive for Mobile/Tablet
+### 案件管理
 
----
+- **五階段 Pipeline 戰情室**：簽、印、稅、過、交，動態圓餅圖一鍵篩選
+- **里程碑 vs 任務**：里程碑為合約法定事實（唯讀），系統在里程碑前 3–5 天自動生成提醒任務
+- **財務自動化**：土地增值稅、契稅限繳日期監控；支援專業輸入縮寫（`5` → `50,000`）
+- **Excel 匯出 / Word 產表**：一鍵報表或填入合約模板
 
-## 🚀 快速啟動 (Quick Start)
+### 時程總覽
 
-1. **安裝依賴**:
-   ```bash
-   yarn install
-   ```
+- **今日焦點**：逾期警示、近期推播、今日任務、明日預告
+- **智能推播**：約客提前 3 天、稅單限繳提前 5 天
+- **跨裝置即時同步**：Supabase Realtime 訂閱，免手動重整
 
-2. **環境變數設定**:
-   複製 `.env.example` 並更名為 `.env.local`，填入您的 Supabase 憑證。
+### 投資儀表板
 
-3. **開發模式**:
-   ```bash
-   yarn dev
-   ```
+追蹤三支主動式 ETF（00980A 野村智慧優選 / 00981A 主動統一台股增長 / 00991A 復華未來50）：
 
-4. **構建與生產**:
-   ```bash
-   yarn build
-   yarn start
-   ```
+- 持股明細：現價、漲跌、成交額、波動率、YoY/MoM 營收、量化篩選（M·T·R）
+- Diff 異動紀錄：IN/OUT/BUY/SELL 變化追蹤
+- 三 ETF 對比分析、選股中心（StockPickerHub）
+- 個股詳情頁：K 線圖、法人籌碼、Revenue Heatmap
+- Python FinLab 每日 22:00（UTC 14:00）自動同步，Gemini AI 產生報告並透過 LINE 發送
 
----
+### 其他
 
-## 🏗️ 代理開發流程 (ECC Protocol)
-
-本專案採用 **OpenSpec** 規格驅動開發 (Specification Driven Development)。所有重大變更皆遵循以下流程：
-
-1. **Proposal**: 建立 `/openspec/changes/[name]` 提案文件。
-2. **Implement**: 由 AI 代理 (Antigravity) 根據 `tasks.md` 執行變更。
-3. **Validate**: 執行 TypeScript 與 Lint 檢查，驗證介面 Vibe。
-4. **Archive**: 歸檔變更，更新 `specs/` 下的系統真相。
+- **知識庫**：Tiptap 富文字編輯器，團隊共用
+- **特約條款**：基本特約 + 自訂特約管理
+- **稅費試算**：內建印花稅率、地價稅層距計算
+- **代償管理**：銀行聯絡、代償步驟追蹤
+- **E2EE 私密備註**：AES-256-GCM 加密，90 天 Key 輪替
 
 ---
 
-## 📝 待辦與上線前確認 (Launch Checklist)
+## 技術堆疊
 
-- [ ] 測試 Google OAuth 登入流程。
-- [ ] 驗證 RLS 限制是否正確隔離不同使用者的案件。
-- [ ] 測試 Excel 匯出與 Word 產表是否格式正確。
-- [ ] 檢查「進度日期」修改後，儀表板提醒是否即時更新。
-- [ ] 確認「緊急戰情室」僅顯示可執行的 Tasks 而非 Milestones。
+| 技術 | 版本 | 用途 |
+| :--- | :--- | :--- |
+| Next.js | 16.1.1 | App Router、Server Components、Server Actions |
+| React | 19.2.3 | UI 元件樹 |
+| TypeScript | ^5 | 嚴格型別 |
+| Tailwind CSS | ^4 | Glassmorphism 視覺風格 |
+| Supabase JS | ^2.89.0 | PostgreSQL、Auth、Realtime |
+| Zod | ^4.3.5 | Schema 驗證 |
+| Framer Motion | ^12.26.2 | 動畫 |
+| Lightweight Charts | ^5.1.0 | K 線圖 |
+| Tiptap | ^3.17.0 | 富文字編輯器 |
+| Python | 3.13 | ETF 爬蟲、FinLab 量化分析 |
+| uv | — | Python 套件管理 |
 
 ---
 
-## 🌐 部署說明 (Deployment)
+## 快速啟動
 
-本專案已部署至 Vercel：`https://scrivener-flow.vercel.app`
+```bash
+# 安裝依賴
+yarn install
 
-### 環境變數設定
+# 設定環境變數（建立 .env.local，參考下方說明）
 
-在 Vercel Dashboard 的 Environment Variables 中需設定：
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `LINE_CHANNEL_ACCESS_TOKEN`
-- `LINE_USER_ID`
+# 開發模式
+yarn dev
+
+# 建置
+yarn build
+```
+
+### 必要環境變數（.env.local）
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+GOOGLE_GEMINI_API_KEY=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+ENCRYPTION_MASTER_KEY=
+FINLAB_API_KEY=
+DATABASE_URL=
+```
+
+### Python ETF Pipeline
+
+```bash
+uv run python ETF/main.py --days 30   # 手動執行（同步最近 30 天）
+uv run python ETF/main.py --dry-run   # 僅爬取，不寫 DB
+uv run python ETF/daily_ai_report.py  # 單獨產生 AI 報告
+```
+
+---
+
+## 開發規範
+
+- **套件管理**：前端嚴格使用 `yarn`（禁止 `npm install`）；Python 使用 `uv`
+- **DB Schema 變更**：新增 `.sql` 至 `supabase/migrations/`，不使用 Prisma migrate 或 Supabase UI 手動操作
+- **功能開發流程**：所有功能變更走 OpenSpec 流程（`openspec/changes/<name>/`），artifact 順序為 proposal → design → specs → tasks
+- **資料突變**：優先使用 Server Actions，REST API Route 僅用於 Webhooks 與第三方整合
 
 ---
 
