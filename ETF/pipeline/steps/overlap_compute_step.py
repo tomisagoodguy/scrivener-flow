@@ -97,6 +97,6 @@ class OverlapComputeStep(BaseStep):
 
         etf_count = len({row[0] for row in rows})
         self.logger.info(
-            f"Overlap compute done: {len(records)} stocks from {etf_count} ETFs on {today}"
+            f"Overlap compute done: {len(records)} stocks from {etf_count} ETFs on {target_date}"
         )
         return ctx
