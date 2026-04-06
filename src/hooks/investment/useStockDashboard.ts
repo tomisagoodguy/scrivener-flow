@@ -51,6 +51,11 @@ export function useStockDashboard(stockCode: string) {
     const [chipsData, setChipsData] = useState<ShareholderData[]>([]);
     const [brokerData, setBrokerData] = useState<BrokerTransactionData[]>([]);
 
+    const [etfWeightHistory, setEtfWeightHistory] = useState<Record<string, { date: string; weight: number; rank: number }[]>>({
+        '00980A': [], '00981A': [], '00991A': [],
+    });
+    const [etfWeightHistoryLoading, setEtfWeightHistoryLoading] = useState(false);
+
     const [loading, setLoading] = useState(true);
     const [priceLoading, setPriceLoading] = useState(false);
     const [revenueLoading, setRevenueLoading] = useState(false);
@@ -99,7 +104,7 @@ export function useStockDashboard(stockCode: string) {
 
     const handleNavigate = (targetCode: string) => {
         const query = searchParams.toString();
-        router.push(`/investment/dashboard/${targetCode}${query ? `?${query}` : ''}`);
+        router.push(`/investment/stock/${targetCode}${query ? `?${query}` : ''}`);
     };
 
     const fetchAllData = async (code: string) => {
@@ -112,8 +117,23 @@ export function useStockDashboard(stockCode: string) {
             fetchRevenueData(code),
             fetchChipsData(code),
             fetchBrokerData(code),
+            fetchEtfWeightHistory(code),
         ]);
         setLoading(false);
+    };
+
+    const fetchEtfWeightHistory = async (code: string) => {
+        setEtfWeightHistoryLoading(true);
+        try {
+            const res = await fetch(`/api/investment/etf-weight-history?code=${code}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            setEtfWeightHistory(data);
+        } catch (err: unknown) {
+            console.error('Failed to fetch ETF weight history:', err);
+        } finally {
+            setEtfWeightHistoryLoading(false);
+        }
     };
 
     const fetchPriceData = async (code: string) => {
@@ -183,6 +203,7 @@ export function useStockDashboard(stockCode: string) {
     return {
         stockName, prevStock, nextStock, handleNavigate,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
+        etfWeightHistory, etfWeightHistoryLoading,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
         priceError, revenueError, chipsError, brokerError,
     };

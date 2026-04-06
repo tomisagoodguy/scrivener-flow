@@ -65,7 +65,7 @@ function OverlapSummary({
         return (
             <div className="glass-card rounded-xl px-4 py-3 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
-                前10大持股無重疊
+                持股無重疊
             </div>
         );
     }
@@ -81,7 +81,7 @@ function OverlapSummary({
                     三方共同持有
                     <span className="font-bold mx-1 text-yellow-600 dark:text-yellow-400">{all3Count}</span>
                     支
-                    <span className="text-slate-400 dark:text-slate-500 ml-1">（佔前10大 {all3Pct}%）</span>
+                    <span className="text-slate-400 dark:text-slate-500 ml-1">（佔全部持股 {all3Pct}%）</span>
                 </span>
             </div>
             {any2Count > 0 && (
@@ -91,7 +91,7 @@ function OverlapSummary({
                         兩方共同持有
                         <span className="font-bold mx-1 text-blue-600 dark:text-blue-400">{any2Count}</span>
                         支
-                        <span className="text-slate-400 dark:text-slate-500 ml-1">（佔前10大 {any2Pct}%）</span>
+                        <span className="text-slate-400 dark:text-slate-500 ml-1">（佔全部持股 {any2Pct}%）</span>
                     </span>
                 </div>
             )}
@@ -179,7 +179,7 @@ function EtfCard({
                             </div>
                         )}
                         <div className="text-xs opacity-75 mt-1">
-                            前10大合計 {topWeight.toFixed(2)}%
+                            前10大合計權重 {topWeight.toFixed(2)}%
                         </div>
                     </div>
                 </div>

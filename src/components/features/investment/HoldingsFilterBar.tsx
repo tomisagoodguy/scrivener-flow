@@ -9,7 +9,7 @@
 import React from 'react';
 import { 
     ArrowUp, ArrowDown, TrendingUp, Activity, 
-    Zap, Trophy, Flame, Rocket, Target
+    Zap, Trophy, Flame, Rocket, Target, LucideIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -27,7 +27,7 @@ interface HoldingsFilterBarProps {
 }
 
 // 篩選按鈕的 UI 配置
-const FILTER_UI_CONFIG: Record<string, { icon: any; color: string }> = {
+const FILTER_UI_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
     high: { icon: Rocket, color: 'emerald' },
     weight: { icon: Trophy, color: 'indigo' },
     amount: { icon: Zap, color: 'amber' },

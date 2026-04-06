@@ -17,11 +17,6 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
         return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
     };
 
-    const formatBillions = (num: number | null | undefined) => {
-        if (!num) return '-';
-        return (num / 1000000).toFixed(1);
-    };
-
     const getNewHighBadge = (item: Holding) => {
         const badges = [];
         if (item.is_high_200d) {

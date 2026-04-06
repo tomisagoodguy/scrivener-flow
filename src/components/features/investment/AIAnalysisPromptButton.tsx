@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { generateInvestmentPromptAction } from '@/app/actions/ai/generateInvestmentPromptAction';
 import { Holding } from '@/types/investment';
-import { Bot, Copy, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { Bot, Copy, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 
 import ReactMarkdown from 'react-markdown';
 
@@ -38,8 +37,8 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
             } else {
                 toast.error(result.message || '生成失敗');
             }
-        } catch (error) {
-            toast.error('發生錯誤，請稍後再試');
+        } catch (_error) {
+            toast.error('無法生成分析建議');
         } finally {
             setIsLoading(false);
         }

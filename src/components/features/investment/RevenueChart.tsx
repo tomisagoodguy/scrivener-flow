@@ -165,18 +165,18 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
                 borderRadius: '8px',
                 padding: '10px',
               }}
-              formatter={(value: any, name?: string, props?: any) => {
+            formatter={(value: unknown, name?: string, props?: { payload?: RevenueData & { ma3: number | null; ma12: number | null; price: number | null } }) => {
                 if (name === 'revenue' || name === '營收') {
-                  const yoy = props.payload.revenue_yoy;
-                  const yoyText = yoy !== null ? ` (YoY ${yoy > 0 ? '+' : ''}${yoy.toFixed(1)}%)` : '';
-                  return [`${formatRevenue(value)}${yoyText}`, '月營收'];
+                  const yoy = props?.payload?.revenue_yoy;
+                  const yoyText = (yoy !== null && yoy !== undefined) ? ` (YoY ${Number(yoy) > 0 ? '+' : ''}${Number(yoy).toFixed(1)}%)` : '';
+                  return [`${formatRevenue(Number(value || 0))}${yoyText}`, '月營收'];
                 }
-                if (name === 'ma3') return [formatRevenue(value), 'MA(3)'];
-                if (name === 'ma12') return [formatRevenue(value), 'MA(12)'];
+                if (name === 'ma3') return [formatRevenue(Number(value || 0)), 'MA(3)'];
+                if (name === 'ma12') return [formatRevenue(Number(value || 0)), 'MA(12)'];
                 if (name === 'price' || name === '月均價') {
                   return [`${value} 元`, '月均價'];
                 }
-                return [value, name];
+                return [String(value), name];
               }}
             />
             <Legend />
@@ -199,18 +199,18 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
               <LabelList 
                 dataKey="revenue" 
                 position="top" 
-                content={(props: any) => {
+                content={(props: { x?: number | string; y?: number | string; width?: number | string; value?: unknown; index?: number }) => {
                   const { x, y, width, value, index } = props;
                   const isLast = index === revenueWithMA.length - 1;
-                  if (!isLast) return null;
+                  if (!isLast || x === undefined || y === undefined || width === undefined) return null;
                   return (
                     <text 
-                      x={x + width / 2} 
-                      y={y - 10} 
+                      x={Number(x) + Number(width) / 2} 
+                      y={Number(y) - 10} 
                       textAnchor="middle" 
                       className="fill-slate-600 dark:fill-slate-400 text-[10px] font-bold"
                     >
-                      {formatRevenue(value)}
+                      {formatRevenue(Number(value || 0))}
                     </text>
                   );
                 }}

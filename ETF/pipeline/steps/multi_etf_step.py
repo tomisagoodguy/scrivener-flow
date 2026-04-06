@@ -7,7 +7,6 @@ Multi-ETF Step
 
 import logging
 from datetime import date
-from typing import Optional
 
 from .base import BaseStep
 from ETF.pipeline.context import PipelineContext
@@ -38,6 +37,8 @@ class MultiEtfStep(BaseStep):
 
         today = date.today().strftime("%Y-%m-%d")
 
+        all_secondary_codes: list[str] = []
+
         for etf_code in SECONDARY_ETF_CODES:
             self.logger.info(f"Processing {etf_code} ({ETF_META[etf_code]['name']})...")
 
@@ -48,6 +49,8 @@ class MultiEtfStep(BaseStep):
                     snapshot_date = data_date or today
                     self._save_holdings_snapshot(ctx, etf_code, df, snapshot_date)
                     self._save_weight_history(ctx, etf_code, df, snapshot_date)
+                    # 收集成分股代碼，供後續 SyncOHLCVStep 使用
+                    all_secondary_codes.extend(df["code"].tolist())
                 else:
                     self.logger.warning(f"No holdings data for {etf_code}")
             except Exception as e:
@@ -68,6 +71,11 @@ class MultiEtfStep(BaseStep):
                     self._save_sectors(ctx, etf_code, sectors, today)
             except Exception as e:
                 self.logger.error(f"Sectors scrape failed for {etf_code}: {e}")
+
+        # 去重後存入 ctx，供 SyncOHLCVStep 合併使用
+        if all_secondary_codes:
+            ctx.secondary_stock_codes = list(set(all_secondary_codes))
+            self.logger.info(f"Collected {len(ctx.secondary_stock_codes)} unique stock codes from secondary ETFs")
 
         return ctx
 

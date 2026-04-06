@@ -38,6 +38,7 @@ class PipelineContext:
     df: Optional[pd.DataFrame] = None
     date_str: str = ""
     diff_logs: Optional[List[Dict[str, Any]]] = None
+    secondary_stock_codes: List[str] = field(default_factory=list)  # 00980A/00991A 成分股代碼
     
     # 執行標誌
     is_dry_run: bool = False

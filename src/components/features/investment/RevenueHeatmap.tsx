@@ -286,7 +286,7 @@ export function RevenueHeatmap({ initialData, initialYear = 2024 }: RevenueHeatm
                 ].map((stock) => (
                   <a
                     key={stock.code}
-                    href={`/investment/dashboard/${stock.code}?sort=weight&order=desc`}
+                    href={`/investment/stock/${stock.code}?sort=weight&order=desc`}
                     className="group flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3">
@@ -346,7 +346,7 @@ export function RevenueHeatmap({ initialData, initialYear = 2024 }: RevenueHeatm
                 ].map((stock) => (
                   <a
                     key={stock.code}
-                    href={`/investment/dashboard/${stock.code}?sort=weight&order=desc`}
+                    href={`/investment/stock/${stock.code}?sort=weight&order=desc`}
                     className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 opacity-90 hover:opacity-100 transition-opacity hover:border-rose-300 dark:hover:border-rose-700 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3">

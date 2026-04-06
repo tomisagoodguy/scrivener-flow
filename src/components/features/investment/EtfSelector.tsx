@@ -17,11 +17,9 @@ export function EtfSelector({ currentEtf }: EtfSelectorProps) {
     const searchParams = useSearchParams();
 
     const handleChange = (etfCode: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('etf', etfCode);
-        // 切換 ETF 時重置 tab 到預設
-        params.delete('tab');
-        router.push(`?${params.toString()}`);
+        const currentTab = searchParams.get('tab');
+        const tabSuffix = currentTab ? `?tab=${currentTab}` : '';
+        router.push(`/investment/${etfCode}${tabSuffix}`);
     };
 
     return (

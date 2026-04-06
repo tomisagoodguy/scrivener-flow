@@ -98,7 +98,7 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
             }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (dateIndex * 0.1) + (index * 0.05) }}
-            onClick={() => router.push(`/investment/dashboard/${log.stock_code}`)}
+            onClick={() => router.push(`/investment/stock/${log.stock_code}`)}
             className={`
                 group relative overflow-hidden p-5 rounded-2xl border transition-all duration-300 cursor-pointer
                 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800

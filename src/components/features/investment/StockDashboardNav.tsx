@@ -22,7 +22,7 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push('/investment?tab=analysis')}
+                    onClick={() => router.push('/investment/00981A')}
                     className="flex items-center gap-2"
                 >
                     <ArrowLeft className="w-4 h-4" />

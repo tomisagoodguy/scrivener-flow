@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,19 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
     const isDarkMode = theme === 'dark';
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+    // Derived state logic: Reset currentIndex when isOpen becomes true 
+    // or if initialIndex changes while the modal is open.
+    // This avoids the "Cannot update a component while rendering another component" warning 
+    // and synchronous useEffect setState performance warnings.
+    if (initialIndex !== prevInitialIndex || (isOpen && !prevIsOpen)) {
+        setPrevInitialIndex(initialIndex);
+        setPrevIsOpen(isOpen);
+        setCurrentIndex(initialIndex);
+    }
+
     const currentStock = holdings[currentIndex];
     const stockCode = currentStock?.stock_code || null;
 
@@ -44,13 +56,6 @@ export function PriceChartModal({ isOpen, onClose, holdings, initialIndex }: Pri
     const { revenueData, monthlyPriceData, loading: revenueLoading, error: revenueError } = useRevenueData(stockCode, isOpen);
     const { data: chipsData, loading: chipsLoading, error: chipsError } = useChipsData(stockCode, 48, isOpen);
     const { data: brokerData, loading: brokerLoading, error: brokerError } = useBrokerData(stockCode, isOpen);
-
-    // Reset index when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setCurrentIndex(initialIndex);
-        }
-    }, [initialIndex, isOpen]);
 
     const handleNext = () => setCurrentIndex((prev) => (prev + 1) % holdings.length);
     const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + holdings.length) % holdings.length);

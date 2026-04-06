@@ -92,17 +92,17 @@ export function BrokerChart({ data }: BrokerChartProps) {
                 borderRadius: '8px',
                 padding: '10px',
             }}
-            formatter={(value: any, name?: string) => {
-                if (name === '淨買賣超') return [formatVolume(value), name];
-                if (name === '主力動能') return [value?.toFixed(2), name];
-                return [value, name];
+            formatter={(value: unknown, name?: string) => {
+                if (name === '淨買賣超') return [formatVolume(Number(value || 0)), name];
+                if (name === '主力動能') return [Number(value || 0).toFixed(2), name];
+                return [String(value), name];
             }}
-            labelFormatter={(label) => label}
+            labelFormatter={(label: React.ReactNode) => label}
         />
         <Legend />
         
         <Bar dataKey="net_volume" name="淨買賣超" yAxisId="left" opacity={0.8} radius={[2, 2, 0, 0]}>
-            {chartData.map((entry, index) => (
+            {chartData.map((entry: BrokerData, index: number) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.net_volume)} />
             ))}
         </Bar>

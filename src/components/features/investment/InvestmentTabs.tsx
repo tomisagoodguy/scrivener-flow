@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface InvestmentTabsProps {
+  stockPickerContent: React.ReactNode;
   analysisContent: React.ReactNode;
   revenueLabContent: React.ReactNode;
   holdingsContent: React.ReactNode;
@@ -12,7 +13,10 @@ interface InvestmentTabsProps {
   compareContent: React.ReactNode;
 }
 
+const VALID_TABS = ['stock-picker', 'analysis', 'revenue-lab', 'holdings', 'ledger', 'compare'] as const;
+
 export function InvestmentTabs({
+  stockPickerContent,
   analysisContent,
   revenueLabContent,
   holdingsContent,
@@ -22,18 +26,15 @@ export function InvestmentTabs({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 直接從 URL 衍生 activeTab，避免 useEffect + setState 引發的 cascading renders
   const activeTab = useMemo(() => {
     const tab = searchParams.get('tab');
-    return tab && ['analysis', 'revenue-lab', 'holdings', 'ledger', 'compare'].includes(tab) ? tab : 'analysis';
+    return tab && (VALID_TABS as readonly string[]).includes(tab) ? tab : 'stock-picker';
   }, [searchParams]);
 
-  // 監控 Hash 變化並在 Tab 切換後手動捲動（此 effect 只與外部系統 DOM 互動，無 setState）
   React.useEffect(() => {
     const handleHashScroll = () => {
       const hash = window.location.hash;
       if (hash && hash.startsWith('#stock-')) {
-        // 確保分頁內容已加載並完成動畫
         const timer = setTimeout(() => {
           const id = hash.substring(1);
           const element = document.getElementById(id);
@@ -65,14 +66,19 @@ export function InvestmentTabs({
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', value);
-    // 保留 hash；activeTab 由 URL 衍生，無需額外 setState
     const hash = window.location.hash;
     router.push(`?${params.toString()}${hash}`, { scroll: false });
   };
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 max-w-[1000px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+      <TabsList className="grid w-full grid-cols-6 max-w-[1200px] mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+        <TabsTrigger
+          value="stock-picker"
+          className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
+        >
+          🎯 選股
+        </TabsTrigger>
         <TabsTrigger
           value="analysis"
           className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
@@ -105,6 +111,7 @@ export function InvestmentTabs({
         </TabsTrigger>
       </TabsList>
 
+      <TabsContent value="stock-picker">{stockPickerContent}</TabsContent>
       <TabsContent value="analysis">{analysisContent}</TabsContent>
       <TabsContent value="revenue-lab">{revenueLabContent}</TabsContent>
       <TabsContent value="holdings">{holdingsContent}</TabsContent>

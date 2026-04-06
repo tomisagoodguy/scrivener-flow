@@ -24,6 +24,55 @@ interface ShareholderFlowChartProps {
   type: 'large' | 'retail';
 }
 
+interface ChartRow {
+  date: string;
+  fullDate: string;
+  cumulative: number;
+  cumulativeSum: number;
+  [key: string]: string | number;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: ChartRow;
+  }>;
+  tiers: { label: string; color: string }[];
+}
+
+const CustomTooltip = ({ active, payload, tiers }: CustomTooltipProps) => {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const data = payload[0].payload;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg">
+      <p className="font-semibold text-sm mb-2">{data.fullDate}</p>
+      <div className="space-y-1 text-xs">
+        {tiers.map(({ label, color }) => {
+          const val = data[label];
+          const numVal = typeof val === 'number' ? val : 0;
+          return (
+            <div key={label} className="flex items-center justify-between gap-4">
+              <span style={{ color }}>● {label}:</span>
+              <span className="font-mono">
+                {numVal > 0 ? '+' : ''}{numVal.toFixed(1)}k
+              </span>
+            </div>
+          );
+        })}
+        <hr className="my-2 border-slate-200 dark:border-slate-700" />
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-slate-600 dark:text-slate-400">累積淨流向:</span>
+          <span className={`font-mono font-semibold ${data.cumulativeSum > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {data.cumulativeSum > 0 ? '+' : ''}{data.cumulativeSum.toFixed(1)}k
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /**
  * 大戶/散戶籌碼堆疊流向圖
  * 左軸：各級距週變化張數（堆疊長條圖）
@@ -34,7 +83,7 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
     if (!data || data.length === 0) return [];
 
     // 定義級距
-    const tierConfig = type === 'large' 
+    const innerTierConfig = type === 'large' 
       ? {
           // 大戶：200-1000張+
           tiers: [
@@ -72,7 +121,7 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
     const sortedDates = Array.from(dateMap.keys()).sort();
     
     // 取最近 N 週
-    const recentDates = sortedDates.slice(-tierConfig.weeks);
+    const recentDates = sortedDates.slice(-innerTierConfig.weeks);
 
     // 計算週變化
     const result = recentDates.map((date, idx) => {
@@ -80,13 +129,15 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
       const prevDate = idx > 0 ? recentDates[idx - 1] : null;
       const prevData = prevDate ? dateMap.get(prevDate) : null;
 
-      const row: any = {
+      const row: ChartRow = {
         date: date.substring(5), // MM-DD
         fullDate: date,
+        cumulative: 0,
+        cumulativeSum: 0,
       };
 
       // 計算各級距的週變化（單位：千張）
-      tierConfig.tiers.forEach(({ tier, label }) => {
+      innerTierConfig.tiers.forEach(({ tier, label }) => {
         const currentShares = currentData.get(tier)?.shares_held || 0;
         const prevShares = prevData?.get(tier)?.shares_held || currentShares;
         const change = (currentShares - prevShares) / 1000; // 轉為千張
@@ -94,7 +145,7 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
       });
 
       // 計算累積淨流向（所有級距加總）
-      const totalChange = tierConfig.tiers.reduce((sum, { tier }) => {
+      const totalChange = innerTierConfig.tiers.reduce((sum, { tier }) => {
         const currentShares = currentData.get(tier)?.shares_held || 0;
         const prevShares = prevData?.get(tier)?.shares_held || currentShares;
         return sum + (currentShares - prevShares);
@@ -115,7 +166,7 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
     return result;
   }, [data, type]);
 
-  const tierConfig = type === 'large' 
+  const tierConfig = useMemo(() => type === 'large' 
     ? {
         tiers: [
           { label: '200-400張', color: '#ef4444' },
@@ -135,7 +186,7 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
           { label: '40-50張', color: '#c026d3' },
         ],
         title: '散戶籌碼堆疊流向圖',
-      };
+      }, [type]);
 
   if (chartData.length === 0) {
     return (
@@ -144,36 +195,6 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
       </div>
     );
   }
-
-  // 自定義 Tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (!active || !payload || payload.length === 0) return null;
-
-    const data = payload[0].payload;
-
-    return (
-      <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg">
-        <p className="font-semibold text-sm mb-2">{data.fullDate}</p>
-        <div className="space-y-1 text-xs">
-          {tierConfig.tiers.map(({ label, color }) => (
-            <div key={label} className="flex items-center justify-between gap-4">
-              <span style={{ color }}>● {label}:</span>
-              <span className="font-mono">
-                {data[label] > 0 ? '+' : ''}{data[label].toFixed(1)}k
-              </span>
-            </div>
-          ))}
-          <hr className="my-2 border-slate-200 dark:border-slate-700" />
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-slate-600 dark:text-slate-400">累積淨流向:</span>
-            <span className={`font-mono font-semibold ${data.cumulativeSum > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {data.cumulativeSum > 0 ? '+' : ''}{data.cumulativeSum.toFixed(1)}k
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-2">
@@ -194,7 +215,6 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
             height={70}
           />
           
-          {/* 左軸：週變化張數 */}
           <YAxis
             yAxisId="left"
             orientation="left"
@@ -207,7 +227,6 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
             }}
           />
           
-          {/* 右軸：累積淨流向 */}
           <YAxis
             yAxisId="right"
             orientation="right"
@@ -220,13 +239,12 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
             }}
           />
           
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip tiers={tierConfig.tiers} />} />
           <Legend 
             wrapperStyle={{ fontSize: '11px' }}
             iconSize={10}
           />
 
-          {/* 堆疊長條圖 */}
           {tierConfig.tiers.map(({ label, color }) => (
             <Bar
               key={label}
@@ -238,7 +256,6 @@ export function ShareholderFlowChart({ data, type }: ShareholderFlowChartProps) 
             />
           ))}
 
-          {/* 累積淨流向折線 */}
           <Line
             yAxisId="right"
             type="monotone"

@@ -61,7 +61,7 @@ export function StockTrendChart({ code, logs }: StockTrendChartProps) {
                         fontSize: '12px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
-                    formatter={(value: any) => [`${Number(value) > 0 ? '+' : ''}${Number(value).toFixed(2)}%`, '權重變動']}
+                    formatter={(value: unknown) => [`${Number(value) > 0 ? '+' : ''}${Number(value).toFixed(2)}%`, '權重變動']}
                 />
                 <ReferenceLine y={0} stroke="#e2e8f0" strokeDasharray="3 3" />
                 <Bar dataKey="value" radius={[2, 2, 0, 0]}>

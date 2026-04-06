@@ -11,7 +11,6 @@ import {
     Tooltip,
     ResponsiveContainer,
     Cell,
-    LineChart,
     Line,
     Legend
 } from 'recharts';
@@ -30,11 +29,6 @@ export function HoldingsOverview({ data }: HoldingsOverviewProps) {
     const topHoldings = [...data]
         .sort((a, b) => b.weight - a.weight)
         .slice(0, 15);
-
-    // 格式化億元
-    const formatBillions = (value: number) => {
-        return `${(value / 1e8).toFixed(1)}億`;
-    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -68,7 +62,7 @@ export function HoldingsOverview({ data }: HoldingsOverviewProps) {
                                     border: 'none',
                                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                 }}
-                                formatter={(value: number | string | any) => [`${Number(value).toFixed(2)}%`, '投組權重']}
+                                formatter={(value: number | string | unknown) => [`${Number(value).toFixed(2)}%`, '投組權重']}
                             />
                             <Bar 
                                 dataKey="weight" 
@@ -118,7 +112,7 @@ export function HoldingsOverview({ data }: HoldingsOverviewProps) {
                                     border: 'none',
                                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                 }}
-                                formatter={(value: number | string | any, name: any) => [`${Number(value || 0).toFixed(1)}%`, name]}
+                                formatter={(value: unknown, name?: string) => [`${Number(value || 0).toFixed(1)}%`, name || '']}
                             />
                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                             <Bar 

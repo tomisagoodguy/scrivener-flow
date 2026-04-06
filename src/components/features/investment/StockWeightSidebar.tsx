@@ -12,7 +12,7 @@ import {
 import { ArrowDownIcon, ArrowUpIcon, SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StockTrendChart } from './StockTrendChart';
-import { useStockWeightAnalysis, TimeRange, StockImpact } from './hooks/useStockWeightAnalysis';
+import { useStockWeightAnalysis, TimeRange } from './hooks/useStockWeightAnalysis';
 import { DiffLog } from '@/types/investment';
 
 interface StockWeightSidebarProps {
@@ -22,6 +22,19 @@ interface StockWeightSidebarProps {
 
 type SortKey = 'impact' | 'code' | 'name';
 type SortDirection = 'asc' | 'desc';
+
+interface SortIconProps {
+    column: SortKey;
+    currentKey: SortKey;
+    currentDirection: SortDirection;
+}
+
+const SortIcon = ({ column, currentKey, currentDirection }: SortIconProps) => {
+    if (currentKey !== column) return <ArrowUpDown className="w-3 h-3 text-slate-300 ml-1" />;
+    return currentDirection === 'asc' ? 
+        <ArrowUpIcon className="w-3 h-3 text-indigo-500 ml-1" /> : 
+        <ArrowDownIcon className="w-3 h-3 text-indigo-500 ml-1" />;
+};
 
 export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) {
     const [timeRange, setTimeRange] = useState<TimeRange>('1D');
@@ -67,19 +80,12 @@ export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) 
         setExpandedCode(current => current === code ? null : code);
     };
 
-    const SortIcon = ({ column }: { column: SortKey }) => {
-        if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 text-slate-300 ml-1" />;
-        return sortConfig.direction === 'asc' ? 
-            <ArrowUpIcon className="w-3 h-3 text-indigo-500 ml-1" /> : 
-            <ArrowDownIcon className="w-3 h-3 text-indigo-500 ml-1" />;
-    };
-
     // Auto-expand the first item when data loads to show the feature
     React.useEffect(() => {
         if (processedData.length > 0 && !expandedCode) {
             setExpandedCode(processedData[0].code);
         }
-    }, [processedData]);
+    }, [processedData, expandedCode]);
 
     return (
         <Sheet>
@@ -123,13 +129,13 @@ export function StockWeightSidebar({ logs, children }: StockWeightSidebarProps) 
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-2 text-xs font-medium text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 sticky top-0 bg-white dark:bg-slate-900 z-10">
                     <div className="col-span-2 cursor-pointer flex items-center hover:text-slate-800 dark:hover:text-slate-300" onClick={() => handleSort('code')}>
-                        代號 <SortIcon column="code" />
+                        代號 <SortIcon column="code" currentKey={sortConfig.key} currentDirection={sortConfig.direction} />
                     </div>
                     <div className="col-span-4 cursor-pointer flex items-center hover:text-slate-800 dark:hover:text-slate-300" onClick={() => handleSort('name')}>
-                        名稱 <SortIcon column="name" />
+                        名稱 <SortIcon column="name" currentKey={sortConfig.key} currentDirection={sortConfig.direction} />
                     </div>
                     <div className="col-span-6 text-right cursor-pointer flex items-center justify-end hover:text-slate-800 dark:hover:text-slate-300" onClick={() => handleSort('impact')}>
-                        權重變化 <SortIcon column="impact" />
+                        權重變化 <SortIcon column="impact" currentKey={sortConfig.key} currentDirection={sortConfig.direction} />
                     </div>
                 </div>
 

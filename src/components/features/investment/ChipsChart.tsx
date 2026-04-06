@@ -24,6 +24,74 @@ interface ChipsChartProps {
   data: ShareholderData[];
 }
 
+const BarColors = {
+  up: '#22c55e', // 綠色
+  down: '#ef4444', // 紅色
+  neutral: '#94a3b8', // 灰色
+};
+
+// 格式化人數 (萬/人)
+const formatCount = (val: number) => {
+  const absVal = Math.abs(val);
+  if (absVal >= 10000) return `${(val / 10000).toFixed(1)}萬`;
+  return val.toLocaleString();
+};
+
+interface ChartData {
+  date: string;
+  fullDate: string;
+  totalHolders: number;
+  retailPct: number;
+  midPct: number;
+  largePct: number;
+  holderChange: number;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: ChartData;
+  }>;
+}
+
+// 自定義 Tooltip
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const data = payload[0].payload;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg">
+      <p className="font-semibold text-sm mb-2">{data.fullDate}</p>
+      <div className="space-y-1 text-xs">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-slate-600 dark:text-slate-400">總股東人數:</span>
+          <span className="font-mono font-semibold">{formatCount(data.totalHolders)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-slate-600 dark:text-slate-400">週變化:</span>
+          <span className={`font-mono font-semibold ${data.holderChange > 0 ? 'text-green-600' : data.holderChange < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+            {data.holderChange > 0 ? '+' : ''}{formatCount(data.holderChange)}
+          </span>
+        </div>
+        <hr className="my-2 border-slate-200 dark:border-slate-700" />
+        <div className="flex items-center justify-between gap-4">
+          <span style={{ color: '#ef4444' }}>● 1-100張:</span>
+          <span className="font-mono">{data.retailPct.toFixed(1)}%</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span style={{ color: '#3b82f6' }}>● 100-1000張:</span>
+          <span className="font-mono">{data.midPct.toFixed(1)}%</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span style={{ color: '#22c55e' }}>● 1000張+:</span>
+          <span className="font-mono">{data.largePct.toFixed(1)}%</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /**
  * 股權分散疊圖 (Shareholder Distribution Overlay)
  * 左軸：總股東人數（長條圖，動態顏色：增綠減紅）
@@ -87,58 +155,6 @@ export function ChipsChart({ data }: ChipsChartProps) {
       };
     });
   }, [data]);
-
-  // 動態顏色：增加為綠色，減少為紅色
-  const getBarColor = (change: number) => {
-    if (change > 0) return '#22c55e'; // 綠色
-    if (change < 0) return '#ef4444'; // 紅色
-    return '#94a3b8'; // 灰色
-  };
-
-  // 格式化人數 (萬/人)
-  const formatCount = (val: number) => {
-      const absVal = Math.abs(val);
-      if (absVal >= 10000) return `${(val / 10000).toFixed(1)}萬`;
-      return val.toLocaleString();
-  };
-
-  // 自定義 Tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (!active || !payload || payload.length === 0) return null;
-
-    const data = payload[0].payload;
-
-    return (
-      <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg">
-        <p className="font-semibold text-sm mb-2">{data.fullDate}</p>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-slate-600 dark:text-slate-400">總股東人數:</span>
-            <span className="font-mono font-semibold">{formatCount(data.totalHolders)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-slate-600 dark:text-slate-400">週變化:</span>
-            <span className={`font-mono font-semibold ${data.holderChange > 0 ? 'text-green-600' : data.holderChange < 0 ? 'text-red-600' : 'text-slate-600'}`}>
-              {data.holderChange > 0 ? '+' : ''}{formatCount(data.holderChange)}
-            </span>
-          </div>
-          <hr className="my-2 border-slate-200 dark:border-slate-700" />
-          <div className="flex items-center justify-between gap-4">
-            <span style={{ color: '#ef4444' }}>● 1-100張:</span>
-            <span className="font-mono">{data.retailPct.toFixed(1)}%</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <span style={{ color: '#3b82f6' }}>● 100-1000張:</span>
-            <span className="font-mono">{data.midPct.toFixed(1)}%</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <span style={{ color: '#22c55e' }}>● 1000張+:</span>
-            <span className="font-mono">{data.largePct.toFixed(1)}%</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   if (chartData.length === 0) {
     return (
@@ -223,7 +239,6 @@ export function ChipsChart({ data }: ChipsChartProps) {
           iconSize={12}
         />
 
-        {/* 總股東人數長條圖（動態顏色） */}
         <Bar
           yAxisId="left"
           dataKey="totalHolders"
@@ -232,7 +247,7 @@ export function ChipsChart({ data }: ChipsChartProps) {
           opacity={0.8}
         >
           {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={getBarColor(entry.holderChange)} />
+            <Cell key={`cell-${index}`} fill={BarColors[entry.holderChange > 0 ? 'up' : entry.holderChange < 0 ? 'down' : 'neutral']} />
           ))}
         </Bar>
 

@@ -33,9 +33,12 @@ class SyncOHLCVStep(BaseStep):
             return ctx
         
         days = ctx.args.days if hasattr(ctx.args, 'days') else 250
-        self.logger.info(f"Syncing historical OHLCV for charts ({days} days)...")
-        
-        ohlcv_df = ctx.finlab_srv.get_ohlcv(ctx.df['code'].tolist(), days=days)
+
+        # 合併 00980A / 00991A 的成分股代碼
+        all_codes = list(set(ctx.df['code'].tolist() + ctx.secondary_stock_codes))
+        self.logger.info(f"Syncing historical OHLCV for charts ({days} days, {len(all_codes)} stocks)...")
+
+        ohlcv_df = ctx.finlab_srv.get_ohlcv(all_codes, days=days)
         
         if not ohlcv_df.empty:
             ctx.storage.save_stock_prices(ohlcv_df)

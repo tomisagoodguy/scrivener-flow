@@ -53,11 +53,8 @@ export function InvestmentTrustChart({ data, isDarkMode = false }: InvestmentTru
   
   const allZero = values.every(v => v === 0);
   // Add some padding to domain
-  const domainMax = Math.ceil(Math.abs(maxVal) * 1.1) || 10;
-  const domainMin = Math.floor(-Math.abs(minVal) * 1.1) || -10;
-  // Use symmetric domain if mixed positive/negative to clear 0 line
   const absMax = Math.max(Math.abs(maxVal), Math.abs(minVal));
-  const symmetricDomain = [-absMax * 1.1, absMax * 1.1];
+  const _symmetricDomain = [-absMax * 1.1, absMax * 1.1];
 
   return (
     <div className="relative">
@@ -100,13 +97,13 @@ export function InvestmentTrustChart({ data, isDarkMode = false }: InvestmentTru
             borderRadius: '8px',
             fontSize: '12px'
           }}
-          formatter={(value: any, name: any) => {
-            // Already converted to Zhang in dataKey
+          formatter={(value: number | string | undefined, name: string | number | undefined) => {
+            if (value === undefined) return ['', String(name || '')];
             const valInZhang = Number(value).toFixed(1);
             if (name === 'it_buy') return [valInZhang, '買賣超 (張)'];
             if (name === 'ma5') return [valInZhang, '5日均 (張)'];
             if (name === 'ma20') return [valInZhang, '20日均 (張)'];
-            return [value, name];
+            return [value, String(name || '')];
           }}
           labelFormatter={(label) => `📅 ${label}`}
         />
