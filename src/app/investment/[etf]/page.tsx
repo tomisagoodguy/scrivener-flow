@@ -5,128 +5,17 @@ import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
 import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
-import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
-import { RevenueLab } from '@/components/features/investment/RevenueLab';
-import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs';
-import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
+import { DrilldownTabs } from '@/components/features/investment/DrilldownTabs';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
-import { EtfComparePanel } from '@/components/features/investment/EtfComparePanel';
 import { EtfSelector } from '@/components/features/investment/EtfSelector';
-import { StockPickerHub } from '@/components/features/investment/StockPickerHub';
 import React from 'react';
 import { Holding } from '@/types/investment';
 import { redirect } from 'next/navigation';
+import { ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistry';
+import Link from 'next/link';
+import { ArrowLeftIcon } from 'lucide-react';
 
-// ── ETF 設定 ────────────────────────────────────────────────────────────────
-
-const SUPPORTED_ETFS = ['00980A', '00981A', '00991A'] as const;
-const DEFAULT_ETF = '00981A';
-
-const ETF_META: Record<string, { shortCode: string; name: string; manager: string }> = {
-    '00980A': { shortCode: '00980', name: '野村智慧優選', manager: '野村投信' },
-    '00981A': { shortCode: '00981', name: '主動統一台股增長', manager: '統一投信' },
-    '00991A': { shortCode: '00991', name: '復華未來50', manager: '復華投信' },
-};
-
-// ── ETF 對比資料（00980A / 00981A / 00991A）────────────────────────────────
-
-const COMPARE_ETF_CODES = ['00980A', '00981A', '00991A'] as const;
-
-const COMPARE_ETF_META: Record<string, { name: string; manager: string; color: string }> = {
-    '00980A': { name: '野村智慧優選', manager: '野村投信', color: '#3b82f6' },
-    '00981A': { name: '主動統一台股增長', manager: '統一投信', color: '#8b5cf6' },
-    '00991A': { name: '復華未來50', manager: '復華投信', color: '#f59e0b' },
-};
-
-async function getCompareData() {
-    const supabase = await createClient();
-
-    const { data: dateRow } = await supabase
-        .from('etf_holdings_snapshot')
-        .select('data_date')
-        .in('etf_code', COMPARE_ETF_CODES as unknown as string[])
-        .order('data_date', { ascending: false })
-        .limit(1);
-
-    const targetDate = dateRow?.[0]?.data_date ?? null;
-    if (!targetDate) return null;
-
-    const { data: allHoldings } = await supabase
-        .from('etf_holdings_snapshot')
-        .select('etf_code, stock_code, stock_name, weight, data_date')
-        .in('etf_code', COMPARE_ETF_CODES as unknown as string[])
-        .eq('data_date', targetDate)
-        .order('weight', { ascending: false });
-
-    const { data: aumRows } = await supabase
-        .from('etf_aum')
-        .select('etf_code, aum_100m_twd, snapshot_date')
-        .in('etf_code', COMPARE_ETF_CODES as unknown as string[])
-        .order('snapshot_date', { ascending: false })
-        .limit(COMPARE_ETF_CODES.length * 3);
-
-    const { data: sectorRows } = await supabase
-        .from('etf_sectors')
-        .select('etf_code, sector_name, weight, snapshot_date')
-        .in('etf_code', COMPARE_ETF_CODES as unknown as string[])
-        .order('snapshot_date', { ascending: false })
-        .limit(COMPARE_ETF_CODES.length * 30);
-
-    const stockEtfMap: Record<string, string[]> = {};
-    for (const h of allHoldings ?? []) {
-        if (!stockEtfMap[h.stock_code]) stockEtfMap[h.stock_code] = [];
-        if (!stockEtfMap[h.stock_code].includes(h.etf_code)) {
-            stockEtfMap[h.stock_code].push(h.etf_code);
-        }
-    }
-
-    const etfs = COMPARE_ETF_CODES.map((etf_code) => {
-        const holdings = (allHoldings ?? [])
-            .filter(h => h.etf_code === etf_code)
-            .map((h, idx) => ({
-                stock_code: h.stock_code,
-                stock_name: h.stock_name,
-                weight: h.weight ?? 0,
-                rank: idx + 1,
-                in_etfs: stockEtfMap[h.stock_code] ?? [etf_code],
-            }));
-
-        const latestAum = (aumRows ?? [])
-            .filter(a => a.etf_code === etf_code)
-            .sort((a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime())[0];
-
-        const latestSectorDate = (sectorRows ?? [])
-            .filter(s => s.etf_code === etf_code)
-            .sort((a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime())[0]?.snapshot_date;
-
-        const sectors = (sectorRows ?? [])
-            .filter(s => s.etf_code === etf_code && s.snapshot_date === latestSectorDate)
-            .map(s => ({ sector_name: s.sector_name, weight: s.weight ?? 0 }))
-            .sort((a, b) => b.weight - a.weight);
-
-        return {
-            etf_code,
-            ...COMPARE_ETF_META[etf_code],
-            data_date: targetDate,
-            holdings,
-            aum_100m_twd: latestAum?.aum_100m_twd ?? null,
-            sectors,
-        };
-    });
-
-    const overlap = {
-        all3: Object.entries(stockEtfMap)
-            .filter(([, etfList]) => etfList.length === 3)
-            .map(([code]) => code),
-        any2: Object.entries(stockEtfMap)
-            .filter(([, etfList]) => etfList.length === 2)
-            .map(([code]) => code),
-    };
-
-    return { etfs, overlap };
-}
-
-// Fetch data on server
+// Fetch single-ETF holdings with price fallback and revenue data
 async function getHoldings(etfCode: string) {
     const supabase = await createClient();
 
@@ -192,7 +81,6 @@ async function getHoldings(etfCode: string) {
         }
     });
 
-    // 對 price = null 的持股（00980A / 00991A），從 stock_prices_daily 補充最新股價
     const missingPriceCodes = (data || [])
         .filter(h => !h.price || h.price === 0)
         .map(h => h.stock_code);
@@ -207,7 +95,6 @@ async function getHoldings(etfCode: string) {
             .order('data_date', { ascending: false })
             .limit(2 * missingPriceCodes.length);
 
-        // 每支股票取最新 2 天，計算漲跌
         const grouped: Record<string, typeof latestPrices> = {};
         for (const row of latestPrices ?? []) {
             if (!grouped[row.stock_code]) grouped[row.stock_code] = [];
@@ -246,11 +133,7 @@ async function getHoldings(etfCode: string) {
         };
     });
 
-    return {
-        holdings: formattedHoldings,
-        updatedAt: targetUpdatedAt,
-        dataDate: targetDate
-    };
+    return { holdings: formattedHoldings, updatedAt: targetUpdatedAt, dataDate: targetDate };
 }
 
 async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
@@ -265,7 +148,6 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
     if (stockCodes.length === 0) return {};
     const supabase = await createClient();
 
-    // 查最近 10 天（it_buy 用），每支股票各取 10 筆
     const { data: recentPriceData } = await supabase
         .from('stock_prices_daily')
         .select('stock_code, data_date, close, it_buy')
@@ -273,12 +155,10 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
         .order('data_date', { ascending: false })
         .limit(10 * stockCodes.length);
 
-    // 計算 61 個自然日前的日期上限（交易日約 60 個 ≈ 85 個自然日，保守取 100 天）
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 100);
     const cutoffStr = cutoffDate.toISOString().slice(0, 10);
 
-    // 查 61 天前附近的收盤價（每支股票各取 5 筆以防非交易日缺漏）
     const { data: oldPriceData } = await supabase
         .from('stock_prices_daily')
         .select('stock_code, data_date, close')
@@ -294,7 +174,6 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
         .order('data_date', { ascending: false })
         .limit(15 * stockCodes.length);
 
-    // 建立 oldClose map：每支股票取最舊的那筆（最接近 61 天前）
     const oldCloseMap: Record<string, number> = {};
     for (const row of oldPriceData ?? []) {
         if (!oldCloseMap[row.stock_code] && Number(row.close) > 0) {
@@ -302,7 +181,6 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
         }
     }
 
-    // 建立 recentPrices map（每支股票最近 10 筆，依日期降序）
     const recentPricesMap: Record<string, typeof recentPriceData> = {};
     for (const row of recentPriceData ?? []) {
         if (!recentPricesMap[row.stock_code]) recentPricesMap[row.stock_code] = [];
@@ -366,13 +244,11 @@ async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, {
         }
 
         const filter_score = (momentum_pass ? 1 : 0) + (it_buy_10d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
-
         result[code] = { momentum_60d, momentum_pass, it_buy_10d, it_buy_10d_pass, rev_ma3, rev_ma3_new_high, filter_score };
     }
 
     return result;
 }
-
 
 async function getRankingHistory(etfCode: string) {
     const supabase = await createClient();
@@ -468,7 +344,7 @@ async function getDiffLogs(etfCode: string) {
     }));
 }
 
-export default async function InvestmentEtfPage({
+export default async function InvestmentEtfDrilldownPage({
     params,
     searchParams,
 }: {
@@ -478,22 +354,18 @@ export default async function InvestmentEtfPage({
     const { etf } = await params;
     await searchParams;
 
-    // 1.5 不合法 ETF segment → redirect 到預設
-    if (!(SUPPORTED_ETFS as readonly string[]).includes(etf)) {
-        redirect(`/investment/${DEFAULT_ETF}`);
+    if (!(ETF_CODES as string[]).includes(etf)) {
+        redirect('/investment');
     }
 
     const etfCode = etf;
-    const etfMeta = ETF_META[etfCode] ?? ETF_META[DEFAULT_ETF];
+    const etfMeta = getEtfMeta(etfCode);
 
     const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
-
-    const [logs, rankingHistory, goldenZoneStats, quantFilters, compareData] = await Promise.all([
+    const [logs, rankingHistory, quantFilters] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
-        getGoldenZoneStats(),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
-        getCompareData(),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({
@@ -516,14 +388,23 @@ export default async function InvestmentEtfPage({
         <div className="container mx-auto py-8 space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
+                    <div className="mb-2">
+                        <Link
+                            href="/investment"
+                            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+                        >
+                            <ArrowLeftIcon className="w-4 h-4" />
+                            返回選股池
+                        </Link>
+                    </div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        {etfMeta.shortCode} 投資監控
+                        {etfMeta?.shortCode ?? etfCode} 持股明細
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        {etfMeta.name} · {etfMeta.manager} • 即時追蹤持股異動與投資策略
+                        {etfMeta?.name} · {etfMeta?.manager} · 持股明細與異動紀錄
                     </p>
                     <div className="mt-3">
-                        <EtfSelector currentEtf={etfCode} />
+                        <EtfSelector currentEtf={etfCode} mode="drilldown" />
                     </div>
                 </div>
 
@@ -537,36 +418,7 @@ export default async function InvestmentEtfPage({
             </div>
 
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
-                <InvestmentTabs
-                    stockPickerContent={
-                        compareData ? (
-                            <StockPickerHub
-                                etfs={compareData.etfs}
-                                quantFilters={quantFilters}
-                            />
-                        ) : (
-                            <div className="glass-card rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400">
-                                <p className="text-lg">暫無選股資料</p>
-                            </div>
-                        )
-                    }
-                    compareContent={
-                        compareData ? (
-                            <EtfComparePanel etfs={compareData.etfs} overlap={compareData.overlap} />
-                        ) : (
-                            <div className="glass-card rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400">
-                                <p className="text-lg">暫無對比資料</p>
-                                <p className="text-sm mt-2">系統每日 22:00 自動更新</p>
-                            </div>
-                        )
-                    }
-                    analysisContent={
-                        <GoldenGrowthZone
-                            data={holdingsWithFilters}
-                            historicalStats={goldenZoneStats?.stats}
-                        />
-                    }
-                    revenueLabContent={<RevenueLab currentHoldings={holdingsWithFilters} />}
+                <DrilldownTabs
                     holdingsContent={
                         <div className="w-full space-y-6">
                             <HoldingsOverview data={holdingsWithFilters} />

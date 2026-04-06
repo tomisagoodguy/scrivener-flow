@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Holding } from '@/types/investment';
@@ -40,7 +39,7 @@ export function GoldenGrowthZone({ data, historicalStats }: GoldenGrowthZoneProp
                                 <Zap className="w-3 h-3 mr-1" />
                                 核心策略
                             </Badge>
-                            <span className="text-slate-500 dark:text-slate-400 text-xs font-mono">THESIS-00981</span>
+                            <span className="text-slate-500 dark:text-slate-400 text-xs font-mono">THESIS-REV-YOY</span>
                         </div>
                         <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             最佳成長甜蜜點 <span className="text-indigo-600 dark:text-indigo-400">YOY 50-100%</span>

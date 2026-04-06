@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
 
@@ -12,6 +12,7 @@ interface HoldingItem {
     weight: number;
     rank: number;
     in_etfs: string[];
+    revenue_yoy?: number | null;
 }
 
 interface EtfData {
@@ -39,9 +40,10 @@ interface StockPickerHubProps {
 type SortField = 'shared_count' | 'filter_score' | 'momentum_60d' | 'it_buy_10d' | string;
 type SortOrder = 'asc' | 'desc';
 
-type FactorFilter = 'momentum' | 'it_buy' | 'rev_new_high' | 'all_shared';
+type FactorFilter = 'momentum' | 'it_buy' | 'rev_new_high' | 'all_shared' | 'golden_zone' | 'explosive_zone';
 
-const ETF_CODES = ['00981A', '00980A', '00991A'] as const;
+import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
+const ETF_CODES = ETF_REGISTRY.map(e => e.code);
 
 // ── 子元件 ─────────────────────────────────────────────────────────────────────
 
@@ -71,6 +73,7 @@ interface UnifiedHolding {
     momentum_pass: boolean;
     it_buy_10d_pass: boolean;
     rev_ma3_new_high: boolean;
+    revenue_yoy: number | null;
 }
 
 function buildUnifiedHoldings(
@@ -96,6 +99,7 @@ function buildUnifiedHoldings(
                     momentum_pass: q?.momentum_pass ?? false,
                     it_buy_10d_pass: q?.it_buy_10d_pass ?? false,
                     rev_ma3_new_high: q?.rev_ma3_new_high ?? false,
+                    revenue_yoy: h.revenue_yoy ?? null,
                 });
             }
             const entry = stockMap.get(h.stock_code)!;
@@ -175,6 +179,14 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
             if (activeFactors.has('it_buy') && !h.it_buy_10d_pass) return false;
             if (activeFactors.has('rev_new_high') && !h.rev_ma3_new_high) return false;
             if (activeFactors.has('all_shared') && h.shared_count < selectedEtfs.size) return false;
+            if (activeFactors.has('golden_zone')) {
+                const yoy = h.revenue_yoy;
+                if (yoy === null || yoy < 50 || yoy > 100) return false;
+            }
+            if (activeFactors.has('explosive_zone')) {
+                const yoy = h.revenue_yoy;
+                if (yoy === null || yoy <= 100) return false;
+            }
             return true;
         });
     }, [unifiedHoldings, activeFactors, selectedEtfs.size]);
@@ -257,6 +269,8 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                         { key: 'it_buy', label: '投信買超', color: 'blue' },
                         { key: 'rev_new_high', label: '營收新高', color: 'violet' },
                         { key: 'all_shared', label: `${selectedEtfs.size}方共持`, color: 'amber' },
+                        { key: 'golden_zone', label: '黃金區間', color: 'yellow' },
+                        { key: 'explosive_zone', label: '爆發區間', color: 'rose' },
                     ] as const
                 ).map(({ key, label, color }) => {
                     const active = activeFactors.has(key);
@@ -275,6 +289,14 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                         },
                         amber: {
                             active: 'bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-600',
+                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
+                        },
+                        yellow: {
+                            active: 'bg-yellow-100 text-yellow-700 border-yellow-400 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600',
+                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
+                        },
+                        rose: {
+                            active: 'bg-rose-100 text-rose-700 border-rose-400 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-600',
                             inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
                         },
                     };
@@ -330,6 +352,9 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                 onClick={() => handleSort('it_buy_10d')}
                             >
                                 投信10日 <TableSortIcon field="it_buy_10d" currentSortField={sortField} currentSortOrder={sortOrder} />
+                            </th>
+                            <th className="text-center py-2 px-2 font-medium whitespace-nowrap text-slate-500 dark:text-slate-400">
+                                YOY%
                             </th>
                             {activeEtfCodes.map(code => (
                                 <th
@@ -407,6 +432,21 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                         {h.it_buy_10d !== null ? (
                                             <span className={`text-xs font-medium ${h.it_buy_10d_pass ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                                                 {h.it_buy_10d > 0 ? '+' : ''}{(h.it_buy_10d / 1000).toFixed(0)}K
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                                        )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                        {h.revenue_yoy !== null ? (
+                                            <span className={`text-xs font-medium ${
+                                                h.revenue_yoy >= 50
+                                                    ? 'text-green-600 dark:text-green-400'
+                                                    : h.revenue_yoy < 0
+                                                    ? 'text-red-500 dark:text-red-400'
+                                                    : 'text-slate-600 dark:text-slate-300'
+                                            }`}>
+                                                {h.revenue_yoy > 0 ? '+' : ''}{h.revenue_yoy.toFixed(1)}%
                                             </span>
                                         ) : (
                                             <span className="text-slate-300 dark:text-slate-600">—</span>
