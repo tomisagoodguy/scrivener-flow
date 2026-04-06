@@ -29,7 +29,7 @@ export const noteService = {
             throw error;
         }
 
-        return data ? { ...data, author_name: '匿名' } : null;
+        return data ? { ...data, author_name: '匿名', author_avatar: null } : null;
     },
 
     async createNote(supabase: SupabaseClient, noteData: TeamNoteInsert): Promise<void> {

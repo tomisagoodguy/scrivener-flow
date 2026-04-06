@@ -7,7 +7,6 @@ import {
     isWednesday,
     endOfMonth,
     subDays,
-    getDay,
     nextWednesday,
     nextFriday,
     isSameDay,
@@ -18,7 +17,7 @@ import {
 const isWorkDay = (date: Date) => !isWeekend(date);
 
 // 增加工作天
-const addWorkDays = (startDate: Date, days: number): Date => {
+export const addWorkDays = (startDate: Date, days: number): Date => {
     let count = 0;
     let currentDate = startDate;
     while (count < days) {

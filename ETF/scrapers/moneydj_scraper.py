@@ -22,7 +22,7 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
-BASE_URL = "https://www.moneydj.com/ETF/X/Basic/Basic0007.xdjhtm"
+BASE_URL = "https://www.moneydj.com/ETF/X/Basic/Basic0007b.xdjhtm"
 AUM_URL = "https://www.moneydj.com/ETF/X/Basic/Basic0001.xdjhtm"
 SECTOR_URL = "https://www.moneydj.com/ETF/X/Basic/Basic0006.xdjhtm"
 
@@ -82,7 +82,7 @@ def _extract_date_from_soup(soup: BeautifulSoup) -> Optional[str]:
 
 def scrape_holdings(etf_code: str) -> Tuple[pd.DataFrame, Optional[str]]:
     """
-    從 MoneyDJ 爬取 ETF 前10大持股。
+    從 MoneyDJ 爬取 ETF 完整持股（最多 50 檔）。
 
     Args:
         etf_code: 如 "00980A" 或 "00991A"
@@ -99,7 +99,7 @@ def scrape_holdings(etf_code: str) -> Tuple[pd.DataFrame, Optional[str]]:
 
     data_date = _extract_date_from_soup(soup)
 
-    # MoneyDJ 前10大持股表格格式：
+    # MoneyDJ 完整持股表格格式（Basic0007b，最多 50 檔）：
     #   欄位：股東名稱(含代號，格式「股名(1234.TW)」) | 持股比例(%) | 持股張數
     # 由於頁面 Big5 編碼導致部分中文亂碼，直接以 (XXXX.TW) pattern 定位持股 table
     rows = []

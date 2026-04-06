@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { noteService } from '@/services/noteService';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Edit2, Trash2, Heart, MessageCircle, Eye, Tag, Calendar, User, Download } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Heart, Tag, Calendar, User, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
-import ReactMarkdown from 'react-markdown';
 import { TeamNote } from './NoteCard';
 import { useWordExport } from '@/hooks/useWordExport';
 
@@ -25,7 +24,7 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
     const [deleteConfirm, setDeleteConfirm] = useState(false);
 
     // Word 匯出功能
-    const { exportToWord, isExporting, error: exportError, progress } = useWordExport();
+    const { exportToWord, isExporting, progress } = useWordExport();
 
     const handleExportWord = async () => {
         if (!note) return;

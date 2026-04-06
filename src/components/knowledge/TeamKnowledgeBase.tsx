@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Search, Plus, X, Folder, Tag, BookOpen, Star } from 'lucide-react';
+import { Search, Plus, X, Folder, Tag, Star } from 'lucide-react';
 import NoteCard, { TeamNote } from './NoteCard';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import { useRouter } from 'next/navigation';
 import AIWorkAssistant from '../dashboard/AIWorkAssistant';
+
+interface Profile {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+}
+
+interface StatNote {
+    category: string | null;
+    tags: string[] | null;
+    is_pinned: boolean | null;
+}
 
 export default function TeamKnowledgeBase() {
     const supabase = createClient();
@@ -29,7 +41,7 @@ export default function TeamKnowledgeBase() {
     };
 
     // Fetch notes
-    const fetchNotes = async () => {
+    const fetchNotes = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -67,7 +79,7 @@ export default function TeamKnowledgeBase() {
             }
 
             // 第二步：收集所有作者 ID 並一次性抓取個人資料表 (手動 Join)
-            const authorIds = Array.from(new Set(notesData.map((n: any) => n.author_id)));
+            const authorIds = Array.from(new Set(notesData.map((n: TeamNote) => n.author_id)));
             
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
@@ -77,23 +89,24 @@ export default function TeamKnowledgeBase() {
             if (profilesError) {
                 console.error('Error fetching profiles:', profilesError.message);
                 // 即使個人資料抓不到，還是顯示筆記（作者顯示為匿名或 Email）
-                setNotes(notesData.map((note: any) => ({
+                setNotes(notesData.map((note: TeamNote) => ({
                     ...note,
-                    author_name: '下載 SQL 失敗',
+                    author_name: '下載個人資料失敗',
+                    author_avatar: null,
                 })));
                 return;
             }
 
             // 第三步：在前端手動組合資料
-            const profilesMap = (profilesData || []).reduce((acc: any, p: any) => {
+            const profilesMap = (profilesData || []).reduce((acc: Record<string, Profile>, p: Profile) => {
                 acc[p.id] = p;
                 return acc;
             }, {});
 
-            const transformedNotes = notesData.map((note: any) => ({
+            const transformedNotes = notesData.map((note: TeamNote) => ({
                 ...note,
                 author_name: profilesMap[note.author_id]?.full_name || '匿名',
-                author_avatar: profilesMap[note.author_id]?.avatar_url,
+                author_avatar: profilesMap[note.author_id]?.avatar_url || null,
             }));
 
             setNotes(transformedNotes);
@@ -102,10 +115,10 @@ export default function TeamKnowledgeBase() {
         }
 
         setLoading(false);
-    };
+    }, [selectedId, searchQuery, supabase]);
 
     // Fetch stats
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         const { data } = await supabase.from('team_notes').select('category, tags, is_pinned');
 
         if (data) {
@@ -113,7 +126,7 @@ export default function TeamKnowledgeBase() {
             const tags: Record<string, number> = {};
             let pinnedCount = 0;
 
-            data.forEach((note: any) => {
+            (data as StatNote[]).forEach((note) => {
                 // Count categories
                 if (note.category) {
                     categories[note.category] = (categories[note.category] || 0) + 1;
@@ -134,15 +147,15 @@ export default function TeamKnowledgeBase() {
 
             setStats({ categories, tags, pinned: pinnedCount });
         }
-    };
+    }, [supabase]);
 
     useEffect(() => {
         fetchNotes();
-    }, [selectedId, searchQuery]);
+    }, [fetchNotes]);
 
     useEffect(() => {
         fetchStats();
-    }, []); // Only fetch stats once or when data changes ideally, but strict dependency allows independence
+    }, [fetchStats]);
 
     // Construct Sidebar Groups
     const sidebarGroups: SidebarGroup[] = [

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 
@@ -34,10 +34,10 @@ export function useCrudDelete({
     onSuccess,
     errorPrefix = '刪除失敗',
 }: UseCrudDeleteOptions): UseCrudDeleteResult {
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
     const [deleting, setDeleting] = useState(false);
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         if (!confirm(confirmMessage)) return;
 
         setDeleting(true);
@@ -51,7 +51,7 @@ export function useCrudDelete({
         } finally {
             setDeleting(false);
         }
-    };
+    }, [table, confirmMessage, onSuccess, errorPrefix, supabase]);
 
     return { deleting, handleDelete };
 }

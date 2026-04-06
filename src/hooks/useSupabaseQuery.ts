@@ -21,12 +21,6 @@ interface UseSupabaseQueryResult<T> {
 
 /**
  * 統一 Supabase 查詢樣板，消除重複的 loading/error/data + useEffect 模式。
- *
- * @example
- * const { data: clauses, loading, refetch } = useSupabaseQuery<Clause>({
- *   table: 'contract_clauses',
- *   order: { column: 'usage_count', ascending: false },
- * });
  */
 export function useSupabaseQuery<T = Record<string, unknown>>(
     options: QueryOptions
@@ -38,13 +32,16 @@ export function useSupabaseQuery<T = Record<string, unknown>>(
     const [loading, setLoading] = useState(immediate);
     const [error, setError] = useState<string | null>(null);
 
+    const orderColumn = order?.column;
+    const orderAscending = order?.ascending;
+
     const refetch = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             let query = supabase.from(table).select(select);
-            if (order) {
-                query = query.order(order.column, { ascending: order.ascending ?? true });
+            if (orderColumn) {
+                query = query.order(orderColumn, { ascending: orderAscending ?? true });
             }
             const { data: result, error: err } = await query;
             if (err) throw err;
@@ -56,10 +53,12 @@ export function useSupabaseQuery<T = Record<string, unknown>>(
         } finally {
             setLoading(false);
         }
-    }, [table, select, order, supabase]);
+    }, [table, select, orderColumn, orderAscending, supabase]);
 
     useEffect(() => {
-        if (immediate) refetch();
+        if (immediate) {
+            refetch();
+        }
     }, [immediate, refetch]);
 
     return { data, loading, error, refetch };

@@ -5,7 +5,7 @@ export default async function proxy(request: NextRequest) {
     // 初始化 request headers
     const requestHeaders = new Headers(request.headers);
 
-    let response = NextResponse.next({
+    const response = NextResponse.next({
         request: {
             headers: requestHeaders,
         },
@@ -36,7 +36,7 @@ export default async function proxy(request: NextRequest) {
     try {
         const { data } = await supabase.auth.getUser();
         user = data.user;
-    } catch (e) {
+    } catch (_e) {
         // 發生錯誤視為未登入
         // console.error('Middleware Auth Error:', e);
     }

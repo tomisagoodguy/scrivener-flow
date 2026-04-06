@@ -60,8 +60,8 @@ export function useWordExport() {
             setProgress(100);
 
             return { success: true };
-        } catch (err: any) {
-            const errorMsg = err.message || '未知錯誤';
+        } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : '未知錯誤';
             setError(errorMsg);
             console.error('Word Export Error:', err);
             return { success: false, error: errorMsg };
