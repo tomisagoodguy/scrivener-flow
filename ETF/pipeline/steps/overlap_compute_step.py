@@ -71,7 +71,7 @@ class OverlapComputeStep(BaseStep):
         records = [
             {
                 "stock_code": stock_code,
-                "data_date": today,
+                "data_date": target_date,
                 "etf_count": len(data["etf_list"]),
                 "total_weight": round(data["total_weight"], 4),
                 "etf_list": json.dumps(data["etf_list"], ensure_ascii=False),
