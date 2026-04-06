@@ -121,7 +121,7 @@ export function EtfOverlapTrendChart({ data, totalEtfs }: EtfOverlapTrendChartPr
                     />
                     <Tooltip
                         contentStyle={{ backgroundColor: 'rgba(255,255,255,0.97)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: '12px' }}
-                        formatter={(v: number, name: string) => [mode === 'pct' ? `${v}%` : `${v} 支`, name]}
+                        formatter={(v: number | undefined, name: string) => [mode === 'pct' ? `${v ?? 0}%` : `${v ?? 0} 支`, name]}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     {SERIES.map(s => {
