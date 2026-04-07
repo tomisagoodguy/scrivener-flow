@@ -10,7 +10,7 @@ Multi-ETF Step
 import logging
 from datetime import date
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 logger = logging.getLogger(__name__)

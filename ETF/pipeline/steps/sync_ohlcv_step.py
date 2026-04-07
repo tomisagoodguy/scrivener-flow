@@ -4,7 +4,7 @@ Sync OHLCV Step
 負責同步歷史 K 線資料（用於圖表）。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

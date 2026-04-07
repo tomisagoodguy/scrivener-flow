@@ -13,7 +13,7 @@ import json
 import logging
 from sqlalchemy import text
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 logger = logging.getLogger(__name__)

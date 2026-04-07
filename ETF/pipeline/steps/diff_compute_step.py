@@ -4,7 +4,7 @@ Diff Compute Step
 負責計算持股異動（新增/剔除/增減）。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.diff_engine import compute_diff, filter_significant
 import pandas as pd

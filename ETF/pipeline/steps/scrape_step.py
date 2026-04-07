@@ -4,7 +4,7 @@ Scrape Step
 負責從網站抓取 ETF 持股資料。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

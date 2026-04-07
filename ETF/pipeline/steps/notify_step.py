@@ -4,7 +4,7 @@ Notify Step
 負責發送 LINE 通知（異動通知與完成摘要）。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 import pandas as pd
 from typing import List, Dict, Any

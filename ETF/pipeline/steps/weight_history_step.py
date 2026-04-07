@@ -9,7 +9,7 @@ etf_weight_history 表，供前端 Dashboard 繪製各成分股歷史權重走�
 - 每日排名（rank）欄位供前端排序
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.weight_history_processor import WeightHistoryProcessor
 

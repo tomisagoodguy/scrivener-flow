@@ -1,5 +1,15 @@
 {
     "files.encoding": "utf8",
+    "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "."
+    ],
+    "python.analysis.include": [
+        "src",
+        "ETF",
+        "scripts",
+        "tests"
+    ],
     "files.associations": {
         "*.css": "tailwindcss"
     },
@@ -15,15 +25,12 @@
         }
     },
     "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
     "[typescriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
     "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
     "editor.codeActionsOnSave": {
