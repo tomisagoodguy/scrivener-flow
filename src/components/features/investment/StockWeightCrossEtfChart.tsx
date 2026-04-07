@@ -157,7 +157,7 @@ export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry
                                     />
                                     <Tooltip
                                         contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }}
-                                        formatter={(v: number) => viewMode === 'weight' ? [`${v.toFixed(2)}%`] : [`#${v}`]}
+                                        formatter={(v: number | undefined) => viewMode === 'weight' ? [`${(v ?? 0).toFixed(2)}%`] : [`#${v ?? 0}`]}
                                     />
                                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                                     {activeEtfs.map(e => (

@@ -141,7 +141,7 @@ export function EtfRankingHistoryChart({ weightHistory, etfRegistry }: EtfRankin
                                 />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: 'rgba(255,255,255,0.97)', borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
-                                    formatter={(v: number) => [viewMode === 'rank' ? `#${v}` : `${v.toFixed(2)}%`]}
+                                    formatter={(v: number | undefined) => [viewMode === 'rank' ? `#${v ?? 0}` : `${(v ?? 0).toFixed(2)}%`]}
                                 />
                                 {topStocks.map((stock, i) => (
                                     <Line
