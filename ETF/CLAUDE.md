@@ -151,6 +151,7 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 每個步驟接收 `ctx`、修改後回傳。新增步驟只需繼承 `BaseStep` 並實作 `run(ctx)`。
 
 **重要欄位：**
+
 - `ctx.df` — 當前 ETF 持股 DataFrame
 - `ctx.date_str` — 資料日期（`YYYY-MM-DD`）
 - `ctx.diff_logs` — 持股異動事件列表（IN/OUT/BUY/SELL）

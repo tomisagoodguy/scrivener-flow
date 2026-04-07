@@ -224,6 +224,7 @@ supabase/migrations/20260111032050_recreate_full_schema.sql
 ### 5-2. 投資模組
 
 投資儀表板路由結構：
+
 - `src/app/investment/[etf]/page.tsx` — ETF 持股監控頁（00980A / 00981A / 00991A 三支，動態路由）
 - `src/app/investment/stock/[code]/page.tsx` — 個股詳情頁（從持股明細點入）
 
@@ -237,6 +238,7 @@ supabase/migrations/20260111032050_recreate_full_schema.sql
 
 - **Key 來源優先序**：環境變數 `ENCRYPTION_MASTER_KEY` → DB `encryption_keys` 表 → Fallback
 - **Key 輪替**：90 天週期，保留最近 3 個歷史 key 供舊資料解密（舊資料不會自動重新加密）
+
 - `SecureApi` wrapper 額外加入隨機 padding（512–1536 bytes）與隨機延遲（50–300ms）防流量分析
 - 解密失敗的常見原因：key 版本不符，需確認 `encryption_keys` 表有對應版本的 key
 

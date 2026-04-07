@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavStock } from '@/hooks/investment/useStockDashboard';
+import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
 
 interface StockDashboardNavProps {
     stockCode: string;
@@ -11,9 +12,12 @@ interface StockDashboardNavProps {
     prevStock: NavStock | null;
     nextStock: NavStock | null;
     onNavigate: (code: string) => void;
+    holdingEtfs?: string[];
+    currentIndex?: number;
+    totalCount?: number;
 }
 
-export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, onNavigate }: StockDashboardNavProps) {
+export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, onNavigate, holdingEtfs = [], currentIndex, totalCount }: StockDashboardNavProps) {
     const router = useRouter();
 
     return (
@@ -40,6 +44,11 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                         <ArrowLeft className="w-4 h-4" />
                         {prevStock ? `上一檔 ${prevStock.name}` : '無'}
                     </Button>
+                    {currentIndex != null && totalCount != null && totalCount > 0 && (
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400 px-1">
+                            {currentIndex}/{totalCount}
+                        </span>
+                    )}
                     <Button
                         variant="default"
                         size="sm"
@@ -60,9 +69,34 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                     </span>
                     {stockName || 'Loading...'}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    技術分析 • 基本面 • 籌碼分析
-                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        技術分析 • 基本面 • 籌碼分析
+                    </p>
+                    {holdingEtfs.length > 0 && (
+                        <>
+                            <span className="text-slate-300 dark:text-slate-600">|</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">經理人持有：</span>
+                            {holdingEtfs.map(code => {
+                                const meta = ETF_REGISTRY.find(e => e.code === code);
+                                return (
+                                    <span
+                                        key={code}
+                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                        style={{
+                                            backgroundColor: meta ? `${meta.color}20` : '#e2e8f0',
+                                            color: meta?.color ?? '#64748b',
+                                            border: `1px solid ${meta ? `${meta.color}40` : '#cbd5e1'}`,
+                                        }}
+                                        title={meta?.name}
+                                    >
+                                        {code}
+                                    </span>
+                                );
+                            })}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

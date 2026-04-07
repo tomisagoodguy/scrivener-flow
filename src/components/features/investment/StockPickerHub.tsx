@@ -421,7 +421,7 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                     </td>
                                     <td className="py-2 px-2 text-center">
                                         {h.momentum_60d !== null ? (
-                                            <span className={`text-xs font-medium ${h.momentum_pass ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                            <span className={`text-xs font-medium ${h.momentum_pass ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                                                 {h.momentum_60d > 0 ? '+' : ''}{h.momentum_60d.toFixed(1)}%
                                             </span>
                                         ) : (
@@ -430,7 +430,7 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                     </td>
                                     <td className="py-2 px-2 text-center">
                                         {h.it_buy_10d !== null ? (
-                                            <span className={`text-xs font-medium ${h.it_buy_10d_pass ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                            <span className={`text-xs font-medium ${h.it_buy_10d_pass ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                                                 {h.it_buy_10d > 0 ? '+' : ''}{(h.it_buy_10d / 1000).toFixed(0)}K
                                             </span>
                                         ) : (
@@ -441,9 +441,9 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                         {h.revenue_yoy !== null ? (
                                             <span className={`text-xs font-medium ${
                                                 h.revenue_yoy >= 50
-                                                    ? 'text-green-600 dark:text-green-400'
+                                                    ? 'text-red-600 dark:text-red-400'
                                                     : h.revenue_yoy < 0
-                                                    ? 'text-red-500 dark:text-red-400'
+                                                    ? 'text-green-600 dark:text-green-400'
                                                     : 'text-slate-600 dark:text-slate-300'
                                             }`}>
                                                 {h.revenue_yoy > 0 ? '+' : ''}{h.revenue_yoy.toFixed(1)}%

@@ -44,6 +44,8 @@ export function useStockDashboard(stockCode: string) {
     const [stockName, setStockName] = useState('');
     const [prevStock, setPrevStock] = useState<NavStock | null>(null);
     const [nextStock, setNextStock] = useState<NavStock | null>(null);
+    const [currentIndex, setCurrentIndex] = useState<number>(-1);
+    const [totalCount, setTotalCount] = useState<number>(0);
 
     const [priceData, setPriceData] = useState<PriceData[]>([]);
     const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
@@ -51,9 +53,7 @@ export function useStockDashboard(stockCode: string) {
     const [chipsData, setChipsData] = useState<ShareholderData[]>([]);
     const [brokerData, setBrokerData] = useState<BrokerTransactionData[]>([]);
 
-    const [etfWeightHistory, setEtfWeightHistory] = useState<Record<string, { date: string; weight: number; rank: number }[]>>({
-        '00980A': [], '00981A': [], '00991A': [],
-    });
+    const [etfWeightHistory, setEtfWeightHistory] = useState<Record<string, { date: string; weight: number; rank: number }[]>>({});
     const [etfWeightHistoryLoading, setEtfWeightHistoryLoading] = useState(false);
 
     const [loading, setLoading] = useState(true);
@@ -88,6 +88,8 @@ export function useStockDashboard(stockCode: string) {
                     setStockName(target.stock_name);
                     setPrevStock(index > 0 ? { code: data[index - 1].stock_code, name: data[index - 1].stock_name } : null);
                     setNextStock(index < data.length - 1 ? { code: data[index + 1].stock_code, name: data[index + 1].stock_name } : null);
+                    setCurrentIndex(index + 1);
+                    setTotalCount(data.length);
                 }
             } catch (err) {
                 console.error('Failed to fetch holdings:', err);
@@ -200,10 +202,15 @@ export function useStockDashboard(stockCode: string) {
         }
     };
 
+    // 目前仍持有這支股票的 ETF（有歷史資料即算）
+    const holdingEtfs = Object.entries(etfWeightHistory)
+        .filter(([, entries]) => entries.length > 0)
+        .map(([code]) => code);
+
     return {
-        stockName, prevStock, nextStock, handleNavigate,
+        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
-        etfWeightHistory, etfWeightHistoryLoading,
+        etfWeightHistory, etfWeightHistoryLoading, holdingEtfs,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
         priceError, revenueError, chipsError, brokerError,
     };

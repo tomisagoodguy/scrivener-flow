@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-const ETF_CODES = ['00980A', '00981A', '00991A'] as const;
+import { ETF_CODES } from '@/lib/investment/etfRegistry';
 
 interface WeightHistoryEntry {
     date: string;
@@ -18,17 +17,15 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient();
-    const result: Record<string, WeightHistoryEntry[]> = {
-        '00980A': [],
-        '00981A': [],
-        '00991A': [],
-    };
+    const result: Record<string, WeightHistoryEntry[]> = Object.fromEntries(
+        ETF_CODES.map(c => [c, []])
+    );
 
     // 優先從 etf_weight_history 查詢
     const { data: weightHistory, error: weightError } = await supabase
         .from('etf_weight_history')
         .select('etf_code, data_date, weight, rank')
-        .in('etf_code', ETF_CODES as unknown as string[])
+        .in('etf_code', ETF_CODES)
         .eq('stock_code', code)
         .order('data_date', { ascending: true });
 
@@ -57,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fallback：從 etf_holdings_snapshot 聚合，補算 rank
-    for (const etfCode of ETF_CODES) {
+    for (const etfCode of ETF_CODES as string[]) {
         const { data: snapshots } = await supabase
             .from('etf_holdings_snapshot')
             .select('data_date, weight')

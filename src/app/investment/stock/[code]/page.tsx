@@ -35,9 +35,9 @@ export default function StockPage() {
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
     const {
-        stockName, prevStock, nextStock, handleNavigate,
+        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
-        etfWeightHistory, etfWeightHistoryLoading,
+        etfWeightHistory, etfWeightHistoryLoading, holdingEtfs,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
         priceError, revenueError, chipsError, brokerError,
     } = useStockDashboard(stockCode);
@@ -58,6 +58,9 @@ export default function StockPage() {
                 prevStock={prevStock}
                 nextStock={nextStock}
                 onNavigate={handleNavigate}
+                holdingEtfs={holdingEtfs}
+                currentIndex={currentIndex}
+                totalCount={totalCount}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">

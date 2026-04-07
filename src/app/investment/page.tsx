@@ -3,7 +3,7 @@ import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs'
 import { StockPickerHub } from '@/components/features/investment/StockPickerHub';
 import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
-import { EtfComparePanel } from '@/components/features/investment/EtfComparePanel';
+import { EtfComparePanel, type OverlapData, type EtfData } from '@/components/features/investment/EtfComparePanel';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
 import { ClockIcon, FlaskConicalIcon, HistoryIcon } from 'lucide-react';
 import React from 'react';
@@ -326,7 +326,7 @@ async function getAllDiffLogs(): Promise<DiffLog[]> {
     })) as DiffLog[];
 }
 
-async function getCompareData() {
+async function getCompareData(): Promise<{ etfs: EtfData[]; overlap: OverlapData } | null> {
     const supabase = await createClient();
 
     const { data: dateRow } = await supabase
@@ -368,7 +368,9 @@ async function getCompareData() {
         }
     }
 
-    const etfs = ETF_CODES.map((etf_code) => {
+    const activeCodes = [...new Set((allHoldings ?? []).map(h => h.etf_code))];
+
+    const etfs = activeCodes.map((etf_code) => {
         const meta = getEtfMeta(etf_code);
         const holdings = (allHoldings ?? [])
             .filter(h => h.etf_code === etf_code)
@@ -405,12 +407,16 @@ async function getCompareData() {
         };
     });
 
-    const overlap = {
-        all3: Object.entries(stockEtfMap).filter(([, l]) => l.length === 3).map(([c]) => c),
-        any2: Object.entries(stockEtfMap).filter(([, l]) => l.length === 2).map(([c]) => c),
-    };
+    const byCount: Record<number, string[]> = {};
+    for (const [code, etfList] of Object.entries(stockEtfMap)) {
+        const n = etfList.length;
+        if (n >= 2) {
+            if (!byCount[n]) byCount[n] = [];
+            byCount[n].push(code);
+        }
+    }
 
-    return { etfs, overlap };
+    return { etfs, overlap: { byCount, totalEtfs: activeCodes.length } };
 }
 
 // ── 頁面 ──────────────────────────────────────────────────────────────────────

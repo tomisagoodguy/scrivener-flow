@@ -17,7 +17,7 @@ interface SectorItem {
     weight: number;
 }
 
-interface EtfData {
+export interface EtfData {
     etf_code: string;
     name: string;
     manager: string;
@@ -28,12 +28,15 @@ interface EtfData {
     sectors: SectorItem[];
 }
 
+export interface OverlapData {
+    /** byCount[n] = 恰好被 n 支 ETF 持有的股票代號陣列（n >= 2） */
+    byCount: Record<number, string[]>;
+    totalEtfs: number;
+}
+
 interface EtfComparePanelProps {
     etfs: EtfData[];
-    overlap: {
-        all3: string[];
-        any2: string[];
-    };
+    overlap: OverlapData;
 }
 
 // ── 顏色常數 ────────────────────────────────────────────────────────────────
@@ -43,7 +46,20 @@ const SECTOR_COLORS = [
     '#8b5cf6', '#14b8a6', '#f97316', '#84cc16',
 ];
 
-// ── Helper：截斷清單，超過 max 支時附加 +N 支 ────────────────────────────────
+// 重疊層級配色（2共 → 藍、最高共同 → 黃，其餘漸層）
+const OVERLAP_COLORS: Record<number, { bg: string; dark: string; badge: string; badgeDark: string; dot: string }> = {
+    2: { bg: 'bg-blue-50/80',   dark: 'dark:bg-blue-900/30',   badge: 'bg-blue-100 text-blue-800',   badgeDark: 'dark:bg-blue-900/50 dark:text-blue-300',   dot: 'bg-blue-400' },
+    3: { bg: 'bg-green-50/80',  dark: 'dark:bg-green-900/30',  badge: 'bg-green-100 text-green-800', badgeDark: 'dark:bg-green-900/50 dark:text-green-300', dot: 'bg-green-400' },
+    4: { bg: 'bg-orange-50/80', dark: 'dark:bg-orange-900/30', badge: 'bg-orange-100 text-orange-800', badgeDark: 'dark:bg-orange-900/50 dark:text-orange-300', dot: 'bg-orange-400' },
+};
+const TOP_COLOR = { bg: 'bg-yellow-50/80', dark: 'dark:bg-yellow-900/30', badge: 'bg-yellow-100 text-yellow-800', badgeDark: 'dark:bg-yellow-900/50 dark:text-yellow-300', dot: 'bg-yellow-400' };
+
+function getOverlapColor(count: number, max: number) {
+    if (count === max) return TOP_COLOR;
+    return OVERLAP_COLORS[count] ?? OVERLAP_COLORS[2];
+}
+
+// ── Helper ───────────────────────────────────────────────────────────────────
 
 function truncateList(list: string[], max: number): { shown: string[]; remaining: number } {
     if (list.length <= max) return { shown: list, remaining: 0 };
@@ -53,15 +69,16 @@ function truncateList(list: string[], max: number): { shown: string[]; remaining
 // ── 子元件：重疊比例摘要卡 ───────────────────────────────────────────────────
 
 function OverlapSummary({
-    all3Count,
-    any2Count,
-    top10Count,
+    byCount,
+    totalEtfs,
+    totalUnique,
 }: {
-    all3Count: number;
-    any2Count: number;
-    top10Count: number;
+    byCount: Record<number, string[]>;
+    totalEtfs: number;
+    totalUnique: number;
 }) {
-    if (all3Count === 0 && any2Count === 0) {
+    const levels = Object.keys(byCount).map(Number).sort((a, b) => b - a);
+    if (levels.length === 0) {
         return (
             <div className="glass-card rounded-xl px-4 py-3 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
@@ -70,31 +87,27 @@ function OverlapSummary({
         );
     }
 
-    const all3Pct = top10Count > 0 ? ((all3Count / top10Count) * 100).toFixed(0) : '0';
-    const any2Pct = top10Count > 0 ? ((any2Count / top10Count) * 100).toFixed(0) : '0';
-
     return (
         <div className="glass-card rounded-xl px-4 py-3 flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-sm bg-yellow-400 shrink-0" />
-                <span className="text-slate-700 dark:text-slate-200">
-                    三方共同持有
-                    <span className="font-bold mx-1 text-yellow-600 dark:text-yellow-400">{all3Count}</span>
-                    支
-                    <span className="text-slate-400 dark:text-slate-500 ml-1">（佔全部持股 {all3Pct}%）</span>
-                </span>
-            </div>
-            {any2Count > 0 && (
-                <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-sm bg-blue-400 shrink-0" />
-                    <span className="text-slate-700 dark:text-slate-200">
-                        兩方共同持有
-                        <span className="font-bold mx-1 text-blue-600 dark:text-blue-400">{any2Count}</span>
-                        支
-                        <span className="text-slate-400 dark:text-slate-500 ml-1">（佔全部持股 {any2Pct}%）</span>
-                    </span>
-                </div>
-            )}
+            {levels.map(n => {
+                const codes = byCount[n];
+                const pct = totalUnique > 0 ? ((codes.length / totalUnique) * 100).toFixed(0) : '0';
+                const color = getOverlapColor(n, totalEtfs);
+                const label = n === totalEtfs ? `全 ${n} 支共同持有` : `${n} 支共同持有`;
+                return (
+                    <div key={n} className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-sm ${color.dot} shrink-0`} />
+                        <span className="text-slate-700 dark:text-slate-200">
+                            {label}
+                            <span className={`font-bold mx-1 ${n === totalEtfs ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                                {codes.length}
+                            </span>
+                            支
+                            <span className="text-slate-400 dark:text-slate-500 ml-1">（佔全部持股 {pct}%）</span>
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -147,12 +160,13 @@ function SectorBar({ sectors }: { sectors: SectorItem[] }) {
 
 function EtfCard({
     etf,
-    overlapAll3,
-    overlapAny2,
+    overlapMap,
+    totalEtfs,
 }: {
     etf: EtfData;
-    overlapAll3: Set<string>;
-    overlapAny2: Set<string>;
+    /** stock_code → 持有數量 */
+    overlapMap: Map<string, number>;
+    totalEtfs: number;
 }) {
     const [expanded, setExpanded] = useState(false);
     const topWeight = etf.holdings.slice(0, 10).reduce((s, h) => s + h.weight, 0);
@@ -198,15 +212,15 @@ function EtfCard({
                     </thead>
                     <tbody>
                         {displayedHoldings.map((h) => {
-                            const isAll3 = overlapAll3.has(h.stock_code);
-                            const isAny2 = overlapAny2.has(h.stock_code);
+                            const sharedCount = overlapMap.get(h.stock_code) ?? 1;
+                            const isOverlap = sharedCount >= 2;
+                            const color = isOverlap ? getOverlapColor(sharedCount, totalEtfs) : null;
                             return (
                                 <tr
                                     key={h.stock_code}
                                     className={[
                                         'border-t border-slate-100 dark:border-slate-700/50 hover:opacity-90 transition-colors',
-                                        isAll3 ? 'bg-yellow-50/80 dark:bg-yellow-900/30' : '',
-                                        isAny2 && !isAll3 ? 'bg-blue-50/80 dark:bg-blue-900/30' : '',
+                                        color ? `${color.bg} ${color.dark}` : '',
                                     ].join(' ')}
                                 >
                                     <td className="px-3 py-2 text-slate-400 text-xs">{h.rank}</td>
@@ -222,11 +236,10 @@ function EtfCard({
                                     </td>
                                     <td className="px-3 py-2 text-slate-800 dark:text-slate-200">
                                         {h.stock_name}
-                                        {isAll3 && (
-                                            <span className="ml-1.5 text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 px-1.5 py-0.5 rounded-full">3共</span>
-                                        )}
-                                        {isAny2 && !isAll3 && (
-                                            <span className="ml-1.5 text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 px-1.5 py-0.5 rounded-full">2共</span>
+                                        {isOverlap && color && (
+                                            <span className={`ml-1.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${color.badge} ${color.badgeDark}`}>
+                                                {sharedCount}共
+                                            </span>
                                         )}
                                     </td>
                                     <td className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-300">
@@ -265,64 +278,80 @@ function EtfCard({
 // ── 主元件 ───────────────────────────────────────────────────────────────────
 
 export function EtfComparePanel({ etfs, overlap }: EtfComparePanelProps) {
-    const overlapAll3 = useMemo(() => new Set(overlap.all3), [overlap.all3]);
-    const overlapAny2 = useMemo(() => new Set(overlap.any2), [overlap.any2]);
+    const { byCount, totalEtfs } = overlap;
 
-    // 計算前10大持股的唯一股票數（取三ETF前10的聯集）
-    const top10Codes = useMemo(() => {
+    // stock_code → 持有數量（用於 EtfCard 著色）
+    const overlapMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const [countStr, codes] of Object.entries(byCount)) {
+            const n = Number(countStr);
+            for (const code of codes) map.set(code, n);
+        }
+        return map;
+    }, [byCount]);
+
+    // 全部唯一持股數（取聯集）
+    const totalUnique = useMemo(() => {
         const codes = new Set<string>();
-        etfs.forEach(e => e.holdings.slice(0, 10).forEach(h => codes.add(h.stock_code)));
+        etfs.forEach(e => e.holdings.forEach(h => codes.add(h.stock_code)));
         return codes.size;
     }, [etfs]);
 
-    const { shown: shownAll3, remaining: remainingAll3 } = truncateList(overlap.all3, 5);
-    const { shown: shownAny2, remaining: remainingAny2 } = truncateList(overlap.any2, 5);
+    // 交集說明標籤（由高到低）
+    const overlapLevels = Object.keys(byCount).map(Number).sort((a, b) => b - a);
+
+    // grid 欄數：≤3 支直接等寬；>3 支固定 3 欄，讓卡片換行
+    const gridClass = etfs.length <= 3
+        ? `grid grid-cols-1 ${etfs.length >= 2 ? 'lg:grid-cols-2' : ''} ${etfs.length === 3 ? 'xl:grid-cols-3' : ''} gap-4`
+        : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4';
 
     return (
         <div className="space-y-4">
             {/* 重疊比例摘要卡 */}
             <OverlapSummary
-                all3Count={overlap.all3.length}
-                any2Count={overlap.any2.length}
-                top10Count={top10Codes}
+                byCount={byCount}
+                totalEtfs={totalEtfs}
+                totalUnique={totalUnique}
             />
 
-            {/* 交集說明 */}
-            {(overlap.all3.length > 0 || overlap.any2.length > 0) && (
+            {/* 交集說明標籤列 */}
+            {overlapLevels.length > 0 && (
                 <div className="flex flex-wrap gap-3 text-sm">
-                    {overlap.all3.length > 0 && (
-                        <div className="flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg px-3 py-2">
-                            <span className="w-3 h-3 rounded-sm bg-yellow-400 shrink-0" />
-                            <span className="text-yellow-800 dark:text-yellow-300">
-                                三 ETF 共同持有：{shownAll3.join('、')}
-                                {remainingAll3 > 0 && (
-                                    <span className="ml-1 text-yellow-600 dark:text-yellow-400">+{remainingAll3} 支</span>
-                                )}
-                            </span>
-                        </div>
-                    )}
-                    {overlap.any2.length > 0 && (
-                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg px-3 py-2">
-                            <span className="w-3 h-3 rounded-sm bg-blue-400 shrink-0" />
-                            <span className="text-blue-800 dark:text-blue-300">
-                                兩 ETF 共同持有：{shownAny2.join('、')}
-                                {remainingAny2 > 0 && (
-                                    <span className="ml-1 text-blue-600 dark:text-blue-400">+{remainingAny2} 支</span>
-                                )}
-                            </span>
-                        </div>
-                    )}
+                    {overlapLevels.map(n => {
+                        const codes = byCount[n];
+                        const { shown, remaining } = truncateList(codes, 5);
+                        const color = getOverlapColor(n, totalEtfs);
+                        const label = n === totalEtfs ? `全 ${n} 支共同持有` : `${n} 支共同持有`;
+                        return (
+                            <div
+                                key={n}
+                                className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+                                    n === totalEtfs
+                                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700/50'
+                                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/50'
+                                }`}
+                            >
+                                <span className={`w-3 h-3 rounded-sm ${color.dot} shrink-0`} />
+                                <span className={n === totalEtfs ? 'text-yellow-800 dark:text-yellow-300' : 'text-blue-800 dark:text-blue-300'}>
+                                    {label}：{shown.join('、')}
+                                    {remaining > 0 && (
+                                        <span className="ml-1 opacity-75">+{remaining} 支</span>
+                                    )}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* 三欄卡片 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* ETF 卡片 Grid */}
+            <div className={gridClass}>
                 {etfs.map((etf) => (
                     <EtfCard
                         key={etf.etf_code}
                         etf={etf}
-                        overlapAll3={overlapAll3}
-                        overlapAny2={overlapAny2}
+                        overlapMap={overlapMap}
+                        totalEtfs={totalEtfs}
                     />
                 ))}
             </div>

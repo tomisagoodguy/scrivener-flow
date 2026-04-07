@@ -1,48 +1,64 @@
 import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { ETF_CODES } from '@/lib/investment/etfRegistry';
 
 /**
- * GET /api/investment/holdings
- * 
- * 獲取 ETF 持股列表（含價格、營收等完整資訊）
- * 用於儀表板頁面的股票導航功能
+ * GET /api/investment/holdings?etf=00981A
+ *
+ * 無 etf 參數時回傳所有 ETF 的 union pool（依 weight 去重降序）
+ * 用於個股儀表板的上下頁導航，確保與選股池順序一致
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         const supabase = await createClient();
-        
-        // 1. 先取得最新可用日期
+        const etfFilter = req.nextUrl.searchParams.get('etf');
+
+        const targetCodes = etfFilter ? [etfFilter] : ETF_CODES;
+
+        // 1. 各 ETF 最新日期
         const { data: latestDateData } = await supabase
             .from('etf_holdings_snapshot')
-            .select('data_date')
+            .select('etf_code, data_date')
+            .in('etf_code', targetCodes)
             .order('data_date', { ascending: false })
-            .limit(1);
+            .limit(targetCodes.length * 2);
 
-        const latestDate = latestDateData?.[0]?.data_date;
-        if (!latestDate) return NextResponse.json([]);
+        if (!latestDateData || latestDateData.length === 0) return NextResponse.json([]);
 
-        // 2. 獲取該日期的持股快照數據
-        const { data, error } = await supabase
-            .from('etf_holdings_snapshot')
-            .select('*')
-            .eq('etf_code', '00981A')
-            .eq('data_date', latestDate)
-            .order('weight', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching holdings:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch holdings' },
-                { status: 500 }
-            );
+        // 每支 ETF 取最新一筆日期
+        const latestByEtf: Record<string, string> = {};
+        for (const row of latestDateData) {
+            if (!latestByEtf[row.etf_code]) latestByEtf[row.etf_code] = row.data_date;
         }
 
-        return NextResponse.json(data || []);
+        // 2. 取各 ETF 持股
+        const snapshots = await Promise.all(
+            Object.entries(latestByEtf).map(([code, date]) =>
+                supabase
+                    .from('etf_holdings_snapshot')
+                    .select('stock_code, stock_name, weight, etf_code')
+                    .eq('etf_code', code)
+                    .eq('data_date', date)
+                    .order('weight', { ascending: false })
+            )
+        );
+
+        // 3. Union：同一 stock_code 保留 weight 最高那筆
+        const map = new Map<string, { stock_code: string; stock_name: string; weight: number; etf_code: string }>();
+        for (const res of snapshots) {
+            for (const h of res.data ?? []) {
+                const existing = map.get(h.stock_code);
+                if (!existing || (h.weight ?? 0) > (existing.weight ?? 0)) {
+                    map.set(h.stock_code, h);
+                }
+            }
+        }
+
+        const result = Array.from(map.values()).sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+
+        return NextResponse.json(result);
     } catch (error) {
         console.error('Unexpected error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

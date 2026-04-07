@@ -168,7 +168,7 @@ export function EtfRankingHistoryChart({ weightHistory, etfRegistry }: EtfRankin
                         <div className="space-y-1.5 overflow-y-auto max-h-[300px]">
                             {topStocks.map((stock, i) => (
                                 <div key={stock.stock_code} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <div className="w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0"
+                                    <div className="w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0"
                                         style={{ backgroundColor: STOCK_COLORS[i % STOCK_COLORS.length] }}>
                                         {stock.rank}
                                     </div>
@@ -176,7 +176,7 @@ export function EtfRankingHistoryChart({ weightHistory, etfRegistry }: EtfRankin
                                         <div className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{stock.stock_name}</div>
                                         <div className="text-[10px] text-slate-400 font-mono">{stock.stock_code}</div>
                                     </div>
-                                    <span className="text-[10px] font-mono text-slate-400 ml-auto flex-shrink-0">
+                                    <span className="text-[10px] font-mono text-slate-400 ml-auto shrink-0">
                                         {stock.weight.toFixed(1)}%
                                     </span>
                                 </div>
