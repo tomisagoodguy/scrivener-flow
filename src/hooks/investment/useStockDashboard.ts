@@ -72,24 +72,28 @@ export function useStockDashboard(stockCode: string) {
             try {
                 const response = await fetch('/api/investment/holdings');
                 if (!response.ok) return;
-                let data: Holding[] = await response.json();
+                const allData: Holding[] = await response.json();
 
+                // 全量用來計算 totalCount
+                setTotalCount(allData.length);
+
+                // filtered 清單用來決定上下頁導航與 currentIndex
+                let navData = allData;
                 if (searchParams.toString()) {
                     const filters = searchParams.get('filters')?.split(',') || [];
                     const search = searchParams.get('search') || '';
                     const sort = (searchParams.get('sort') as SortField) || 'weight';
                     const order = (searchParams.get('order') as SortOrder) || 'desc';
-                    data = filterAndSortHoldings(data, filters, search, sort, order);
+                    navData = filterAndSortHoldings(allData, filters, search, sort, order);
                 }
 
-                const index = data.findIndex((h: Holding) => h.stock_code === stockCode);
-                const target = data[index];
+                const index = navData.findIndex((h: Holding) => h.stock_code === stockCode);
+                const target = navData[index] ?? allData.find((h) => h.stock_code === stockCode);
                 if (target) {
                     setStockName(target.stock_name);
-                    setPrevStock(index > 0 ? { code: data[index - 1].stock_code, name: data[index - 1].stock_name } : null);
-                    setNextStock(index < data.length - 1 ? { code: data[index + 1].stock_code, name: data[index + 1].stock_name } : null);
-                    setCurrentIndex(index + 1);
-                    setTotalCount(data.length);
+                    setPrevStock(index > 0 ? { code: navData[index - 1].stock_code, name: navData[index - 1].stock_name } : null);
+                    setNextStock(index < navData.length - 1 ? { code: navData[index + 1].stock_code, name: navData[index + 1].stock_name } : null);
+                    setCurrentIndex(index >= 0 ? index + 1 : -1);
                 }
             } catch (err) {
                 console.error('Failed to fetch holdings:', err);
