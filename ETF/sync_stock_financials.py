@@ -49,10 +49,10 @@ class FinancialsSync:
                 logger.error("Finlab 登入失敗")
                 return
 
-            # 1. 取得目標股票
+            # 1. 取得目標股票（所有 ETF 合集）
             logger.info("正在獲取目標股票清單...")
-            stock_list = self.storage.get_target_stocks('00981A')
-            logger.info(f"找到 {len(stock_list)} 支成分股")
+            stock_list = self.storage.get_all_target_stocks()
+            logger.info(f"找到 {len(stock_list)} 支成分股（所有 ETF 合計）")
             
             if not stock_list:
                 logger.error("無目標股票，中止同步")

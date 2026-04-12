@@ -45,7 +45,9 @@
       "Bash(ls -la /c/Users/user/Documents/GitHub/scrivener-flow/ETF/migrate_snapshot*.py)",
       "Bash(grep -A 30 \"save_snapshot\" /c/Users/user/Documents/GitHub/scrivener-flow/ETF/services/storage/*.py)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): 修正 sync_stock_financials 只同步 00981A 成分股的問題，改用 get_all_target_stocks\\(\\) 覆蓋所有 ETF\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 修正 sync_stock_financials 只同步 00981A 成分股的問題，改用 get_all_target_stocks\\(\\) 覆蓋所有 ETF\")"
     ]
   }
 }

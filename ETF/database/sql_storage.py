@@ -54,12 +54,23 @@ class SQLStorage:
         """從 etf_holdings_snapshot 取得目標股票清單"""
         with self.engine.connect() as conn:
             query = text("""
-                SELECT DISTINCT stock_code 
-                FROM etf_holdings_snapshot 
+                SELECT DISTINCT stock_code
+                FROM etf_holdings_snapshot
                 WHERE etf_code = :etf_code
                 ORDER BY stock_code
             """)
             result = conn.execute(query, {"etf_code": etf_code})
+            return [row[0] for row in result]
+
+    def get_all_target_stocks(self) -> list:
+        """從 etf_holdings_snapshot 取得所有 ETF 的成分股（去重合集）"""
+        with self.engine.connect() as conn:
+            query = text("""
+                SELECT DISTINCT stock_code
+                FROM etf_holdings_snapshot
+                ORDER BY stock_code
+            """)
+            result = conn.execute(query)
             return [row[0] for row in result]
 
     def upsert_revenue_data(self, records: list):
