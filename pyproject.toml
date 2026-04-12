@@ -39,7 +39,7 @@ src = ["src", "ETF"]
 [tool.pyright]
 # 指定 Pyright / Pylance 掃描的包含目錄
 include = ["src", "ETF", "scripts", "tests"]
-# 允許專案根目錄作為 Import 的搜尋根目錄
+# 允許專案根目錄作為 Import 的搜尋根目錄（ETF package 位於此）
 extraPaths = ["."]
 # 指定虛擬環境
 venvPath = "."

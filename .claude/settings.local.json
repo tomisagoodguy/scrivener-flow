@@ -47,7 +47,24 @@
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")",
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): 修正 sync_stock_financials 只同步 00981A 成分股的問題，改用 get_all_target_stocks\\(\\) 覆蓋所有 ETF\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 修正 sync_stock_financials 只同步 00981A 成分股的問題，改用 get_all_target_stocks\\(\\) 覆蓋所有 ETF\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 修正 sync_stock_financials 只同步 00981A 成分股的問題，改用 get_all_target_stocks\\(\\) 覆蓋所有 ETF\")",
+      "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")",
+      "Bash(grep -l \"etf_holdings\\\\|etf_stock_overlap\\\\|stock_prices\\\\|stock_revenue\" /c/Users/user/Documents/GitHub/scrivener-flow/migrations/*.sql)",
+      "Bash(python3)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('description',''\\), d.get\\('language',''\\), d.get\\('topics',[]\\)\\)\")",
+      "WebFetch(domain:ai.finlab.finance)",
+      "Bash(curl -sSf https://ai.finlab.finance/install.sh)",
+      "Bash(sh)",
+      "Bash(grep -E \"^[a-z0-9-]+$\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(investment\\): 將 PREDEFINED_STRATEGIES 移出 use server 檔案以修復 .map 錯誤\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(investment\\): 將 PREDEFINED_STRATEGIES 移出 use server 檔案以修復 .map 錯誤\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",
+      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\src\\app\\api\\investment\\bare-k",
+      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\src\\app\\investment\\bare-k"
     ]
   }
 }

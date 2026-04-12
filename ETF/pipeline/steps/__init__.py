@@ -4,18 +4,19 @@ Pipeline Steps Module
 各個獨立的 Pipeline 步驟。
 """
 
-from .base import BaseStep
-from .scrape_step import ScrapeStep
-from .price_attach_step import PriceAttachStep
-from .diff_compute_step import DiffComputeStep
-from .save_snapshot_step import SaveSnapshotStep
-from .sync_company_step import SyncCompanyStep
-from .sync_ohlcv_step import SyncOHLCVStep
-from .notify_step import NotifyStep
-from .cleanup_step import CleanupStep
-from .weight_history_step import WeightHistoryStep
-from .multi_etf_step import MultiEtfStep
-from .overlap_compute_step import OverlapComputeStep
+from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.scrape_step import ScrapeStep
+from ETF.pipeline.steps.price_attach_step import PriceAttachStep
+from ETF.pipeline.steps.diff_compute_step import DiffComputeStep
+from ETF.pipeline.steps.save_snapshot_step import SaveSnapshotStep
+from ETF.pipeline.steps.sync_company_step import SyncCompanyStep
+from ETF.pipeline.steps.sync_ohlcv_step import SyncOHLCVStep
+from ETF.pipeline.steps.notify_step import NotifyStep
+from ETF.pipeline.steps.cleanup_step import CleanupStep
+from ETF.pipeline.steps.weight_history_step import WeightHistoryStep
+from ETF.pipeline.steps.multi_etf_step import MultiEtfStep
+from ETF.pipeline.steps.overlap_compute_step import OverlapComputeStep
+from ETF.pipeline.steps.sync_bare_k_step import SyncBareKStep
 
 __all__ = [
     "BaseStep",
@@ -28,6 +29,7 @@ __all__ = [
     "WeightHistoryStep",
     "MultiEtfStep",
     "OverlapComputeStep",
+    "SyncBareKStep",
     "NotifyStep",
     "CleanupStep",
 ]

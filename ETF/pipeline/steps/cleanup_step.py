@@ -4,7 +4,7 @@ Cleanup Step
 負責清理過舊的資料庫記錄以節省空間。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

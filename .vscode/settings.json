@@ -10,6 +10,7 @@
         "scripts",
         "tests"
     ],
+    "python.analysis.autoSearchPaths": false,
     "files.associations": {
         "*.css": "tailwindcss"
     },

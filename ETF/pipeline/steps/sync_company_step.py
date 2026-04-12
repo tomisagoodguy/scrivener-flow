@@ -4,7 +4,7 @@ Sync Company Step
 負責同步公司基本資訊（產業類別、公司名稱）。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

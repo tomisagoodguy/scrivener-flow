@@ -7,9 +7,9 @@ Pipeline Orchestrator
 import logging
 from typing import List, Type
 
-from .context import PipelineContext
-from .steps.base import BaseStep
-from .steps import (
+from ETF.pipeline.context import PipelineContext
+from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps import (
     ScrapeStep,
     PriceAttachStep,
     DiffComputeStep,
@@ -19,6 +19,7 @@ from .steps import (
     WeightHistoryStep,
     MultiEtfStep,
     OverlapComputeStep,
+    SyncBareKStep,
     NotifyStep,
     CleanupStep,
 )
@@ -45,6 +46,7 @@ class PipelineOrchestrator:
         SyncCompanyStep,
         SyncOHLCVStep,
         OverlapComputeStep,  # 聚合跨 ETF 共識持股 → etf_stock_overlap
+        SyncBareKStep,       # 同步 watch_list 裸K快照
         NotifyStep,
         CleanupStep,
     ]

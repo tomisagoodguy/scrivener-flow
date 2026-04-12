@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 from typing import List
 
-from .client import FinlabClient
+from ETF.services.finlab.client import FinlabClient
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ Price Attach Step
 負責附加股票價格與相關指標資料。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

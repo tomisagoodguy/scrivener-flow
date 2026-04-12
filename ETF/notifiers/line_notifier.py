@@ -3,7 +3,7 @@ import logging
 import json
 import requests
 from typing import List, Dict, Any
-from .message_builder import DiffMessageBuilder, SummaryMessageBuilder
+from ETF.notifiers.message_builder import DiffMessageBuilder, SummaryMessageBuilder
 
 logger = logging.getLogger(__name__)
 

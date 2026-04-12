@@ -4,7 +4,7 @@ Save Snapshot Step
 負責儲存快照、異動記錄與 CSV 備份。
 """
 
-from .base import BaseStep
+from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 

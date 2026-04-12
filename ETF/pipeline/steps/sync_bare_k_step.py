@@ -1,0 +1,140 @@
+"""
+Sync Bare-K Step
+
+從 watch_list 聚合所有使用者的自選股，計算裸K六面板快照，
+並批次 upsert 至 bare_k_snapshots 表。
+"""
+
+import json
+import logging
+from datetime import date
+
+from sqlalchemy import text
+
+from ETF.pipeline.context import PipelineContext
+from ETF.pipeline.steps.base import BaseStep
+from ETF.services.finlab.bare_k_service import BareKService
+
+logger = logging.getLogger(__name__)
+
+MAX_STOCKS = 50  # 每次最多同步股票數量
+
+
+class SyncBareKStep(BaseStep):
+    """同步裸K看盤六面板快照"""
+
+    @property
+    def name(self) -> str:
+        return "Sync BareK Snapshots"
+
+    def should_skip(self, ctx: PipelineContext) -> bool:
+        return ctx.is_dry_run
+
+    def execute(self, ctx: PipelineContext) -> PipelineContext:
+        # 1. 從 watch_list 聚合所有使用者的股票（service role 繞過 RLS）
+        stock_ids = self._fetch_watch_list_stocks(ctx)
+
+        if not stock_ids:
+            self.logger.info("watch_list is empty, skipping BareK sync.")
+            ctx.bare_k_synced_count = 0
+            return ctx
+
+        if len(stock_ids) > MAX_STOCKS:
+            self.logger.warning(
+                f"watch_list has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
+            )
+            stock_ids = stock_ids[:MAX_STOCKS]
+
+        self.logger.info(f"Syncing BareK snapshots for {len(stock_ids)} stocks: {stock_ids}")
+
+        # 2. 初始化 BareKService（預載全市場資料）
+        svc = BareKService()
+        if not svc.ensure_global_data():
+            self.logger.error("Failed to load FinLab data for BareK sync, skipping.")
+            ctx.bare_k_synced_count = 0
+            return ctx
+
+        # 3. 對每支股票計算快照
+        today = str(date.today())
+        success_count = 0
+        snapshots: list[dict] = []
+
+        for sid in stock_ids:
+            try:
+                snapshot = svc.compute_snapshot(sid, days=240)
+                if snapshot is None:
+                    self.logger.warning(f"No snapshot for {sid}, skipping.")
+                    continue
+                snapshots.append({"stock_id": sid, "date": today, **snapshot})
+                success_count += 1
+            except Exception as e:
+                self.logger.warning(f"Failed to compute snapshot for {sid}: {e}")
+
+        # 4. 批次 upsert
+        if snapshots:
+            self._upsert_snapshots(ctx, snapshots)
+
+        ctx.bare_k_synced_count = success_count
+        self.logger.info(
+            f"BareK sync done: {success_count}/{len(stock_ids)} stocks succeeded."
+        )
+        return ctx
+
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _fetch_watch_list_stocks(self, ctx: PipelineContext) -> list[str]:
+        """
+        從 watch_list 讀取所有使用者的自選股（service role 繞過 RLS）。
+        按 created_at 升序排列，取最多 MAX_STOCKS 支。
+        """
+        try:
+            with ctx.sql_storage.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT DISTINCT stock_id
+                    FROM watch_list
+                    ORDER BY stock_id
+                    LIMIT :limit
+                """), {"limit": MAX_STOCKS + 1})  # 多取 1 供截斷警告
+                return [row[0] for row in result.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Failed to fetch watch_list: {e}")
+            return []
+
+    def _upsert_snapshots(self, ctx: PipelineContext, snapshots: list[dict]) -> None:
+        """批次 upsert snapshots 至 bare_k_snapshots"""
+        upsert_sql = text("""
+            INSERT INTO bare_k_snapshots
+                (stock_id, date, ohlcv, mas, signals, margin, revenue, inv_chips, summary)
+            VALUES
+                (:stock_id, :date, :ohlcv::jsonb, :mas::jsonb, :signals::jsonb,
+                 :margin::jsonb, :revenue::jsonb, :inv_chips::jsonb, :summary::jsonb)
+            ON CONFLICT (stock_id, date) DO UPDATE SET
+                ohlcv      = EXCLUDED.ohlcv,
+                mas        = EXCLUDED.mas,
+                signals    = EXCLUDED.signals,
+                margin     = EXCLUDED.margin,
+                revenue    = EXCLUDED.revenue,
+                inv_chips  = EXCLUDED.inv_chips,
+                summary    = EXCLUDED.summary,
+                created_at = now()
+        """)
+
+        try:
+            with ctx.sql_storage.engine.connect() as conn:
+                for snap in snapshots:
+                    conn.execute(upsert_sql, {
+                        "stock_id":  snap["stock_id"],
+                        "date":      snap["date"],
+                        "ohlcv":     json.dumps(snap["ohlcv"], ensure_ascii=False),
+                        "mas":       json.dumps(snap["mas"],   ensure_ascii=False),
+                        "signals":   json.dumps(snap["signals"], ensure_ascii=False),
+                        "margin":    json.dumps(snap["margin"], ensure_ascii=False),
+                        "revenue":   json.dumps(snap["revenue"], ensure_ascii=False),
+                        "inv_chips": json.dumps(snap["inv_chips"], ensure_ascii=False),
+                        "summary":   json.dumps(snap["summary"], ensure_ascii=False),
+                    })
+                conn.commit()
+            self.logger.info(f"Upserted {len(snapshots)} bare_k_snapshots.")
+        except Exception as e:
+            self.logger.error(f"Failed to upsert bare_k_snapshots: {e}")
+            raise

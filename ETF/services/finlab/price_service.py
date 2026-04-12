@@ -9,8 +9,8 @@ import pandas as pd
 from datetime import datetime
 from typing import Optional
 
-from .client import FinlabClient
-from ..indicators import calculate_new_highs, calculate_volatility, calculate_revenue_momentum
+from ETF.services.finlab.client import FinlabClient
+from ETF.services.indicators import calculate_new_highs, calculate_volatility, calculate_revenue_momentum
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,8 @@ import os
 import logging
 import pathlib
 from datetime import datetime
-from ..scrapers.unified_scraper import download_file
-from ..parsers.xlsx_parser import parse_holdings_xlsx
+from ETF.scrapers.unified_scraper import download_file
+from ETF.parsers.xlsx_parser import parse_holdings_xlsx
 
 logger = logging.getLogger(__name__)
 

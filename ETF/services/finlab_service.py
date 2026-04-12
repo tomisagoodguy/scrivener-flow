@@ -6,10 +6,10 @@ FinlabService - 向後相容入口
 """
 
 # Re-export from new location for backward compatibility
-from .finlab import FinlabService
+from ETF.services.finlab.facade import FinlabService
 
 # 也匯出子服務以供直接使用
-from .finlab import (
+from ETF.services.finlab import (
     FinlabClient,
     PriceDataService,
     OHLCVService,
