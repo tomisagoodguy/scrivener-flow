@@ -36,7 +36,16 @@
       "mcp__firecrawl__firecrawl_agent",
       "mcp__firecrawl__firecrawl_agent_status",
       "Read(//tmp/**)",
-      "Read(//c/tmp/**)"
+      "Read(//c/tmp/**)",
+      "Bash(find \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\" -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"stock.*filter\\\\|filter.*stock\" {} \\\\;)",
+      "Bash(find \"/c/Users/user/Documents/GitHub/scrivener-flow/src/app\" -name \"*.tsx\" -type f -exec grep -l \"stock.*filter\\\\|byStock\\\\|stockFilter\" {} \\\\;)",
+      "Bash(grep -n \"ALTER TABLE.*etf_holdings_snapshot\\\\|ADD COLUMN.*volatility\\\\|ADD COLUMN.*momentum\" /c/Users/user/Documents/GitHub/scrivener-flow/migrations/*.sql /c/Users/user/Documents/GitHub/scrivener-flow/supabase/migrations/*.sql)",
+      "Bash(grep -B 5 -A 15 \"volatility\\\\|revenue_momentum_rank\" /c/Users/user/Documents/GitHub/scrivener-flow/src/app/actions/ai/*.ts)",
+      "Bash(find /c/Users/user/Documents/GitHub/scrivener-flow/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"volatility\" {} \\\\;)",
+      "Bash(ls -la /c/Users/user/Documents/GitHub/scrivener-flow/ETF/migrate_snapshot*.py)",
+      "Bash(grep -A 30 \"save_snapshot\" /c/Users/user/Documents/GitHub/scrivener-flow/ETF/services/storage/*.py)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix\\(etf\\): 補充次要 ETF FinLab 指標以修復波動率/營收動能顯示\")"
     ]
   }
 }

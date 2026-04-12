@@ -71,7 +71,14 @@ class MultiEtfStep(BaseStep):
                     snapshot_date = data_date or today
                     # Pocket.tw 回傳 YYYY/MM/DD，轉換為 YYYY-MM-DD
                     snapshot_date = snapshot_date.replace("/", "-")
-                    self._save_holdings_snapshot(ctx, etf_code, df, snapshot_date)
+                    # 補充 FinLab 指標（volatility、revenue_momentum_rank 等）
+                    try:
+                        df = ctx.finlab_srv.attach_prices(df, snapshot_date)
+                        self.logger.info(f"FinLab price attach succeeded for {etf_code}")
+                    except Exception as e:
+                        self.logger.warning(f"FinLab price attach failed for {etf_code}: {e}")
+                    # 用 storage.save_snapshot() 統一存入（含所有指標欄位）
+                    ctx.storage.save_snapshot(df, etf_code, snapshot_date)
                     self._save_weight_history(ctx, etf_code, df, snapshot_date)
                     # 收集成分股代碼，供後續 SyncOHLCVStep 使用
                     all_secondary_codes.extend(df["code"].tolist())

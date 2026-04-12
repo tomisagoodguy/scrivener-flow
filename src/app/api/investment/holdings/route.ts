@@ -15,21 +15,21 @@ export async function GET(req: NextRequest) {
 
         const targetCodes = etfFilter ? [etfFilter] : ETF_CODES;
 
-        // 1. 各 ETF 最新日期
-        const { data: latestDateData } = await supabase
-            .from('etf_holdings_snapshot')
-            .select('etf_code, data_date')
-            .in('etf_code', targetCodes)
-            .order('data_date', { ascending: false })
-            .limit(targetCodes.length * 2);
-
-        if (!latestDateData || latestDateData.length === 0) return NextResponse.json([]);
-
-        // 每支 ETF 取最新一筆日期
+        // 1. 各 ETF 最新日期（分開查，避免混合 limit 截斷問題）
         const latestByEtf: Record<string, string> = {};
-        for (const row of latestDateData) {
-            if (!latestByEtf[row.etf_code]) latestByEtf[row.etf_code] = row.data_date;
-        }
+        await Promise.all(
+            targetCodes.map(async (code) => {
+                const { data } = await supabase
+                    .from('etf_holdings_snapshot')
+                    .select('data_date')
+                    .eq('etf_code', code)
+                    .order('data_date', { ascending: false })
+                    .limit(1);
+                if (data?.[0]) latestByEtf[code] = data[0].data_date;
+            })
+        );
+
+        if (Object.keys(latestByEtf).length === 0) return NextResponse.json([]);
 
         // 2. 取各 ETF 持股
         const snapshots = await Promise.all(
