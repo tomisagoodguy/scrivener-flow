@@ -1,0 +1,12 @@
+schema: spec-driven
+created: 2026-04-14
+status: applied
+applied_at: 2026-04-14
+summary: |
+  Python 端 ETF Registry 統一化完成。
+  - 新增 ETF/config/etf_registry.py（唯一 Python ETF 清單，11 支，以 TS 為準）
+  - multi_etf_step.py、daily_ai_report.py、prompt_builder.py 均改從 registry 動態讀取
+  - etfRegistry.ts dataSource 已從 'moneydj' 改為 'pocket'
+  - moneydj_scraper.py 已刪除（確認無任何 Python import）
+  - AI 日報 ETF 覆蓋範圍從 3 支擴大到全部 11 支
+  - ruff check/format 通過，ETF/tests/ 全數通過

@@ -2,7 +2,9 @@
 
 ## 專案本質
 
-ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤三支主動型 ETF（00981A / 00980A / 00991A）的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
+ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤 **11 支主動型 ETF** 的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
+
+ETF 清單統一由 **`ETF/config/etf_registry.py`** 維護（對應 `src/lib/investment/etfRegistry.ts`），新增 ETF 只需改這兩個檔案。
 
 選用 **SQLAlchemy + FinLab** 的理由：需要繞過 Supabase RLS 批次寫入，FinLab 提供台股完整的 OHLCV / 財務 / 籌碼資料。
 
@@ -27,8 +29,11 @@ ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤三支�
 ```text
 ETF/
 ├── main.py                    # 進入點，解析 args、建立 ctx、執行 Pipeline
-├── daily_ai_report.py         # 單獨執行 AI 報告的腳本
+├── daily_ai_report.py         # 單獨執行 AI 報告的腳本（覆蓋全部 11 支 ETF）
 ├── sync_stock_financials.py   # 手動同步股票財務資料
+│
+├── config/
+│   └── etf_registry.py        # 「Python 端唱一 ETF 清單」—所有步驟從此讀取，對應 etfRegistry.ts
 │
 ├── pipeline/
 │   ├── context.py             # PipelineContext：步驟間共享狀態（核心）
@@ -49,7 +54,7 @@ ETF/
 │
 ├── scrapers/
 │   ├── fhtrust_scraper.py     # 00981A 來源：復華投信持股 Excel 下載
-│   ├── moneydj_scraper.py     # 00980A / 00991A 來源：MoneyDJ 持股頁面
+│   ├── pocket_scraper.py      # 次要 ETF 統一來源：Pocket.tw（所有 data_source='pocket' 的 ETF）
 │   └── unified_scraper.py     # 統一爬蟲介面
 │
 ├── processors/

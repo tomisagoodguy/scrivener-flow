@@ -1,9 +1,10 @@
 """
 Multi-ETF Step
 
-爬取全部 9 檔次要主動式 ETF 的持股快照、AUM、產業分布，
+爬取全部次要主動式 ETF 的持股快照、AUM、產業分布，
 並存入 Supabase。與現有 00981A pipeline 並行，不影響主流程。
 
+ETF 清單從 ETF/config/etf_registry.py 動態讀取（data_source='pocket'）。
 使用 pocket_scraper 作為統一資料源（Pocket.tw 支援全部主動式 ETF）。
 """
 
@@ -13,38 +14,14 @@ from typing import Any
 
 import pandas as pd
 
+from ETF.config.etf_registry import SECONDARY_ETF_CODES, ETF_META
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.diff_engine import compute_diff
 
 logger = logging.getLogger(__name__)
 
-# 目標 ETF（不含 00981A，它走既有主流程）
-SECONDARY_ETF_CODES = [
-    "00980A",  # 野村智慧優選
-    "00982A",  # 中信優選成長
-    "00984A",  # 群益主動優選
-    "00985A",  # 元大主動選股
-    "00987A",  # 凱基主動精選
-    "00991A",  # 復華未來50
-    "00992A",  # 統一主動選股
-    "00993A",  # 永豐主動選股
-    "00994A",  # 新光主動選股
-    "00995A",  # 台新主動選股
-]
-
-ETF_META = {
-    "00980A": {"name": "野村智慧優選", "manager": "野村投信"},
-    "00982A": {"name": "中信優選成長", "manager": "中國信託投信"},
-    "00984A": {"name": "群益主動優選", "manager": "群益投信"},
-    "00985A": {"name": "元大主動選股", "manager": "元大投信"},
-    "00987A": {"name": "凱基主動精選", "manager": "凱基投信"},
-    "00991A": {"name": "復華未來50", "manager": "復華投信"},
-    "00992A": {"name": "統一主動選股", "manager": "統一投信"},
-    "00993A": {"name": "永豐主動選股", "manager": "永豐投信"},
-    "00994A": {"name": "新光主動選股", "manager": "新光投信"},
-    "00995A": {"name": "台新主動選股", "manager": "台新投信"},
-}
+# ETF 清單從 etf_registry 動態讀取，請勿在此處 hardcode
 
 
 class MultiEtfStep(BaseStep):
@@ -65,8 +42,9 @@ class MultiEtfStep(BaseStep):
         all_secondary_codes: list[str] = []
 
         for etf_code in SECONDARY_ETF_CODES:
-            meta = ETF_META.get(etf_code, {"name": etf_code, "manager": "未知"})
-            self.logger.info(f"Processing {etf_code} ({meta['name']})...")
+            entry = ETF_META.get(etf_code)
+            name = entry.name if entry else etf_code
+            self.logger.info(f"Processing {etf_code} ({name})...")
 
             # 1. 持股快照（pocket_scraper 統一資料源）
             try:
@@ -78,9 +56,13 @@ class MultiEtfStep(BaseStep):
                     # 補充 FinLab 指標（volatility、revenue_momentum_rank 等）
                     try:
                         df = ctx.finlab_srv.attach_prices(df, snapshot_date)
-                        self.logger.info(f"FinLab price attach succeeded for {etf_code}")
+                        self.logger.info(
+                            f"FinLab price attach succeeded for {etf_code}"
+                        )
                     except Exception as e:
-                        self.logger.warning(f"FinLab price attach failed for {etf_code}: {e}")
+                        self.logger.warning(
+                            f"FinLab price attach failed for {etf_code}: {e}"
+                        )
                     # 用 storage.save_snapshot() 統一存入（含所有指標欄位）
                     ctx.storage.save_snapshot(df, etf_code, snapshot_date)
                     self._save_weight_history(ctx, etf_code, df, snapshot_date)
@@ -92,7 +74,9 @@ class MultiEtfStep(BaseStep):
                         diff_logs = self._compute_diff(ctx, etf_code, df, snapshot_date)
                         if diff_logs:
                             self._save_diff_logs(ctx, diff_logs)
-                        self._notify_etf_completion(ctx, etf_code, df, diff_logs, snapshot_date)
+                        self._notify_etf_completion(
+                            ctx, etf_code, df, diff_logs, snapshot_date
+                        )
                     except Exception as e:
                         self.logger.error(f"Diff/notify failed for {etf_code}: {e}")
                 else:
@@ -105,15 +89,16 @@ class MultiEtfStep(BaseStep):
             ctx.secondary_stock_codes = list(set(all_secondary_codes))
             self.logger.info(
                 f"Collected {len(ctx.secondary_stock_codes)} unique stock codes "
-                f"from {len(SECONDARY_ETF_CODES)} secondary ETFs"
+                f"from {len(list(SECONDARY_ETF_CODES))} secondary ETFs"
             )
 
         return ctx
 
     # ------------------------------------------------------------------ helpers
 
-    def _save_holdings_snapshot(self, ctx: PipelineContext, etf_code: str,
-                                df, snapshot_date: str):
+    def _save_holdings_snapshot(
+        self, ctx: PipelineContext, etf_code: str, df, snapshot_date: str
+    ):
         """存入 etf_holdings_snapshot"""
         from sqlalchemy import text
 
@@ -149,10 +134,13 @@ class MultiEtfStep(BaseStep):
             conn.execute(upsert_sql, records)
             conn.commit()
 
-        self.logger.info(f"Saved {len(records)} holdings for {etf_code} on {snapshot_date}")
+        self.logger.info(
+            f"Saved {len(records)} holdings for {etf_code} on {snapshot_date}"
+        )
 
-    def _save_weight_history(self, ctx: PipelineContext, etf_code: str,
-                             df, snapshot_date: str):
+    def _save_weight_history(
+        self, ctx: PipelineContext, etf_code: str, df, snapshot_date: str
+    ):
         """存入 etf_weight_history（含 rank）"""
         from sqlalchemy import text
 
@@ -194,8 +182,9 @@ class MultiEtfStep(BaseStep):
         except Exception as e:
             self.logger.warning(f"Weight history save failed for {etf_code}: {e}")
 
-    def _save_aum(self, ctx: PipelineContext, etf_code: str,
-                  aum: float, snapshot_date: str):
+    def _save_aum(
+        self, ctx: PipelineContext, etf_code: str, aum: float, snapshot_date: str
+    ):
         """存入 etf_aum"""
         from sqlalchemy import text
 
@@ -207,17 +196,21 @@ class MultiEtfStep(BaseStep):
         """)
 
         with ctx.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, {
-                "etf_code": etf_code,
-                "aum_100m_twd": aum,
-                "snapshot_date": snapshot_date,
-            })
+            conn.execute(
+                upsert_sql,
+                {
+                    "etf_code": etf_code,
+                    "aum_100m_twd": aum,
+                    "snapshot_date": snapshot_date,
+                },
+            )
             conn.commit()
 
         self.logger.info(f"Saved AUM {aum} 億元 for {etf_code}")
 
-    def _save_sectors(self, ctx: PipelineContext, etf_code: str,
-                      sectors: list, snapshot_date: str):
+    def _save_sectors(
+        self, ctx: PipelineContext, etf_code: str, sectors: list, snapshot_date: str
+    ):
         """存入 etf_sectors"""
         from sqlalchemy import text
 
@@ -273,16 +266,24 @@ class MultiEtfStep(BaseStep):
                 # 今日快照已存入 DB，取第二新作為前日基準
                 prev_df = ctx.storage.get_snapshot_by_index(etf_code, index=1)
             else:
-                prev_df = ctx.storage.get_snapshot_from_date(etf_code, latest_date_in_db) if latest_date_in_db else pd.DataFrame()
+                prev_df = (
+                    ctx.storage.get_snapshot_from_date(etf_code, latest_date_in_db)
+                    if latest_date_in_db
+                    else pd.DataFrame()
+                )
         except Exception as e:
-            self.logger.warning(f"Could not fetch previous snapshot for {etf_code}: {e}")
+            self.logger.warning(
+                f"Could not fetch previous snapshot for {etf_code}: {e}"
+            )
             prev_df = pd.DataFrame()
 
         diff_logs = compute_diff(prev_df, curr_df, etf_code, snapshot_date)
         self.logger.info(f"Computed {len(diff_logs)} diff events for {etf_code}")
         return diff_logs
 
-    def _save_diff_logs(self, ctx: PipelineContext, diff_logs: list[dict[str, Any]]) -> None:
+    def _save_diff_logs(
+        self, ctx: PipelineContext, diff_logs: list[dict[str, Any]]
+    ) -> None:
         """Upsert diff logs 到 etf_diff_logs 表。
 
         Conflict key: (etf_code, stock_code, data_date)。
@@ -325,7 +326,9 @@ class MultiEtfStep(BaseStep):
             with ctx.sql_storage.engine.connect() as conn:
                 conn.execute(upsert_sql, diff_logs)
                 conn.commit()
-            self.logger.info(f"Saved {len(diff_logs)} diff logs for {diff_logs[0]['etf_code']}")
+            self.logger.info(
+                f"Saved {len(diff_logs)} diff logs for {diff_logs[0]['etf_code']}"
+            )
         except Exception as e:
             self.logger.error(f"Failed to save diff logs: {e}")
 
@@ -361,7 +364,9 @@ class MultiEtfStep(BaseStep):
                 "total_changes": len(diff_logs),
                 "new_in": len([d for d in diff_logs if d["change_type"] == "IN"]),
                 "removed": len([d for d in diff_logs if d["change_type"] == "OUT"]),
-                "adjusted": len([d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]),
+                "adjusted": len(
+                    [d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]
+                ),
             },
             "top_changes": sorted(
                 diff_logs,

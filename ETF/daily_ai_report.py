@@ -11,8 +11,8 @@ except Exception:
     sys.path.append(os.getcwd())
 
 from ETF.ai_report.reporter import AIReporter  # noqa: E402
+from ETF.config.etf_registry import ALL_ETF_CODES  # noqa: E402
 
-ETF_CODES = ["00981A", "00980A", "00991A"]
 MODELS_TO_TRY = [
     "gemini-2.5-flash",
     "gemini-3-flash",
@@ -47,7 +47,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    for etf_code in ETF_CODES:
+    for etf_code in ALL_ETF_CODES:
         try:
             run_report(etf_code, dry_run=args.dry_run)
         except Exception as e:

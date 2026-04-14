@@ -5,12 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 
-
-ETF_NAME_MAP: dict[str, str] = {
-    "00981A": "00981 (半導體收益 ETF)",
-    "00980A": "00980 (野村智慧優選)",
-    "00991A": "00991 (復華未來50)",
-}
+from ETF.config.etf_registry import ETF_NAME_MAP
 
 
 def build_report_prompt(
@@ -59,9 +54,9 @@ def build_report_prompt(
 
 ### 1. 投資組合概況 (Portfolio Overview)
 - **資料日期**：{data_date}
-- **持股檔數**：{stats['totalHoldings']} 檔
-- **前十大持股權重佔比**：{stats['top10Weight']:.2f}% (集中度指標)
-- **平均營收年增率 (YoY)**：{stats['avgYoY']:.2f}% (成長動能指標)
+- **持股檔數**：{stats["totalHoldings"]} 檔
+- **前十大持股權重佔比**：{stats["top10Weight"]:.2f}% (集中度指標)
+- **平均營收年增率 (YoY)**：{stats["avgYoY"]:.2f}% (成長動能指標)
 
 ### 2. 個股全方位掃描 (Full Holdings Analysis - Partial Sample for AI)
 包含部分關鍵成分股的技術面與籌碼面：
