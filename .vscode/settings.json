@@ -41,5 +41,6 @@
         "javascriptreact",
         "typescript",
         "typescriptreact"
-    ]
+    ],
+    "python.envFile": "${workspaceFolder}/.env"
 }
