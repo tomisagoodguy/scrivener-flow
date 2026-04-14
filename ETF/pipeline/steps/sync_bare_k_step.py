@@ -106,8 +106,8 @@ class SyncBareKStep(BaseStep):
             INSERT INTO bare_k_snapshots
                 (stock_id, date, ohlcv, mas, signals, margin, revenue, inv_chips, summary)
             VALUES
-                (:stock_id, :date, :ohlcv::jsonb, :mas::jsonb, :signals::jsonb,
-                 :margin::jsonb, :revenue::jsonb, :inv_chips::jsonb, :summary::jsonb)
+                (:stock_id, :date, CAST(:ohlcv AS jsonb), CAST(:mas AS jsonb), CAST(:signals AS jsonb),
+                 CAST(:margin AS jsonb), CAST(:revenue AS jsonb), CAST(:inv_chips AS jsonb), CAST(:summary AS jsonb))
             ON CONFLICT (stock_id, date) DO UPDATE SET
                 ohlcv      = EXCLUDED.ohlcv,
                 mas        = EXCLUDED.mas,
