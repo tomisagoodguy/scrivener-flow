@@ -37,14 +37,13 @@ dev = [
 src = ["ETF"]
 
 [tool.pyright]
-# 指定 Pyright / Pylance 掃描的包含目錄
 include = ["ETF", "scripts", "tests"]
 exclude = ["src", "**/node_modules", "**/__pycache__", ".venv"]
-# 允許專案根目錄作為 Import 的搜尋根目錄（ETF package 位於此）
 extraPaths = ["."]
-# 指定虛擬環境
 venvPath = "."
 venv = ".venv"
-# 基礎型別檢查
 typeCheckingMode = "basic"
 reportMissingImports = true
+executionEnvironments = [
+  { root = ".", extraPaths = ["."] }
+]

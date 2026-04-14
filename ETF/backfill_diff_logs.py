@@ -100,8 +100,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Backfill ETF diff logs from existing snapshots.")
     parser.add_argument("--etf", dest="etf_code", default="00981A", help="ETF code to backfill (default: 00981A)")
+    parser.add_argument("--all", action="store_true", help="Backfill for all ETFs registered in config")
     parser.add_argument("--dry-run", action="store_true", help="Compute logs but do not write to database")
 
     args = parser.parse_args()
-    backfill_diff_logs(etf_code=args.etf_code, dry_run=args.dry_run)
-
+    
+    if args.all:
+        from ETF.config.etf_registry import ALL_ETF_CODES
+        for code in ALL_ETF_CODES:
+            logger.info("Starting backfill for %s", code)
+            backfill_diff_logs(etf_code=code, dry_run=args.dry_run)
+    else:
+        backfill_diff_logs(etf_code=args.etf_code, dry_run=args.dry_run)
