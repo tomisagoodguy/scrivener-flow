@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { X, Star, Trash2, Plus, Search } from 'lucide-react';
+import { useNotification } from '@/hooks/useNotification';
+import { X, Star, Trash2, Plus, Search, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { CustomWatchlistItem } from '@/types';
 import {
-    getWatchlist,
-    addToWatchlist,
-    removeFromWatchlist,
-} from '@/app/actions/watchlist';
+    getWatchList,
+    addWatchStock,
+    removeWatchStock,
+} from '@/app/actions/investment/watchListActions';
 
 interface WatchlistDrawerProps {
     open: boolean;
@@ -17,54 +19,48 @@ interface WatchlistDrawerProps {
 export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
     const [items, setItems] = useState<CustomWatchlistItem[]>([]);
     const [search, setSearch] = useState('');
-    const [label, setLabel] = useState('');
-    const [toast, setToast] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
+    const notify = useNotification();
+
+    useEffect(() => {
+        const el = document.getElementById('investment-page-content');
+        if (!el) return;
+        el.style.paddingRight = open ? '24rem' : '';
+        return () => { el.style.paddingRight = ''; };
+    }, [open]);
 
     // Load watchlist when drawer opens
     useEffect(() => {
         if (!open) return;
         startTransition(async () => {
-            const data = await getWatchlist();
+            const data = await getWatchList();
             setItems(data);
         });
     }, [open]);
 
-    function showToast(msg: string) {
-        setToast(msg);
-        setTimeout(() => setToast(null), 2500);
-    }
-
     function handleAdd() {
         const code = search.trim().toUpperCase();
         if (!code) return;
-        const enteredLabel = label.trim() || '自選';
         startTransition(async () => {
-            const result = await addToWatchlist(code, enteredLabel);
-            if (result.duplicate) {
-                showToast(`「${code}」已在自選清單中`);
-                return;
-            }
+            const result = await addWatchStock(code);
             if (!result.success) {
-                showToast(`新增失敗：${result.error ?? '未知錯誤'}`);
+                notify.error(result.error ?? '新增失敗');
                 return;
             }
-            const refreshed = await getWatchlist();
-            setItems(refreshed);
+            if (result.item) setItems(prev => [result.item!, ...prev]);
             setSearch('');
-            setLabel('');
-            showToast(`已加入「${code}」`);
+            notify.success(`已加入「${code}」`);
         });
     }
 
-    function handleRemove(stockCode: string) {
+    function handleRemove(stockId: string) {
         startTransition(async () => {
-            const result = await removeFromWatchlist(stockCode);
+            const result = await removeWatchStock(stockId);
             if (!result.success) {
-                showToast(`移除失敗：${result.error ?? '未知錯誤'}`);
+                notify.error(result.error ?? '移除失敗');
                 return;
             }
-            setItems(prev => prev.filter(i => i.stock_code !== stockCode));
+            setItems(prev => prev.filter(i => i.stock_id !== stockId));
         });
     }
 
@@ -74,17 +70,9 @@ export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
 
     return (
         <>
-            {/* Backdrop */}
-            {open && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity"
-                    onClick={onClose}
-                />
-            )}
-
             {/* Drawer */}
             <div
-                className={`fixed top-0 right-0 z-50 h-full w-full md:w-96 flex flex-col
+                className={`fixed top-16 right-0 z-40 h-[calc(100vh-4rem)] w-full md:w-96 flex flex-col
                     backdrop-blur-xl bg-white/80 border-l border-white/50 shadow-2xl
                     transition-transform duration-300 ease-in-out
                     ${open ? 'translate-x-0' : 'translate-x-full'}`}
@@ -98,17 +86,27 @@ export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
                             {items.length}
                         </span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-                        aria-label="關閉"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <Link
+                            href="/investment/watch-list"
+                            onClick={onClose}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                            title="完整管理頁"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                        </Link>
+                        <button
+                            onClick={onClose}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                            aria-label="關閉"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Add Stock Section */}
-                <div className="px-5 py-4 border-b border-slate-200/60 space-y-3">
+                <div className="px-5 py-4 border-b border-slate-200/60 space-y-2">
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">新增股票</p>
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1">
@@ -131,15 +129,7 @@ export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
                             加入
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            placeholder="標籤（選填，預設「自選」）"
-                            value={label}
-                            onChange={e => setLabel(e.target.value)}
-                            className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/50 backdrop-blur-sm border border-gray-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 transition-all"
-                        />
-                    </div>
+                    <p className="text-xs text-slate-400">策略標籤請至完整管理頁設定</p>
                 </div>
 
                 {/* Watchlist Items */}
@@ -159,17 +149,22 @@ export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
                                 key={item.id}
                                 className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/60 border border-white/50 shadow-sm hover:bg-white/80 transition-colors group"
                             >
-                                <div className="flex items-center gap-3">
-                                    <span className="font-bold text-slate-800 text-sm">{item.stock_code}</span>
-                                    <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
-                                        {item.label}
-                                    </span>
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <span className="font-bold text-slate-800 text-sm shrink-0">{item.stock_id}</span>
+                                    {item.name && (
+                                        <span className="text-xs text-slate-500 truncate">{item.name}</span>
+                                    )}
+                                    {item.strategies?.length > 0 && (
+                                        <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded-full shrink-0">
+                                            {item.strategies.length} 策略
+                                        </span>
+                                    )}
                                 </div>
                                 <button
-                                    onClick={() => handleRemove(item.stock_code)}
+                                    onClick={() => handleRemove(item.stock_id)}
                                     disabled={isPending}
-                                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all disabled:opacity-30"
-                                    aria-label={`移除 ${item.stock_code}`}
+                                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all disabled:opacity-30 shrink-0"
+                                    aria-label={`移除 ${item.stock_id}`}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -178,12 +173,6 @@ export function WatchlistDrawer({ open, onClose }: WatchlistDrawerProps) {
                     )}
                 </div>
 
-                {/* Toast */}
-                {toast && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-800 text-white text-sm rounded-xl shadow-lg whitespace-nowrap animate-fade-in">
-                        {toast}
-                    </div>
-                )}
             </div>
         </>
     );

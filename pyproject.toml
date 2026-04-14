@@ -47,3 +47,6 @@ venv = ".venv"
 # 基礎型別檢查
 typeCheckingMode = "basic"
 reportMissingImports = true
+
+[[tool.pyright.executionEnvironments]]
+root = "."

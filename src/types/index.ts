@@ -264,7 +264,8 @@ export interface BankRedemptionInfo {
 export interface CustomWatchlistItem {
     id: string;
     user_id: string;
-    stock_code: string;
-    label: string;
+    stock_id: string;
+    name: string;
+    strategies: string[];
     created_at: string;
 }

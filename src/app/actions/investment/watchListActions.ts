@@ -3,12 +3,32 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { PREDEFINED_STRATEGIES, type Strategy } from './watchListConstants';
+import { CustomWatchlistItem } from '@/types';
 
 const WATCH_LIST_LIMIT = 50;
+
+export async function getWatchList(): Promise<CustomWatchlistItem[]> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from('watch_list')
+        .select('id, user_id, stock_id, name, strategies, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('[watchlist] getWatchList error:', error.message);
+        return [];
+    }
+    return (data ?? []) as CustomWatchlistItem[];
+}
 
 export interface WatchListActionResult {
     success: boolean;
     error?: string;
+    item?: CustomWatchlistItem;
 }
 
 /**
@@ -67,12 +87,12 @@ export async function addWatchStock(
             }
         }
 
-        const { error } = await supabase.from('watch_list').insert({
+        const { data: newItem, error } = await supabase.from('watch_list').insert({
             user_id: user.id,
             stock_id: sid,
             name: companyName,
             strategies: validStrategies,
-        });
+        }).select('id, user_id, stock_id, name, strategies, created_at').single();
 
         if (error) {
             if (error.code === '23505') {
@@ -83,7 +103,7 @@ export async function addWatchStock(
 
         revalidatePath('/investment/bare-k');
         revalidatePath('/investment/watch-list');
-        return { success: true };
+        return { success: true, item: newItem as CustomWatchlistItem };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '新增失敗';
         return { success: false, error: msg };

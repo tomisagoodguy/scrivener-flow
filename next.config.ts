@@ -44,7 +44,17 @@ const nextConfig: NextConfig = {
     poweredByHeader: false,
 
     // 🕵️‍♂️ 反逆向工程：關閉 Source Maps
-    productionBrowserSourceMaps: false
+    productionBrowserSourceMaps: false,
+
+    // 🖼️ 允許外部圖片來源
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'lh3.googleusercontent.com'
+            }
+        ]
+    }
 };
 
 export default nextConfig;

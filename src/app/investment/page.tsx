@@ -225,7 +225,7 @@ export default async function InvestmentPoolPage() {
         : 'N/A';
 
     return (
-        <div className="container mx-auto py-8 space-y-8">
+        <div id="investment-page-content" className="container mx-auto py-8 space-y-8 transition-[padding-right] duration-300 ease-in-out">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
