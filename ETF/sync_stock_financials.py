@@ -14,20 +14,20 @@ import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Add ETF directory to path for imports
+# Add project root to path for imports to enable 'from ETF.xxx import yyy'
 ETF_DIR = Path(__file__).parent
-sys.path.insert(0, str(ETF_DIR))
+project_root = ETF_DIR.parent
+sys.path.insert(0, str(project_root))
 
 # Load .env.local from project root
-project_root = ETF_DIR.parent
 env_path = project_root / '.env.local'
 load_dotenv(env_path)
 
-from services.finlab_service import FinlabService
-from database.sql_storage import SQLStorage
-from processors.revenue_processor import RevenueProcessor
-from processors.shareholder_processor import ShareholderProcessor
-from processors.broker_processor import BrokerProcessor
+from ETF.services.finlab_service import FinlabService
+from ETF.database.sql_storage import SQLStorage
+from ETF.processors.revenue_processor import RevenueProcessor
+from ETF.processors.shareholder_processor import ShareholderProcessor
+from ETF.processors.broker_processor import BrokerProcessor
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
