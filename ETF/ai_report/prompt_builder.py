@@ -6,11 +6,19 @@ from datetime import datetime
 import pandas as pd
 
 
+ETF_NAME_MAP: dict[str, str] = {
+    "00981A": "00981 (半導體收益 ETF)",
+    "00980A": "00980 (野村智慧優選)",
+    "00991A": "00991 (復華未來50)",
+}
+
+
 def build_report_prompt(
     holdings_df: pd.DataFrame,
     stats: dict,
     technical_map: dict[str, dict],
     top_holdings: list[dict],
+    etf_code: str = "00981A",
 ) -> str:
     """組裝 ETF AI 分析報告的 Prompt。
 
@@ -19,10 +27,12 @@ def build_report_prompt(
         stats: 彙總統計 dict，含 totalHoldings / top10Weight / avgYoY。
         technical_map: 個股技術/籌碼分析結果，key 為股票代碼。
         top_holdings: 前 10 大持股的基本面資料列表。
+        etf_code: ETF 代碼，用於動態產生報告標題。
 
     Returns:
         完整的 Prompt 字串。
     """
+    etf_display_name = ETF_NAME_MAP.get(etf_code, etf_code)
     data_date = datetime.now().strftime("%Y-%m-%d")
 
     # 風險警示：過熱且 MA20 下彎的個股
@@ -45,7 +55,7 @@ def build_report_prompt(
     )
 
     return f"""
-你是一位頂尖的 ETF 基金經理人與籌碼分析師。請根據以下提供的 00981 (半導體收益 ETF) **全數持股**數據，深度解析該基金的**投資組合配置邏輯**與**經理人選股偏好**。
+你是一位頂尖的 ETF 基金經理人與籌碼分析師。請根據以下提供的 {etf_display_name} **全數持股**數據，深度解析該基金的**投資組合配置邏輯**與**經理人選股偏好**。
 
 ### 1. 投資組合概況 (Portfolio Overview)
 - **資料日期**：{data_date}

@@ -49,10 +49,10 @@ class AIReporter:
             return
 
         # 4. 獲取資料
-        fetcher = ETFDataFetcher(storage.engine)
+        fetcher = ETFDataFetcher(storage.engine, etf_code=self.etf_code)
         logger.info("Fetching holdings...")
         try:
-            holdings_df = fetcher.fetch_holdings(self.etf_code)
+            holdings_df = fetcher.fetch_holdings()
         except Exception as e:
             logger.error(f"Failed to fetch holdings: {e}")
             return
@@ -121,7 +121,7 @@ class AIReporter:
                 else 0.0
             ),
         }
-        prompt = build_report_prompt(holdings_df, stats, technical_map, top_holdings)
+        prompt = build_report_prompt(holdings_df, stats, technical_map, top_holdings, etf_code=self.etf_code)
 
         # 7. 呼叫 Gemini
         genai.configure(api_key=api_key)

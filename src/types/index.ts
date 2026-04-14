@@ -260,3 +260,11 @@ export interface BankRedemptionInfo {
     requirements: string;
     notes: string;
 }
+
+export interface CustomWatchlistItem {
+    id: string;
+    user_id: string;
+    stock_code: string;
+    label: string;
+    created_at: string;
+}

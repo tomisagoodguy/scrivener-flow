@@ -34,11 +34,11 @@ dev = [
 
 [tool.ruff]
 # 指定原始碼目錄，幫助 Ruff 辨識 Package 根路徑
-src = ["src", "ETF"]
+src = ["ETF"]
 
 [tool.pyright]
 # 指定 Pyright / Pylance 掃描的包含目錄
-include = ["src", "ETF", "scripts", "tests"]
+include = ["ETF", "scripts", "tests"]
 # 允許專案根目錄作為 Import 的搜尋根目錄（ETF package 位於此）
 extraPaths = ["."]
 # 指定虛擬環境

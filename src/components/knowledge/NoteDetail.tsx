@@ -1,13 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { noteService } from '@/services/noteService';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit2, Trash2, Heart, Tag, Calendar, User, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
-import { TeamNote } from './NoteCard';
+import { useNoteDetail } from '@/hooks/useNoteDetail';
 import { useWordExport } from '@/hooks/useWordExport';
 
 interface NoteDetailProps {
@@ -15,15 +12,8 @@ interface NoteDetailProps {
 }
 
 export default function NoteDetail({ noteId }: NoteDetailProps) {
-    const supabase = createClient();
     const router = useRouter();
-    const [note, setNote] = useState<TeamNote | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [isLiked, setIsLiked] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-    const [deleteConfirm, setDeleteConfirm] = useState(false);
-
-    // Word 匯出功能
+    const { note, loading, isLiked, currentUserId, deleteConfirm, handleLike, handleDelete } = useNoteDetail(noteId);
     const { exportToWord, isExporting, progress } = useWordExport();
 
     const handleExportWord = async () => {
@@ -33,65 +23,6 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
             alert('✅ Word 文件已下載！');
         } else {
             alert(`⚠️ 匯出失敗: ${result.error || '未知錯誤'}`);
-        }
-    };
-
-    useEffect(() => {
-        if (!noteId) return;
-        setLoading(true);
-
-        const init = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id ?? null);
-
-            try {
-                const data = await noteService.getNote(supabase, noteId);
-                setNote(data);
-            } catch (err) {
-                console.error('Error loading note:', err);
-                alert('載入筆記失敗');
-            }
-
-            if (user) {
-                const liked = await noteService.getLikeStatus(supabase, noteId, user.id);
-                setIsLiked(liked);
-            }
-
-            setLoading(false);
-        };
-
-        init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [noteId]);
-
-    const handleLike = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { alert('請先登入'); return; }
-
-        try {
-            await noteService.toggleLike(supabase, noteId, user.id, isLiked);
-            setIsLiked(!isLiked);
-            if (note) {
-                setNote({ ...note, like_count: (note.like_count || 0) + (isLiked ? -1 : 1) });
-            }
-        } catch (err) {
-            console.error('Like error:', err);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!deleteConfirm) {
-            setDeleteConfirm(true);
-            setTimeout(() => setDeleteConfirm(false), 3000);
-            return;
-        }
-
-        try {
-            await noteService.deleteNote(supabase, noteId);
-            router.push('/knowledge');
-        } catch (err) {
-            console.error('Error deleting note:', err);
-            alert('刪除失敗');
         }
     };
 
@@ -156,8 +87,7 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className={`px-4 py-2 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors ${deleteConfirm ? 'text-white bg-red-600 hover:bg-red-700' : 'text-red-600'
-                                    }`}
+                                className={`px-4 py-2 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors ${deleteConfirm ? 'text-white bg-red-600 hover:bg-red-700' : 'text-red-600'}`}
                             >
                                 <Trash2 size={16} />
                                 {deleteConfirm ? '確定刪除?' : '刪除'}
@@ -170,10 +100,8 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
             {/* Content */}
             <div className="max-w-4xl mx-auto p-6">
                 <article className="bg-white rounded-xl border border-slate-200 p-8">
-                    {/* Title & Meta */}
                     <div className="mb-8">
                         <h1 className="text-4xl font-black text-slate-800 mb-4">{note.title}</h1>
-
                         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
                             <div className="flex items-center gap-2">
                                 <User size={16} />
@@ -181,27 +109,16 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
                             </div>
                             <div className="flex items-center gap-2">
                                 <Calendar size={16} />
-                                <span>
-                                    {format(new Date(note.created_at), 'yyyy/MM/dd HH:mm', {
-                                        locale: zhTW,
-                                    })}
-                                </span>
+                                <span>{format(new Date(note.created_at), 'yyyy/MM/dd HH:mm', { locale: zhTW })}</span>
                             </div>
                             {note.category && (
-                                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-                                    {note.category}
-                                </span>
+                                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">{note.category}</span>
                             )}
                         </div>
-
-                        {/* Tags */}
                         {note.tags && note.tags.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-4">
                                 {note.tags.map((tag, index) => (
-                                    <span
-                                        key={index}
-                                        className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded flex items-center gap-1"
-                                    >
+                                    <span key={index} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded flex items-center gap-1">
                                         <Tag size={10} />
                                         {tag}
                                     </span>
@@ -210,54 +127,21 @@ export default function NoteDetail({ noteId }: NoteDetailProps) {
                         )}
                     </div>
 
-                    {/* Content */}
                     <div className="prose prose-slate max-w-none mb-8">
-                        <div
-                            className="rich-text-content"
-                            dangerouslySetInnerHTML={{ __html: note.content || '無內容' }}
-                        />
+                        <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: note.content || '無內容' }} />
                     </div>
 
-                    {/* Stats & Actions */}
                     <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-                        <div className="flex items-center gap-6 text-sm text-slate-500">
-                            {/* 
-                            <span className="flex items-center gap-2">
-                                <Eye size={16} />
-                                {note.view_count || 0} 次瀏覽
-                            </span>
-                            <span className="flex items-center gap-2">
-                                <MessageCircle size={16} />
-                                {note.comment_count || 0} 則評論
-                            </span>
-                             */}
-                        </div>
+                        <div className="flex items-center gap-6 text-sm text-slate-500" />
                         <button
                             onClick={handleLike}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isLiked
-                                ? 'bg-red-50 text-red-600'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isLiked ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                         >
                             <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
                             {note.like_count || 0}
                         </button>
                     </div>
                 </article>
-
-                {/* Comments Section (Placeholder) */}
-                {/* Comments Section (Disabled) */}
-                {/* 
-                <div className="mt-6 bg-white rounded-xl border border-slate-200 p-8">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <MessageCircle size={20} />
-                        評論 ({note.comment_count || 0})
-                    </h3>
-                    <div className="text-center text-slate-400 py-8">
-                        <p>評論功能即將推出...</p>
-                    </div>
-                </div> 
-                */}
             </div>
         </div>
     );

@@ -9,9 +9,13 @@ Multi-ETF Step
 
 import logging
 from datetime import date
+from typing import Any
+
+import pandas as pd
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from ETF.processors.diff_engine import compute_diff
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,15 @@ class MultiEtfStep(BaseStep):
                     self._save_weight_history(ctx, etf_code, df, snapshot_date)
                     # 收集成分股代碼，供後續 SyncOHLCVStep 使用
                     all_secondary_codes.extend(df["code"].tolist())
+
+                    # Diff 計算與通知
+                    try:
+                        diff_logs = self._compute_diff(ctx, etf_code, df, snapshot_date)
+                        if diff_logs:
+                            self._save_diff_logs(ctx, diff_logs)
+                        self._notify_etf_completion(ctx, etf_code, df, diff_logs, snapshot_date)
+                    except Exception as e:
+                        self.logger.error(f"Diff/notify failed for {etf_code}: {e}")
                 else:
                     self.logger.warning(f"No holdings data for {etf_code}")
             except Exception as e:
@@ -233,3 +246,129 @@ class MultiEtfStep(BaseStep):
             conn.commit()
 
         self.logger.info(f"Saved {len(records)} sectors for {etf_code}")
+
+    def _compute_diff(
+        self,
+        ctx: PipelineContext,
+        etf_code: str,
+        curr_df: pd.DataFrame,
+        snapshot_date: str,
+    ) -> list[dict[str, Any]]:
+        """取前日快照並計算持股異動 diff。
+
+        重複執行同日時取第二新快照（index=1）作為前日基準。
+
+        Args:
+            ctx: Pipeline 上下文。
+            etf_code: ETF 代碼。
+            curr_df: 今日持股 DataFrame（需含 code/name/shares/weight）。
+            snapshot_date: 今日資料日期字串（YYYY-MM-DD）。
+
+        Returns:
+            diff log 列表，格式與 DiffComputeStep 相同。
+        """
+        try:
+            latest_date_in_db = ctx.storage.get_latest_date(etf_code)
+            if latest_date_in_db == snapshot_date:
+                # 今日快照已存入 DB，取第二新作為前日基準
+                prev_df = ctx.storage.get_snapshot_by_index(etf_code, index=1)
+            else:
+                prev_df = ctx.storage.get_snapshot_from_date(etf_code, latest_date_in_db) if latest_date_in_db else pd.DataFrame()
+        except Exception as e:
+            self.logger.warning(f"Could not fetch previous snapshot for {etf_code}: {e}")
+            prev_df = pd.DataFrame()
+
+        diff_logs = compute_diff(prev_df, curr_df, etf_code, snapshot_date)
+        self.logger.info(f"Computed {len(diff_logs)} diff events for {etf_code}")
+        return diff_logs
+
+    def _save_diff_logs(self, ctx: PipelineContext, diff_logs: list[dict[str, Any]]) -> None:
+        """Upsert diff logs 到 etf_diff_logs 表。
+
+        Conflict key: (etf_code, stock_code, data_date)。
+
+        Args:
+            ctx: Pipeline 上下文。
+            diff_logs: compute_diff() 回傳的 log 列表。
+        """
+        from sqlalchemy import text
+
+        if not diff_logs:
+            return
+
+        upsert_sql = text("""
+            INSERT INTO etf_diff_logs
+                (etf_code, stock_code, stock_name, data_date, change_type,
+                 prev_shares, curr_shares, diff_shares,
+                 prev_weight, curr_weight, diff_weight,
+                 is_significant, description)
+            VALUES
+                (:etf_code, :stock_code, :stock_name, :data_date, :change_type,
+                 :prev_shares, :curr_shares, :diff_shares,
+                 :prev_weight, :curr_weight, :diff_weight,
+                 :is_significant, :description)
+            ON CONFLICT (etf_code, stock_code, data_date)
+            DO UPDATE SET
+                change_type    = EXCLUDED.change_type,
+                stock_name     = EXCLUDED.stock_name,
+                prev_shares    = EXCLUDED.prev_shares,
+                curr_shares    = EXCLUDED.curr_shares,
+                diff_shares    = EXCLUDED.diff_shares,
+                prev_weight    = EXCLUDED.prev_weight,
+                curr_weight    = EXCLUDED.curr_weight,
+                diff_weight    = EXCLUDED.diff_weight,
+                is_significant = EXCLUDED.is_significant,
+                description    = EXCLUDED.description
+        """)
+
+        try:
+            with ctx.sql_storage.engine.connect() as conn:
+                conn.execute(upsert_sql, diff_logs)
+                conn.commit()
+            self.logger.info(f"Saved {len(diff_logs)} diff logs for {diff_logs[0]['etf_code']}")
+        except Exception as e:
+            self.logger.error(f"Failed to save diff logs: {e}")
+
+    def _notify_etf_completion(
+        self,
+        ctx: PipelineContext,
+        etf_code: str,
+        df: pd.DataFrame,
+        diff_logs: list[dict[str, Any]],
+        snapshot_date: str,
+    ) -> None:
+        """發送 LINE 通知：異動明細 + 完成摘要。
+
+        Args:
+            ctx: Pipeline 上下文（透過 ctx.notifier 取得已初始化的 LineNotifier）。
+            etf_code: ETF 代碼。
+            df: 當日持股 DataFrame。
+            diff_logs: 今日 diff logs。
+            snapshot_date: 資料日期字串。
+        """
+        notifier = ctx.notifier
+
+        if diff_logs:
+            notifier.notify_diffs(diff_logs, etf_code, snapshot_date)
+            self.logger.info(f"Sent {len(diff_logs)} diff notifications for {etf_code}")
+
+        summary: dict[str, Any] = {
+            "etf_code": etf_code,
+            "data_date": snapshot_date,
+            "total_holdings": len(df) if df is not None else 0,
+            "sync_days": 0,
+            "diff_stats": {
+                "total_changes": len(diff_logs),
+                "new_in": len([d for d in diff_logs if d["change_type"] == "IN"]),
+                "removed": len([d for d in diff_logs if d["change_type"] == "OUT"]),
+                "adjusted": len([d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]),
+            },
+            "top_changes": sorted(
+                diff_logs,
+                key=lambda x: abs(x.get("diff_weight", 0)),
+                reverse=True,
+            )[:10],
+            "market_signals": {},
+        }
+        notifier.notify_completion(summary)
+        self.logger.info(f"Completion notification sent for {etf_code}")

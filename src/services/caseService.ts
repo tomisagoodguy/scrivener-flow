@@ -179,7 +179,7 @@ export const caseService = {
             : null;
 
         // 映射關係
-        addSystemTodo('tax_prep', sealPrepDate, '報稅');
+        addSystemTodo('tax_prep', sealPrepDate, '稅務申報準備（土增稅／契稅等）');
         addSystemTodo('seal_appt', milestoneData.seal_appointment, '用印約定');
         addSystemTodo('tax_appt', milestoneData.tax_appointment, '完稅約定');
         addSystemTodo('handover_appt', milestoneData.handover_appointment, '交屋約定');

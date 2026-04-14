@@ -3,7 +3,7 @@
 - [x] 1.1 建立 `watch_list` 表 migration（user_id RLS、stock_id、name、strategies[]、created_at、UNIQUE(user_id, stock_id)）
 - [x] 1.2 建立 `bare_k_snapshots` 表 migration（stock_id、date、ohlcv JSONB、mas JSONB、signals JSONB、margin JSONB、revenue JSONB、inv_chips JSONB、summary JSONB、PRIMARY KEY(stock_id, date)）
 - [x] 1.3 為 `watch_list` 建立 RLS Policy（SELECT/INSERT/UPDATE/DELETE 均限 `auth.uid() = user_id`）
-- [ ] 1.4 在 Supabase Production 執行 migration（20260412000000_add_watch_list_and_bare_k.sql）並驗證表結構
+- [x] 1.4 在 Supabase Production 執行 migration（20260412000000_add_watch_list_and_bare_k.sql）並驗證表結構（watch_list + bare_k_snapshots 表已確認存在）
 
 ## 2. Python 後端：BareKService
 

@@ -14,6 +14,7 @@ import { ConsensusPanel, type ConsensusRow } from '@/components/features/investm
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
 import { fetchQuantFilters } from '@/lib/investment/quantFilters';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
+import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -256,6 +257,7 @@ export default async function InvestmentPoolPage() {
                         <FlaskConicalIcon className="w-4 h-4" />
                         Revenue Lab
                     </Link>
+                    <WatchlistButton />
                     <ExcelDownloadButton />
                     <Link
                         href="/investment/bare-k"

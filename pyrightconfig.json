@@ -1,6 +1,5 @@
 {
     "include": [
-        "src",
         "ETF",
         "scripts",
         "tests"

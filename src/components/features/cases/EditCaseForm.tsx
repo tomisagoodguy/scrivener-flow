@@ -22,7 +22,7 @@ import { RedemptionProgressTracker } from '@/components/features/redemptions/Red
 // Hook & Types
 import { useEditCase } from './edit-case/useEditCase';
 import { stripHtml } from './edit-case/caseUtils';
-import { DemoCase } from '@/types';
+import { DemoCase, Financials } from '@/types';
 
 interface EditCaseFormProps {
     initialData: DemoCase;
@@ -53,8 +53,8 @@ export default function EditCaseForm({ initialData }: EditCaseFormProps) {
         handleFileUpload
     } = useEditCase(initialData);
 
-    const milestones = (initialData.milestones?.[0] || {}) as any;
-    const financials = (initialData.financials?.[0] || {}) as any;
+    const milestones = initialData.milestones?.[0] ?? null;
+    const financials = (initialData.financials?.[0] ?? null) as Financials | null;
 
     return (
         <form

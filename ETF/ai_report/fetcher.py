@@ -7,14 +7,13 @@ from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
-ETF_CODE = "00981A"
-
 
 class ETFDataFetcher:
     """封裝所有 ETF 相關資料庫查詢，消除重複的 placeholder 建立模板。"""
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, etf_code: str = "00981A") -> None:
         self.engine = engine
+        self.etf_code = etf_code
 
     def _query_by_codes(
         self,
@@ -46,12 +45,16 @@ class ETFDataFetcher:
             result = conn.execute(text(rendered_sql), params)
             return pd.DataFrame(result.fetchall(), columns=result.keys())
 
-    def fetch_holdings(self, etf_code: str = ETF_CODE) -> pd.DataFrame:
+    def fetch_holdings(self, etf_code: str | None = None) -> pd.DataFrame:
         """取得 ETF 最新持股快照，含最新月營收 YoY/MoM。
+
+        Args:
+            etf_code: ETF 代碼，預設使用 __init__ 傳入的 etf_code。
 
         Returns:
             持股 DataFrame，weight/revenue_yoy/revenue_mom 已轉為 float。
         """
+        target_etf = etf_code if etf_code is not None else self.etf_code
         query = text("""
             WITH LatestDate AS (
                 SELECT MAX(data_date) as max_date
@@ -72,7 +75,7 @@ class ETFDataFetcher:
             ORDER BY h.weight DESC
         """)
         with self.engine.connect() as conn:
-            result = conn.execute(query, {"etf_code": etf_code})
+            result = conn.execute(query, {"etf_code": target_etf})
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
 
         # 移除重複欄位

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { 
-    createChart, 
-    ColorType, 
-    IChartApi, 
+import {
+    createChart,
+    ColorType,
+    IChartApi,
     ISeriesApi,
-    CandlestickSeries, 
-    HistogramSeries, 
-    LineSeries 
+    CandlestickSeries,
+    HistogramSeries,
+    LineSeries
 } from 'lightweight-charts';
 import { PriceData, IndicatorService } from '@/lib/investment/indicators';
 
@@ -24,9 +24,12 @@ interface StockChartProps {
  */
 export function StockChart({ data, isDarkMode = false }: StockChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const rsiContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
+    const rsiChartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const rsiSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const maSeriesRefs = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
 
     // 1. Initialize Chart (Mount/Unmount only)
@@ -95,9 +98,47 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             maSeriesRefs.current.set(config.period, series);
         });
 
+        // RSI 子圖表
+        if (rsiContainerRef.current) {
+            const rsiChart = createChart(rsiContainerRef.current, {
+                width: rsiContainerRef.current.clientWidth,
+                height: 120,
+                layout: {
+                    background: { type: ColorType.Solid, color: 'transparent' },
+                    textColor: '#94a3b8',
+                },
+                grid: {
+                    vertLines: { color: 'rgba(148, 163, 184, 0.1)' },
+                    horzLines: { color: 'rgba(148, 163, 184, 0.1)' },
+                },
+                rightPriceScale: {
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    scaleMargins: { top: 0.1, bottom: 0.1 },
+                },
+                timeScale: {
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    timeVisible: true,
+                    visible: false, // 隱藏 RSI 的時間軸，與主圖共用
+                },
+            });
+            rsiChartRef.current = rsiChart;
+
+            const rsiSeries = rsiChart.addSeries(LineSeries, {
+                color: '#8b5cf6',
+                lineWidth: 1,
+                title: 'RSI(14)',
+                lastValueVisible: true,
+                priceLineVisible: false,
+            });
+            rsiSeriesRef.current = rsiSeries;
+        }
+
         const handleResize = () => {
             if (chartContainerRef.current && chartRef.current) {
                 chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
+            }
+            if (rsiContainerRef.current && rsiChartRef.current) {
+                rsiChartRef.current.applyOptions({ width: rsiContainerRef.current.clientWidth });
             }
         };
 
@@ -112,6 +153,9 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             chartRef.current = null;
             candleSeriesRef.current = null;
             volumeSeriesRef.current = null;
+            rsiChartRef.current?.remove();
+            rsiChartRef.current = null;
+            rsiSeriesRef.current = null;
             currentMaRefs.clear();
         };
     }, []); // Only on mount
@@ -137,6 +181,14 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             series.setData(IndicatorService.calculateSMA(data, period));
         });
 
+        // RSI
+        if (rsiSeriesRef.current) {
+            rsiSeriesRef.current.setData(IndicatorService.calculateRSI(data, 14));
+        }
+        if (rsiChartRef.current) {
+            rsiChartRef.current.timeScale().fitContent();
+        }
+
         chartRef.current.timeScale().fitContent();
 
     }, [data]);
@@ -145,7 +197,7 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
     useEffect(() => {
         if (!chartRef.current) return;
         
-        chartRef.current.applyOptions({
+        const themeOptions = {
             layout: {
                 textColor: isDarkMode ? '#94a3b8' : '#334155',
             },
@@ -159,8 +211,18 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             timeScale: {
                 borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             },
-        });
+        };
+        chartRef.current.applyOptions(themeOptions);
+        rsiChartRef.current?.applyOptions(themeOptions);
     }, [isDarkMode]);
 
-    return <div ref={chartContainerRef} className="w-full h-full" />;
+    return (
+        <div className="w-full flex flex-col">
+            <div ref={chartContainerRef} className="w-full" style={{ height: 450 }} />
+            <div className="text-xs text-slate-400 px-2 py-1 flex items-center gap-1">
+                RSI(14)
+            </div>
+            <div ref={rsiContainerRef} className="w-full" style={{ height: 120 }} />
+        </div>
+    );
 }
