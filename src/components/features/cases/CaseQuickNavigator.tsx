@@ -2,7 +2,7 @@
 
 import { DemoCase } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface CaseQuickNavigatorProps {
     cases: DemoCase[];
@@ -10,14 +10,40 @@ interface CaseQuickNavigatorProps {
 
 export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
     const [showBackToTop, setShowBackToTop] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [showLeftMask, setShowLeftMask] = useState(false);
+    const [showRightMask, setShowRightMask] = useState(false);
+
+    const checkScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        setShowLeftMask(scrollLeft > 10);
+        setShowRightMask(scrollLeft < scrollWidth - clientWidth - 10);
+    };
 
     useEffect(() => {
         const handleScroll = () => {
             setShowBackToTop(window.scrollY > 400);
         };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        
+        // Initial scroll check
+        checkScroll();
+        
+        // Re-check on window resize
+        window.addEventListener('resize', checkScroll);
+        
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', checkScroll);
+        };
     }, []);
+
+    // Re-check when cases change (e.g. after filtering)
+    useEffect(() => {
+        const timer = setTimeout(checkScroll, 100);
+        return () => clearTimeout(timer);
+    }, [cases]);
 
     const scrollToCase = (id: string) => {
         const element = document.getElementById(`case-${id}`);
@@ -45,23 +71,49 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                         <span className="text-[10px] font-black text-white dark:text-blue-400 uppercase tracking-widest whitespace-nowrap">快速跳轉</span>
                     </div>
                     
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                        {cases.map((c, idx) => (
-                            <motion.button
-                                key={`nav-${c.id || idx}`}
-                                whileHover={{ y: -1, scale: 1.02 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => scrollToCase(c.id)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-lg transition-all duration-300 shrink-0 shadow-sm group"
-                            >
-                                <span className="text-[12px] font-bold truncate max-w-[120px] dark:text-slate-200 group-hover:dark:text-blue-400">
-                                    {c.buyer_name} / {c.seller_name}
-                                </span>
-                                <span className="text-[10px] font-mono font-black text-slate-400 opacity-60">
-                                    {c.case_number.slice(-3)}
-                                </span>
-                            </motion.button>
-                        ))}
+                    <div className="relative flex-1 overflow-hidden">
+                        {/* Edge Masks */}
+                        <AnimatePresence>
+                            {showLeftMask && (
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-r from-white dark:from-slate-900 to-transparent" 
+                                />
+                            )}
+                            {showRightMask && (
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-l from-white dark:from-slate-900 to-transparent" 
+                                />
+                            )}
+                        </AnimatePresence>
+
+                        <div 
+                            ref={scrollRef}
+                            onScroll={checkScroll}
+                            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
+                        >
+                            {cases.slice(0, 30).map((c, idx) => (
+                                <motion.button
+                                    key={`nav-${c.id || idx}`}
+                                    whileHover={{ y: -1, scale: 1.02 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => scrollToCase(c.id)}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-lg transition-all duration-300 shrink-0 shadow-sm group"
+                                >
+                                    <span className="text-[12px] font-bold truncate max-w-[120px] dark:text-slate-200 group-hover:dark:text-blue-400">
+                                        {c.buyer_name} / {c.seller_name}
+                                    </span>
+                                    <span className="text-[10px] font-mono font-black text-slate-400 opacity-60">
+                                        {c.case_number.slice(-3)}
+                                    </span>
+                                </motion.button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

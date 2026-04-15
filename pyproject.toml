@@ -40,8 +40,8 @@ src = ["ETF"]
 pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
-include = ["ETF", "scripts", "tests"]
-extraPaths = ["."]
+include = [".", "ETF", "scripts", "tests"]
+extraPaths = [".", "./src"]
 typeCheckingMode = "basic"
 reportMissingImports = true
 exclude = [
@@ -52,6 +52,5 @@ exclude = [
     ".next",
     ".venv",
     "dist",
-    "build",
-    "src"
+    "build"
 ]

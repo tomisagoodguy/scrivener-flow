@@ -8,6 +8,7 @@ import { SideNav } from '@/components/layout/SideNav';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AuthGateProvider } from '@/components/shared/AuthGate';
 import { SecurityWarningModal } from '@/components/shared/SecurityWarningModal';
+import QuickScrollNavigator from '@/components/shared/QuickScrollNavigator';
 
 const inter = Inter({
     variable: '--font-inter',
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                                 <div className="w-full pr-4 md:pr-8 py-4 md:py-6 animate-fade-in relative z-10">
                                     {children}
                                 </div>
+                                <QuickScrollNavigator />
                             </main>
                         </div>
                     </AuthGateProvider>
