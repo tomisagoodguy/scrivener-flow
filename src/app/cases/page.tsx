@@ -11,6 +11,7 @@ import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 
 import { getCaseStage } from '@/lib/stageUtils';
 import CasesPendingView from '@/components/features/cases/CasesPendingView';
+import CaseQuickNavigator from '@/components/features/cases/CaseQuickNavigator';
 
 export const dynamic = 'force-dynamic';
 
@@ -154,6 +155,9 @@ export default async function CasesPage({
                 </form>
             </div>
 
+            {/* Quick Navigator - Sticky Top Row & FAB */}
+            <CaseQuickNavigator cases={monitoringCases} />
+
             {/* Memo Board View */}
             {statusParam === 'Memo' && (
                 <CaseMemoBoard cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
@@ -227,6 +231,7 @@ export default async function CasesPage({
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

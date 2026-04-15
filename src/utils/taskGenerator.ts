@@ -103,6 +103,13 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
         add(m.contract_date, '簽約', 'legal', 3);
         add(m.sign_diff_date, '補差額', 'legal', 3);
         add(m.seal_date, '用印', 'legal', 3);
+        
+        // 動態報稅提醒 (以日期為導向)
+        const dateDisplay = m.seal_date ? new Date(m.seal_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
+        const isTaxDayToday = m.seal_date && new Date(m.seal_date).toDateString() === new Date().toDateString();
+        const taxTitle = isTaxDayToday ? '今天報稅' : `預計 ${dateDisplay} 報稅`;
+        add(m.seal_date, taxTitle, 'tax', 30);
+
         add(m.tax_payment_date, '完稅', 'legal', 3);
         add(m.transfer_date, '過戶', 'legal', 3);
         add(m.redemption_date, '代償', 'legal', 3);
@@ -114,10 +121,10 @@ export async function fetchSystemTasks(): Promise<TodoTask[]> {
         add(m.handover_appointment, '交屋約定', 'appointment', 3);
 
         // Tax (5 days before)
-        add(f.land_value_tax_deadline, '土增稅限繳', 'tax', 5);
-        add(f.deed_tax_deadline, '契稅限繳', 'tax', 5);
-        add(f.land_tax_deadline, '地價稅限繳', 'tax', 5);
-        add(f.house_tax_deadline, '房屋稅限繳', 'tax', 5);
+        add(f.land_value_tax_deadline, '土地增值稅 - 繳納提醒 (限繳日期)', 'tax', 5);
+        add(f.deed_tax_deadline, '契稅 - 繳納提醒 (限繳日期)', 'tax', 5);
+        add(f.land_tax_deadline, '地價稅 - 繳納提醒 (限繳日期)', 'tax', 5);
+        add(f.house_tax_deadline, '房屋稅 - 繳納提醒 (限繳日期)', 'tax', 5);
     });
 
     return tasks;

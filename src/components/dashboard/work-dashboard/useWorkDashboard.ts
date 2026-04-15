@@ -77,6 +77,7 @@ export function useWorkDashboard() {
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('is_completed', false)
+                .eq('is_deleted', false)
                 .order('due_date', { ascending: true });
 
             if (syncedTodos) {
@@ -96,7 +97,9 @@ export function useWorkDashboard() {
                     .map((t) => {
                         let type: TaskType = 'personal';
                         if (t.source_type === 'system') {
-                            if (t.source_key?.includes('tax') || t.source_key === 'shortfall_payment_alert') type = 'tax';
+                            // 只有「報稅提醒」和「完稅約定」才屬於 tax 類型
+                            // 契稅/地價稅/房屋稅/土增稅的限繳日期屬於 legal，不應顯示在報稅監控
+                            if (t.source_key === 'tax_filing_reminder' || t.source_key === 'tax_appt') type = 'tax';
                             else if (t.source_key?.includes('appt')) type = 'appointment';
                             else type = 'legal';
                         }
@@ -145,7 +148,7 @@ export function useWorkDashboard() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [supabase]);
 
     /**
      * 初始化與即時訂閱
@@ -166,7 +169,7 @@ export function useWorkDashboard() {
             supabase.removeChannel(channel);
             window.removeEventListener('todo-updated', handleSync);
         };
-    }, [fetchTasks]);
+    }, [fetchTasks, supabase]);
 
     /**
      * 完成任務
@@ -200,7 +203,7 @@ export function useWorkDashboard() {
         await supabase.from('todos').update({ is_completed: true }).in('id', staleIds);
         setTasks(prev => prev.filter(t => !staleIds.includes(t.id)));
         window.dispatchEvent(new CustomEvent('todo-updated'));
-    }, [tasks]);
+    }, [tasks, supabase]);
 
     /**
      * 計算過濾後的任務類別
@@ -216,7 +219,12 @@ export function useWorkDashboard() {
     });
     // 所有過期任務（可透過封存按鈕一鍵清除）
     const staleTasks = tasks.filter(t => !t.isMilestone && differenceInDays(t.date, today) < 0);
-    const taxTasks = tasks.filter(t => t.type === 'tax');
+    // 稅務提醒：顯示已過期或未來 30 天內要處理的
+    const taxTasks = tasks.filter(t => {
+        if (t.type !== 'tax') return false;
+        const diff = differenceInDays(t.date, today);
+        return diff <= 30; // 包含過期與未來一個月
+    });
     const pipelineTasks = tasks.filter(t => {
         const diff = differenceInDays(t.date, today);
         return diff >= 0 && diff <= 7;

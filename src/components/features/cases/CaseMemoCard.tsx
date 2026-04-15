@@ -179,7 +179,7 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
     );
 
     return (
-        <div className="glass-card p-4 flex flex-col gap-3">
+        <div id={`case-${caseData.id}`} className="glass-card p-4 flex flex-col gap-3 transition-all duration-500 scroll-mt-[170px]">
             {/* Header */}
             <div className="flex items-center justify-between gap-2">
                 <Link

@@ -49,7 +49,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
     return (
         <tr
             id={`case-${caseData.id}`}
-            className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group"
+            className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors group scroll-mt-[100px]"
         >
             {/* 案號 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">

@@ -45,9 +45,10 @@ export const mapTodosToState = (todos: RawTodoRow[], cases: CaseRef[], activeCas
         .map((t) => {
             let type: TaskType = 'personal';
             if (t.source_type === 'system') {
-                if (t.source_key?.includes('appt')) type = 'appointment';
-                else if (t.source_key?.includes('tax')) type = 'tax';
-                else if (t.source_key?.includes('date')) type = 'legal';
+                // 只有「報稅提醒」和「完稅約定」才屬於 tax 類型
+                if (t.source_key === 'tax_filing_reminder' || t.source_key === 'tax_appt') type = 'tax';
+                else if (t.source_key?.includes('appt')) type = 'appointment';
+                else type = 'legal';
             }
 
             const relatedCase = cases.find((c) => c.id === t.case_id);

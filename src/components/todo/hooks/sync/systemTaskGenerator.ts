@@ -112,6 +112,13 @@ export function generateSystemTasks(
 
         addSystemTask(c, 'sign_diff_date', m.sign_diff_date, 3, 'legal', '補差額');
         addSystemTask(c, 'seal_date', m.seal_date, 3, 'legal', '用印日');
+
+        // 動態報稅提醒逻辑 (顯示範圍改為 30 天)
+        const isTaxDayToday = m.seal_date && new Date(m.seal_date).toDateString() === today.toDateString();
+        const taxDateDisplay = m.seal_date ? new Date(m.seal_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
+        const taxTitle = isTaxDayToday ? '今天報稅' : `預計 ${taxDateDisplay} 報稅`;
+        addSystemTask(c, 'tax_filing_reminder', m.seal_date, 30, 'tax', taxTitle);
+
         addSystemTask(c, 'tax_payment_date', m.tax_payment_date, 3, 'legal', '完稅日');
 
         // 計算貸款差額提醒 (Shortfall Reminder)
@@ -138,10 +145,10 @@ export function generateSystemTasks(
         addSystemTask(c, 'tax_appt', m.tax_appointment, 3, 'appointment', '完稅約定');
         addSystemTask(c, 'handover_appt', m.handover_appointment, 3, 'appointment', '交屋約定');
 
-        addSystemTask(c, 'land_val_tax', f.land_value_tax_deadline, 5, 'tax', '土增稅限繳');
-        addSystemTask(c, 'deed_tax', f.deed_tax_deadline, 5, 'tax', '契稅限繳');
-        addSystemTask(c, 'land_tax', f.land_tax_deadline, 5, 'tax', '地價稅限繳');
-        addSystemTask(c, 'house_tax', f.house_tax_deadline, 5, 'tax', '房屋稅限繳');
+        addSystemTask(c, 'land_val_tax', f.land_value_tax_deadline, 5, 'tax', '土地增值稅 - 繳納提醒 (限繳日期)');
+        addSystemTask(c, 'deed_tax', f.deed_tax_deadline, 5, 'tax', '契稅 - 繳納提醒 (限繳日期)');
+        addSystemTask(c, 'land_tax', f.land_tax_deadline, 5, 'tax', '地價稅 - 繳納提醒 (限繳日期)');
+        addSystemTask(c, 'house_tax', f.house_tax_deadline, 5, 'tax', '房屋稅 - 繳納提醒 (限繳日期)');
     });
 
     return { todosToInsert, todosToUpdate, processedKeys };
