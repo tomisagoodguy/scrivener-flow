@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, List } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BareKChart } from './BareKChart';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 
@@ -86,13 +86,11 @@ export function BareKScrollViewer({ slides, initialIndex }: Props) {
                     {/* 返回列表 */}
                     <Link
                         href="/investment/bare-k"
-                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors shrink-0"
+                        className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 bg-white/60 hover:bg-white border border-gray-200 hover:border-blue-300 px-2.5 py-1.5 rounded-lg transition-all shrink-0"
                     >
-                        <List size={14} />
-                        <span>裸K看盤</span>
+                        <ArrowLeft size={14} />
+                        <span>返回</span>
                     </Link>
-
-                    <span className="text-gray-300 dark:text-slate-600">/</span>
 
                     {/* 目前股票 */}
                     <span className="flex-1 text-sm font-medium text-gray-700 dark:text-slate-300 truncate">

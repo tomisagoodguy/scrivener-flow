@@ -48,7 +48,13 @@ export function WatchListManager({ initialList }: Props) {
             }
             setList((prev) => [
                 ...prev,
-                { id: crypto.randomUUID(), stock_id: sid, name: '', strategies: selectedStrategies, created_at: new Date().toISOString() },
+                {
+                    id: res.item?.id ?? crypto.randomUUID(),
+                    stock_id: sid,
+                    name: res.item?.name ?? '',
+                    strategies: selectedStrategies,
+                    created_at: res.item?.created_at ?? new Date().toISOString(),
+                },
             ]);
             setInputCode('');
             setSelectedStrategies([]);

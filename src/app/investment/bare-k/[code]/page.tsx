@@ -39,12 +39,15 @@ export default async function BareKDetailPage({ params }: Props) {
 
     const snapshotMap = new Map(snapshots.map((s) => [s.code, s.snapshot]));
 
-    const slides: StockSlide[] = list.map((w) => ({
-        code: w.stock_id,
-        name: w.name ?? '',
-        strategies: w.strategies ?? [],
-        snapshot: snapshotMap.get(w.stock_id) ?? null,
-    }));
+    const slides: StockSlide[] = list.map((w) => {
+        const snapshot = snapshotMap.get(w.stock_id) ?? null;
+        return {
+            code: w.stock_id,
+            name: w.name || snapshot?.summary?.name || '',
+            strategies: w.strategies ?? [],
+            snapshot,
+        };
+    });
 
     // 找目前 code 的 index，找不到預設 0
     const initialIndex = Math.max(0, slides.findIndex((s) => s.code === code));

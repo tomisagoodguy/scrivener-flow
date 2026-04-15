@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Settings2 } from 'lucide-react';
+import { ArrowLeft, Settings2 } from 'lucide-react';
 import { BareKSummaryCard } from '@/components/features/investment/BareKSummaryCard';
 import type { WatchListEntry, BareKSummary } from '@/app/api/investment/bare-k/route';
 
@@ -27,13 +27,14 @@ export default async function BareKOverviewPage() {
                 .order('date', { ascending: false })
                 .limit(1);
 
+            const summary = (data?.[0]?.summary as BareKSummary) ?? null;
             return {
                 id: w.id,
                 stock_id: w.stock_id,
-                name: w.name,
+                name: w.name || summary?.name || '',
                 strategies: w.strategies ?? [],
                 created_at: w.created_at,
-                summary: (data?.[0]?.summary as BareKSummary) ?? null,
+                summary,
             };
         })
     );
@@ -43,11 +44,19 @@ export default async function BareKOverviewPage() {
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-800">裸K看盤</h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                            六面板技術分析 · 每日台灣時間 22:00 更新
-                        </p>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/investment"
+                            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 bg-white/60 hover:bg-white border border-gray-200 hover:border-blue-300 px-2.5 py-1.5 rounded-lg transition-all"
+                        >
+                            <ArrowLeft size={14} /> 返回
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">裸K看盤</h1>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                                六面板技術分析 · 每日台灣時間 22:00 更新
+                            </p>
+                        </div>
                     </div>
                     <Link
                         href="/investment/watch-list"
