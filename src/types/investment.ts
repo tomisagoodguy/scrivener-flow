@@ -1,5 +1,6 @@
 export interface DiffLog {
     id: string;
+    etf_code?: string;
     data_date: string;
     change_type: 'IN' | 'OUT' | 'BUY' | 'SELL' | 'CLOSE';
     stock_code: string;

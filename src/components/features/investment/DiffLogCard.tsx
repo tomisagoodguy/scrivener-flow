@@ -15,15 +15,17 @@ import {
 } from 'lucide-react';
 
 import { DiffLog } from '@/types/investment';
+import { getEtfMeta } from '@/lib/investment/etfRegistry';
 
 export interface DiffLogCardProps {
     log: DiffLog;
     index: number;
     dateIndex: number;
     getBehaviorTags: (stockCode: string, currentLog: DiffLog) => { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: LucideIcon }[];
+    showEtfBadge?: boolean;
 }
 
-export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogCardProps) {
+export function DiffLogCard({ log, index, dateIndex, getBehaviorTags, showEtfBadge }: DiffLogCardProps) {
     const router = useRouter();
 
     const getStatusConfig = (type: string) => {
@@ -119,6 +121,17 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags }: DiffLogC
 
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
+                            {showEtfBadge && log.etf_code && (() => {
+                                const meta = getEtfMeta(log.etf_code);
+                                return meta ? (
+                                    <span
+                                        className="inline-block px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider shrink-0"
+                                        style={{ backgroundColor: meta.color + '25', color: meta.color, border: `1px solid ${meta.color}55` }}
+                                    >
+                                        {meta.shortCode}
+                                    </span>
+                                ) : null;
+                            })()}
                             <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 {log.stock_name}
                             </span>

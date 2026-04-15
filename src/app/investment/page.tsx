@@ -77,15 +77,24 @@ async function getAllDiffLogs(): Promise<DiffLog[]> {
 
     if (!logsData || logsData.length === 0) return [];
 
+    // 去除 pipeline 重複執行產生的重複紀錄，保留最新一筆（query 已按 created_at DESC 排序）
+    const seen = new Set<string>();
+    const uniqueLogs = logsData.filter(log => {
+        const key = `${log.etf_code}|${log.data_date}|${log.stock_code}|${log.change_type}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
     const { data: industryData } = await supabase
         .from('stock_basic_info')
         .select('stock_code, industry')
-        .in('stock_code', logsData.map(l => l.stock_code));
+        .in('stock_code', uniqueLogs.map(l => l.stock_code));
 
     const industryMap: Record<string, string> = {};
     industryData?.forEach(i => { industryMap[i.stock_code] = i.industry; });
 
-    return logsData.map(l => ({
+    return uniqueLogs.map(l => ({
         ...l,
         industry: industryMap[l.stock_code] || undefined,
         rank: null,

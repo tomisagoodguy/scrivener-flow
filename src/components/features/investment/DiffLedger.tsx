@@ -8,9 +8,12 @@ import {
     TrashIcon,
     RocketIcon,
     CalendarIcon,
+    LayoutGridIcon,
+    ListIcon,
     LucideIcon
 } from 'lucide-react';
 import { DiffLogCard } from './DiffLogCard';
+import { DiffListGroup } from './DiffListGroup';
 import { DiffLog } from '@/types/investment';
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
 
@@ -21,10 +24,11 @@ interface DiffLedgerProps {
 
 export function DiffLedger({ logs, showEtfFilter = false }: DiffLedgerProps) {
     const [activeEtf, setActiveEtf] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
     const filteredLogs = useMemo(() => {
         if (!showEtfFilter || activeEtf === null) return logs;
-        return logs.filter(l => (l as DiffLog & { etf_code?: string }).etf_code === activeEtf);
+        return logs.filter(l => l.etf_code === activeEtf);
     }, [logs, showEtfFilter, activeEtf]);
 
     if (!logs || logs.length === 0) {
@@ -106,7 +110,27 @@ export function DiffLedger({ logs, showEtfFilter = false }: DiffLedgerProps) {
                             {etf.code}
                         </button>
                     ))}
-                    <span className="text-xs text-slate-400 ml-auto">{filteredLogs.length} 筆紀錄</span>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg ml-auto">
+                        <button
+                            onClick={() => setViewMode('card')}
+                            title="卡片模式"
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'card'
+                                ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                        >
+                            <LayoutGridIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            title="列表模式"
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
+                                ? 'bg-white dark:bg-slate-600 text-indigo-600 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                        >
+                            <ListIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                    <span className="text-xs text-slate-400">{filteredLogs.length} 筆紀錄</span>
                 </div>
             )}
 
@@ -124,17 +148,25 @@ export function DiffLedger({ logs, showEtfFilter = false }: DiffLedgerProps) {
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {groupedLogs[date].map((log, idx) => (
-                                <DiffLogCard
-                                    key={log.id}
-                                    log={log}
-                                    index={idx}
-                                    dateIndex={dateIdx}
-                                    getBehaviorTags={getBehaviorTags}
-                                />
-                            ))}
-                        </div>
+                        {viewMode === 'card' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {groupedLogs[date].map((log, idx) => (
+                                    <DiffLogCard
+                                        key={log.id}
+                                        log={log}
+                                        index={idx}
+                                        dateIndex={dateIdx}
+                                        getBehaviorTags={getBehaviorTags}
+                                        showEtfBadge={activeEtf === null}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <DiffListGroup
+                                logs={groupedLogs[date]}
+                                dateIndex={dateIdx}
+                            />
+                        )}
                     </div>
                 ))}
             </div>
