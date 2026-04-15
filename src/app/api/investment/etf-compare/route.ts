@@ -35,7 +35,7 @@ export interface EtfCompareData {
  *
  * Cache: 1 小時重新驗證
  */
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     try {
