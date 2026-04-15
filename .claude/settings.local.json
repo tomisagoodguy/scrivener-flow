@@ -68,7 +68,16 @@
       "Bash(node run.js /c/Users/user/AppData/Local/Temp/playwright-test-verify-all.js)",
       "Bash(c:/Users/user/Documents/GitHub/scrivener-flow/.venv/Scripts/python.exe --version)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(bare-k\\): 支援連續捲動瀏覽自選股，修正圖表遮蔽問題\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(bare-k\\): 支援連續捲動瀏覽自選股，修正圖表遮蔽問題\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(bare-k\\): 支援連續捲動瀏覽自選股，修正圖表遮蔽問題\")",
+      "Bash(grep -r \"etf_code\" /c/Users/user/Documents/GitHub/scrivener-flow/src/app/investment/[etf]/page.tsx)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(sed -n '298,345p' src/app/investment/[etf]/page.tsx)",
+      "Bash(npx tsc:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(yarn dev:*)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(investment\\): 去除 diff_logs 重複紀錄顯示\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")",
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

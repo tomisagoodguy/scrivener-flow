@@ -5,7 +5,7 @@ Flex Message Builders
 將視覺呈現層 (Presentation) 與發送層 (Transport) 分離，避免 LineNotifier 過度膨脹。
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 class FlexMessageBuilder:
     """Flex Message 建構器基類"""
@@ -188,14 +188,14 @@ class SummaryMessageBuilder(FlexMessageBuilder):
             def _add_signal_section(title, key, color="#EF4444"):
                 items = market_signals.get(key, [])
                 if not items: return
-                
+
                 rows.append(cls._text(title, size="xs", color="#64748B", margin="sm"))
-                
+
                 for s in items:
                     rows.append(cls._box_horizontal([
-                        cls._text(s['name'], size="xs", flex=0, color="#334155", weight="bold", 
-                                  action={"type": "uri", "label": "G", "uri": f"https://www.google.com/search?q={s['code']}+TW"}),
-                        cls._text(s['value'], size="xs", align="end", color=color, flex=1)
+                        cls._text(s['name'], size="xs", flex=3, color="#334155", weight="bold"),
+                        cls._text(s['code'], size="xs", flex=2, color="#94A3B8"),
+                        cls._text(s['value'], size="xs", align="end", color=color, flex=2)
                     ], margin="xs"))
 
             # 雙成長
@@ -223,4 +223,152 @@ class SummaryMessageBuilder(FlexMessageBuilder):
         }
 
 
+class CarouselBuilder(FlexMessageBuilder):
+    """建構合併所有 ETF 的每日 Carousel Flex Message
 
+    結構：
+      Bubble 0  — 總覽（11 支 ETF 的異動狀態）
+      Bubble 1  — 00981A 市場訊號（有才加）
+      Bubble N+ — 每支有顯著異動的 ETF diff 明細
+    LINE Carousel 上限 12 個 bubble。
+    """
+
+    @classmethod
+    def build(
+        cls,
+        summaries: List[Dict[str, Any]],
+        market_signals: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        date_str = summaries[0]["data_date"] if summaries else ""
+        bubbles: List[Dict[str, Any]] = []
+
+        # Bubble 0: 總覽
+        bubbles.append(cls._build_overview_bubble(summaries, date_str))
+
+        # Bubble 1: 00981A 市場訊號（選填）
+        signal_bubble = cls._build_signals_bubble(market_signals, date_str)
+        if signal_bubble:
+            bubbles.append(signal_bubble)
+
+        # Bubble N+: 各有顯著異動 ETF 的 diff 明細
+        for summary in summaries:
+            diff_logs = summary.get("diff_logs", [])
+            significant = [
+                d for d in diff_logs
+                if d.get("is_significant", True) and d["change_type"] != "TRIM"
+            ]
+            if not significant:
+                continue
+            diff_bubble = DiffMessageBuilder.build(
+                summary["etf_code"], summary["data_date"], diff_logs
+            )
+            if diff_bubble:
+                bubbles.append(diff_bubble)
+
+        return {"type": "carousel", "contents": bubbles[:12]}
+
+    @classmethod
+    def _build_overview_bubble(
+        cls, summaries: List[Dict[str, Any]], date_str: str
+    ) -> Dict[str, Any]:
+        from ETF.config.etf_registry import ETF_META
+
+        rows: List[Dict[str, Any]] = []
+
+        for summary in summaries:
+            etf_code = summary["etf_code"]
+            diff_stats = summary.get("diff_stats", {})
+            new_in = diff_stats.get("new_in", 0)
+            removed = diff_stats.get("removed", 0)
+            adjusted = diff_stats.get("adjusted", 0)
+
+            if new_in > 0 or removed > 0:
+                status_text = f"🔴 +{new_in}/-{removed}" + (f"/±{adjusted}" if adjusted else "")
+                status_color = "#DC2626"
+            elif adjusted > 0:
+                status_text = f"🟡 ±{adjusted}"
+                status_color = "#D97706"
+            else:
+                status_text = "✅ 無異動"
+                status_color = "#64748B"
+
+            entry = ETF_META.get(etf_code)
+            short_name = entry.name.replace("主動", "") if entry else etf_code
+
+            rows.append(cls._box_horizontal([
+                cls._text(etf_code, size="xs", color="#64748B", flex=2),
+                cls._text(short_name, size="xs", color="#334155", flex=4),
+                cls._text(status_text, size="xs", align="end", flex=3, color=status_color),
+            ], margin="sm"))
+
+        return {
+            "type": "bubble",
+            "header": cls._box_vertical([
+                cls._text("📊 主動 ETF 每日動態", weight="bold", size="lg", color="#ffffff"),
+                cls._text(f"📅 {date_str}", size="xs", color="#ffffffcc", margin="xs"),
+                cls._text(f"共 {len(summaries)} 支 ETF", size="xs", color="#ffffffaa", margin="xs"),
+            ], backgroundColor="#0F172A"),
+            "body": cls._box_vertical(rows, paddingAll="16px"),
+            "footer": cls._box_vertical([
+                cls._button_uri(
+                    "查看詳細資訊",
+                    "https://scrivener-flow.vercel.app/investment",
+                    style="secondary",
+                )
+            ], paddingAll="12px"),
+        }
+
+    @classmethod
+    def _build_signals_bubble(
+        cls,
+        market_signals: Dict[str, Any],
+        date_str: str,
+    ) -> Optional[Dict[str, Any]]:
+        """建構 00981A 市場訊號 bubble；無任何訊號時回傳 None"""
+        signal_keys = [
+            "revenue_double_growth", "revenue_yoy_top10", "revenue_mom_top10",
+            "amount_top10", "breakout_200", "breakout_20", "breakout_5",
+        ]
+        if not any(market_signals.get(k) for k in signal_keys):
+            return None
+
+        rows: List[Dict[str, Any]] = []
+
+        def _add_section(title: str, key: str, color: str = "#EF4444") -> None:
+            items = market_signals.get(key, [])
+            if not items:
+                return
+            rows.append(cls._text(title, size="xs", color="#64748B", margin="sm"))
+            for s in items:
+                rows.append(cls._box_horizontal([
+                    cls._text(s["name"], size="xs", flex=3, color="#334155", weight="bold"),
+                    cls._text(s["code"], size="xs", flex=2, color="#94A3B8"),
+                    cls._text(s["value"], size="xs", align="end", color=color, flex=2),
+                ], margin="xs"))
+
+        _add_section("🔥 營收雙成長 (MoM & YoY)", "revenue_double_growth", "#D946EF")
+        _add_section("🚀 營收年增 Top 10", "revenue_yoy_top10", "#EF4444")
+        _add_section("📈 營收月增 Top 10", "revenue_mom_top10", "#F59E0B")
+        _add_section("💰 成交金額 Top 10", "amount_top10", "#3B82F6")
+        _add_section("🌟 200日新高", "breakout_200", "#EF4444")
+        _add_section("💪 20日新高", "breakout_20", "#F59E0B")
+        _add_section("⚡ 5日新高", "breakout_5", "#10B981")
+
+        if not rows:
+            return None
+
+        return {
+            "type": "bubble",
+            "header": cls._box_vertical([
+                cls._text("🎯 00981A 市場焦點", weight="bold", size="lg", color="#ffffff"),
+                cls._text(f"📅 {date_str}", size="xs", color="#ffffffcc", margin="xs"),
+            ], backgroundColor="#1E3A5F"),
+            "body": cls._box_vertical(rows, paddingAll="16px"),
+            "footer": cls._box_vertical([
+                cls._button_uri(
+                    "查看詳細資訊",
+                    "https://scrivener-flow.vercel.app/investment",
+                    style="secondary",
+                )
+            ], paddingAll="12px"),
+        }

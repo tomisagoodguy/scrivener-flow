@@ -69,16 +69,26 @@ class MultiEtfStep(BaseStep):
                     # 收集成分股代碼，供後續 SyncOHLCVStep 使用
                     all_secondary_codes.extend(df["code"].tolist())
 
-                    # Diff 計算與通知
+                    # Diff 計算，累積摘要供 NotifyStep 合併發送
                     try:
                         diff_logs = self._compute_diff(ctx, etf_code, df, snapshot_date)
                         if diff_logs:
                             self._save_diff_logs(ctx, diff_logs)
-                        self._notify_etf_completion(
-                            ctx, etf_code, df, diff_logs, snapshot_date
-                        )
+                        ctx.all_etf_summaries.append({
+                            "etf_code": etf_code,
+                            "etf_name": name,
+                            "data_date": snapshot_date,
+                            "total_holdings": len(df),
+                            "diff_logs": diff_logs or [],
+                            "diff_stats": {
+                                "total_changes": len(diff_logs or []),
+                                "new_in": len([d for d in (diff_logs or []) if d["change_type"] == "IN"]),
+                                "removed": len([d for d in (diff_logs or []) if d["change_type"] == "OUT"]),
+                                "adjusted": len([d for d in (diff_logs or []) if d["change_type"] in ["BUY", "SELL"]]),
+                            },
+                        })
                     except Exception as e:
-                        self.logger.error(f"Diff/notify failed for {etf_code}: {e}")
+                        self.logger.error(f"Diff/collect failed for {etf_code}: {e}")
                 else:
                     self.logger.warning(f"No holdings data for {etf_code}")
             except Exception as e:
@@ -332,48 +342,3 @@ class MultiEtfStep(BaseStep):
         except Exception as e:
             self.logger.error(f"Failed to save diff logs: {e}")
 
-    def _notify_etf_completion(
-        self,
-        ctx: PipelineContext,
-        etf_code: str,
-        df: pd.DataFrame,
-        diff_logs: list[dict[str, Any]],
-        snapshot_date: str,
-    ) -> None:
-        """發送 LINE 通知：異動明細 + 完成摘要。
-
-        Args:
-            ctx: Pipeline 上下文（透過 ctx.notifier 取得已初始化的 LineNotifier）。
-            etf_code: ETF 代碼。
-            df: 當日持股 DataFrame。
-            diff_logs: 今日 diff logs。
-            snapshot_date: 資料日期字串。
-        """
-        notifier = ctx.notifier
-
-        if diff_logs:
-            notifier.notify_diffs(diff_logs, etf_code, snapshot_date)
-            self.logger.info(f"Sent {len(diff_logs)} diff notifications for {etf_code}")
-
-        summary: dict[str, Any] = {
-            "etf_code": etf_code,
-            "data_date": snapshot_date,
-            "total_holdings": len(df) if df is not None else 0,
-            "sync_days": 0,
-            "diff_stats": {
-                "total_changes": len(diff_logs),
-                "new_in": len([d for d in diff_logs if d["change_type"] == "IN"]),
-                "removed": len([d for d in diff_logs if d["change_type"] == "OUT"]),
-                "adjusted": len(
-                    [d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]
-                ),
-            },
-            "top_changes": sorted(
-                diff_logs,
-                key=lambda x: abs(x.get("diff_weight", 0)),
-                reverse=True,
-            )[:10],
-            "market_signals": {},
-        }
-        notifier.notify_completion(summary)
-        self.logger.info(f"Completion notification sent for {etf_code}")

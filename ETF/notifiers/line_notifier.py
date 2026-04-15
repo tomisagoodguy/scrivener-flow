@@ -211,6 +211,23 @@ class LineNotifier:
             except Exception as fallback_error:
                 logger.error(f"Fallback notification also failed: {fallback_error}")
 
+    def notify_merged_carousel(
+        self,
+        summaries: List[Dict[str, Any]],
+        market_signals: Dict[str, Any],
+    ) -> None:
+        """發送合併所有 ETF 的每日 Carousel（一則）"""
+        if not summaries:
+            logger.warning("No ETF summaries. Skipping merged carousel.")
+            return
+
+        from ETF.notifiers.message_builder import CarouselBuilder
+
+        carousel = CarouselBuilder.build(summaries, market_signals)
+        date_str = summaries[0].get("data_date", "")
+        self.broadcast_flex_message(f"ETF 每日動態 {date_str}", carousel)
+        logger.info("Merged ETF carousel sent.")
+
     def broadcast_ai_report(self, ai_report: str):
         """廣播 AI 分析報告 (Broadcast to All)"""
         if not self.channel_token:
