@@ -23,4 +23,4 @@
 - [ ] 4.1 瀏覽 `/investment/stock/2383`，確認卡片列正確顯示在圖表上方
 - [ ] 4.2 切換「持股排名」↔「權重%」，確認卡片數值同步切換
 - [ ] 4.3 確認趨勢方向與顏色正確（↑ 綠、↓ 紅、→ 灰）
-- [ ] 4.4 確認無 TypeScript 編譯錯誤（`yarn build` 或 `yarn lint`）
+- [x] 4.4 確認無 TypeScript 編譯錯誤（`yarn build` 或 `yarn lint`）

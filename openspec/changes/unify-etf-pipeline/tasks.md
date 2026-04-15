@@ -25,6 +25,6 @@
 
 ## 5. 驗證
 
-- [ ] 5.1 本地用 `uv run python ETF/main.py --dry-run` 確認主流程無 regression
+- [x] 5.1 本地用 `uv run python ETF/main.py --dry-run` 確認主流程無 regression
 - [ ] 5.2 手動觸發 GitHub Actions workflow_dispatch 執行完整流程
 - [ ] 5.3 確認 LINE 收到三份 AI 報告與 00980A / 00991A 的完成摘要

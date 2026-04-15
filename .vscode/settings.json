@@ -1,15 +1,6 @@
 {
     "files.encoding": "utf8",
-    "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}"
-    ],
-    "python.analysis.include": [
-        "ETF",
-        "scripts",
-        "tests"
-    ],
-    "python.analysis.autoSearchPaths": false,
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
     "files.associations": {
         "*.css": "tailwindcss"
     },

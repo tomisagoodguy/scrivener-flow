@@ -65,7 +65,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
       "Bash(node -e \"require\\('./lib/helpers'\\).detectDevServers\\(\\).then\\(s => console.log\\(JSON.stringify\\(s\\)\\)\\)\")",
       "Bash(npm run:*)",
-      "Bash(node run.js /c/Users/user/AppData/Local/Temp/playwright-test-verify-all.js)"
+      "Bash(node run.js /c/Users/user/AppData/Local/Temp/playwright-test-verify-all.js)",
+      "Bash(c:/Users/user/Documents/GitHub/scrivener-flow/.venv/Scripts/python.exe --version)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(bare-k\\): 支援連續捲動瀏覽自選股，修正圖表遮蔽問題\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(bare-k\\): 支援連續捲動瀏覽自選股，修正圖表遮蔽問題\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

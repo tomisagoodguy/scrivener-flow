@@ -5,6 +5,6 @@
 
 ## 2. Verification
 
-- [ ] 2.1 更新含用印日的案件，確認待辦出現 `tax_prep` 任務且 due_date 為 `seal_date - 3 天`
-- [ ] 2.2 `seal_date` 為 null 時確認任務不生成
-- [ ] 2.3 重複 sync 不產生重複任務
+- [x] 2.1 更新含用印日的案件，確認待辦出現 `tax_prep` 任務且 due_date 為 `seal_date - 3 天`
+- [x] 2.2 `seal_date` 為 null 時確認任務不生成
+- [x] 2.3 重複 sync 不產生重複任務

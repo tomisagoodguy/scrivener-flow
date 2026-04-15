@@ -1,7 +1,12 @@
 {
-  "pythonVersion": "3.11",
+  "pythonVersion": "3.13",
   "venvPath": ".",
   "venv": ".venv",
+  "include": [
+    "ETF",
+    "scripts",
+    "tests"
+  ],
   "extraPaths": [
     ".",
     "src"
@@ -9,7 +14,11 @@
   "exclude": [
     "**/node_modules",
     "**/__pycache__",
+    "**/*.pyc",
+    "**/.*",
     ".next",
-    ".venv"
+    ".venv",
+    "dist",
+    "build"
   ]
 }

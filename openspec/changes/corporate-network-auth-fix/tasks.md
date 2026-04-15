@@ -42,4 +42,4 @@
 - [ ] 6.2 上傳 < 4MB 檔案，確認走 `/api/drive/secure-upload`（DevTools Network 確認）
 - [ ] 6.3 上傳 ≥ 4MB 檔案，確認走 `init-resumable` + `upload-chunk`（無 direct googleapis.com 請求）
 - [ ] 6.4 DevTools → Network → Block `googleapis.com`，重新測試上傳，確認不報錯
-- [ ] 6.5 `yarn build` 確認無 TypeScript 錯誤
+- [x] 6.5 `yarn build` 確認無 TypeScript 錯誤

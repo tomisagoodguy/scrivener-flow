@@ -30,4 +30,4 @@
 - [ ] 5.1 手動測試：網頁新增股票 → 確認 DB 寫入 → Drawer 即時更新
 - [ ] 5.2 手動測試：移除股票 → DB 刪除 → 從 Drawer 消失
 - [ ] 5.3 手動測試：手機瀏覽器開啟 Drawer，確認操作順暢
-- [ ] 5.4 手動執行 `uv run python ETF/stock_chart_report.py` 確認自選股出現在 HTML 報告中（此檔案不存在，略過）
+- [x] 5.4 手動執行 `uv run python ETF/stock_chart_report.py` 確認自選股出現在 HTML 報告中（此檔案不存在，略過）
