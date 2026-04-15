@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { DemoCase } from '@/types';
 import { getCaseStage } from '@/lib/stageUtils';
-import { cn } from '@/lib/utils';
 
 interface GlobalPipelineChartProps {
     cases: DemoCase[];
@@ -38,16 +37,13 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
     }, [cases]);
 
     return (
-        <div className="bg-card border border-border p-4 rounded-xl shadow-sm mb-6 overflow-x-auto ring-1 ring-border/5">
-            <div className="flex justify-between items-start mb-4">
+        <div className="bg-card border border-border p-2 rounded-lg shadow-sm mb-2 overflow-x-auto ring-1 ring-border/5">
+            <div className="flex justify-between items-start mb-2">
                 <div>
-                    <h3 className="text-base font-black text-foreground flex items-center gap-2">
-                        <span className="text-lg">📊</span> 案件全流程監控 (Pipeline Status)
+                    <h3 className="text-[11px] font-black text-foreground flex items-center gap-1">
+                        <span className="text-xs">📊</span> 流程監控
+                        <span className="text-[8px] text-foreground/30 font-bold border-l border-border pl-1 ml-1 hidden sm:inline">點擊圓圈篩選</span>
                     </h3>
-                    <p className="text-xs text-foreground/50 font-bold mt-1 ml-7 flex items-center gap-1.5">
-                        <span className="bg-primary/20 text-primary px-1 py-0.5 rounded text-[9px]">TIPS</span>
-                        點擊圓圈可篩選下方案件
-                    </p>
                 </div>
                 {currentStage ? (
                     <Link
@@ -57,14 +53,11 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                         <span>✖ 清除篩選 ({STAGES.find((s) => s.id === currentStage)?.label})</span>
                     </Link>
                 ) : (
-                    <div className="hidden md:block text-right bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
-                        <div className="text-[9px] text-foreground/40 font-black uppercase tracking-wider">
-                            Processing Cases
-                        </div>
-                        <div className="text-xl font-black text-primary leading-none mt-0.5">
-                            {Object.values(stageData).reduce((a, b) => a + b, 0)}{' '}
-                            <span className="text-xs text-foreground/30">件</span>
-                        </div>
+                    <div className="hidden md:flex items-center gap-2 bg-secondary/20 px-1.5 py-0.5 rounded border border-border">
+                        <span className="text-[8px] text-foreground/40 font-black uppercase">Processing</span>
+                        <span className="text-sm font-black text-primary leading-none">
+                            {Object.values(stageData).reduce((a, b) => a + b, 0)}
+                        </span>
                     </div>
                 )}
             </div>
@@ -85,37 +78,34 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                             >
                                 <div
                                     className={`
-                                    relative w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white font-black text-lg md:text-xl shadow-lg border-4 ring-2 transition-all duration-300
+                                    relative w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white font-black text-[10px] md:text-xs shadow-md border ring-1 transition-all duration-300
                                     ${count > 0 ? stage.color : 'bg-slate-200 text-slate-400'}
-                                    ${isActive ? 'ring-primary scale-110 border-primary shadow-xl' : 'border-white ring-slate-100 group-hover:scale-105'}
+                                    ${isActive ? 'ring-primary scale-110 border-primary' : 'border-white ring-slate-100 group-hover:scale-105'}
                                 `}
                                 >
                                     {stage.icon}
                                     {count > 0 && (
                                         <div
-                                            className={`absolute -top-2 -right-2 text-white text-xs px-2 py-1 rounded-full font-black animate-bounce shadow-md ${currentStage === stage.id ? 'bg-primary' : 'bg-red-600'}`}
+                                            className={`absolute -top-1 -right-1 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black animate-bounce shadow-md ${currentStage === stage.id ? 'bg-primary' : 'bg-red-600'}`}
                                         >
                                             {count}
                                         </div>
                                     )}
                                 </div>
-                                <div className="mt-2 text-center">
+                                <div className="mt-1 text-center">
                                     <div
-                                        className={`text-sm md:text-[15px] font-black transition-colors ${isActive ? 'text-primary scale-110' : count > 0 ? 'text-foreground group-hover:text-primary' : 'text-foreground/30'}`}
+                                        className={`text-[9px] md:text-[10px] font-black transition-colors ${isActive ? 'text-primary scale-110' : count > 0 ? 'text-foreground group-hover:text-primary' : 'text-foreground/30'}`}
                                     >
                                         {stage.label}
-                                    </div>
-                                    <div className="hidden md:block text-[10px] text-foreground/40 font-bold uppercase tracking-widest mt-0.5 group-hover:text-foreground/60">
-                                        Stage {idx + 1}
                                     </div>
                                 </div>
                             </Link>
 
                             {!isLast && (
-                                <div className="grow flex flex-col items-center justify-center px-1 md:px-2 -mt-6 md:-mt-8 min-w-[20px] relative">
+                                <div className="grow flex flex-col items-center justify-center px-0.5 -mt-2.5 md:-mt-3.5 min-w-[8px] relative">
                                     <div className="flex items-center w-full opacity-30">
                                         <div
-                                            className={`h-1 w-full rounded-full transition-colors ${count > 0 ? 'bg-slate-300' : 'bg-slate-100'
+                                            className={`h-0.5 w-full rounded-full transition-colors ${count > 0 ? 'bg-slate-300' : 'bg-slate-100'
                                                 }`}
                                         >
                                             <div
@@ -123,14 +113,11 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                                                 style={{ width: count > 0 ? '100%' : '0%' }}
                                             ></div>
                                         </div>
-                                        <span className="text-slate-300 font-black ml-1 text-xs md:text-sm">
-                                            →
-                                        </span>
                                     </div>
                                     {stage.id === 'contract' && (
-                                        <div className="absolute top-4 md:top-5 w-[140px] flex justify-center pointer-events-none">
-                                            <div className="text-[10px] md:text-[11px] font-bold text-slate-400 bg-slate-50/90 backdrop-blur-[2px] border border-slate-200/60 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
-                                                請謄本、預估、請現值
+                                        <div className="absolute top-1 w-[80px] flex justify-center pointer-events-none">
+                                            <div className="text-[7px] font-bold text-slate-400 bg-slate-50/90 backdrop-blur-[2px] border border-slate-200/40 px-1 py-0 rounded-full whitespace-nowrap z-10">
+                                                謄本/現值
                                             </div>
                                         </div>
                                     )}
@@ -141,12 +128,10 @@ export default function GlobalPipelineChart({ cases, currentStage }: GlobalPipel
                 })}
             </div>
 
-            <div className="mt-8 flex gap-6 justify-center">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground/40 bg-secondary/50 px-2 py-1 rounded">
-                        💡 點擊上方圓圈可篩選下方案件清單
-                    </span>
-                </div>
+            <div className="mt-1 flex justify-center border-t border-slate-100 pt-1">
+                <span className="text-[8px] font-bold text-foreground/30">
+                    💡 點擊圓圈篩選案件
+                </span>
             </div>
         </div>
     );

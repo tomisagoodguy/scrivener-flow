@@ -8,9 +8,15 @@
     "tests"
   ],
   "extraPaths": [
-    ".",
-    "src"
+    "."
   ],
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
   "exclude": [
     "**/node_modules",
     "**/__pycache__",
@@ -19,6 +25,7 @@
     ".next",
     ".venv",
     "dist",
-    "build"
+    "build",
+    "src"
   ]
 }

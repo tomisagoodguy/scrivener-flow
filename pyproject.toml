@@ -35,15 +35,3 @@ dev = [
 [tool.ruff]
 # 指定原始碼目錄，幫助 Ruff 辨識 Package 根路徑
 src = ["ETF"]
-
-[tool.pyright]
-include = ["ETF", "scripts", "tests"]
-exclude = ["src", "**/node_modules", "**/__pycache__", ".venv"]
-extraPaths = ["."]
-venvPath = "."
-venv = ".venv"
-typeCheckingMode = "basic"
-reportMissingImports = true
-executionEnvironments = [
-  { root = ".", extraPaths = ["."] }
-]
