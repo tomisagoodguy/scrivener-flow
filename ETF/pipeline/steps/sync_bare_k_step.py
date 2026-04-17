@@ -136,5 +136,5 @@ class SyncBareKStep(BaseStep):
                 conn.commit()
             self.logger.info(f"Upserted {len(snapshots)} bare_k_snapshots.")
         except Exception as e:
+            # BareK 是輔助功能，upsert 失敗不應中斷主流程（NotifyStep 仍需執行）
             self.logger.error(f"Failed to upsert bare_k_snapshots: {e}")
-            raise
