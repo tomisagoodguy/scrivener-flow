@@ -77,7 +77,9 @@
       "Bash(yarn dev:*)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(investment\\): 去除 diff_logs 重複紀錄顯示\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")",
-      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")"
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")",
+      "Bash(npx supabase *)",
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh)"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { CheckCircle2, Circle, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, ChevronRight, Banknote } from 'lucide-react';
 import { REDEMPTION_STEPS } from '@/lib/constants/caseConstants';
 import {
     initRedemptionSteps,
@@ -23,8 +23,14 @@ export function RedemptionProgressTracker({ caseId }: Props) {
     useEffect(() => {
         async function load() {
             setLoading(true);
-            await initRedemptionSteps(caseId);
-            const { data } = await getRedemptionSteps(caseId);
+            const initResult = await initRedemptionSteps(caseId);
+            if (initResult.error) {
+                console.error('initRedemptionSteps failed:', initResult.error);
+            }
+            const { data, error: fetchError } = await getRedemptionSteps(caseId);
+            if (fetchError) {
+                console.error('getRedemptionSteps failed:', fetchError);
+            }
             setSteps(data ?? []);
             setLoading(false);
         }
@@ -61,17 +67,22 @@ export function RedemptionProgressTracker({ caseId }: Props) {
             <button
                 type="button"
                 onClick={() => setExpanded(v => !v)}
-                className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/20 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-orange-50/40 transition-colors"
             >
                 <div className="flex items-center gap-2">
                     {expanded ? (
-                        <ChevronDown className="w-4 h-4 text-foreground/50" />
+                        <ChevronDown className="w-4 h-4 text-orange-400" />
                     ) : (
-                        <ChevronRight className="w-4 h-4 text-foreground/50" />
+                        <ChevronRight className="w-4 h-4 text-orange-400" />
                     )}
-                    <span className="text-sm font-bold text-foreground">代償進度追蹤</span>
+                    <Banknote className="w-4 h-4 text-orange-500" />
+                    <span className="text-sm font-bold text-orange-600 border-l-4 border-orange-400 pl-2">代償進度追蹤</span>
                 </div>
-                <span className="text-xs text-foreground/60 bg-white/40 rounded-full px-2 py-0.5">
+                <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${
+                    !loading && doneCount === 7
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-orange-100 text-orange-700'
+                }`}>
                     {loading ? '—' : `${doneCount} / 7`} 步驟完成
                 </span>
             </button>
