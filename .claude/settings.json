@@ -11,5 +11,19 @@
       "Skill(reflect)",
       "Skill(reflect:*)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"try{const fs=require('fs');let r='';process.stdin.on('data',d=>r+=d);process.stdin.on('end',()=>{try{const i=JSON.parse(r);const p=(i.tool_input&&i.tool_input.file_path)||'';if((p.endsWith('.tsx')||p.endsWith('.ts'))&&!p.includes('node_modules')){const n=fs.readFileSync(p,'utf8').split('\\\\n').length;if(n>150)console.log('⚠️ [元件超標] '+p.split(/[\\\\/]/).pop()+' 已有 '+n+' 行（上限 150），請考慮拆分');}}catch(e){}});}catch(e){}\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }

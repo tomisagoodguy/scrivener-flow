@@ -79,12 +79,19 @@
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")",
       "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 合併 11 支 ETF LINE 通知為單一 Carousel，修正市場訊號顯示股票代號\")",
       "Bash(npx supabase *)",
-      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh)"
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 柔化深色模式紅色與 rose 警告色，避免夜間模式刺眼\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Users/user/Documents/GitHub/scrivener-flow/.claude/settings.json','utf8'\\)\\); console.log\\('JSON OK'\\)\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): SyncBareKStep 失敗不再中斷主流程，修復 LINE 通知被跳過的問題\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\src\\app\\api\\investment\\bare-k",
-      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\src\\app\\investment\\bare-k"
+      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\src\\app\\investment\\bare-k",
+      "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\.claude"
     ]
   }
 }
