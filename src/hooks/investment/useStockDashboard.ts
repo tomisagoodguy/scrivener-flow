@@ -37,6 +37,13 @@ export interface NavStock {
     name: string;
 }
 
+export interface StockQuantMetrics {
+    momentum_60d: number | null;
+    it_buy_10d: number | null;
+    filter_score: number | null;
+    revenue_yoy: number | null;
+}
+
 export function useStockDashboard(stockCode: string) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -46,6 +53,7 @@ export function useStockDashboard(stockCode: string) {
     const [nextStock, setNextStock] = useState<NavStock | null>(null);
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
     const [totalCount, setTotalCount] = useState<number>(0);
+    const [quantMetrics, setQuantMetrics] = useState<StockQuantMetrics>({ momentum_60d: null, it_buy_10d: null, filter_score: null, revenue_yoy: null });
 
     const [priceData, setPriceData] = useState<PriceData[]>([]);
     const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
@@ -94,6 +102,12 @@ export function useStockDashboard(stockCode: string) {
                     setPrevStock(index > 0 ? { code: navData[index - 1].stock_code, name: navData[index - 1].stock_name } : null);
                     setNextStock(index < navData.length - 1 ? { code: navData[index + 1].stock_code, name: navData[index + 1].stock_name } : null);
                     setCurrentIndex(index >= 0 ? index + 1 : -1);
+                    setQuantMetrics({
+                        momentum_60d: (target as Holding & { momentum_60d?: number | null }).momentum_60d ?? null,
+                        it_buy_10d: (target as Holding & { it_buy_10d?: number | null }).it_buy_10d ?? null,
+                        filter_score: (target as Holding & { filter_score?: number | null }).filter_score ?? null,
+                        revenue_yoy: target.revenue_yoy ?? null,
+                    });
                 }
             } catch (err) {
                 console.error('Failed to fetch holdings:', err);
@@ -212,7 +226,7 @@ export function useStockDashboard(stockCode: string) {
         .map(([code]) => code);
 
     return {
-        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate,
+        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate, quantMetrics,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
         etfWeightHistory, etfWeightHistoryLoading, holdingEtfs,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,

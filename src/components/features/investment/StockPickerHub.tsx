@@ -38,6 +38,16 @@ interface StockPickerHubProps {
 }
 
 type SortField = 'shared_count' | 'filter_score' | 'momentum_60d' | 'it_buy_10d' | string;
+
+// SortField 值可直接對應 Holding 欄位的清單（用於傳遞 URL query params）
+const HOLDING_SORT_FIELDS = new Set(['filter_score', 'momentum_60d', 'it_buy_10d', 'revenue_yoy']);
+
+function toStockLink(code: string, sortField: SortField, sortOrder: SortOrder): string {
+    if (HOLDING_SORT_FIELDS.has(sortField)) {
+        return `/investment/stock/${code}?sort=${sortField}&order=${sortOrder}`;
+    }
+    return `/investment/stock/${code}`;
+}
 type SortOrder = 'asc' | 'desc';
 
 type FactorFilter = 'momentum' | 'it_buy' | 'rev_new_high' | 'all_shared' | 'golden_zone' | 'explosive_zone';
@@ -381,7 +391,7 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                     <td className="py-2 px-2">
                                         <div className="flex items-center gap-2">
                                             <Link
-                                                href={`/investment/stock/${h.stock_code}`}
+                                                href={toStockLink(h.stock_code, sortField, sortOrder)}
                                                 className="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                                             >
                                                 {h.stock_code}

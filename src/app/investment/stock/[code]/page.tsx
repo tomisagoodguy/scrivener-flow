@@ -35,7 +35,7 @@ export default function StockPage() {
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
     const {
-        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate,
+        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate, quantMetrics,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
         etfWeightHistory, etfWeightHistoryLoading, holdingEtfs,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
@@ -61,6 +61,7 @@ export default function StockPage() {
                 holdingEtfs={holdingEtfs}
                 currentIndex={currentIndex}
                 totalCount={totalCount}
+                quantMetrics={quantMetrics}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">

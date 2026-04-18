@@ -7,6 +7,7 @@ import { ETF_CODES } from '@/lib/investment/etfRegistry';
  *
  * 無 etf 參數時回傳所有 ETF 的 union pool（依 weight 去重降序）
  * 用於個股儀表板的上下頁導航，確保與選股池順序一致
+ * 回傳欄位含 quant filter（momentum_60d、it_buy_10d、filter_score）供排序用
  */
 export async function GET(req: NextRequest) {
     try {
@@ -54,7 +55,95 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        const result = Array.from(map.values()).sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+        const stockCodes = Array.from(map.keys());
+
+        // 4. 查詢 quant filter 資料（momentum_60d、it_buy_10d）
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 100);
+        const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+
+        const [recentPriceRes, oldPriceRes, revenueRes] = await Promise.all([
+            supabase
+                .from('stock_prices_daily')
+                .select('stock_code, data_date, close, it_buy')
+                .in('stock_code', stockCodes)
+                .order('data_date', { ascending: false })
+                .limit(10 * stockCodes.length),
+            supabase
+                .from('stock_prices_daily')
+                .select('stock_code, data_date, close')
+                .in('stock_code', stockCodes)
+                .gte('data_date', cutoffStr)
+                .order('data_date', { ascending: true })
+                .limit(5 * stockCodes.length),
+            supabase
+                .from('stock_revenue_monthly')
+                .select('stock_code, data_date, revenue')
+                .in('stock_code', stockCodes)
+                .order('data_date', { ascending: false })
+                .limit(15 * stockCodes.length),
+        ]);
+
+        const oldCloseMap: Record<string, number> = {};
+        for (const row of oldPriceRes.data ?? []) {
+            if (!oldCloseMap[row.stock_code] && Number(row.close) > 0) {
+                oldCloseMap[row.stock_code] = Number(row.close);
+            }
+        }
+
+        const recentPricesMap: Record<string, { stock_code: string; data_date: string; close: number; it_buy: number | null }[]> = {};
+        for (const row of recentPriceRes.data ?? []) {
+            if (!recentPricesMap[row.stock_code]) recentPricesMap[row.stock_code] = [];
+            recentPricesMap[row.stock_code].push(row);
+        }
+
+        const revenueMap: Record<string, { data_date: string; revenue: number }[]> = {};
+        for (const row of revenueRes.data ?? []) {
+            if (!revenueMap[row.stock_code]) revenueMap[row.stock_code] = [];
+            revenueMap[row.stock_code].push(row);
+        }
+
+        // 5. 合併 quant filter 欄位
+        const result = Array.from(map.values()).map((h) => {
+            const prices = (recentPricesMap[h.stock_code] ?? [])
+                .sort((a, b) => new Date(b.data_date).getTime() - new Date(a.data_date).getTime());
+
+            let momentum_60d: number | null = null;
+            let it_buy_10d: number | null = null;
+            let momentum_pass = false;
+            let it_buy_10d_pass = false;
+
+            if (prices.length >= 1) {
+                const latestClose = Number(prices[0].close);
+                const oldClose = oldCloseMap[h.stock_code];
+                if (latestClose > 0 && oldClose && oldClose > 0) {
+                    momentum_60d = Number(((latestClose / oldClose - 1) * 100).toFixed(2));
+                    momentum_pass = momentum_60d > 0;
+                }
+                it_buy_10d = prices.reduce((sum, p) => sum + Number(p.it_buy || 0), 0);
+                it_buy_10d_pass = it_buy_10d > 0;
+            }
+
+            const revs = (revenueMap[h.stock_code] ?? [])
+                .sort((a, b) => new Date(b.data_date).getTime() - new Date(a.data_date).getTime());
+
+            let rev_ma3_new_high = false;
+            if (revs.length >= 14) {
+                const ma3Series: number[] = [];
+                for (let i = 0; i <= 11; i++) {
+                    const avg = (Number(revs[i]?.revenue || 0) + Number(revs[i + 1]?.revenue || 0) + Number(revs[i + 2]?.revenue || 0)) / 3;
+                    ma3Series.push(avg);
+                }
+                const rollingMax = Math.max(...ma3Series);
+                rev_ma3_new_high = ma3Series[0] > 0 && Math.abs(ma3Series[0] - rollingMax) < 0.01;
+            }
+
+            const filter_score = (momentum_pass ? 1 : 0) + (it_buy_10d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
+
+            return { ...h, momentum_60d, it_buy_10d, filter_score, momentum_pass, it_buy_10d_pass, rev_ma3_new_high };
+        });
+
+        result.sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
 
         return NextResponse.json(result);
     } catch (error) {

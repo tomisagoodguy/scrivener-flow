@@ -1,18 +1,20 @@
 import { Holding } from '@/types/investment';
 
-export type SortField = 
-    | 'weight' 
-    | 'shares' 
-    | 'amount' 
-    | 'margin_ratio' 
-    | 'change_percent' 
-    | 'volatility' 
-    | 'market_cap' 
-    | 'monthly_revenue' 
-    | 'revenue_yoy' 
-    | 'revenue_mom' 
-    | 'revenue_momentum_rank' 
+export type SortField =
+    | 'weight'
+    | 'shares'
+    | 'amount'
+    | 'margin_ratio'
+    | 'change_percent'
+    | 'volatility'
+    | 'market_cap'
+    | 'monthly_revenue'
+    | 'revenue_yoy'
+    | 'revenue_mom'
+    | 'revenue_momentum_rank'
     | 'filter_score'
+    | 'momentum_60d'
+    | 'it_buy_10d'
     | 'price';
 
 export type SortOrder = 'asc' | 'desc';
