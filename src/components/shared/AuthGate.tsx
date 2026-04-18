@@ -28,8 +28,8 @@ export function AuthGateProvider({ children }: { children: React.ReactNode }) {
         const checkAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession();
 
-            // If the user is on the login page or auth callback, we don't need the gate
-            if (pathname === '/login' || pathname.startsWith('/auth')) {
+            // If the user is on the login page, auth callback, or investment pages, we don't need the gate
+            if (pathname === '/login' || pathname.startsWith('/auth') || pathname.startsWith('/investment')) {
                 setIsChecking(false);
                 return;
             }
@@ -70,7 +70,7 @@ export function AuthGateProvider({ children }: { children: React.ReactNode }) {
         );
     }
 
-    const isPublicRoute = pathname === '/login' || pathname.startsWith('/auth');
+    const isPublicRoute = pathname === '/login' || pathname.startsWith('/auth') || pathname.startsWith('/investment');
     if (!isAuthorized && !isPublicRoute) {
         return <PassphraseScreen onVerify={checkPassphrase} />;
     }
