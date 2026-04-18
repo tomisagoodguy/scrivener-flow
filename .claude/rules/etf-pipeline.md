@@ -60,3 +60,27 @@ Pocket.tw 的「資料日期」反映 ETF 官方公告日，**不保證每天更
 # ✅ 正確
 "CAST(:col AS jsonb)"
 ```
+
+## 投資模組架構（前端）
+
+投資儀表板路由：
+- `src/app/investment/[etf]/page.tsx` — ETF 持股監控頁（動態路由，支援 00980A / 00981A / 00991A）
+- `src/app/investment/stock/[code]/page.tsx` — 個股詳情頁
+
+採 Repository Pattern，`repositories/` 下有 `priceRepo`、`revenueRepo`、`stockRepo`。  
+對應 hooks：`hooks/investment/` 下的 `useHoldingsFilter`、`useStockDashboard`、`usePriceData` 等。
+
+**00980A / 00991A 股價補充機制**：這兩支 ETF 的 `etf_holdings_snapshot` 的 `price` 欄位為 null。  
+`getHoldings()` 在 Server 端偵測 `price = null` 的持股，從 `stock_prices_daily` 補充最新 `price`、`change_percent`、`amount`、`margin_ratio`。  
+資料由 `SyncOHLCVStep` 透過 `ctx.secondary_stock_codes` 合併後 sync。
+
+## 關鍵模組索引
+
+| 路徑 | 說明 |
+|------|------|
+| `ETF/pipeline/context.py` | `PipelineContext`：步驟間共享狀態（含 `secondary_stock_codes`） |
+| `ETF/pipeline/orchestrator.py` | 步驟執行順序 |
+| `ETF/processors/diff_engine.py` | `compute_diff()`：計算持股 IN/OUT/BUY/SELL |
+| `ETF/services/finlab/facade.py` | FinLab 股價 / OHLCV / 公司資料統一入口 |
+| `ETF/database/sql_storage.py` | SQLAlchemy 直接操作 Supabase（繞過 RLS） |
+| `ETF/daily_ai_report.py` | Gemini AI 報告產生 + LINE 發送 |

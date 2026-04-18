@@ -85,7 +85,9 @@
       "Skill(update-config:*)",
       "Bash(node -e ' *)",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Users/user/Documents/GitHub/scrivener-flow/.claude/settings.json','utf8'\\)\\); console.log\\('JSON OK'\\)\")",
-      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): SyncBareKStep 失敗不再中斷主流程，修復 LINE 通知被跳過的問題\")"
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix\\(etf\\): SyncBareKStep 失敗不再中斷主流程，修復 LINE 通知被跳過的問題\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"docs: 拆分 CLAUDE.md 架構規則至 .claude/rules/ 各主題檔案\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"docs: 拆分 CLAUDE.md 架構規則至 .claude/rules/ 各主題檔案\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

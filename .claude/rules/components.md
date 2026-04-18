@@ -50,3 +50,21 @@ if (data instanceof Error) { ... }
 
 `useSearchParams()` 不能放在 layout / header 全域元件，會導致靜態 build 失敗。  
 必須在 `layout.tsx` 用 `<Suspense>` 包裹含有 `useSearchParams` 的 Client Component。
+
+## UI 風格規範（強制）
+
+所有容器使用 `.glass-card`（`backdrop-blur + bg-white/65 + border-white/50`）。  
+Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 focus:bg-white`。  
+頁面進場：`animate-fade-in`（0.6s）；列表卡片：`animate-slide-up`（staggered）。
+
+深色模式限制：`dark-theme.css` 對結構性 class 套用 `!important` 會蓋掉 Tailwind `dark:` variants。詳見 `dark-mode.md`。
+
+## CaseStatus 型別陷阱
+
+`CaseStatus` 型別混用中英文值（`'辦理中'` 和 `'Processing'` 並存）。  
+寫 filter 條件時，注意資料來源實際儲存的是哪一種；使用 `src/lib/constants/caseConstants.ts` 的常數，不要硬編碼字串。
+
+## 登入頁面元件結構
+
+登入表單已拆至 `src/app/login/components/`（`MfaTotpForm`、`PasswordLoginForm` 等子元件）。  
+修改登入邏輯時，直接修改對應子元件，不要在 `ModernLogin.tsx` 主檔寫表單邏輯。
