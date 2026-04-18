@@ -13,28 +13,33 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 def download_file_requests(url: str, output_path: pathlib.Path) -> bool:
     """
-    Simulated download using simple Requests (Fast & Lightweight)
+    Download using requests.Session to handle cookie-based bot protection.
+    ezmoney.com.tw returns 302 + Set-Cookie on first hit; session carries the
+    cookie automatically so the follow-up redirect resolves correctly.
     """
     try:
         logger.info(f"Attempting download via Requests: {url}")
-        headers = {'User-Agent': USER_AGENT}
-        
-        # 00981A special handling: Official site often redirects or checks cookies.
-        # We try a direct GET first.
-        # Disable SSL verification for legacy financial sites
-        resp = requests.get(url, headers=headers, stream=True, timeout=30, verify=False)
+        session = requests.Session()
+        session.headers.update({'User-Agent': USER_AGENT})
+
+        # First touch: picks up the __nxquid bot-check cookie via 302
+        probe = session.get(url, timeout=30, verify=False, allow_redirects=False)
+        if probe.status_code in (301, 302, 303, 307, 308):
+            logger.info(f"Got redirect ({probe.status_code}), cookie set — retrying with session")
+
+        # Second request: session carries the cookie, server should serve the file
+        resp = session.get(url, timeout=30, verify=False, allow_redirects=True, stream=True)
         resp.raise_for_status()
-        
-        # Basic content type check
+
         ct = resp.headers.get('Content-Type', '').lower()
         if 'html' in ct and 'application' not in ct:
-            logger.warning("Requests returned HTML instead of binary file. Likely blocked or redirect.")
+            logger.warning("Requests returned HTML instead of binary file. Likely blocked.")
             return False
-            
+
         with open(output_path, 'wb') as f:
             for chunk in resp.iter_content(chunk_size=8192):
                 f.write(chunk)
-                
+
         logger.info("Download via Requests successful.")
         return True
     except Exception as e:

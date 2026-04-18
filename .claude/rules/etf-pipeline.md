@@ -1,5 +1,38 @@
 # ETF Pipeline 規則
 
+## 管理員監控
+
+### Pipeline 失敗警報
+`PipelineOrchestrator.run()` 捕捉到任何步驟拋出的例外時，會在 re-raise 前透過 LINE 發送錯誤警報：
+
+```
+🚨 ETF Pipeline 異常
+📅 YYYY-MM-DD
+❌ 失敗步驟：<step_name>
+💬 錯誤：<error message>
+
+請至 GitHub Actions 查看完整 log。
+```
+
+**收到此訊息的處置流程：**
+1. GitHub → Actions → Daily ETF Tracker → 找對應日期的失敗 run，看完整 log
+2. 常見原因與解法：
+
+| 失敗步驟 | 常見原因 | 解法 |
+|---------|---------|------|
+| `Scrape Holdings` | 爬蟲被 bot 保護阻擋（HTTP 302 loop） | 修 `unified_scraper.py` 的 session/cookie 處理，或用 Playwright fallback |
+| `Scrape Holdings` | 資料來源網站改版（URL / Excel 格式變更） | 更新 `fhtrust_scraper.py` 或 `xlsx_parser.py` |
+| `Save Snapshot` | Supabase 連線逾時 / schema 不符 | 確認 `SUPABASE_DB_URL` 有效，或查看 migration 是否有缺 |
+| `Multi-ETF Scrape` | Pocket.tw / MoneyDJ 改版 | 更新對應 scraper（輔助步驟不應讓 pipeline 中斷） |
+
+### 資料新鮮度確認
+若懷疑資料停更（前端顯示的日期超過 3 個交易日以前）：
+1. 先查 LINE 是否有收到今日的 ETF carousel 通知 → 有通知代表 pipeline 成功但資料來源本身沒更新（正常現象，尤其 Pocket.tw ETF）
+2. 沒收到通知 → 代表 pipeline 失敗 → 查 GitHub Actions log
+3. 最快驗證方式：`uv run python -c "from ETF.scrapers.unified_scraper import download_file_requests; import pathlib; print(download_file_requests('https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode=49YTW', pathlib.Path('test.xlsx')))"`
+
+---
+
 ## 步驟錯誤處理原則
 
 Pipeline 步驟分兩級，錯誤處理策略不同：

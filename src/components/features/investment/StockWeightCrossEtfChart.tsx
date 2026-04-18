@@ -34,33 +34,41 @@ export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry
     }, [stockList, search]);
 
     // 取出該股在各 ETF 的走勢
-    const { chartData, activeEtfs } = useMemo(() => {
-        if (!selectedStock) return { chartData: [], activeEtfs: [] };
+    const { chartData, activeEtfs, latestSnapshot } = useMemo(() => {
+        if (!selectedStock) return { chartData: [], activeEtfs: [], latestSnapshot: null };
 
         const rows = weightHistory.filter(r => r.stock_code === selectedStock);
-        if (rows.length === 0) return { chartData: [], activeEtfs: [] };
+        if (rows.length === 0) return { chartData: [], activeEtfs: [], latestSnapshot: null };
 
         // 找有資料的 ETF
         const etfSet = new Set(rows.map(r => r.etf_code));
         const active = etfRegistry.filter(e => etfSet.has(e.code));
 
-        // 按日期聚合
-        const byDate = new Map<string, Record<string, number>>();
+        // 按日期聚合（同時保留 weight 和 rank）
+        const byDateWeight = new Map<string, Record<string, number>>();
+        const byDateRank = new Map<string, Record<string, number>>();
         for (const row of rows) {
             const d = row.data_date.substring(0, 10);
-            if (!byDate.has(d)) byDate.set(d, {});
-            byDate.get(d)![row.etf_code] = viewMode === 'weight' ? row.weight : row.rank;
+            if (!byDateWeight.has(d)) byDateWeight.set(d, {});
+            if (!byDateRank.has(d)) byDateRank.set(d, {});
+            byDateWeight.get(d)![row.etf_code] = row.weight;
+            byDateRank.get(d)![row.etf_code] = row.rank;
         }
 
-        const data = Array.from(byDate.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([date, vals]) => ({
-                date: date.substring(5), // MM-DD
-                _full: date,
-                ...vals,
-            }));
+        const sortedDates = Array.from(byDateWeight.keys()).sort();
+        const data = sortedDates.map(date => ({
+            date: date.substring(5), // MM-DD
+            _full: date,
+            ...(viewMode === 'weight' ? byDateWeight.get(date) : byDateRank.get(date)),
+        }));
 
-        return { chartData: data, activeEtfs: active };
+        // 最新快照同時帶 weight 和 rank
+        const lastDate = sortedDates[sortedDates.length - 1];
+        const snap = lastDate
+            ? { weight: byDateWeight.get(lastDate) ?? {}, rank: byDateRank.get(lastDate) ?? {} }
+            : null;
+
+        return { chartData: data, activeEtfs: active, latestSnapshot: snap };
     }, [selectedStock, viewMode, weightHistory, etfRegistry]);
 
     const selectedStockName = stockList.find(s => s.code === selectedStock)?.name ?? '';
@@ -130,19 +138,36 @@ export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry
                         </div>
                     ) : (
                         <div>
-                            <div className="mb-3 flex items-center gap-2">
+                            <div className="mb-2 flex items-center gap-2">
                                 <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
                                     {selectedStock} {selectedStockName}
                                 </span>
-                                <div className="flex items-center gap-3 ml-2">
-                                    {activeEtfs.map(e => (
-                                        <span key={e.code} className="flex items-center gap-1 text-xs text-slate-500">
-                                            <span className="w-3 h-0.5 inline-block rounded" style={{ backgroundColor: e.color }} />
-                                            {e.shortCode}
-                                        </span>
-                                    ))}
-                                </div>
                             </div>
+                            {/* 最新排名/權重摘要卡片 */}
+                            {latestSnapshot && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {activeEtfs.map(e => {
+                                        const rank = latestSnapshot.rank[e.code];
+                                        const weight = latestSnapshot.weight[e.code];
+                                        if (!rank && !weight) return null;
+                                        return (
+                                            <div
+                                                key={e.code}
+                                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/70 dark:bg-slate-800/70 border text-xs shadow-sm"
+                                                style={{ borderLeftWidth: 3, borderLeftColor: e.color, borderColor: `${e.color}30` }}
+                                            >
+                                                <span className="font-bold text-slate-700 dark:text-slate-200" style={{ color: e.color }}>{e.shortCode}</span>
+                                                {rank ? (
+                                                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">#{rank}</span>
+                                                ) : null}
+                                                {weight ? (
+                                                    <span className="text-slate-400 dark:text-slate-500">{weight.toFixed(2)}%</span>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                             <ResponsiveContainer width="100%" height={320}>
                                 <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
