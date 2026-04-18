@@ -61,6 +61,28 @@ Pocket.tw 的「資料日期」反映 ETF 官方公告日，**不保證每天更
 "CAST(:col AS jsonb)"
 ```
 
+## 自選股名稱查詢優先序
+
+`watch_list.name` 空白時，依下列順序補填中文名稱（優先序由低到高）：
+
+| 優先 | 資料來源 | 欄位 |
+|------|---------|------|
+| 3（最低）| `bare_k_snapshots` | `summary->>'name'`（JSON 欄位） |
+| 2 | `etf_holdings_snapshot` | `stock_name` |
+| 1（最高）| `stock_basic_info` | `name_short` |
+
+**陷阱**：裸K看盤（`bare-k`）頁面顯示名稱是因為有 `summary?.name` fallback，而觀察清單（`watch-list`）只顯示 DB 儲存的 `name`。  
+新增或 backfill 時，**必須同時查三張表**，否則名稱為空。
+
+```ts
+// watch-list/page.tsx backfill 範例
+const [{ data: basicData }, { data: etfData }, { data: bareKData }] = await Promise.all([
+    supabase.from('stock_basic_info').select('stock_code, name_short').in('stock_code', codes),
+    supabase.from('etf_holdings_snapshot').select('stock_code, stock_name').in('stock_code', codes),
+    supabase.from('bare_k_snapshots').select('stock_id, summary').in('stock_id', codes).order('date', { ascending: false }),
+]);
+```
+
 ## 投資模組架構（前端）
 
 投資儀表板路由：
