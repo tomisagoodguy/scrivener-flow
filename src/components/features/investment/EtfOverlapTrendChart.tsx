@@ -19,9 +19,17 @@ interface OverlapTrendRow {
     pct7: number;
 }
 
+interface OverlapStock {
+    code: string;
+    name: string;
+    etfCount: number;
+}
+
 interface EtfOverlapTrendChartProps {
     data: OverlapTrendRow[];
     totalEtfs: number;
+    etfCodes?: string[];
+    overlapStocks?: OverlapStock[];
 }
 
 type MetricMode = 'pct' | 'count';
@@ -33,8 +41,9 @@ const SERIES = [
     { key: 'pct2', countKey: 'shared2', label: '2+ 家共持', color: '#10b981' },
 ] as const;
 
-export function EtfOverlapTrendChart({ data, totalEtfs }: EtfOverlapTrendChartProps) {
+export function EtfOverlapTrendChart({ data, totalEtfs, etfCodes, overlapStocks }: EtfOverlapTrendChartProps) {
     const [mode, setMode] = useState<MetricMode>('pct');
+    const [minEtfs, setMinEtfs] = useState(3);
 
     if (data.length === 0) {
         return (
@@ -65,6 +74,11 @@ export function EtfOverlapTrendChart({ data, totalEtfs }: EtfOverlapTrendChartPr
                         共識持股趨勢 — {totalEtfs} 支 ETF
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">各日期中，被多家 ETF 同時持有的股票比例</p>
+                    {etfCodes && etfCodes.length > 0 && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            含：{etfCodes.join('、')}
+                        </p>
+                    )}
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                     <button
@@ -140,6 +154,39 @@ export function EtfOverlapTrendChart({ data, totalEtfs }: EtfOverlapTrendChartPr
                     })}
                 </AreaChart>
             </ResponsiveContainer>
+            {/* 最新共識股票清單 */}
+            {overlapStocks && overlapStocks.length > 0 && (
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            最新共識持股明細
+                        </span>
+                        <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                            {[2, 3, 5, 7].map(n => (
+                                <button
+                                    key={n}
+                                    onClick={() => setMinEtfs(n)}
+                                    className={`px-3 py-1 text-xs font-medium transition-colors ${minEtfs === n ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
+                                >
+                                    {n}+ 家
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {overlapStocks.filter(s => s.etfCount >= minEtfs).map(s => (
+                            <div key={s.code} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+                                <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 shrink-0">{s.code}</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300 truncate">{s.name}</span>
+                                <span className="ml-auto text-[10px] text-slate-400 shrink-0">{s.etfCount}家</span>
+                            </div>
+                        ))}
+                    </div>
+                    {overlapStocks.filter(s => s.etfCount >= minEtfs).length === 0 && (
+                        <p className="text-xs text-slate-400 text-center py-4">無符合條件的共識持股</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
