@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { BareKScrollViewer } from '@/components/features/investment/BareKScrollViewer';
 import type { StockSlide } from '@/components/features/investment/BareKScrollViewer';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
@@ -13,14 +12,15 @@ export default async function BareKDetailPage({ params }: Props) {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
 
-    // 取全部自選股（順序與列表一致）
-    const { data: watchList } = await supabase
-        .from('watch_list')
-        .select('stock_id, name, strategies')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+    // 未登入者看到空清單
+    const watchList = user
+        ? (await supabase
+              .from('watch_list')
+              .select('stock_id, name, strategies')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: true })).data
+        : null;
 
     const list = watchList ?? [];
 

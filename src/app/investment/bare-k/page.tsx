@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+
 import Link from 'next/link';
 import { ArrowLeft, Settings2 } from 'lucide-react';
 import { BareKSummaryCard } from '@/components/features/investment/BareKSummaryCard';
@@ -8,14 +8,15 @@ import type { WatchListEntry, BareKSummary } from '@/app/api/investment/bare-k/r
 export default async function BareKOverviewPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
 
-    // 取 watch_list
-    const { data: watchList } = await supabase
-        .from('watch_list')
-        .select('id, stock_id, name, strategies, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+    // 未登入者看到空清單
+    const watchList = user
+        ? (await supabase
+              .from('watch_list')
+              .select('id, stock_id, name, strategies, created_at')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: true })).data
+        : null;
 
     // 批次取各股 summary
     const entries: WatchListEntry[] = await Promise.all(

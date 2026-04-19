@@ -1,17 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { WatchListManager } from '@/components/features/investment/WatchListManager';
 
 export default async function WatchListPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
 
-    const { data: watchList } = await supabase
-        .from('watch_list')
-        .select('id, stock_id, name, strategies, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+    // 未登入者看到空清單
+    const watchList = user
+        ? (await supabase
+              .from('watch_list')
+              .select('id, stock_id, name, strategies, created_at')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: true })).data
+        : null;
 
     // 補填名稱為空的項目
     const missing = (watchList ?? []).filter((w) => !w.name);
