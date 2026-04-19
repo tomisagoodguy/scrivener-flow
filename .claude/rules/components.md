@@ -59,6 +59,19 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 深色模式限制：`dark-theme.css` 對結構性 class 套用 `!important` 會蓋掉 Tailwind `dark:` variants。詳見 `dark-mode.md`。
 
+## 台股色彩慣例（投資模組強制）
+
+台股與歐美相反：**紅色 = 上漲 / 利多，綠色 = 下跌 / 利空**。
+
+| 情境 | 顏色 class |
+|------|-----------|
+| 漲幅、主力買進、正向訊號 | `text-rose-600 dark:text-rose-400` |
+| 跌幅、主力賣出、負向訊號 | `text-emerald-600 dark:text-emerald-400` |
+| icon 背景（利多） | `bg-rose-500/10` + `text-rose-600` |
+| icon 背景（利空） | `bg-emerald-500/10` + `text-emerald-600` |
+
+投資模組所有漲跌色彩**禁止**使用歐美慣例（綠漲紅跌）。
+
 ## CaseStatus 型別陷阱
 
 `CaseStatus` 型別混用中英文值（`'辦理中'` 和 `'Processing'` 並存）。  

@@ -116,6 +116,15 @@ const [{ data: basicData }, { data: etfData }, { data: bareKData }] = await Prom
 ]);
 ```
 
+**`etf_holdings_snapshot` 日期欄位**：日期欄位名稱是 `data_date`，**不是** `snapshot_date`。  
+SQL 排序取最新一筆寫法：`ORDER BY stock_code, data_date DESC`。
+
+**`equity_distribution_stats` 名稱 backfill**：若 `stock_name` 有空值，執行：  
+```bash
+uv run python ETF/sync_equity_distribution.py --backfill-names
+```
+此指令只補名稱（查 `etf_holdings_snapshot` + `stock_basic_info`），不重算統計數字，冪等安全。
+
 ## 投資模組架構（前端）
 
 投資儀表板路由：
