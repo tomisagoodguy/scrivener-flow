@@ -286,7 +286,7 @@ export async function generateInvestmentPromptAction({ holdings, dataDate }: Gen
 | Filter | 條件 | 通過檔數 / 總持股 |
 |--------|------|---------|
 | **Momentum** | close / close[60日前] - 1 > 0 | **${filterStats.momentum_pass} / ${stats.totalHoldings}** |
-| **投信10日買超** | 投信10日累積買超 > 0張 | **${filterStats.it_buy_pass} / ${stats.totalHoldings}** |
+| **投信5日買超** | 投信5日累積買超 > 0張 | **${filterStats.it_buy_pass} / ${stats.totalHoldings}** |
 | **Rev New High** | 月營收3MA達12個月新高 | **${filterStats.rev_new_high_pass} / ${stats.totalHoldings}** |
 | **🏆 三大全過** | 以上三者全部通過 | **${filterStats.triple_pass} / ${stats.totalHoldings}** |
 | **雙 Filter通過** | 任兩項通過 | **${filterStats.double_pass} / ${stats.totalHoldings}** |

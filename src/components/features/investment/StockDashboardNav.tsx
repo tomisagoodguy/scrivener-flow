@@ -8,7 +8,7 @@ import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
 
 const SORT_LABEL: Record<string, string> = {
     momentum_60d: '60日動能',
-    it_buy_10d: '投信買超',
+    it_buy_5d: '投信買超',
     filter_score: '動能分',
     revenue_yoy: 'YOY%',
     weight: '持股權重',
@@ -89,35 +89,39 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                     {quantMetrics && (
                         <>
                             <span className="text-slate-300 dark:text-slate-600">|</span>
-                            {quantMetrics.momentum_60d !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
-                                    quantMetrics.momentum_60d > 0
-                                        ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                                        : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                                }`}>
-                                    60日 {quantMetrics.momentum_60d > 0 ? '+' : ''}{quantMetrics.momentum_60d.toFixed(1)}%
-                                </span>
-                            )}
-                            {quantMetrics.it_buy_10d !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
-                                    quantMetrics.it_buy_10d > 0
-                                        ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                                        : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                                }`}>
-                                    投信 {quantMetrics.it_buy_10d > 0 ? '+' : ''}{(quantMetrics.it_buy_10d / 1000).toFixed(0)}K
-                                </span>
-                            )}
-                            {quantMetrics.revenue_yoy !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
-                                    quantMetrics.revenue_yoy >= 50
-                                        ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                                        : quantMetrics.revenue_yoy < 0
-                                        ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                                        : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                                }`}>
-                                    YOY {quantMetrics.revenue_yoy > 0 ? '+' : ''}{quantMetrics.revenue_yoy.toFixed(1)}%
-                                </span>
-                            )}
+                            {/* M badge */}
+                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                quantMetrics.momentum_pass
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
+                            }`}>
+                                M {quantMetrics.momentum_pass ? '✓' : '✗'}
+                                {quantMetrics.momentum_60d !== null && (
+                                    <span className="font-normal">{quantMetrics.momentum_60d > 0 ? '+' : ''}{quantMetrics.momentum_60d.toFixed(1)}%</span>
+                                )}
+                            </span>
+                            {/* T badge */}
+                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                quantMetrics.it_buy_5d_pass
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
+                            }`}>
+                                T {quantMetrics.it_buy_5d_pass ? '✓' : '✗'}
+                                {quantMetrics.it_buy_5d !== null && (
+                                    <span className="font-normal">{quantMetrics.it_buy_5d > 0 ? '+' : ''}{(quantMetrics.it_buy_5d / 1000).toFixed(0)}K</span>
+                                )}
+                            </span>
+                            {/* R badge */}
+                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                quantMetrics.rev_ma3_new_high
+                                    ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
+                            }`}>
+                                R {quantMetrics.rev_ma3_new_high ? '✓' : '✗'}
+                                {quantMetrics.revenue_yoy !== null && (
+                                    <span className="font-normal">YOY {quantMetrics.revenue_yoy > 0 ? '+' : ''}{quantMetrics.revenue_yoy.toFixed(1)}%</span>
+                                )}
+                            </span>
                         </>
                     )}
                     {holdingEtfs.length > 0 && (

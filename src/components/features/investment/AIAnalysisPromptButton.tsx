@@ -67,7 +67,7 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
                         00981A 量化體檢報告
                     </DialogTitle>
                     <DialogDescription>
-                        Gemini 分析三大量化 Filter：動能(60日)、投信10日累積、Rev MA3 創12月新高，識別強勢複合信號股。
+                        Gemini 分析三大量化 Filter：動能(60日)、投信5日累積、Rev MA3 創12月新高，識別強勢複合信號股。
                     </DialogDescription>
                 </DialogHeader>
                 
@@ -94,7 +94,7 @@ export function AIAnalysisPromptButton({ holdings, dataDate }: AIAnalysisPromptB
                             </div>
                             <div className="text-center space-y-2">
                                 <h3 className="font-medium text-lg text-slate-800 dark:text-slate-200">正在進行量化體檢...</h3>
-                                <p className="text-slate-500 text-sm">計算 60日動能 • 統計投信10日買超 • 辨識Rev MA3新高</p>
+                                <p className="text-slate-500 text-sm">計算 60日動能 • 統計投信5日買超 • 辨識Rev MA3新高</p>
                             </div>
                         </div>
                     )}

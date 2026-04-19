@@ -12,7 +12,7 @@ import { ETF_REGISTRY, ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistr
 import Link from 'next/link';
 import { ConsensusPanel, type ConsensusRow } from '@/components/features/investment/ConsensusPanel';
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
-import { fetchQuantFilters } from '@/lib/investment/quantFilters';
+import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
 import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 
@@ -202,7 +202,7 @@ export default async function InvestmentPoolPage() {
     const allCodes = unionHoldings.map(h => h.stock_code);
 
     const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult] = await Promise.all([
-        fetchQuantFilters(allCodes),
+        fetchQuantFiltersBatched(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
         getCompareData(),
@@ -226,6 +226,12 @@ export default async function InvestmentPoolPage() {
             rank: idx + 1,
             in_etfs: ETF_CODES.filter(c => byEtf[c]?.some(x => x.stock_code === h.stock_code)),
             revenue_yoy: h.revenue_yoy ?? null,
+            amount: h.amount ?? null,
+            margin_ratio: h.margin_ratio ?? null,
+            is_high_5d: h.is_high_5d ?? null,
+            is_high_20d: h.is_high_20d ?? null,
+            is_high_200d: h.is_high_200d ?? null,
+            volatility: h.volatility ?? null,
         })),
     }));
 

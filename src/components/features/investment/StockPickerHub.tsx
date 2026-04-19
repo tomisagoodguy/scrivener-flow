@@ -13,6 +13,12 @@ interface HoldingItem {
     rank: number;
     in_etfs: string[];
     revenue_yoy?: number | null;
+    amount?: number | null;
+    margin_ratio?: number | null;
+    is_high_5d?: boolean | null;
+    is_high_20d?: boolean | null;
+    is_high_200d?: boolean | null;
+    volatility?: number | null;
 }
 
 interface EtfData {
@@ -25,8 +31,8 @@ interface EtfData {
 interface QuantFilter {
     momentum_60d: number | null;
     momentum_pass: boolean;
-    it_buy_10d: number | null;
-    it_buy_10d_pass: boolean;
+    it_buy_5d: number | null;
+    it_buy_5d_pass: boolean;
     rev_ma3: number | null;
     rev_ma3_new_high: boolean;
     filter_score: number;
@@ -37,10 +43,10 @@ interface StockPickerHubProps {
     quantFilters: Record<string, QuantFilter>;
 }
 
-type SortField = 'shared_count' | 'filter_score' | 'momentum_60d' | 'it_buy_10d' | string;
+type SortField = 'shared_count' | 'filter_score' | 'momentum_60d' | 'it_buy_5d' | string;
 
 // SortField 值可直接對應 Holding 欄位的清單（用於傳遞 URL query params）
-const HOLDING_SORT_FIELDS = new Set(['filter_score', 'momentum_60d', 'it_buy_10d', 'revenue_yoy']);
+const HOLDING_SORT_FIELDS = new Set(['filter_score', 'momentum_60d', 'it_buy_5d', 'revenue_yoy', 'amount', 'margin_ratio', 'volatility']);
 
 function toStockLink(code: string, sortField: SortField, sortOrder: SortOrder): string {
     if (HOLDING_SORT_FIELDS.has(sortField)) {
@@ -50,7 +56,10 @@ function toStockLink(code: string, sortField: SortField, sortOrder: SortOrder): 
 }
 type SortOrder = 'asc' | 'desc';
 
-type FactorFilter = 'momentum' | 'it_buy' | 'rev_new_high' | 'all_shared' | 'golden_zone' | 'explosive_zone';
+type FactorFilter =
+    | 'new_high' | 'high_20d' | 'high_200d'
+    | 'weight_top10' | 'amount_top10' | 'yoy_20' | 'low_vol' | 'margin_high10' | 'margin_low10'
+    | 'momentum' | 'it_buy' | 'rev_new_high' | 'all_shared' | 'golden_zone' | 'explosive_zone';
 
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
 const ETF_CODES = ETF_REGISTRY.map(e => e.code);
@@ -77,13 +86,24 @@ interface UnifiedHolding {
     stock_name: string;
     shared_count: number;
     weights: Record<string, number>;  // etf_code -> weight
+    maxWeight: number;
     filter_score: number;
     momentum_60d: number | null;
-    it_buy_10d: number | null;
+    it_buy_5d: number | null;
     momentum_pass: boolean;
-    it_buy_10d_pass: boolean;
+    it_buy_5d_pass: boolean;
     rev_ma3_new_high: boolean;
     revenue_yoy: number | null;
+    amount: number | null;
+    margin_ratio: number | null;
+    is_high_5d: boolean;
+    is_high_20d: boolean;
+    is_high_200d: boolean;
+    volatility: number | null;
+    weightRank?: number;
+    amountRank?: number;
+    marginRankHigh?: number;
+    marginRankLow?: number;
 }
 
 function buildUnifiedHoldings(
@@ -103,26 +123,55 @@ function buildUnifiedHoldings(
                     stock_name: h.stock_name,
                     shared_count: 0,
                     weights: {},
+                    maxWeight: 0,
                     filter_score: q?.filter_score ?? 0,
                     momentum_60d: q?.momentum_60d ?? null,
-                    it_buy_10d: q?.it_buy_10d ?? null,
+                    it_buy_5d: q?.it_buy_5d ?? null,
                     momentum_pass: q?.momentum_pass ?? false,
-                    it_buy_10d_pass: q?.it_buy_10d_pass ?? false,
+                    it_buy_5d_pass: q?.it_buy_5d_pass ?? false,
                     rev_ma3_new_high: q?.rev_ma3_new_high ?? false,
                     revenue_yoy: h.revenue_yoy ?? null,
+                    amount: h.amount ?? null,
+                    margin_ratio: h.margin_ratio ?? null,
+                    is_high_5d: h.is_high_5d ?? false,
+                    is_high_20d: h.is_high_20d ?? false,
+                    is_high_200d: h.is_high_200d ?? false,
+                    volatility: h.volatility ?? null,
                 });
             }
             const entry = stockMap.get(h.stock_code)!;
             entry.weights[etf.etf_code] = h.weight;
+            if (h.amount != null && entry.amount == null) entry.amount = h.amount;
+            if (h.margin_ratio != null && entry.margin_ratio == null) entry.margin_ratio = h.margin_ratio;
+            if (h.is_high_5d) entry.is_high_5d = true;
+            if (h.is_high_20d) entry.is_high_20d = true;
+            if (h.is_high_200d) entry.is_high_200d = true;
+            if (h.volatility != null && entry.volatility == null) entry.volatility = h.volatility;
         }
     }
 
-    // 計算 shared_count（只計算已選取的 ETF）
-    for (const entry of stockMap.values()) {
+    const result = Array.from(stockMap.values());
+
+    // shared_count & maxWeight
+    for (const entry of result) {
         entry.shared_count = Object.keys(entry.weights).filter(e => selectedEtfs.has(e)).length;
+        entry.maxWeight = Math.max(...Object.values(entry.weights));
     }
 
-    return Array.from(stockMap.values());
+    // Compute cross-pool ranks
+    const byWeight = [...result].sort((a, b) => b.maxWeight - a.maxWeight);
+    byWeight.forEach((h, i) => { stockMap.get(h.stock_code)!.weightRank = i + 1; });
+
+    const byAmount = [...result].sort((a, b) => (b.amount ?? -Infinity) - (a.amount ?? -Infinity));
+    byAmount.forEach((h, i) => { if (h.amount != null) stockMap.get(h.stock_code)!.amountRank = i + 1; });
+
+    const byMarginHigh = [...result].sort((a, b) => (b.margin_ratio ?? -Infinity) - (a.margin_ratio ?? -Infinity));
+    byMarginHigh.forEach((h, i) => { if (h.margin_ratio != null) stockMap.get(h.stock_code)!.marginRankHigh = i + 1; });
+
+    const byMarginLow = [...result].sort((a, b) => (a.margin_ratio ?? Infinity) - (b.margin_ratio ?? Infinity));
+    byMarginLow.forEach((h, i) => { if (h.margin_ratio != null) stockMap.get(h.stock_code)!.marginRankLow = i + 1; });
+
+    return result;
 }
 
 // ── 排序 helper ──────────────────────────────────────────────────────────────
@@ -149,9 +198,21 @@ function sortHoldings(
         } else if (field === 'momentum_60d') {
             aVal = a.momentum_60d ?? -Infinity;
             bVal = b.momentum_60d ?? -Infinity;
-        } else if (field === 'it_buy_10d') {
-            aVal = a.it_buy_10d ?? -Infinity;
-            bVal = b.it_buy_10d ?? -Infinity;
+        } else if (field === 'it_buy_5d') {
+            aVal = a.it_buy_5d ?? -Infinity;
+            bVal = b.it_buy_5d ?? -Infinity;
+        } else if (field === 'revenue_yoy') {
+            aVal = a.revenue_yoy ?? -Infinity;
+            bVal = b.revenue_yoy ?? -Infinity;
+        } else if (field === 'amount') {
+            aVal = a.amount ?? -Infinity;
+            bVal = b.amount ?? -Infinity;
+        } else if (field === 'margin_ratio') {
+            aVal = a.margin_ratio ?? -Infinity;
+            bVal = b.margin_ratio ?? -Infinity;
+        } else if (field === 'volatility') {
+            aVal = a.volatility ?? Infinity;
+            bVal = b.volatility ?? Infinity;
         } else {
             aVal = a.filter_score;
             bVal = b.filter_score;
@@ -185,8 +246,17 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
     const filteredHoldings = useMemo(() => {
         if (activeFactors.size === 0) return unifiedHoldings;
         return unifiedHoldings.filter(h => {
+            if (activeFactors.has('new_high') && !h.is_high_5d) return false;
+            if (activeFactors.has('high_20d') && !h.is_high_20d) return false;
+            if (activeFactors.has('high_200d') && !h.is_high_200d) return false;
+            if (activeFactors.has('weight_top10') && (h.weightRank ?? Infinity) > 10) return false;
+            if (activeFactors.has('amount_top10') && (h.amountRank ?? Infinity) > 10) return false;
+            if (activeFactors.has('yoy_20') && (h.revenue_yoy ?? -Infinity) <= 20) return false;
+            if (activeFactors.has('low_vol') && ((h.volatility ?? Infinity) >= 8 || h.volatility == null)) return false;
+            if (activeFactors.has('margin_high10') && (h.marginRankHigh ?? Infinity) > 10) return false;
+            if (activeFactors.has('margin_low10') && (h.marginRankLow ?? Infinity) > 10) return false;
             if (activeFactors.has('momentum') && !h.momentum_pass) return false;
-            if (activeFactors.has('it_buy') && !h.it_buy_10d_pass) return false;
+            if (activeFactors.has('it_buy') && !h.it_buy_5d_pass) return false;
             if (activeFactors.has('rev_new_high') && !h.rev_ma3_new_high) return false;
             if (activeFactors.has('all_shared') && h.shared_count < selectedEtfs.size) return false;
             if (activeFactors.has('golden_zone')) {
@@ -271,67 +341,84 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
             </div>
 
             {/* 強勢因子篩選（AND Logic） */}
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">強勢因子：</span>
-                {(
-                    [
-                        { key: 'momentum', label: '動能正', color: 'emerald' },
-                        { key: 'it_buy', label: '投信買超', color: 'blue' },
-                        { key: 'rev_new_high', label: '營收新高', color: 'violet' },
-                        { key: 'all_shared', label: `${selectedEtfs.size}方共持`, color: 'amber' },
-                        { key: 'golden_zone', label: '黃金區間', color: 'yellow' },
-                        { key: 'explosive_zone', label: '爆發區間', color: 'rose' },
-                    ] as const
-                ).map(({ key, label, color }) => {
+            {(() => {
+                const inactive = 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700';
+                const colorMap: Record<string, string> = {
+                    orange:  'bg-orange-100 text-orange-700 border-orange-400 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-600',
+                    lime:    'bg-lime-100 text-lime-700 border-lime-400 dark:bg-lime-900/50 dark:text-lime-300 dark:border-lime-600',
+                    red:     'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/50 dark:text-red-300 dark:border-red-600',
+                    indigo:  'bg-indigo-100 text-indigo-700 border-indigo-400 dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-indigo-600',
+                    cyan:    'bg-cyan-100 text-cyan-700 border-cyan-400 dark:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-600',
+                    teal:    'bg-teal-100 text-teal-700 border-teal-400 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-600',
+                    slate:   'bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-500',
+                    purple:  'bg-purple-100 text-purple-700 border-purple-400 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-600',
+                    pink:    'bg-pink-100 text-pink-700 border-pink-400 dark:bg-pink-900/50 dark:text-pink-300 dark:border-pink-600',
+                    emerald: 'bg-emerald-100 text-emerald-700 border-emerald-400 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-600',
+                    blue:    'bg-blue-100 text-blue-700 border-blue-400 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-600',
+                    violet:  'bg-violet-100 text-violet-700 border-violet-400 dark:bg-violet-900/50 dark:text-violet-300 dark:border-violet-600',
+                    amber:   'bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-600',
+                    yellow:  'bg-yellow-100 text-yellow-700 border-yellow-400 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600',
+                    rose:    'bg-rose-100 text-rose-700 border-rose-400 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-600',
+                };
+
+                const renderChip = (key: FactorFilter, label: string, color: string) => {
                     const active = activeFactors.has(key);
-                    const colorMap: Record<string, { active: string; inactive: string }> = {
-                        emerald: {
-                            active: 'bg-emerald-100 text-emerald-700 border-emerald-400 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                        blue: {
-                            active: 'bg-blue-100 text-blue-700 border-blue-400 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                        violet: {
-                            active: 'bg-violet-100 text-violet-700 border-violet-400 dark:bg-violet-900/50 dark:text-violet-300 dark:border-violet-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                        amber: {
-                            active: 'bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                        yellow: {
-                            active: 'bg-yellow-100 text-yellow-700 border-yellow-400 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                        rose: {
-                            active: 'bg-rose-100 text-rose-700 border-rose-400 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-600',
-                            inactive: 'bg-white/60 text-slate-500 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
-                        },
-                    };
                     return (
                         <button
                             key={key}
                             onClick={() => toggleFactor(key)}
-                            className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all select-none cursor-pointer ${
-                                active ? colorMap[color].active : colorMap[color].inactive
-                            }`}
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all select-none cursor-pointer ${active ? colorMap[color] : inactive}`}
                         >
                             {active && <span className="mr-1">✓</span>}
                             {label}
                         </button>
                     );
-                })}
-                {activeFactors.size > 0 && (
-                    <button
-                        onClick={() => setActiveFactors(new Set())}
-                        className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline ml-1"
-                    >
-                        清除
-                    </button>
-                )}
-            </div>
+                };
+
+                return (
+                    <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                        {/* 新高 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-16 shrink-0">新高</span>
+                            {renderChip('new_high', '創5日高', 'orange')}
+                            {renderChip('high_20d', '創20日高', 'lime')}
+                            {renderChip('high_200d', '創200日高', 'red')}
+                        </div>
+                        {/* 量化M·T·R */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-16 shrink-0">量化M·T·R</span>
+                            {renderChip('momentum', 'M 動能正', 'emerald')}
+                            {renderChip('it_buy', 'T 投信買超', 'blue')}
+                            {renderChip('rev_new_high', 'R 營收新高', 'violet')}
+                        </div>
+                        {/* 基本因子 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-16 shrink-0">基本</span>
+                            {renderChip('weight_top10', '權重前10', 'indigo')}
+                            {renderChip('amount_top10', '成交前10', 'cyan')}
+                            {renderChip('yoy_20', 'YoY>20%', 'teal')}
+                            {renderChip('low_vol', '低波動<8%', 'slate')}
+                            {renderChip('margin_high10', '高資前10', 'purple')}
+                            {renderChip('margin_low10', '低資前10', 'pink')}
+                        </div>
+                        {/* 進階 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-16 shrink-0">進階</span>
+                            {renderChip('all_shared', `${selectedEtfs.size}方共持`, 'amber')}
+                            {renderChip('golden_zone', '黃金區間', 'yellow')}
+                            {renderChip('explosive_zone', '爆發區間', 'rose')}
+                            {activeFactors.size > 0 && (
+                                <button
+                                    onClick={() => setActiveFactors(new Set())}
+                                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline ml-1"
+                                >
+                                    清除
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* 持股表格 */}
             <div className="overflow-x-auto">
@@ -359,12 +446,27 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                             </th>
                             <th
                                 className="text-center py-2 px-2 font-medium cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap"
-                                onClick={() => handleSort('it_buy_10d')}
+                                onClick={() => handleSort('it_buy_5d')}
                             >
-                                投信10日 <TableSortIcon field="it_buy_10d" currentSortField={sortField} currentSortOrder={sortOrder} />
+                                投信5日 <TableSortIcon field="it_buy_5d" currentSortField={sortField} currentSortOrder={sortOrder} />
                             </th>
-                            <th className="text-center py-2 px-2 font-medium whitespace-nowrap text-slate-500 dark:text-slate-400">
-                                YOY%
+                            <th
+                                className="text-center py-2 px-2 font-medium cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap"
+                                onClick={() => handleSort('revenue_yoy')}
+                            >
+                                YOY% <TableSortIcon field="revenue_yoy" currentSortField={sortField} currentSortOrder={sortOrder} />
+                            </th>
+                            <th
+                                className="text-center py-2 px-2 font-medium cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap"
+                                onClick={() => handleSort('amount')}
+                            >
+                                成交額 <TableSortIcon field="amount" currentSortField={sortField} currentSortOrder={sortOrder} />
+                            </th>
+                            <th
+                                className="text-center py-2 px-2 font-medium cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap"
+                                onClick={() => handleSort('margin_ratio')}
+                            >
+                                資券% <TableSortIcon field="margin_ratio" currentSortField={sortField} currentSortOrder={sortOrder} />
                             </th>
                             {activeEtfCodes.map(code => (
                                 <th
@@ -409,6 +511,16 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                                     2共
                                                 </span>
                                             )}
+                                            {h.is_high_200d && (
+                                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700 font-medium">
+                                                    高200
+                                                </span>
+                                            )}
+                                            {h.is_high_20d && !h.is_high_200d && (
+                                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-lime-100 text-lime-700 border border-lime-300 dark:bg-lime-900/40 dark:text-lime-300 dark:border-lime-700 font-medium">
+                                                    高20
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="py-2 px-2 text-center">
@@ -439,9 +551,9 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                         )}
                                     </td>
                                     <td className="py-2 px-2 text-center">
-                                        {h.it_buy_10d !== null ? (
-                                            <span className={`text-xs font-medium ${h.it_buy_10d_pass ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                                {h.it_buy_10d > 0 ? '+' : ''}{(h.it_buy_10d / 1000).toFixed(0)}K
+                                        {h.it_buy_5d !== null ? (
+                                            <span className={`text-xs font-medium ${h.it_buy_5d_pass ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                                {h.it_buy_5d > 0 ? '+' : ''}{(h.it_buy_5d / 1000).toFixed(0)}K
                                             </span>
                                         ) : (
                                             <span className="text-slate-300 dark:text-slate-600">—</span>
@@ -457,6 +569,32 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                                     : 'text-slate-600 dark:text-slate-300'
                                             }`}>
                                                 {h.revenue_yoy > 0 ? '+' : ''}{h.revenue_yoy.toFixed(1)}%
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                                        )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                        {h.amount != null ? (
+                                            <span className={`text-xs font-medium ${(h.amountRank ?? Infinity) <= 10 ? 'text-cyan-600 dark:text-cyan-400 font-bold' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                {h.amount >= 1e8
+                                                    ? `${(h.amount / 1e8).toFixed(1)}億`
+                                                    : `${(h.amount / 1e4).toFixed(0)}萬`}
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                                        )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                        {h.margin_ratio != null ? (
+                                            <span className={`text-xs font-medium ${
+                                                (h.marginRankHigh ?? Infinity) <= 10
+                                                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                                                    : (h.marginRankLow ?? Infinity) <= 10
+                                                    ? 'text-pink-600 dark:text-pink-400 font-bold'
+                                                    : 'text-slate-600 dark:text-slate-300'
+                                            }`}>
+                                                {h.margin_ratio.toFixed(1)}%
                                             </span>
                                         ) : (
                                             <span className="text-slate-300 dark:text-slate-600">—</span>

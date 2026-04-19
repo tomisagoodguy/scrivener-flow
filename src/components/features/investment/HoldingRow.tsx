@@ -209,11 +209,11 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
 
                         {/* 投信 badge */}
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
-                            item.it_buy_10d_pass
+                            item.it_buy_5d_pass
                                 ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
                                 : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
-                        }`} title={item.it_buy_10d != null ? `投信10日: ${item.it_buy_10d > 0 ? '+' : ''}${item.it_buy_10d?.toLocaleString()}張` : '投信資料不足'}>
-                            T {item.it_buy_10d_pass ? '✓' : '✗'}
+                        }`} title={item.it_buy_5d != null ? `投信5日: ${item.it_buy_5d > 0 ? '+' : ''}${item.it_buy_5d?.toLocaleString()}張` : '投信資料不足'}>
+                            T {item.it_buy_5d_pass ? '✓' : '✗'}
                         </span>
 
                         {/* Rev New High badge */}

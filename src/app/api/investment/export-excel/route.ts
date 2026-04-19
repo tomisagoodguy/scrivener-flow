@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
-import { fetchQuantFilters } from '@/lib/investment/quantFilters';
+import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import { Holding } from '@/types/investment';
 
 /**
@@ -18,7 +18,7 @@ export async function GET() {
         const allCodes = unionHoldings.map(h => h.stock_code);
 
         // 2. 取得量化篩選欄位
-        const quantFilters = await fetchQuantFilters(allCodes);
+        const quantFilters = await fetchQuantFiltersBatched(allCodes);
 
         // 3. 合併量化欄位到持股
         const holdings = unionHoldings.map(h => ({
@@ -57,7 +57,7 @@ export async function GET() {
         const triplePass = holdings.filter(h => h.filter_score === 3).map(h => h.stock_code);
         const doublePass = holdings.filter(h => (h.filter_score ?? 0) >= 2).map(h => h.stock_code);
         const momentumPass = holdings.filter(h => h.momentum_pass).map(h => h.stock_code);
-        const itBuyPass = holdings.filter(h => h.it_buy_10d_pass).map(h => h.stock_code);
+        const itBuyPass = holdings.filter(h => h.it_buy_5d_pass).map(h => h.stock_code);
         const revNewHigh = holdings.filter(h => h.rev_ma3_new_high).map(h => h.stock_code);
 
         const maxRows = Math.max(all.length, triplePass.length, doublePass.length, momentumPass.length, itBuyPass.length, revNewHigh.length);
@@ -92,7 +92,7 @@ export async function GET() {
             { header: '權重%', key: 'weight', width: 10 },
             { header: '分數(0-3)', key: 'filter_score', width: 12 },
             { header: '動能60d(%)', key: 'momentum_60d', width: 14 },
-            { header: '投信10日(張)', key: 'it_buy_10d', width: 14 },
+            { header: '投信5日(張)', key: 'it_buy_5d', width: 14 },
             { header: '營收新高', key: 'rev_ma3_new_high', width: 12 },
             { header: '產業', key: 'industry', width: 14 },
             { header: '收盤價', key: 'price', width: 10 },
@@ -120,7 +120,7 @@ export async function GET() {
                 weight: h.weight != null ? Number(h.weight.toFixed(2)) : '',
                 filter_score: h.filter_score ?? 0,
                 momentum_60d: h.momentum_60d != null ? Number(h.momentum_60d.toFixed(2)) : '',
-                it_buy_10d: h.it_buy_10d != null ? Math.round(h.it_buy_10d) : '',
+                it_buy_5d: h.it_buy_5d != null ? Math.round(h.it_buy_5d) : '',
                 rev_ma3_new_high: h.rev_ma3_new_high ? '✓' : '',
                 industry: h.industry ?? '',
                 price: h.price != null ? Number(h.price.toFixed(2)) : '',

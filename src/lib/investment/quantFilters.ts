@@ -3,11 +3,19 @@ import { createClient } from '@/lib/supabase/server';
 export interface QuantFilter {
     momentum_60d: number | null;
     momentum_pass: boolean;
-    it_buy_10d: number | null;
-    it_buy_10d_pass: boolean;
+    it_buy_5d: number | null;
+    it_buy_5d_pass: boolean;
     rev_ma3: number | null;
     rev_ma3_new_high: boolean;
     filter_score: number;
+}
+
+export async function fetchQuantFiltersBatched(stockCodes: string[]): Promise<Record<string, QuantFilter>> {
+    const BATCH = 60; // keep each query under Supabase's 1000-row limit (15 × 60 = 900)
+    const chunks: string[][] = [];
+    for (let i = 0; i < stockCodes.length; i += BATCH) chunks.push(stockCodes.slice(i, i + BATCH));
+    const parts = await Promise.all(chunks.map(c => fetchQuantFilters(c)));
+    return Object.assign({}, ...parts);
 }
 
 export async function fetchQuantFilters(stockCodes: string[]): Promise<Record<string, QuantFilter>> {
@@ -61,8 +69,8 @@ export async function fetchQuantFilters(stockCodes: string[]): Promise<Record<st
 
         let momentum_60d: number | null = null;
         let momentum_pass = false;
-        let it_buy_10d: number | null = null;
-        let it_buy_10d_pass = false;
+        let it_buy_5d: number | null = null;
+        let it_buy_5d_pass = false;
 
         if (prices.length >= 1) {
             const latestClose = Number(prices[0].close);
@@ -71,9 +79,9 @@ export async function fetchQuantFilters(stockCodes: string[]): Promise<Record<st
                 momentum_60d = Number(((latestClose / oldClose - 1) * 100).toFixed(2));
                 momentum_pass = momentum_60d > 0;
             }
-            const itBuys = prices.map(p => Number(p.it_buy || 0));
-            it_buy_10d = itBuys.reduce((a, b) => a + b, 0);
-            it_buy_10d_pass = it_buy_10d > 0;
+            const itBuys = prices.slice(0, 5).map(p => Number(p.it_buy || 0));
+            it_buy_5d = itBuys.reduce((a, b) => a + b, 0);
+            it_buy_5d_pass = it_buy_5d > 0;
         }
 
         const revs = (revenueData?.filter(r => r.stock_code === code) || [])
@@ -95,8 +103,8 @@ export async function fetchQuantFilters(stockCodes: string[]): Promise<Record<st
             rev_ma3 = Number(((Number(revs[0]?.revenue || 0) + Number(revs[1]?.revenue || 0) + Number(revs[2]?.revenue || 0)) / 3).toFixed(0));
         }
 
-        const filter_score = (momentum_pass ? 1 : 0) + (it_buy_10d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
-        result[code] = { momentum_60d, momentum_pass, it_buy_10d, it_buy_10d_pass, rev_ma3, rev_ma3_new_high, filter_score };
+        const filter_score = (momentum_pass ? 1 : 0) + (it_buy_5d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
+        result[code] = { momentum_60d, momentum_pass, it_buy_5d, it_buy_5d_pass, rev_ma3, rev_ma3_new_high, filter_score };
     }
 
     return result;

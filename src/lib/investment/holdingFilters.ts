@@ -14,7 +14,7 @@ export type SortField =
     | 'revenue_momentum_rank'
     | 'filter_score'
     | 'momentum_60d'
-    | 'it_buy_10d'
+    | 'it_buy_5d'
     | 'price';
 
 export type SortOrder = 'asc' | 'desc';
