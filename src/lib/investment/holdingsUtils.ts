@@ -50,7 +50,11 @@ export async function getAllHoldings(): Promise<{
 
     const allCodes = [...new Set(results.flatMap(r => r.holdings.map(h => h.stock_code)))];
 
-    const [industryData, revData, priceData] = await Promise.all([
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 310);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    const [industryData, revData, priceData, priceHistData] = await Promise.all([
         supabase.from('stock_basic_info').select('stock_code, industry').in('stock_code', allCodes),
         supabase.from('stock_revenue_monthly')
             .select('stock_code, data_date, revenue_yoy, revenue_mom')
@@ -61,6 +65,11 @@ export async function getAllHoldings(): Promise<{
             .in('stock_code', allCodes)
             .order('data_date', { ascending: false })
             .limit(2 * allCodes.length),
+        supabase.from('stock_prices_daily')
+            .select('stock_code, close')
+            .in('stock_code', allCodes)
+            .gte('data_date', cutoffStr)
+            .order('data_date', { ascending: false }),
     ]);
 
     const industryMap: Record<string, string> = {};
@@ -72,6 +81,25 @@ export async function getAllHoldings(): Promise<{
             revMap[r.stock_code] = { date: r.data_date.substring(0, 7), yoy: r.revenue_yoy, mom: r.revenue_mom };
         }
     });
+
+    const highsByCode: Record<string, number[]> = {};
+    for (const row of priceHistData.data ?? []) {
+        if (!highsByCode[row.stock_code]) highsByCode[row.stock_code] = [];
+        highsByCode[row.stock_code].push(Number(row.close));
+    }
+    const highMap: Record<string, { is_high_5d: boolean; is_high_20d: boolean; is_high_200d: boolean }> = {};
+    for (const [code, closes] of Object.entries(highsByCode)) {
+        if (closes.length === 0) continue;
+        const latest = closes[0];
+        const h5 = closes.slice(0, 5);
+        const h20 = closes.slice(0, 20);
+        const h200 = closes.slice(0, 200);
+        highMap[code] = {
+            is_high_5d: h5.length >= 5 && latest >= Math.max(...h5),
+            is_high_20d: h20.length >= 20 && latest >= Math.max(...h20),
+            is_high_200d: h200.length >= 60 && latest >= Math.max(...h200),
+        };
+    }
 
     const priceMap: Record<string, { price: number; change_percent: number; amount: number | null; margin_ratio: number | null }> = {};
     const grouped: Record<string, typeof priceData.data> = {};
@@ -114,6 +142,9 @@ export async function getAllHoldings(): Promise<{
                 revenue_month: rev?.date || null,
                 revenue_yoy: rev?.yoy ?? null,
                 revenue_mom: rev?.mom ?? null,
+                is_high_5d: highMap[h.stock_code]?.is_high_5d ?? false,
+                is_high_20d: highMap[h.stock_code]?.is_high_20d ?? false,
+                is_high_200d: highMap[h.stock_code]?.is_high_200d ?? false,
             } as Holding;
         });
     }

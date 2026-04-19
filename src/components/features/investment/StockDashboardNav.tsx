@@ -24,14 +24,19 @@ interface StockDashboardNavProps {
     currentIndex?: number;
     totalCount?: number;
     quantMetrics?: StockQuantMetrics;
+    chipRank?: number | null;
+    retailRank?: number | null;
 }
 
-export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, onNavigate, holdingEtfs = [], currentIndex, totalCount, quantMetrics }: StockDashboardNavProps) {
+export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, onNavigate, holdingEtfs = [], currentIndex, totalCount, quantMetrics, chipRank, retailRank }: StockDashboardNavProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const sortField = searchParams.get('sort');
-    const isEquitySource = searchParams.get('source') === 'equity';
-    const sortLabel = isEquitySource ? '籌碼排行' : (sortField ? SORT_LABEL[sortField] : null);
+    const source = searchParams.get('source');
+    const isEquitySource = source === 'equity' || source === 'equity-retail';
+    const isRetailSource = source === 'equity-retail';
+    const sortLabel = isRetailSource ? '散戶排行' : isEquitySource ? '籌碼排行' : (sortField ? SORT_LABEL[sortField] : null);
+    const backHref = isEquitySource ? '/investment/equity' : '/investment/00981A';
 
     return (
         <div className="mb-4">
@@ -39,11 +44,11 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push('/investment/00981A')}
+                    onClick={() => router.push(backHref)}
                     className="flex items-center gap-2"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    返回投資總覽
+                    {isEquitySource ? '返回籌碼排行榜' : '返回投資總覽'}
                 </Button>
 
                 <div className="flex items-center gap-2">
@@ -57,12 +62,24 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                         <ArrowLeft className="w-4 h-4" />
                         {prevStock ? `上一檔 ${prevStock.name}` : '無'}
                     </Button>
-                    {currentIndex != null && totalCount != null && totalCount > 0 && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400 px-1 whitespace-nowrap">
-                            {sortLabel ? `${sortLabel} 第${currentIndex}名` : `第${currentIndex}檔`}
-                            <span className="text-slate-400 dark:text-slate-600"> / 共{totalCount}支</span>
-                        </span>
-                    )}
+                    <div className="flex flex-col items-center gap-0.5 px-1">
+                        {currentIndex != null && totalCount != null && totalCount > 0 && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {sortLabel ? `${sortLabel} 第${currentIndex}名` : `第${currentIndex}檔`}
+                                <span className="text-slate-400 dark:text-slate-600"> / 共{totalCount}支</span>
+                            </span>
+                        )}
+                        {isEquitySource && chipRank != null && retailRank != null && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 whitespace-nowrap">
+                                    主力 #{chipRank}
+                                </span>
+                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 whitespace-nowrap">
+                                    散戶 #{retailRank}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <Button
                         variant="default"
                         size="sm"

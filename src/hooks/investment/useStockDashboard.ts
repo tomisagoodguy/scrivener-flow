@@ -56,6 +56,8 @@ export function useStockDashboard(stockCode: string) {
     const [nextStock, setNextStock] = useState<NavStock | null>(null);
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
     const [totalCount, setTotalCount] = useState<number>(0);
+    const [chipRank, setChipRank] = useState<number | null>(null);
+    const [retailRank, setRetailRank] = useState<number | null>(null);
     const [quantMetrics, setQuantMetrics] = useState<StockQuantMetrics>({ momentum_60d: null, momentum_pass: false, it_buy_5d: null, it_buy_5d_pass: false, rev_ma3_new_high: false, filter_score: null, revenue_yoy: null });
 
     const [priceData, setPriceData] = useState<PriceData[]>([]);
@@ -81,19 +83,36 @@ export function useStockDashboard(stockCode: string) {
     useEffect(() => {
         const fetchHoldings = async () => {
             try {
-                const isFromEquity = searchParams.get('source') === 'equity';
+                const source = searchParams.get('source');
+                const isFromEquity = source === 'equity' || source === 'equity-retail';
+                const isRetailSource = source === 'equity-retail';
 
                 if (isFromEquity) {
                     const response = await fetch('/api/investment/equity-chips');
                     if (!response.ok) return;
-                    const chips: { stock_code: string; stock_name: string | null }[] = await response.json();
+                    const chips: { stock_code: string; stock_name: string | null; big_holder_pct_change: number | null; shareholders_change_rate: number | null }[] = await response.json();
+                    // chips is already sorted by chip score (big_holder DESC)
 
-                    setTotalCount(chips.length);
-                    const index = chips.findIndex((s) => s.stock_code === stockCode);
+                    // chip rank
+                    const chipIdx = chips.findIndex((s) => s.stock_code === stockCode);
+                    setChipRank(chipIdx >= 0 ? chipIdx + 1 : null);
+
+                    // retail rank (shareholders_change_rate ASC, nulls last)
+                    const retailSorted = [...chips].sort((a, b) => {
+                        if (a.shareholders_change_rate === null) return 1;
+                        if (b.shareholders_change_rate === null) return -1;
+                        return a.shareholders_change_rate - b.shareholders_change_rate;
+                    });
+                    const retailIdx = retailSorted.findIndex((s) => s.stock_code === stockCode);
+                    setRetailRank(retailIdx >= 0 ? retailIdx + 1 : null);
+
+                    const navList = isRetailSource ? retailSorted : chips;
+                    setTotalCount(navList.length);
+                    const index = navList.findIndex((s) => s.stock_code === stockCode);
                     if (index >= 0) {
-                        setStockName(chips[index].stock_name ?? stockCode);
-                        setPrevStock(index > 0 ? { code: chips[index - 1].stock_code, name: chips[index - 1].stock_name ?? chips[index - 1].stock_code } : null);
-                        setNextStock(index < chips.length - 1 ? { code: chips[index + 1].stock_code, name: chips[index + 1].stock_name ?? chips[index + 1].stock_code } : null);
+                        setStockName(navList[index].stock_name ?? stockCode);
+                        setPrevStock(index > 0 ? { code: navList[index - 1].stock_code, name: navList[index - 1].stock_name ?? navList[index - 1].stock_code } : null);
+                        setNextStock(index < navList.length - 1 ? { code: navList[index + 1].stock_code, name: navList[index + 1].stock_name ?? navList[index + 1].stock_code } : null);
                         setCurrentIndex(index + 1);
                     } else {
                         setStockName(stockCode);
@@ -254,7 +273,7 @@ export function useStockDashboard(stockCode: string) {
         .map(([code]) => code);
 
     return {
-        stockName, prevStock, nextStock, currentIndex, totalCount, handleNavigate, quantMetrics,
+        stockName, prevStock, nextStock, currentIndex, totalCount, chipRank, retailRank, handleNavigate, quantMetrics,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
         etfWeightHistory, etfWeightHistoryLoading, holdingEtfs,
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
