@@ -146,7 +146,7 @@ export function useStockDashboard(stockCode: string) {
                     setPrevStock(index > 0 ? { code: navData[index - 1].stock_code, name: navData[index - 1].stock_name } : null);
                     setNextStock(index < navData.length - 1 ? { code: navData[index + 1].stock_code, name: navData[index + 1].stock_name } : null);
                     setCurrentIndex(index >= 0 ? index + 1 : -1);
-                    type ExtHolding = Holding & { momentum_60d?: number | null; momentum_pass?: boolean; it_buy_5d?: number | null; it_buy_5d_pass?: boolean; rev_ma3_new_high?: boolean; filter_score?: number | null };
+                    type ExtHolding = Holding & { momentum_60d?: number | null; momentum_pass?: boolean; it_buy_5d?: number | null; it_buy_5d_pass?: boolean; rev_ma3_new_high?: boolean; filter_score?: number | null; is_20d_high?: boolean; is_200d_high?: boolean };
                     const ext = target as ExtHolding;
                     setQuantMetrics({
                         momentum_60d: ext.momentum_60d ?? null,
@@ -156,6 +156,8 @@ export function useStockDashboard(stockCode: string) {
                         rev_ma3_new_high: ext.rev_ma3_new_high ?? false,
                         filter_score: ext.filter_score ?? null,
                         revenue_yoy: target.revenue_yoy ?? null,
+                        is_20d_high: ext.is_20d_high ?? false,
+                        is_200d_high: ext.is_200d_high ?? false,
                     });
                 }
             } catch (err) {
