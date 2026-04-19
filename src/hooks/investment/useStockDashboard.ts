@@ -45,6 +45,8 @@ export interface StockQuantMetrics {
     rev_ma3_new_high: boolean;
     filter_score: number | null;
     revenue_yoy: number | null;
+    is_20d_high: boolean;
+    is_200d_high: boolean;
 }
 
 export function useStockDashboard(stockCode: string) {
@@ -58,7 +60,7 @@ export function useStockDashboard(stockCode: string) {
     const [totalCount, setTotalCount] = useState<number>(0);
     const [chipRank, setChipRank] = useState<number | null>(null);
     const [retailRank, setRetailRank] = useState<number | null>(null);
-    const [quantMetrics, setQuantMetrics] = useState<StockQuantMetrics>({ momentum_60d: null, momentum_pass: false, it_buy_5d: null, it_buy_5d_pass: false, rev_ma3_new_high: false, filter_score: null, revenue_yoy: null });
+    const [quantMetrics, setQuantMetrics] = useState<StockQuantMetrics>({ momentum_60d: null, momentum_pass: false, it_buy_5d: null, it_buy_5d_pass: false, rev_ma3_new_high: false, filter_score: null, revenue_yoy: null, is_20d_high: false, is_200d_high: false });
 
     const [priceData, setPriceData] = useState<PriceData[]>([]);
     const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
@@ -211,6 +213,14 @@ export function useStockDashboard(stockCode: string) {
             const data: PriceData[] = await res.json();
             if (data.length === 0) throw new Error('查無歷史數據');
             setPriceData(data);
+
+            // 計算 20/200 日創新高（data 按日期升序，最新在尾端）
+            const latest = data[data.length - 1]?.close ?? 0;
+            const prices20 = data.slice(-20).map(d => d.close);
+            const prices200 = data.slice(-200).map(d => d.close);
+            const is_20d_high = prices20.length >= 20 && latest >= Math.max(...prices20);
+            const is_200d_high = prices200.length >= 60 && latest >= Math.max(...prices200);
+            setQuantMetrics(prev => ({ ...prev, is_20d_high, is_200d_high }));
         } catch (err: unknown) {
             setPriceError(err instanceof Error ? err.message : '未知錯誤');
             setPriceData([]);

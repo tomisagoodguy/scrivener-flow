@@ -140,6 +140,17 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
                                     <span className="font-normal">YOY {quantMetrics.revenue_yoy > 0 ? '+' : ''}{quantMetrics.revenue_yoy.toFixed(1)}%</span>
                                 )}
                             </span>
+                            {/* 創新高 badge */}
+                            {quantMetrics.is_200d_high && (
+                                <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white">
+                                    200日高
+                                </span>
+                            )}
+                            {!quantMetrics.is_200d_high && quantMetrics.is_20d_high && (
+                                <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-orange-400 text-white">
+                                    20日高
+                                </span>
+                            )}
                         </>
                     )}
                     {holdingEtfs.length > 0 && (

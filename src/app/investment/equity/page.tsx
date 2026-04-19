@@ -32,23 +32,34 @@ async function fetchPriceIndicators(stockCodes: string[]): Promise<Record<string
     cutoff.setDate(cutoff.getDate() - 310);
     const cutoffStr = cutoff.toISOString().split('T')[0];
 
-    const { data } = await supabase
-        .from('stock_prices_daily')
-        .select('stock_code, close, amount, it_buy')
-        .in('stock_code', stockCodes)
-        .gte('data_date', cutoffStr)
-        .order('data_date', { ascending: false });
+    // 分批查詢避免 Supabase 預設 1000 行限制（209 支股票 × ~220 天 ≈ 46000 行）
+    const BATCH = 20;
+    const batches: string[][] = [];
+    for (let i = 0; i < stockCodes.length; i += BATCH) batches.push(stockCodes.slice(i, i + BATCH));
 
-    if (!data) return {};
+    const batchResults = await Promise.all(
+        batches.map(batch =>
+            supabase
+                .from('stock_prices_daily')
+                .select('stock_code, close, amount, it_buy')
+                .in('stock_code', batch)
+                .gte('data_date', cutoffStr)
+                .order('data_date', { ascending: false })
+                .limit(batch.length * 220)
+        )
+    );
 
     const byCode: Record<string, { close: number; amount: number | null; it_buy: number | null }[]> = {};
-    for (const row of data) {
-        if (!byCode[row.stock_code]) byCode[row.stock_code] = [];
-        byCode[row.stock_code].push({
-            close: Number(row.close),
-            amount: row.amount != null ? Number(row.amount) : null,
-            it_buy: row.it_buy != null ? Number(row.it_buy) : null,
-        });
+    for (const { data } of batchResults) {
+        if (!data) continue;
+        for (const row of data) {
+            if (!byCode[row.stock_code]) byCode[row.stock_code] = [];
+            byCode[row.stock_code].push({
+                close: Number(row.close),
+                amount: row.amount != null ? Number(row.amount) : null,
+                it_buy: row.it_buy != null ? Number(row.it_buy) : null,
+            });
+        }
     }
 
     const result: Record<string, PriceIndicator> = {};
