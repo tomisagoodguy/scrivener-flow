@@ -81,6 +81,26 @@ export function useStockDashboard(stockCode: string) {
     useEffect(() => {
         const fetchHoldings = async () => {
             try {
+                const isFromEquity = searchParams.get('source') === 'equity';
+
+                if (isFromEquity) {
+                    const response = await fetch('/api/investment/equity-chips');
+                    if (!response.ok) return;
+                    const chips: { stock_code: string; stock_name: string | null }[] = await response.json();
+
+                    setTotalCount(chips.length);
+                    const index = chips.findIndex((s) => s.stock_code === stockCode);
+                    if (index >= 0) {
+                        setStockName(chips[index].stock_name ?? stockCode);
+                        setPrevStock(index > 0 ? { code: chips[index - 1].stock_code, name: chips[index - 1].stock_name ?? chips[index - 1].stock_code } : null);
+                        setNextStock(index < chips.length - 1 ? { code: chips[index + 1].stock_code, name: chips[index + 1].stock_name ?? chips[index + 1].stock_code } : null);
+                        setCurrentIndex(index + 1);
+                    } else {
+                        setStockName(stockCode);
+                    }
+                    return;
+                }
+
                 const response = await fetch('/api/investment/holdings');
                 if (!response.ok) return;
                 const allData: Holding[] = await response.json();

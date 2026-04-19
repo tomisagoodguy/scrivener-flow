@@ -30,7 +30,8 @@ export function StockDashboardNav({ stockCode, stockName, prevStock, nextStock, 
     const router = useRouter();
     const searchParams = useSearchParams();
     const sortField = searchParams.get('sort');
-    const sortLabel = sortField ? SORT_LABEL[sortField] : null;
+    const isEquitySource = searchParams.get('source') === 'equity';
+    const sortLabel = isEquitySource ? '籌碼排行' : (sortField ? SORT_LABEL[sortField] : null);
 
     return (
         <div className="mb-4">

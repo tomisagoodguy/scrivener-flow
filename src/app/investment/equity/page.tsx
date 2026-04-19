@@ -93,7 +93,7 @@ function RankingTable({
                                 <td className="py-3 px-3 text-gray-400 font-mono text-xs">{i + 1}</td>
                                 <td className="py-3 px-3">
                                     <Link
-                                        href={`/investment/stock/${row.stock_code}`}
+                                        href={`/investment/stock/${row.stock_code}?source=equity`}
                                         className="font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 transition-colors"
                                     >
                                         {row.stock_name || row.stock_code}
