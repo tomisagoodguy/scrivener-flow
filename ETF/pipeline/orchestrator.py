@@ -5,7 +5,7 @@ Pipeline Orchestrator
 """
 
 import logging
-from typing import List, Type
+from typing import List, Optional, Type
 
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
@@ -51,7 +51,7 @@ class PipelineOrchestrator:
         CleanupStep,
     ]
     
-    def __init__(self, steps: List[Type[BaseStep]] = None):
+    def __init__(self, steps: Optional[List[Type[BaseStep]]] = None):
         """
         初始化編排器。
         

@@ -15,6 +15,7 @@ import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUti
 import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
 import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
+import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -272,6 +273,7 @@ export default async function InvestmentPoolPage() {
                         <FlaskConicalIcon className="w-4 h-4" />
                         Revenue Lab
                     </Link>
+                    <PipelineMonitor />
                     <WatchlistButton />
                     <ExcelDownloadButton />
                     <Link
