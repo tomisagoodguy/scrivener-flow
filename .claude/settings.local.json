@@ -89,7 +89,9 @@
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"docs: 拆分 CLAUDE.md 架構規則至 .claude/rules/ 各主題檔案\")",
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"docs: 拆分 CLAUDE.md 架構規則至 .claude/rules/ 各主題檔案\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(investment\\): 投資監控介面改用代書系統玻璃擬態風格\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(investment\\): 投資監控介面改用代書系統玻璃擬態風格\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(investment\\): 投資監控介面改用代書系統玻璃擬態風格\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",
