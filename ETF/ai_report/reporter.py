@@ -61,18 +61,24 @@ class AIReporter:
             logger.error(f"No holdings found for {self.etf_code}")
             return
         
-        # 4.1 檢查資料日期是否為今日
-        from datetime import datetime
+        # 4.1 檢查資料日期是否為最近交易日（台股週末不開市，允許最近 3 個日曆日內的資料）
+        from datetime import datetime, timedelta
         if "snapshot_date" in holdings_df.columns and not holdings_df.empty:
             snapshot_date = holdings_df["snapshot_date"].iloc[0]
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            
-            # 轉換為字串比較 (假設 snapshot_date 可能是 date 物件或字串)
-            snapshot_str = str(snapshot_date)
-            
-            if snapshot_str != today_str and not dry_run:
-                logger.warning(f"⚠️ 持股資料日期 ({snapshot_str}) 非今日 ({today_str})，跳過 AI 報告發送。")
-                return
+            today = datetime.now().date()
+            snapshot_str = str(snapshot_date)[:10]  # 統一取 YYYY-MM-DD
+
+            # 最近 3 個日曆日內視為有效（涵蓋週末、假日）
+            cutoff = today - timedelta(days=3)
+            try:
+                snapshot_d = datetime.strptime(snapshot_str, "%Y-%m-%d").date()
+            except ValueError:
+                snapshot_d = None
+
+            if snapshot_d is None or snapshot_d < cutoff:
+                logger.warning(f"⚠️ 持股資料日期 ({snapshot_str}) 超過 3 天前，跳過 AI 報告發送。")
+                if not dry_run:
+                    return
 
         stock_codes = holdings_df["stock_code"].tolist()
         logger.info("Fetching technical/broker/chip data...")
