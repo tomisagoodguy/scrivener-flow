@@ -192,3 +192,5 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 | 直接查 Supabase REST API | 批次寫入用 `sql_storage.py`（SQLAlchemy 繞過 RLS） |
 | FinLab 本地隨意執行 | 有 5GB/天配額限制，本地測試用 mock 或 dry-run |
 | catch 用 `except Exception as e: pass` | 必須記錄錯誤，不可靜默失敗 |
+| AI 報告週末全部跳過 | `reporter.py` 允許 3 天內資料（台股週末不開市，週五資料週日仍有效） |
+| `etf_diff_logs` ON CONFLICT 報錯 | 需有 `(etf_code, stock_code, data_date)` 唯一約束，見 migration `20260420000000` |
