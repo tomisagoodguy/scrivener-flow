@@ -8,7 +8,10 @@
       "Bash(git push)",
       "Bash(git push *)",
       "Bash(yarn tsc --noEmit)",
-      "Bash(mkdir -p *)"
+      "Bash(mkdir -p *)",
+      "Bash(git -C c:/Users/user/Documents/GitHub/scrivener-flow push)",
+      "Bash(git -C c:/Users/user/Documents/GitHub/scrivener-flow add ETF/CLAUDE.md)",
+      "Bash(git -C c:/Users/user/Documents/GitHub/scrivener-flow commit -m \"docs\\(etf\\): 更新 CLAUDE.md 補上週末日期容差與 diff_logs 約束說明\")"
     ]
   },
   "hooks": {
