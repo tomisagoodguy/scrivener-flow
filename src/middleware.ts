@@ -56,7 +56,7 @@ export default async function proxy(request: NextRequest) {
     }
 
     // 投資監控頁公開開放（DB 層已開放 RLS 公開讀取）
-    if (pathname.startsWith('/investment')) {
+    if (pathname.startsWith('/investment') || pathname.startsWith('/api/investment')) {
         return response;
     }
 
