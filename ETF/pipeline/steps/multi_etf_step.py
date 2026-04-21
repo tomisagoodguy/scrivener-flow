@@ -37,7 +37,7 @@ class MultiEtfStep(BaseStep):
     def execute(self, ctx: PipelineContext) -> PipelineContext:
         from ETF.scrapers.pocket_scraper import scrape_holdings
 
-        today = date.today().strftime("%Y-%m-%d")
+        fallback_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
         all_secondary_codes: list[str] = []
 
@@ -50,7 +50,7 @@ class MultiEtfStep(BaseStep):
             try:
                 df, data_date = scrape_holdings(etf_code)
                 if df is not None and not df.empty:
-                    snapshot_date = data_date or today
+                    snapshot_date = data_date or fallback_date
                     # Pocket.tw 回傳 YYYY/MM/DD，轉換為 YYYY-MM-DD
                     snapshot_date = snapshot_date.replace("/", "-")
                     # 補充 FinLab 指標（volatility、revenue_momentum_rank 等）
@@ -270,6 +270,8 @@ class MultiEtfStep(BaseStep):
         Returns:
             diff log 列表，格式與 DiffComputeStep 相同。
         """
+        latest_date_in_db = None
+        prev_df = pd.DataFrame()
         try:
             latest_date_in_db = ctx.storage.get_latest_date(etf_code)
             if latest_date_in_db == snapshot_date:
@@ -285,7 +287,13 @@ class MultiEtfStep(BaseStep):
             self.logger.warning(
                 f"Could not fetch previous snapshot for {etf_code}: {e}"
             )
-            prev_df = pd.DataFrame()
+
+        if prev_df.empty and latest_date_in_db is not None:
+            self.logger.warning(
+                f"Previous snapshot empty despite DB history for {etf_code} "
+                f"(latest_date={latest_date_in_db}). Skipping diff."
+            )
+            return []
 
         diff_logs = compute_diff(prev_df, curr_df, etf_code, snapshot_date)
         self.logger.info(f"Computed {len(diff_logs)} diff events for {etf_code}")

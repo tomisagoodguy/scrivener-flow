@@ -4,8 +4,19 @@ import { ETF_CODES } from '@/lib/investment/etfRegistry';
 
 async function getHoldingsForEtf(
     etfCode: string,
-    supabase: Awaited<ReturnType<typeof createClient>>
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    canonicalDate?: string | null
 ) {
+    if (canonicalDate) {
+        const { data } = await supabase
+            .from('etf_holdings_snapshot')
+            .select('*')
+            .eq('etf_code', etfCode)
+            .eq('data_date', canonicalDate)
+            .order('weight', { ascending: false });
+        return { holdings: data || [], dataDate: canonicalDate };
+    }
+
     const { data: dateCandidates } = await supabase
         .from('etf_holdings_snapshot')
         .select('data_date, updated_at')
@@ -44,8 +55,17 @@ export async function getAllHoldings(): Promise<{
 }> {
     const supabase = await createClient();
 
+    // 取全局最新日期，強制所有 ETF 使用同一 canonical date，避免聚合視圖不一致
+    const { data: latestRow } = await supabase
+        .from('etf_holdings_snapshot')
+        .select('data_date')
+        .order('data_date', { ascending: false })
+        .limit(1)
+        .single();
+    const canonicalDate = latestRow?.data_date ?? null;
+
     const results = await Promise.all(
-        ETF_CODES.map(code => getHoldingsForEtf(code, supabase))
+        ETF_CODES.map(code => getHoldingsForEtf(code, supabase, canonicalDate))
     );
 
     const allCodes = [...new Set(results.flatMap(r => r.holdings.map(h => h.stock_code)))];
@@ -97,7 +117,7 @@ export async function getAllHoldings(): Promise<{
         highMap[code] = {
             is_high_5d: h5.length >= 5 && latest >= Math.max(...h5),
             is_high_20d: h20.length >= 20 && latest >= Math.max(...h20),
-            is_high_200d: h200.length >= 60 && latest >= Math.max(...h200),
+            is_high_200d: h200.length >= 200 && latest >= Math.max(...h200),
         };
     }
 

@@ -55,7 +55,7 @@ class SyncBareKStep(BaseStep):
             return ctx
 
         # 3. 對每支股票計算快照
-        today = str(date.today())
+        today = ctx.date_str or str(date.today())
         success_count = 0
         snapshots: list[dict] = []
 

@@ -30,11 +30,12 @@ class DiffComputeStep(BaseStep):
         # In that case, we want the 2nd latest (index 1).
         
         target_df = pd.DataFrame()
-        
+        latest_date_in_db = None
+
         try:
             # Check latest date available in DB
             latest_date_in_db = ctx.storage.get_latest_date(ctx.etf_code)
-            
+
             if latest_date_in_db == ctx.date_str:
                 self.logger.info(f"Latest DB snapshot is already today ({latest_date_in_db}). Comparing against previous day (Index 1).")
                 # Fetch index 1 (2nd latest)
@@ -42,15 +43,25 @@ class DiffComputeStep(BaseStep):
             else:
                 self.logger.info(f"Comparing against latest DB snapshot: {latest_date_in_db}")
                 target_df = ctx.storage.get_snapshot_from_date(ctx.etf_code, latest_date_in_db)
-                
+
         except Exception as e:
             self.logger.warning(f"Could not intelligently determine snapshot date: {e}. Falling back to simple latest fetch.")
             target_df = ctx.storage.get_latest_snapshot(ctx.etf_code)
 
         prev_df = target_df
-        
+
         if prev_df.empty:
-            self.logger.warning("No suitable previous snapshot found. This will result in all 'New Entry' logs.")
+            if latest_date_in_db is None:
+                # 真正的首次執行，允許全部 IN 信號
+                self.logger.info("First run detected (no previous snapshot). All holdings will be marked as IN.")
+            else:
+                # 有歷史但取不到前日快照（例如重複執行且 DB 只有今日 1 筆）
+                self.logger.warning(
+                    "Previous snapshot is empty despite having DB history "
+                    f"(latest_date={latest_date_in_db}). Skipping diff to prevent false IN signals."
+                )
+                ctx.diff_logs = []
+                return ctx
 
         
         # 計算異動（含 CLOSE 判定、0.10% 閾值過濾）

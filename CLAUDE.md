@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-此檔案提供 Claude Code 在本專案中工作的指引。詳細規則請見 `.claude/rules/`。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+此檔案提供 Claude Code 在本專案中工作的指引。詳細規則請見 `.claude/rules/`（下方有索引）。
 
 ---
 
@@ -42,27 +44,24 @@ scrivener-flow/
 │   │   ├── api/                # API Routes（Webhooks、第三方整合）
 │   │   ├── cases/              # 案件詳情頁（含 [id] 動態路由）
 │   │   ├── investment/         # 投資儀表板（[etf] 與 stock/[code]）
-│   │   ├── knowledge/          # 團隊知識庫（Tiptap 富文字）
-│   │   ├── calculator/         # 稅費試算工具
 │   │   └── login/components/   # 拆解的登入子元件
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件
 │   │   ├── layout/             # Header、SideNav、Footer
-│   │   ├── todo/               # 待辦事項（List / Matrix / Calendar）
-│   │   └── ui/                 # 基礎 UI 元件
+│   │   └── todo/               # 待辦事項（List / Matrix / Calendar）
 │   ├── services/               # 業務邏輯（caseService.ts、syncService.ts）
 │   ├── repositories/           # 資料存取層（投資模組 Repository Pattern）
-│   ├── lib/                    # 工具函式與第三方整合
-│   │   ├── supabase/           # client / server / service 三種 client
+│   ├── lib/
+│   │   ├── supabase/           # client / server / service 三種 client（用途不同，見下方）
 │   │   ├── crypto/             # E2EE（AES-256-GCM）
 │   │   ├── ai/                 # Gemini API（geminiConfig.ts）
-│   │   ├── investment/         # FinLab、yearUtils.ts
-│   │   └── constants/          # caseConstants.ts、TODO_SOURCE_TYPES
+│   │   └── investment/         # holdingsUtils.ts、etfRegistry.ts、yearUtils.ts
 │   ├── domain/case/types.ts    # 案件領域模型（Single Source of Truth）
 │   └── types/                  # 全域 TypeScript 型別定義
 ├── prisma/schema.prisma        # ⚠️ 僅含 generator/datasource，不定義 model
 ├── supabase/migrations/        # 真正的 DB Schema（SQL 格式）
-├── ETF/                        # Python ETF Pipeline
+├── ETF/                        # Python ETF Pipeline（含自己的 CLAUDE.md）
+├── openspec/changes/           # 功能變更的 proposal / design / specs / tasks
 └── pyproject.toml              # Python 依賴（uv 管理）
 ```
 
@@ -85,10 +84,13 @@ yarn lint             # ESLint 靜態分析
 
 ```bash
 uv run python ETF/main.py --days 30        # 正常執行（同步最近 30 天）
-uv run python ETF/main.py --dry-run        # 只跑 ScrapeStep，不寫 DB
+uv run python ETF/main.py --dry-run        # 只跑 ScrapeStep，不寫 DB（本地安全）
 uv run python ETF/daily_ai_report.py       # 單獨執行 AI 報告
 uv run ruff check --fix && uv run ruff format  # Lint + Format
+uv run pytest ETF/                         # 執行 ETF 單元測試
 ```
+
+> **本地執行保護**：`main.py` 預設封鎖本地執行（保護 FinLab 5GB/天配額）。本地測試需在 `.env` 設定 `FORCE_RUN=true`。
 
 CI：`.github/workflows/etf_daily.yml` 每日 UTC 14:00（台灣時間 22:00）自動執行。
 
@@ -122,7 +124,7 @@ ENCRYPTION_MASTER_KEY=          # AES-256-GCM，90 天輪替
 
 # 投資
 FINLAB_API_KEY=
-DATABASE_URL=                   # Prisma connection string
+DATABASE_URL=                   # Prisma / SQLAlchemy connection string
 
 # 裸K看盤公開瀏覽
 BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯讀）；需同步設定於 Vercel
@@ -137,9 +139,26 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 | 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial、Holding 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 | 3 | `src/lib/constants/caseConstants.ts` | 案件狀態、待辦來源型別常數 |
-| 4 | `src/lib/investment/yearUtils.ts` | 投資模組年份常數（`generateAvailableYears`） |
-| 5 | `src/lib/calculator/taxConstants.ts` | 稅費計算基準常數 |
-| 6 | `ETF/pipeline/context.py` | Pipeline 步驟間共享狀態，含 `secondary_stock_codes` |
+| 4 | `src/lib/investment/etfRegistry.ts` | 11 支 ETF 唯一清單（新增 ETF 只改此檔 + Python 端的 `ETF/config/etf_registry.py`） |
+| 5 | `src/lib/investment/holdingsUtils.ts` | `getAllHoldings()`、`buildUnionHoldings()`（前端聚合邏輯核心） |
+| 6 | `ETF/pipeline/context.py` | Pipeline 步驟間共享狀態，含 `date_str`、`secondary_stock_codes` |
+
+---
+
+## 規則文件索引（`.claude/rules/`）
+
+每個規則檔涵蓋不同領域，修改對應功能前必須先讀：
+
+| 檔案 | 涵蓋內容 |
+| :--- | :--- |
+| `components.md` | 元件大小上限、Supabase client 選擇（3種）、Server Action vs API Route、**台股色彩慣例（紅漲綠跌）**、useSearchParams 陷阱 |
+| `database.md` | RLS 多租戶隔離、里程碑 vs 任務、E2EE 加密架構、Todo 雙軌同步、Schema 修改流程（禁用 Prisma migrate） |
+| `etf-pipeline.md` | Pipeline 步驟錯誤處理（關鍵 vs 輔助步驟）、日期來源規則（`ctx.date_str` 優先）、SQL `CAST()` vs `::` 語法、自選股名稱查詢三表優先序 |
+| `ai.md` | Gemini fallback 鏈、`ALLOWED_EMAIL` 功能閘門、AI Server Action 限制 |
+| `dark-mode.md` | `dark-theme.css !important` 覆蓋問題與正確的深色模式做法 |
+| `workflow.md` | openspec 流程、登入重導向處理、套件管理禁令 |
+
+> ETF Pipeline 有獨立的 `ETF/CLAUDE.md`，涵蓋步驟架構、資料來源差異、常見錯誤等，修改 Python 端前必讀。
 
 ---
 
@@ -148,6 +167,32 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 1. **資料優先**：先定義 Zod Schema / TypeScript interface，再實作 UI 與業務邏輯。
 2. **單一事實來源**：同一概念只能有一個實作，在 `domain/` 或 `types/` 定義，不要複製型別。
 3. **修改前先搜尋**：用 `Grep` / `Glob` 確認現有實作，能擴充就不新建。
+
+---
+
+## 關鍵架構陷阱
+
+### Supabase Client 選擇
+
+三種 client 用途不同，用錯會導致 RLS 繞不過或 Server/Client 邊界錯誤：
+
+- `src/lib/supabase/client.ts` — Client Component（受 RLS）
+- `src/lib/supabase/server.ts` — Server Component / Server Action（受 RLS）
+- `src/lib/supabase/service.ts` — 管理員，bypass RLS（**僅 Server 端**）
+
+### 台股色彩慣例（投資模組禁止違反）
+
+台股與歐美**相反**：**紅色 = 上漲**，**綠色 = 下跌**。
+所有漲跌顯示使用 `text-rose-600`（漲）和 `text-emerald-600`（跌）。
+
+### ETF 日期一致性
+
+`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 11 支 ETF 並行使用同一日期。
+Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fallback。
+
+### Supabase JOIN 回傳陣列
+
+即使 1:1 關係，JOIN 回傳仍是陣列：`caseData.milestone?.[0]?.contract_date`，型別定義用 `Milestone[]`。
 
 ---
 
