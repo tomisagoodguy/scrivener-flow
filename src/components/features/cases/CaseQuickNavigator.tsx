@@ -1,8 +1,30 @@
 'use client';
 
-import { DemoCase } from '@/types';
+import { DemoCase, Milestone } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+
+function getNextMilestoneLabel(c: DemoCase): string | null {
+    const m = c.milestones?.[0] as Milestone | undefined;
+    if (!m) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const steps = [
+        { label: '簽', date: m.contract_date },
+        { label: '印', date: m.seal_date },
+        { label: '稅', date: m.tax_payment_date },
+        { label: '過', date: m.transfer_date },
+        { label: '交', date: m.handover_date },
+    ];
+    const upcoming = steps
+        .filter((s) => s.date)
+        .map((s) => ({ ...s, time: new Date(s.date!).getTime() }))
+        .filter((s) => s.time >= today.getTime())
+        .sort((a, b) => a.time - b.time)[0];
+    if (!upcoming) return null;
+    const d = new Date(upcoming.date!);
+    return `${upcoming.label} ${d.getMonth() + 1}/${d.getDate()}`;
+}
 
 interface CaseQuickNavigatorProps {
     cases: DemoCase[];
@@ -59,6 +81,21 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
         }
     };
 
+    const sortedCases = [...cases].sort((a, b) => {
+        const getTime = (c: DemoCase) => {
+            const m = c.milestones?.[0] as Milestone | undefined;
+            if (!m) return Infinity;
+            const today = Date.now();
+            const dates = [m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]
+                .filter(Boolean)
+                .map((d) => new Date(d!).getTime())
+                .filter((t) => t >= today)
+                .sort((x, y) => x - y);
+            return dates[0] ?? Infinity;
+        };
+        return getTime(a) - getTime(b);
+    });
+
     if (cases.length === 0) return null;
 
     return (
@@ -97,20 +134,27 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                             onScroll={checkScroll}
                             className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
                         >
-                            {cases.slice(0, 30).map((c, idx) => (
-                                <motion.button
-                                    key={`nav-${c.id || idx}`}
-                                    whileHover={{ y: -1, scale: 1.02 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => scrollToCase(c.id)}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-lg transition-all duration-300 shrink-0 shadow-sm group"
-                                >
-                                    <span className="text-[12px] font-bold truncate max-w-[120px] dark:text-slate-200 group-hover:dark:text-blue-400">
-                                        {c.buyer_name} / {c.seller_name}
-                                    </span>
-
-                                </motion.button>
-                            ))}
+                            {sortedCases.slice(0, 30).map((c, idx) => {
+                                const milestoneLabel = getNextMilestoneLabel(c);
+                                return (
+                                    <motion.button
+                                        key={`nav-${c.id || idx}`}
+                                        whileHover={{ y: -1, scale: 1.02 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => scrollToCase(c.id)}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-lg transition-all duration-300 shrink-0 shadow-sm group"
+                                    >
+                                        <span className="text-[12px] font-bold truncate max-w-[120px] dark:text-slate-200 group-hover:dark:text-blue-400">
+                                            {c.buyer_name} / {c.seller_name}
+                                        </span>
+                                        {milestoneLabel && (
+                                            <span className="text-[11px] font-bold text-blue-500 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                                                {milestoneLabel}
+                                            </span>
+                                        )}
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

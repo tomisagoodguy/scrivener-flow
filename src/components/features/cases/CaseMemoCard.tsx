@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { caseService } from '@/services/caseService';
-import { DemoCase, Milestone } from '@/types';
+import { DemoCase, Milestone, TodoRecord } from '@/types';
 import { stripHtml } from './edit-case/caseUtils';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -20,13 +20,39 @@ function getNextMilestone(milestone: Milestone | undefined) {
         { label: '過', date: milestone.transfer_date },
         { label: '交', date: milestone.handover_date },
     ];
-    return (
-        steps
-            .filter((s) => s.date)
-            .map((s) => ({ ...s, time: new Date(s.date!).getTime() }))
-            .filter((s) => s.time >= today.getTime())
-            .sort((a, b) => a.time - b.time)[0] ?? null
-    );
+
+    const upcoming = steps
+        .map((s, idx) => ({ ...s, idx }))
+        .filter((s) => s.date)
+        .map((s) => ({ ...s, time: new Date(s.date!).getTime() }))
+        .filter((s) => s.time >= today.getTime())
+        .sort((a, b) => a.time - b.time)[0];
+
+    if (!upcoming) return null;
+
+    // 決定「下一站」提示
+    const next = steps[upcoming.idx + 1];
+    let hint: string | null = null;
+    let hintDate: string | null = null;
+    let hintWarn = false;
+
+    if (next) {
+        if (next.date) {
+            hint = next.label;
+            hintDate = next.date;
+        } else if (next.label === '過') {
+            // 過沒有日期 → 提醒設定交
+            const handover = steps[upcoming.idx + 2];
+            hint = '交';
+            hintDate = handover?.date ?? null;
+            hintWarn = true;
+        } else {
+            hint = next.label;
+            hintWarn = true;
+        }
+    }
+
+    return { label: upcoming.label, date: upcoming.date, hint, hintDate, hintWarn };
 }
 
 function formatShortDate(dateStr: string) {
@@ -37,6 +63,21 @@ function formatShortDate(dateStr: string) {
 function countPendingTodos(todos: Record<string, boolean> | undefined) {
     if (!todos) return 0;
     return Object.values(todos).filter((v) => !v).length;
+}
+
+function formatDueDate(dateStr: string) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const isPast = d < now && !isToday;
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const hasTime = hours !== 0 || minutes !== '00';
+    const dateLabel = isToday ? '今天' : `${month}/${day}`;
+    const timeLabel = hasTime ? ` ${hours}:${minutes}` : '';
+    return { label: `${dateLabel}${timeLabel}`, isPast, isToday };
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -152,17 +193,52 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
     );
 }
 
+// ── scroll helper ─────────────────────────────────────────────────────────────
+
+function scrollToCase(id: string) {
+    const el = document.getElementById(`case-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.add('ring-4', 'ring-blue-500/40', 'scale-[1.01]', 'shadow-2xl');
+    setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-blue-500/40', 'scale-[1.01]', 'shadow-2xl');
+    }, 2000);
+}
+
 // ── card ─────────────────────────────────────────────────────────────────────
 
 interface CaseMemoCardProps {
     caseData: DemoCase;
+    allCases: DemoCase[];
+    currentIndex: number;
 }
 
-export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
+export default function CaseMemoCard({ caseData, allCases, currentIndex }: CaseMemoCardProps) {
     const supabase = createClient();
     const milestone = caseData.milestones?.[0];
     const next = getNextMilestone(milestone);
     const pendingCount = countPendingTodos(caseData.todos);
+
+    const activeTodos: TodoRecord[] = (caseData.todos_list ?? []).filter(
+        (t) => !t.is_completed && !t.is_deleted
+    );
+    const [todosOpen, setTodosOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const prevCase = currentIndex > 0 ? allCases[currentIndex - 1] : null;
+    const nextCase = currentIndex < allCases.length - 1 ? allCases[currentIndex + 1] : null;
+
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [dropdownOpen]);
 
     const cleanNotes = stripHtml(caseData.notes?.replace(/\[\[ATTR:.*?\]\]/g, '').trim() ?? '');
     // Preserve the [[ATTR:...]] suffix so custom attributes are not lost on save
@@ -195,10 +271,48 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
                         </span>
                     )}
                     {next && (
-                        <span className="text-[12px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full border border-blue-500/20">
-                            {next.label} {formatShortDate(next.date!)}
+                        <span className="flex items-center gap-1 text-[12px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full border border-blue-500/20">
+                            <span>{next.label} {formatShortDate(next.date!)}</span>
+                            {next.hint && (
+                                <>
+                                    <span className="text-blue-300">→</span>
+                                    <span className={next.hintWarn ? 'text-amber-500' : 'text-blue-400'}>
+                                        {next.hintWarn ? '⚠️' : ''}{next.hint}{next.hintDate ? ` ${formatShortDate(next.hintDate)}` : ''}
+                                    </span>
+                                </>
+                            )}
                         </span>
                     )}
+                    {/* D: N/M badge + dropdown */}
+                    <div className="relative" ref={dropdownRef}>
+                        <button
+                            type="button"
+                            onClick={() => setDropdownOpen((o) => !o)}
+                            className="text-[11px] font-bold text-slate-400 hover:text-blue-600 px-2 py-0.5 rounded-full hover:bg-blue-500/10 transition-all border border-transparent hover:border-blue-500/20"
+                        >
+                            {currentIndex + 1} / {allCases.length}
+                        </button>
+                        {dropdownOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                                {allCases.map((c, i) => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={() => { scrollToCase(c.id); setDropdownOpen(false); }}
+                                        className={`w-full text-left px-3 py-2 text-[12px] hover:bg-blue-500/10 transition-colors flex items-center gap-2 ${
+                                            i === currentIndex
+                                                ? 'text-blue-600 font-bold bg-blue-500/5'
+                                                : 'text-slate-600 dark:text-slate-300'
+                                        }`}
+                                    >
+                                        <span className="text-slate-400 w-5 text-right shrink-0 tabular-nums">{i + 1}</span>
+                                        <span className="font-bold truncate">{c.case_number}</span>
+                                        <span className="text-slate-400 truncate text-[11px]">{c.buyer_name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -208,6 +322,47 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
                 <span className="mx-1 text-slate-300">/</span>
                 {caseData.seller_name}
             </div>
+
+            {/* 待辦清單 */}
+            {activeTodos.length > 0 && (
+                <div className="flex flex-col gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setTodosOpen((o) => !o)}
+                        className="flex items-center gap-1.5 text-[12px] font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-colors text-left"
+                    >
+                        <span className={`transition-transform duration-200 ${todosOpen ? 'rotate-90' : ''}`}>▶</span>
+                        待辦 {activeTodos.length} 項
+                    </button>
+                    {todosOpen && activeTodos.map((todo) => {
+                        const due = todo.due_date ? formatDueDate(todo.due_date) : null;
+                        return (
+                            <div
+                                key={todo.id}
+                                className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40"
+                            >
+                                <span className="text-[12px] shrink-0 mt-px">☐</span>
+                                <span className="text-[13px] text-slate-700 dark:text-slate-300 flex-1 leading-snug">
+                                    {todo.content}
+                                </span>
+                                {due && (
+                                    <span
+                                        className={`text-[11px] font-bold whitespace-nowrap shrink-0 mt-px ${
+                                            due.isPast
+                                                ? 'text-rose-600 dark:text-rose-400'
+                                                : due.isToday
+                                                  ? 'text-amber-600 dark:text-amber-400'
+                                                  : 'text-slate-400'
+                                        }`}
+                                    >
+                                        {due.label}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* ⚠️ 警示備註 */}
             <EditableNote
@@ -238,6 +393,36 @@ export default function CaseMemoCard({ caseData }: CaseMemoCardProps) {
                 bgClassName="bg-slate-100/80 dark:bg-slate-800/70 border-slate-300/60 dark:border-slate-600/40"
                 onSave={(v) => save('private_notes', v)}
             />
+
+            {/* A: Prev / Next navigation */}
+            {(prevCase || nextCase) && (
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                    {prevCase ? (
+                        <button
+                            type="button"
+                            onClick={() => scrollToCase(prevCase.id)}
+                            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-blue-600 transition-colors group/nav max-w-[45%]"
+                        >
+                            <span className="shrink-0">←</span>
+                            <span className="truncate group-hover/nav:text-blue-600">
+                                {prevCase.case_number}
+                            </span>
+                        </button>
+                    ) : <div />}
+                    {nextCase ? (
+                        <button
+                            type="button"
+                            onClick={() => scrollToCase(nextCase.id)}
+                            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-blue-600 transition-colors group/nav max-w-[45%]"
+                        >
+                            <span className="truncate group-hover/nav:text-blue-600">
+                                {nextCase.case_number}
+                            </span>
+                            <span className="shrink-0">→</span>
+                        </button>
+                    ) : <div />}
+                </div>
+            )}
         </div>
     );
 }

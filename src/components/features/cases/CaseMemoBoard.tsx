@@ -1,27 +1,25 @@
 import { DemoCase } from '@/types';
 import CaseMemoCard from './CaseMemoCard';
+import MemoRealtimeRefresh from './MemoRealtimeRefresh';
 
 interface CaseMemoBoard {
     cases: DemoCase[];
 }
 
+function getNextMilestoneTime(c: DemoCase): number {
+    const m = c.milestones?.[0];
+    if (!m) return Infinity;
+    const now = Date.now();
+    const dates = [m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]
+        .filter(Boolean)
+        .map((d) => new Date(d!).getTime())
+        .filter((t) => t >= now)
+        .sort((a, b) => a - b);
+    return dates[0] ?? Infinity;
+}
+
 export default function CaseMemoBoard({ cases }: CaseMemoBoard) {
-    const casesWithNotes = cases.filter(
-        (c) =>
-            (c.notes && c.notes.replace(/\[\[ATTR:.*?\]\]/g, '').trim()) ||
-            c.pending_tasks ||
-            c.private_notes
-    );
-
-    // Cases without any notes — show them too so user can add notes directly
-    const casesWithoutNotes = cases.filter(
-        (c) =>
-            !(c.notes && c.notes.replace(/\[\[ATTR:.*?\]\]/g, '').trim()) &&
-            !c.pending_tasks &&
-            !c.private_notes
-    );
-
-    const warningCount = casesWithNotes.filter(
+    const warningCount = cases.filter(
         (c) => c.notes && c.notes.replace(/\[\[ATTR:.*?\]\]/g, '').trim()
     ).length;
 
@@ -34,8 +32,14 @@ export default function CaseMemoBoard({ cases }: CaseMemoBoard) {
         );
     }
 
+    // 按最近里程碑日期排序（由近到遠），沒有日期的排最後
+    const orderedCases = [...cases].sort(
+        (a, b) => getNextMilestoneTime(a) - getNextMilestoneTime(b)
+    );
+
     return (
         <div className="space-y-6">
+            <MemoRealtimeRefresh />
             {/* Stats */}
             <div className="flex items-center gap-3 text-sm">
                 <span className="font-bold text-slate-700 dark:text-slate-300">
@@ -49,13 +53,15 @@ export default function CaseMemoBoard({ cases }: CaseMemoBoard) {
                 <span className="text-xs text-slate-400">點擊任一備註欄即可直接編輯，自動儲存</span>
             </div>
 
-            {/* Cards with notes */}
+            {/* Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                {casesWithNotes.map((c) => (
-                    <CaseMemoCard key={c.id} caseData={c} />
-                ))}
-                {casesWithoutNotes.map((c) => (
-                    <CaseMemoCard key={c.id} caseData={c} />
+                {orderedCases.map((c, i) => (
+                    <CaseMemoCard
+                        key={c.id}
+                        caseData={c}
+                        allCases={orderedCases}
+                        currentIndex={i}
+                    />
                 ))}
             </div>
         </div>
