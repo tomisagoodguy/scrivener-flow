@@ -110,16 +110,6 @@ export function generateSystemTasks(
         const m = (c.milestones?.[0] || {}) as Record<string, string | null>;
         const f = (c.financials?.[0] || {}) as Record<string, string | null>;
 
-        addSystemTask(c, 'sign_diff_date', m.sign_diff_date, 3, 'legal', '補差額');
-        addSystemTask(c, 'seal_date', m.seal_date, 3, 'legal', '用印日');
-
-        // 動態報稅提醒逻辑 (顯示範圍改為 30 天)
-        const isTaxDayToday = m.seal_date && new Date(m.seal_date).toDateString() === today.toDateString();
-        const taxDateDisplay = m.seal_date ? new Date(m.seal_date).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
-        const taxTitle = isTaxDayToday ? '今天報稅' : `預計 ${taxDateDisplay} 報稅`;
-        addSystemTask(c, 'tax_filing_reminder', m.seal_date, 30, 'tax', taxTitle);
-
-        addSystemTask(c, 'tax_payment_date', m.tax_payment_date, 3, 'legal', '完稅日');
 
         // 計算貸款差額提醒 (Shortfall Reminder)
         const balance = Number(m.balance_amount || 0);
@@ -137,9 +127,7 @@ export function generateSystemTasks(
             );
         }
 
-        addSystemTask(c, 'transfer_date', m.transfer_date, 3, 'legal', '過戶日');
         addSystemTask(c, 'redemption_date', m.redemption_date, 3, 'legal', '代償日');
-        addSystemTask(c, 'handover_date', m.handover_date, 3, 'legal', '交屋日');
 
         addSystemTask(c, 'seal_appt', m.seal_appointment, 3, 'appointment', '用印約定');
         addSystemTask(c, 'tax_appt', m.tax_appointment, 3, 'appointment', '完稅約定');

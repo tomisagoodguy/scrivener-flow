@@ -17,6 +17,9 @@ export default function MemoRealtimeRefresh() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, () => {
                 router.refresh();
             })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'todos' }, () => {
+                router.refresh();
+            })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };

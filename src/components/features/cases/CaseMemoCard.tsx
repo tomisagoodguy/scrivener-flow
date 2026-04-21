@@ -65,6 +65,88 @@ function countPendingTodos(todos: Record<string, boolean> | undefined) {
     return Object.values(todos).filter((v) => !v).length;
 }
 
+function formatDateTime(dateStr: string) {
+    const d = new Date(dateStr);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours();
+    const min = d.getMinutes().toString().padStart(2, '0');
+    const hasTime = h !== 0 || min !== '00';
+    return hasTime ? `${m}/${day} ${h}:${min}` : `${m}/${day}`;
+}
+
+type Urgency = 'overdue' | 'urgent' | 'soon' | 'upcoming';
+
+function getUrgency(dateStr: string | null | undefined): Urgency | null {
+    if (!dateStr) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.floor((new Date(dateStr).getTime() - today.getTime()) / 86400000);
+    if (diff < 0) return 'overdue';
+    if (diff <= 2) return 'urgent';
+    if (diff <= 7) return 'soon';
+    return 'upcoming';
+}
+
+const urgencyChipStyle: Record<Urgency, string> = {
+    overdue:  'bg-rose-50 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-800/40 text-rose-600 dark:text-rose-400',
+    urgent:   'bg-amber-50 dark:bg-amber-900/20 border-amber-200/60 dark:border-amber-800/40 text-amber-600 dark:text-amber-400',
+    soon:     'bg-blue-50 dark:bg-blue-900/20 border-blue-200/60 dark:border-blue-800/40 text-blue-600 dark:text-blue-400',
+    upcoming: 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400',
+};
+
+function DateChip({ label, dateStr }: { label: string; dateStr: string }) {
+    const urgency = getUrgency(dateStr);
+    if (!urgency) return null;
+    return (
+        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${urgencyChipStyle[urgency]}`}>
+            {urgency === 'overdue' && <span>🔴</span>}
+            {urgency === 'urgent'  && <span>🟠</span>}
+            <span>{label}</span>
+            <span className="font-normal opacity-80">{formatDateTime(dateStr)}</span>
+        </span>
+    );
+}
+
+function ImportantDates({ milestone, financials }: { milestone?: Milestone; financials?: import('@/types').Financials }) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isFuture = (d: string | null | undefined) => !!d && new Date(d) >= today;
+
+    const appointments = [
+        { label: '簽約約', date: milestone?.sign_appointment },
+        { label: '用印約', date: milestone?.seal_appointment },
+        { label: '完稅約', date: milestone?.tax_appointment },
+        { label: '交屋約', date: milestone?.handover_appointment },
+    ].filter((a) => isFuture(a.date));
+
+    const taxDeadlines = [
+        { label: '地增稅', date: financials?.land_value_tax_deadline },
+        { label: '契稅', date: financials?.deed_tax_deadline },
+        { label: '土地稅', date: financials?.land_tax_deadline },
+        { label: '房屋稅', date: financials?.house_tax_deadline },
+    ].filter((t) => !!t.date);
+
+    if (appointments.length === 0 && taxDeadlines.length === 0) return null;
+
+    return (
+        <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/30">
+            {appointments.length > 0 && (
+                <div className="flex items-start gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">🤝</span>
+                    {appointments.map((a) => <DateChip key={a.label} label={a.label} dateStr={a.date!} />)}
+                </div>
+            )}
+            {taxDeadlines.length > 0 && (
+                <div className="flex items-start gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">🧾</span>
+                    {taxDeadlines.map((t) => <DateChip key={t.label} label={t.label} dateStr={t.date!} />)}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function formatDueDate(dateStr: string) {
     const d = new Date(dateStr);
     const now = new Date();
@@ -219,8 +301,12 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex }: CaseM
     const next = getNextMilestone(milestone);
     const pendingCount = countPendingTodos(caseData.todos);
 
+    const financials = caseData.financials?.[0];
+    const REMOVED_SYSTEM_KEYS = new Set([
+        'seal_date', 'tax_payment_date', 'transfer_date', 'handover_date', 'tax_filing_reminder', 'sign_diff_date',
+    ]);
     const activeTodos: TodoRecord[] = (caseData.todos_list ?? []).filter(
-        (t) => !t.is_completed && !t.is_deleted
+        (t) => !t.is_completed && !t.is_deleted && !REMOVED_SYSTEM_KEYS.has(t.source_key ?? '')
     );
     const [todosOpen, setTodosOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -322,6 +408,9 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex }: CaseM
                 <span className="mx-1 text-slate-300">/</span>
                 {caseData.seller_name}
             </div>
+
+            {/* 重要時程 */}
+            <ImportantDates milestone={milestone} financials={financials} />
 
             {/* 待辦清單 */}
             {activeTodos.length > 0 && (
