@@ -16,9 +16,10 @@ export interface StockSlide {
 interface Props {
     slides: StockSlide[];
     initialIndex: number;
+    isOwner?: boolean;
 }
 
-export function BareKScrollViewer({ slides, initialIndex }: Props) {
+export function BareKScrollViewer({ slides, initialIndex, isOwner = false }: Props) {
     const sectionsRef = useRef<(HTMLElement | null)[]>([]);
     const headersRef = useRef<(HTMLElement | null)[]>([]);
     const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -156,13 +157,15 @@ export function BareKScrollViewer({ slides, initialIndex }: Props) {
                             ) : (
                                 <div className="glass-card rounded-2xl p-10 text-center">
                                     <p className="text-gray-500 font-medium mb-1">{slide.code} 的裸K資料尚未同步</p>
-                                    <p className="text-sm text-gray-400">
-                                        請確認已在
-                                        <Link href="/investment/watch-list" className="text-blue-500 hover:underline mx-1">
-                                            自選股管理
-                                        </Link>
-                                        加入此股票
-                                    </p>
+                                    {isOwner && (
+                                        <p className="text-sm text-gray-400">
+                                            請確認已在
+                                            <Link href="/investment/watch-list" className="text-blue-500 hover:underline mx-1">
+                                                自選股管理
+                                            </Link>
+                                            加入此股票
+                                        </p>
+                                    )}
                                 </div>
                             )
                         ) : (

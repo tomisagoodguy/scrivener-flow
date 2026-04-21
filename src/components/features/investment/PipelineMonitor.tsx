@@ -20,6 +20,20 @@ interface EtfStatus {
     staleDays: number;
 }
 
+function countTradingDays(from: Date, to: Date): number {
+    let count = 0;
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    const end = new Date(to);
+    end.setHours(0, 0, 0, 0);
+    while (d < end) {
+        d.setDate(d.getDate() + 1);
+        const day = d.getDay();
+        if (day !== 0 && day !== 6) count++;
+    }
+    return count;
+}
+
 function getStatusLevel(staleDays: number): 'ok' | 'warn' | 'error' | 'unknown' {
     if (staleDays < 0) return 'unknown';
     if (staleDays <= 1) return 'ok';
@@ -39,14 +53,14 @@ export async function PipelineMonitor() {
 
     const { data: snapshotRows } = await supabase
         .from('etf_holdings_snapshot')
-        .select('etf_code, data_date, created_at')
+        .select('etf_code, data_date, updated_at')
         .order('data_date', { ascending: false });
 
     // 每支 ETF 取最新一筆
     const latestByEtf: Record<string, { data_date: string; created_at: string }> = {};
     for (const row of snapshotRows ?? []) {
         if (!latestByEtf[row.etf_code]) {
-            latestByEtf[row.etf_code] = { data_date: row.data_date, created_at: row.created_at };
+            latestByEtf[row.etf_code] = { data_date: row.data_date, created_at: row.updated_at };
         }
     }
 
@@ -59,7 +73,7 @@ export async function PipelineMonitor() {
         if (row?.data_date) {
             const d = new Date(row.data_date);
             d.setHours(0, 0, 0, 0);
-            staleDays = Math.floor((today.getTime() - d.getTime()) / 86400000);
+            staleDays = countTradingDays(d, today);
         }
         return {
             etf_code: entry.code,
@@ -126,8 +140,8 @@ export async function PipelineMonitor() {
                         const staleLabel =
                             s.staleDays < 0 ? '無資料' :
                             s.staleDays === 0 ? '今日' :
-                            s.staleDays === 1 ? '昨日' :
-                            `${s.staleDays} 天前`;
+                            s.staleDays === 1 ? '1交易日' :
+                            `${s.staleDays} 交易日`;
 
                         const sourceUrl = getSourceUrl(s.etf_code, s.dataSource);
                         return (

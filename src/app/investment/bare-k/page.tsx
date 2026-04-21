@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/service';
 
 import Link from 'next/link';
 import { ArrowLeft, Settings2 } from 'lucide-react';
@@ -9,12 +10,15 @@ export default async function BareKOverviewPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 未登入者看到空清單
-    const watchList = user
-        ? (await supabase
+    const isOwner = !!user;
+    const ownerId = user?.id ?? process.env.BARE_K_OWNER_USER_ID;
+    const db = isOwner ? supabase : getAdminClient();
+
+    const watchList = ownerId
+        ? (await db
               .from('watch_list')
               .select('id, stock_id, name, strategies, created_at')
-              .eq('user_id', user.id)
+              .eq('user_id', ownerId)
               .order('created_at', { ascending: true })).data
         : null;
 
@@ -59,23 +63,27 @@ export default async function BareKOverviewPage() {
                             </p>
                         </div>
                     </div>
-                    <Link
-                        href="/investment/watch-list"
-                        className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 bg-white/60 hover:bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
-                    >
-                        <Settings2 size={15} /> 管理清單
-                    </Link>
+                    {isOwner && (
+                        <Link
+                            href="/investment/watch-list"
+                            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 bg-white/60 hover:bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
+                        >
+                            <Settings2 size={15} /> 管理清單
+                        </Link>
+                    )}
                 </div>
 
                 {entries.length === 0 ? (
                     <div className="glass-card rounded-2xl p-12 text-center">
                         <p className="text-gray-400 mb-3">尚無自選股</p>
-                        <Link
-                            href="/investment/watch-list"
-                            className="text-blue-500 hover:underline text-sm"
-                        >
-                            前往管理清單，加入第一支股票 →
-                        </Link>
+                        {isOwner && (
+                            <Link
+                                href="/investment/watch-list"
+                                className="text-blue-500 hover:underline text-sm"
+                            >
+                                前往管理清單，加入第一支股票 →
+                            </Link>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

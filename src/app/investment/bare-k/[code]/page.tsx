@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/service';
 import { BareKScrollViewer } from '@/components/features/investment/BareKScrollViewer';
 import type { StockSlide } from '@/components/features/investment/BareKScrollViewer';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
@@ -13,12 +14,15 @@ export default async function BareKDetailPage({ params }: Props) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 未登入者看到空清單
-    const watchList = user
-        ? (await supabase
+    const isOwner = !!user;
+    const ownerId = user?.id ?? process.env.BARE_K_OWNER_USER_ID;
+    const db = isOwner ? supabase : getAdminClient();
+
+    const watchList = ownerId
+        ? (await db
               .from('watch_list')
               .select('stock_id, name, strategies')
-              .eq('user_id', user.id)
+              .eq('user_id', ownerId)
               .order('created_at', { ascending: true })).data
         : null;
 
@@ -52,5 +56,5 @@ export default async function BareKDetailPage({ params }: Props) {
     // 找目前 code 的 index，找不到預設 0
     const initialIndex = Math.max(0, slides.findIndex((s) => s.code === code));
 
-    return <BareKScrollViewer slides={slides} initialIndex={initialIndex} />;
+    return <BareKScrollViewer slides={slides} initialIndex={initialIndex} isOwner={isOwner} />;
 }
