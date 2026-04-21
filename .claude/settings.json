@@ -13,7 +13,8 @@
       "Bash(git -C c:/Users/user/Documents/GitHub/scrivener-flow add ETF/CLAUDE.md)",
       "Bash(git -C c:/Users/user/Documents/GitHub/scrivener-flow commit -m \"docs\\(etf\\): 更新 CLAUDE.md 補上週末日期容差與 diff_logs 約束說明\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(bare-k\\): 裸K看盤支援未登入公開唯讀瀏覽\")",
-      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(bare-k\\): 裸K看盤支援未登入公開唯讀瀏覽\")"
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(bare-k\\): 裸K看盤支援未登入公開唯讀瀏覽\")",
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"docs\\(claude\\): 補上 BARE_K_OWNER_USER_ID 環境變數說明\")"
     ]
   },
   "hooks": {

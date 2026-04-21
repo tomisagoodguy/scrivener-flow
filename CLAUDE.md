@@ -123,6 +123,9 @@ ENCRYPTION_MASTER_KEY=          # AES-256-GCM，90 天輪替
 # 投資
 FINLAB_API_KEY=
 DATABASE_URL=                   # Prisma connection string
+
+# 裸K看盤公開瀏覽
+BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯讀）；需同步設定於 Vercel
 ```
 
 ---
