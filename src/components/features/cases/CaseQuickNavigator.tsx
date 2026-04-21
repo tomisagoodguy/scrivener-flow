@@ -108,9 +108,7 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                                     <span className="text-[12px] font-bold truncate max-w-[120px] dark:text-slate-200 group-hover:dark:text-blue-400">
                                         {c.buyer_name} / {c.seller_name}
                                     </span>
-                                    <span className="text-[10px] font-mono font-black text-slate-400 opacity-60">
-                                        {c.case_number.slice(-3)}
-                                    </span>
+
                                 </motion.button>
                             ))}
                         </div>

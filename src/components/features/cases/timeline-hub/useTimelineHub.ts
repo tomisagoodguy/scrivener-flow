@@ -178,7 +178,10 @@ export function useTimelineHub(cases: DemoCase[]) {
                             textColor: 'text-amber-700',
                             shape: 'pill',
                             isCompleted: false,
-                            content: todo.content,
+                            todoId: todo.id,
+                            content: todo.due_date?.includes('T')
+                                ? `⏰ ${format(parsedDate, 'HH:mm')}　${todo.content}`
+                                : todo.content,
                         });
                     } catch { /* skip */ }
                 });

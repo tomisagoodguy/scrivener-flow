@@ -18,6 +18,7 @@ export interface TimelineEvent {
     textColor: string;   // tailwind text class
     shape: EventShape;
     isCompleted: boolean;
+    todoId?: string;     // 僅 category === 'todo' 時有值，供快速完成使用
     content?: string;    // 額外說明 (for todos)
     pendingTodos?: string[]; // 該案件未完成的 checklist 項目（只掛在最近的里程碑上）
 }

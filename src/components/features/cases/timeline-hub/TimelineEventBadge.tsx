@@ -9,12 +9,13 @@ interface TimelineEventBadgeProps {
     event: TimelineEvent;
     compact?: boolean;
     showDate?: boolean;
+    onComplete?: (todoId: string) => void;
 }
 
 /**
  * 共用事件標記 — 在月曆、甘特圖、今日焦點中統一使用
  */
-export function TimelineEventBadge({ event, compact = false, showDate = false }: TimelineEventBadgeProps) {
+export function TimelineEventBadge({ event, compact = false, showDate = false, onComplete }: TimelineEventBadgeProps) {
     if (compact) {
         // 月曆格子內的迷你標記
         return (
@@ -37,6 +38,18 @@ export function TimelineEventBadge({ event, compact = false, showDate = false }:
     // 完整事件卡片
     return (
         <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all group">
+            {/* 快速完成按鈕（僅 todo 類型） */}
+            {event.category === 'todo' && onComplete && event.todoId && (
+                <button
+                    onClick={() => onComplete(event.todoId!)}
+                    title="標記完成"
+                    className="shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 border-amber-400 hover:bg-amber-400 hover:border-amber-500 transition-colors flex items-center justify-center group/check"
+                >
+                    <svg className="w-3 h-3 text-transparent group-hover/check:text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 6l3 3 5-5" />
+                    </svg>
+                </button>
+            )}
             {/* 圖標 */}
             <div
                 className={`

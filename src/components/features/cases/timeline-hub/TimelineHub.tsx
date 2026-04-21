@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { DemoCase, TodoRecord } from '@/types';
 import { useTimelineHub } from './useTimelineHub';
@@ -61,6 +61,11 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
 
     const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(mergedCases);
 
+    const handleCompleteTodo = useCallback(async (todoId: string) => {
+        await supabase.from('todos').update({ is_completed: true }).eq('id', todoId);
+        window.dispatchEvent(new Event('todo-updated'));
+    }, [supabase]);
+
     return (
         <div className="space-y-6">
             {/* 頂部統計 */}
@@ -86,7 +91,7 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
             </div>
 
             {/* ① 今日焦點 */}
-            <TodayFocus events={allEvents} today={today} upcomingAttentions={upcomingAttentions} />
+            <TodayFocus events={allEvents} today={today} upcomingAttentions={upcomingAttentions} onCompleteTodo={handleCompleteTodo} />
 
             {/* ② 每日列表 */}
             <DailyList dayGroups={dayGroups} today={today} />

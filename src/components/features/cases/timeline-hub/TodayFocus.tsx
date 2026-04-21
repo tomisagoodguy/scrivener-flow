@@ -10,12 +10,13 @@ interface TodayFocusProps {
     events: TimelineEvent[];
     today: Date;
     upcomingAttentions?: TimelineEvent[];
+    onCompleteTodo?: (todoId: string) => void;
 }
 
 /**
  * ① 今日焦點 — 今天 & 明天有什麼事
  */
-export function TodayFocus({ events, today, upcomingAttentions = [] }: TodayFocusProps) {
+export function TodayFocus({ events, today, upcomingAttentions = [], onCompleteTodo }: TodayFocusProps) {
     const todayKey = format(today, 'yyyy-MM-dd');
     const tomorrowKey = format(new Date(today.getTime() + 86400000), 'yyyy-MM-dd');
 
@@ -51,7 +52,7 @@ export function TodayFocus({ events, today, upcomingAttentions = [] }: TodayFocu
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                         {overdueEvents.map((evt) => (
-                            <TimelineEventBadge key={evt.id} event={evt} showDate />
+                            <TimelineEventBadge key={evt.id} event={evt} showDate onComplete={onCompleteTodo} />
                         ))}
                     </div>
                 </div>
