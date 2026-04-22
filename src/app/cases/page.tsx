@@ -114,7 +114,7 @@ export default async function CasesPage({
 
             {/* Main Tabs & Search */}
             <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
-                <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-[20px] border border-slate-200 dark:border-slate-800 backdrop-blur-sm">
+                <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-[20px] border border-slate-200 dark:border-slate-800 backdrop-blur-sm overflow-x-auto no-scrollbar shrink-0 max-w-full">
                     {[
                         { label: '承辦中', value: 'Processing' },
                         { label: '已結案', value: 'Closed' },
@@ -187,7 +187,7 @@ export default async function CasesPage({
             {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse table-fixed">
+                        <table className="min-w-[1000px] w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 dark:bg-slate-950/30 sticky top-0 z-10">
                                     <th className="px-1 py-3 text-[12px] font-black border border-slate-200 dark:border-slate-800 text-slate-500 uppercase tracking-tighter w-[85px] text-center">

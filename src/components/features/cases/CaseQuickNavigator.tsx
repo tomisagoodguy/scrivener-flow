@@ -112,19 +112,21 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                         {/* Edge Masks */}
                         <AnimatePresence>
                             {showLeftMask && (
-                                <motion.div 
+                                <motion.div
+                                    key="left-mask"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-r from-white dark:from-slate-900 to-transparent" 
+                                    className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-r from-white dark:from-slate-900 to-transparent"
                                 />
                             )}
                             {showRightMask && (
-                                <motion.div 
+                                <motion.div
+                                    key="right-mask"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-l from-white dark:from-slate-900 to-transparent" 
+                                    className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-l from-white dark:from-slate-900 to-transparent"
                                 />
                             )}
                         </AnimatePresence>
