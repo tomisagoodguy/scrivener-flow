@@ -48,9 +48,29 @@
 - [ ] 4.12 在 `/investment` 選股池列表綁定點擊事件，觸發 `StockDetailPanel` 開啟
 - [ ] 4.13 前端驗證：slide-in/out 動畫、切換個股 fade、ESC 關閉、各區塊 skeleton + 資料顯示正常
 
-## 5. 收尾
+## 5. Phase 5 — ETF Portfolio Analytics（深潛頁 6 Tab）
+
+- [ ] 5.1 建立 migration `supabase/migrations/<timestamp>_add_etf_position_summary.sql`，建立 `etf_position_summary` 表（etf_code, stock_code, entry_date, entry_price, exit_date, exit_price, latest_weight, active_days, status, realized_pnl_pct, unrealized_pnl_pct）
+- [ ] 5.2 建立 `ETF/pipeline/steps/position_summary_step.py`，實作增量更新：IN 事件建立 active 記錄、OUT 事件關閉為 exited、每日重算 unrealized_pnl
+- [ ] 5.3 在 `orchestrator.py` 的 `SignalDetectStep` 之後插入 `PositionSummaryStep`；確認為輔助步驟
+- [ ] 5.4 建立 backfill 腳本 `ETF/scripts/backfill_positions.py`，從既有 `etf_diff_logs` 重算歷史 position_summary
+- [ ] 5.5 執行 backfill，確認各 ETF 的 active + exited 持倉記錄正確
+- [ ] 5.6 重構 `/investment/[etf]` 的 DrilldownTabs 為 6 Tab 結構（目前持股、當日加減碼、歷史軌跡、單股進出場、損益排行、已出清）；Tab 切換以 `?tab=` query string 保留狀態
+- [ ] 5.7 實作「目前持股」Tab：持倉列表（排名/代號/名稱/比重/張數/股價/漲跌幅/未實現損益%）；點擊個股觸發 `StockDetailPanel`
+- [ ] 5.8 實作「當日加減碼」Tab：三區塊（新建倉/加碼/減碼），各含比重變化數字
+- [ ] 5.9 實作「歷史軌跡」Tab：股票選擇器 + 比重折線圖（含持倉期間標示）
+- [ ] 5.10 實作「單股進出場」Tab：active 持倉列表（進場日/進場價/當前價/持倉天數/未實現損益%）
+- [ ] 5.11 實作「損益排行」Tab：active + exited 合併排序，含篩選器（持倉中/已出清）
+- [ ] 5.12 實作「已出清」Tab：exited 列表（進出場日/天數/已實現損益%）+ 頂部匯總統計（出清數/平均天數/平均損益/勝率）
+- [ ] 5.13 前端驗證：6 Tab 切換、URL query string 保留、損益色彩（台股慣例：正=紅/負=綠）
+
+## 6. 收尾
+
+- [ ] 6.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
+- [ ] 6.2 更新 `ETF/CLAUDE.md`，新增官網 API 備援、AumSyncStep、PositionSummaryStep 架構說明
+- [ ] 6.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
+- [ ] 6.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
 
 - [ ] 5.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
 - [ ] 5.2 更新 `ETF/CLAUDE.md`，新增「官網 API 備援」和「AumSyncStep」架構說明
 - [ ] 5.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
-- [ ] 5.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
