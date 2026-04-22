@@ -54,7 +54,13 @@ class DiffMessageBuilder(FlexMessageBuilder):
     """建構持股異動通知"""
 
     @classmethod
-    def build(cls, etf_code: str, date_str: str, diff_logs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def build(
+        cls,
+        etf_code: str,
+        date_str: str,
+        diff_logs: List[Dict[str, Any]],
+        shareholder_signals: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
         if not diff_logs:
             return None
 
@@ -63,6 +69,8 @@ class DiffMessageBuilder(FlexMessageBuilder):
 
         if not significant:
             return None
+
+        signals = shareholder_signals or {}
 
         # Categorize
         in_stocks    = [d for d in significant if d['change_type'] == 'IN']
@@ -86,7 +94,7 @@ class DiffMessageBuilder(FlexMessageBuilder):
                 return f"{prev:.2f}%→{curr:.2f}%"
             return f"{diff:+.2f}%"
 
-        def _add_section(title, stocks, color, icon, is_out=False, show_prev=False):
+        def _add_section(title, stocks, color, icon, is_out=False, show_prev=False, show_signals=False):
             if not stocks:
                 return
 
@@ -99,8 +107,13 @@ class DiffMessageBuilder(FlexMessageBuilder):
                     name_style["decoration"] = "line-through"
                     name_style["color"] = "#999999"
 
+                # 大戶積累時在股名後加 💎
+                display_name = s['stock_name']
+                if show_signals and signals.get(s.get('stock_code')) == "積累":
+                    display_name = f"{display_name} 💎"
+
                 rows.append(cls._box_horizontal([
-                    cls._text(s['stock_name'], **name_style),
+                    cls._text(display_name, **name_style),
                     cls._text(s['stock_code'], size="xs", color="#aaaaaa", flex=2, align="end"),
                     cls._text(_weight_label(s, show_prev), size="sm", align="end", flex=3, color=color),
                 ]))
@@ -109,10 +122,10 @@ class DiffMessageBuilder(FlexMessageBuilder):
                 rows.append(cls._text(f"...還有 {len(stocks)-10} 檔", size="xs", color="#aaaaaa", align="end"))
 
         # Build Sections
-        _add_section("新增成分股", in_stocks, "#1DB446", "🚀")
+        _add_section("新增成分股", in_stocks, "#1DB446", "🚀", show_signals=True)
         _add_section("剔除成分股", out_stocks, "#FF334B", "🗑️", is_out=True)
         _add_section("近乎清倉 ⚠️", close_stocks, "#DC2626", "🚨", is_out=True, show_prev=True)
-        _add_section("權重加碼 (Top 10)", buy_stocks, "#F59E0B", "📈", show_prev=True)
+        _add_section("權重加碼 (Top 10)", buy_stocks, "#F59E0B", "📈", show_prev=True, show_signals=True)
         _add_section("權重減碼 (Top 10)", sell_stocks, "#64748B", "📉", show_prev=True)
 
         if not rows:
@@ -238,6 +251,7 @@ class CarouselBuilder(FlexMessageBuilder):
         cls,
         summaries: List[Dict[str, Any]],
         market_signals: Dict[str, Any],
+        shareholder_signals: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         date_str = summaries[0]["data_date"] if summaries else ""
         bubbles: List[Dict[str, Any]] = []
@@ -260,7 +274,8 @@ class CarouselBuilder(FlexMessageBuilder):
             if not significant:
                 continue
             diff_bubble = DiffMessageBuilder.build(
-                summary["etf_code"], summary["data_date"], diff_logs
+                summary["etf_code"], summary["data_date"], diff_logs,
+                shareholder_signals=shareholder_signals,
             )
             if diff_bubble:
                 bubbles.append(diff_bubble)

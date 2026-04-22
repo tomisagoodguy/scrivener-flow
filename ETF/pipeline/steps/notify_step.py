@@ -42,8 +42,11 @@ class NotifyStep(BaseStep):
         # 3. 市場訊號：只取 00981A 的資料
         market_signals = self._extract_market_signals(ctx.df)
 
-        # 4. 發送合併 Carousel（一則）
-        notifier.notify_merged_carousel(all_summaries, market_signals)
+        # 4. 發送合併 Carousel（一則），帶入大戶籌碼訊號
+        notifier.notify_merged_carousel(
+            all_summaries, market_signals,
+            shareholder_signals=ctx.shareholder_signals or {},
+        )
         self.logger.info(
             f"Merged carousel sent: {len(all_summaries)} ETFs, "
             f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."

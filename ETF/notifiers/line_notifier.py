@@ -215,6 +215,7 @@ class LineNotifier:
         self,
         summaries: List[Dict[str, Any]],
         market_signals: Dict[str, Any],
+        shareholder_signals: Dict[str, str] | None = None,
     ) -> None:
         """發送合併所有 ETF 的每日 Carousel（一則）"""
         if not summaries:
@@ -223,7 +224,7 @@ class LineNotifier:
 
         from ETF.notifiers.message_builder import CarouselBuilder
 
-        carousel = CarouselBuilder.build(summaries, market_signals)
+        carousel = CarouselBuilder.build(summaries, market_signals, shareholder_signals=shareholder_signals)
         date_str = summaries[0].get("data_date", "")
         self.broadcast_flex_message(f"ETF 每日動態 {date_str}", carousel)
         logger.info("Merged ETF carousel sent.")

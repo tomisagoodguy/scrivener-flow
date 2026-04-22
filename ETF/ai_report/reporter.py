@@ -127,7 +127,17 @@ class AIReporter:
                 else 0.0
             ),
         }
-        prompt = build_report_prompt(holdings_df, stats, technical_map, top_holdings, etf_code=self.etf_code)
+        # 6.5 從 MOPS 取近期重大公告作為 AI 報告語境
+        news_context: list[dict] = []
+        try:
+            from ETF.services.news.mops_client import fetch_mops_announcements
+            top_codes = [r["stock_code"] for r in top_holdings]
+            news_context = fetch_mops_announcements(top_codes, days=5)
+            logger.info(f"Fetched {len(news_context)} MOPS announcements for AI prompt.")
+        except Exception as e:
+            logger.warning(f"Failed to fetch MOPS news context: {e}")
+
+        prompt = build_report_prompt(holdings_df, stats, technical_map, top_holdings, etf_code=self.etf_code, news_context=news_context)
 
         # 7. 呼叫 Gemini
         genai.configure(api_key=api_key)

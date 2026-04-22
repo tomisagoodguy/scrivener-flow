@@ -44,12 +44,15 @@ ETF/
 │       ├── price_attach_step.py   # FinLab 補充收盤價
 │       ├── diff_compute_step.py   # 計算持股 IN/OUT/BUY/SELL
 │       ├── save_snapshot_step.py  # 存入 etf_holdings_snapshot
+│       ├── shareholder_signal_step.py  # 讀 stock-data-main JSON，計算大戶積累訊號 → ctx.shareholder_signals
 │       ├── weight_history_step.py # 聚合持股比重走勢
 │       ├── multi_etf_step.py      # 處理 00980A / 00991A（MoneyDJ）
 │       ├── sync_company_step.py   # 同步公司基本資料
 │       ├── sync_ohlcv_step.py     # 同步 stock_prices_daily（含次要 ETF 成分股）
 │       ├── overlap_compute_step.py # 聚合跨 ETF 共識持股 → etf_stock_overlap
-│       ├── notify_step.py         # LINE 推送通知
+│       ├── sync_bare_k_step.py    # 同步 watch_list 裸K快照
+│       ├── news_context_step.py   # 直接呼叫 MOPS API，取重大公告 → ctx.news_context
+│       ├── notify_step.py         # LINE 推送通知（含 💎 大戶積累標記）
 │       └── cleanup_step.py        # 清理暫存資料
 │
 ├── scrapers/
@@ -67,6 +70,9 @@ ETF/
 │   ├── price_service.py       # 收盤價服務
 │   ├── ohlcv_service.py       # OHLCV 歷史資料服務
 │   └── company_service.py     # 公司基本資料服務
+│
+├── services/news/
+│   └── mops_client.py         # MOPS API 直打（HTTP POST），取重大公告；無需額外環境變數
 │
 ├── database/
 │   ├── sql_storage.py         # SQLAlchemy 直接寫入 Supabase（繞過 RLS）
@@ -124,14 +130,19 @@ ScrapeStep
   → PriceAttachStep
   → DiffComputeStep
   → SaveSnapshotStep
+  → ShareholderSignalStep   ← [輔助] 讀 stock-data-main JSON，計算大戶積累 → ctx.shareholder_signals
   → WeightHistoryStep
-  → MultiEtfStep          ← 處理 00980A / 00991A，填入 ctx.secondary_stock_codes
+  → MultiEtfStep            ← 處理 00980A / 00991A，填入 ctx.secondary_stock_codes
   → SyncCompanyStep
-  → SyncOHLCVStep         ← 合併 secondary_stock_codes 一起 sync 進 stock_prices_daily
-  → OverlapComputeStep    ← 聚合跨 ETF 共識持股 → etf_stock_overlap
-  → NotifyStep
+  → SyncOHLCVStep           ← 合併 secondary_stock_codes 一起 sync 進 stock_prices_daily
+  → OverlapComputeStep      ← 聚合跨 ETF 共識持股 → etf_stock_overlap
+  → SyncBareKStep           ← 同步 watch_list 裸K快照
+  → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
+  → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
 ```
+
+> **輔助步驟**（`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
 
 ---
 
@@ -161,6 +172,8 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 - `ctx.date_str` — 資料日期（`YYYY-MM-DD`）
 - `ctx.diff_logs` — 持股異動事件列表（IN/OUT/BUY/SELL）
 - `ctx.secondary_stock_codes` — 00980A / 00991A 成分股代碼，由 `MultiEtfStep` 填入，`SyncOHLCVStep` 消費
+- `ctx.shareholder_signals` — `{stock_code: "積累"|"減少"|"持平"}`，由 `ShareholderSignalStep` 填入，`NotifyStep` 消費（💎 標記）
+- `ctx.news_context` — MOPS 重大公告列表，由 `NewsContextStep` 填入，`reporter.py` 注入 AI Prompt
 
 ### ETF 資料來源差異
 
@@ -181,6 +194,32 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 
 ---
 
+## 籌碼與新聞步驟
+
+### 大戶籌碼訊號（`ShareholderSignalStep`）
+
+資料來源：`equity_distribution_stats` Supabase 表（由 `sync_equity_distribution.py` 每週從 FinLab 同步）。
+
+```python
+# 取最新一期的 big_holder_pct_change（400 張+ 大戶週度變化）
+if delta > 0.1:    signal = "積累"   # LINE 通知顯示 💎
+elif delta < -0.1: signal = "減少"
+else:              signal = "持平"
+```
+
+- `equity_distribution_stats` 每週才更新（TDCC 集保公告週期），非每日
+- 股票無資料（小型股、未入庫）→ 靜默跳過
+- 此步驟為輔助步驟，失敗不中斷 pipeline
+
+### MOPS 重大公告（`NewsContextStep`）
+
+直接呼叫 `mops.twse.com.tw/mops/api/t05st02`，無需額外 API Key 或本地資料。取 ETF 前十大持股近 5 日公告，存入 `ctx.news_context` 供 AI 報告使用。
+
+- MOPS API 回溯上限約 7 天
+- 此步驟為輔助步驟，失敗不中斷 pipeline
+
+---
+
 ## 常見錯誤
 
 | ❌ 錯誤 | ✅ 正確 |
@@ -191,6 +230,9 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 | 修改 `legacy/` 的舊腳本 | 舊腳本不使用，直接忽略 |
 | 直接查 Supabase REST API | 批次寫入用 `sql_storage.py`（SQLAlchemy 繞過 RLS） |
 | FinLab 本地隨意執行 | 有 5GB/天配額限制，本地測試用 mock 或 dry-run |
-| catch 用 `except Exception as e: pass` | 必須記錄錯誤，不可靜默失敗 |
+| 輔助步驟的 `except` 加 `raise` | 輔助步驟只 `logger.error()`，不 `raise`，確保主流程不中斷 |
+| catch 用 `except Exception as e: pass` | 必須記錄錯誤，不可靜默失敗（`logger.error` 必填） |
 | AI 報告週末全部跳過 | `reporter.py` 允許 3 天內資料（台股週末不開市，週五資料週日仍有效） |
 | `etf_diff_logs` ON CONFLICT 報錯 | 需有 `(etf_code, stock_code, data_date)` 唯一約束，見 migration `20260420000000` |
+| 大戶籌碼查不到資料 | 確認 `equity_distribution_stats` 表有資料；`sync_equity_distribution.py` 需先執行過 |
+| 新聞用 Cloudflare D1 查詢 | 直接打 MOPS HTTP API（`services/news/mops_client.py`），無需額外環境變數 |

@@ -8,6 +8,7 @@ import { ChangeImpactChart } from '@/components/features/investment/ChangeImpact
 import { DrilldownTabs } from '@/components/features/investment/DrilldownTabs';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
 import { EtfSelector } from '@/components/features/investment/EtfSelector';
+import { EtfNewsPanel } from '@/components/features/investment/EtfNewsPanel';
 import React from 'react';
 import { Holding } from '@/types/investment';
 import { redirect } from 'next/navigation';
@@ -295,6 +296,20 @@ async function getRankingHistory(etfCode: string) {
     return withRank;
 }
 
+async function getEtfNews(etfCode: string) {
+    const supabase = await createClient();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 5);
+    const { data } = await supabase
+        .from('etf_news')
+        .select('stock_code, pub_date, pub_time, title, source, url')
+        .eq('etf_code', etfCode)
+        .gte('pub_date', cutoff.toISOString().slice(0, 10))
+        .order('pub_date', { ascending: false })
+        .order('stock_code', { ascending: true });
+    return data ?? [];
+}
+
 async function getDiffLogs(etfCode: string) {
     const supabase = await createClient();
 
@@ -362,10 +377,11 @@ export default async function InvestmentEtfDrilldownPage({
     const etfMeta = getEtfMeta(etfCode);
 
     const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
-    const [logs, rankingHistory, quantFilters] = await Promise.all([
+    const [logs, rankingHistory, quantFilters, news] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
+        getEtfNews(etfCode),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({
@@ -416,6 +432,8 @@ export default async function InvestmentEtfDrilldownPage({
                     <AIAnalysisPromptButton holdings={holdingsWithFilters} dataDate={displayDate} />
                 </div>
             </div>
+
+            <EtfNewsPanel news={news} />
 
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <DrilldownTabs

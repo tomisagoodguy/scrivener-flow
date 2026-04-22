@@ -41,6 +41,8 @@ class PipelineContext:
     secondary_stock_codes: List[str] = field(default_factory=list)  # 00980A/00991A 成分股代碼
     bare_k_synced_count: int = 0  # SyncBareKStep 同步成功的股票數
     all_etf_summaries: List[Dict[str, Any]] = field(default_factory=list)  # 所有 ETF 摘要，供 NotifyStep 合併發送
+    shareholder_signals: Dict[str, str] = field(default_factory=dict)  # {stock_code: "積累"|"減少"|"持平"}
+    news_context: List[Dict[str, Any]] = field(default_factory=list)   # 近期財經新聞，供 AI 報告使用
     
     # 執行標誌
     is_dry_run: bool = False

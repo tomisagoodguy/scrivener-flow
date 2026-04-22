@@ -17,6 +17,8 @@ from ETF.pipeline.steps.weight_history_step import WeightHistoryStep
 from ETF.pipeline.steps.multi_etf_step import MultiEtfStep
 from ETF.pipeline.steps.overlap_compute_step import OverlapComputeStep
 from ETF.pipeline.steps.sync_bare_k_step import SyncBareKStep
+from ETF.pipeline.steps.shareholder_signal_step import ShareholderSignalStep
+from ETF.pipeline.steps.news_context_step import NewsContextStep
 
 __all__ = [
     "BaseStep",
@@ -30,6 +32,8 @@ __all__ = [
     "MultiEtfStep",
     "OverlapComputeStep",
     "SyncBareKStep",
+    "ShareholderSignalStep",
+    "NewsContextStep",
     "NotifyStep",
     "CleanupStep",
 ]

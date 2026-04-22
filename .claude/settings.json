@@ -18,7 +18,9 @@
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\")",
       "WebSearch",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"chore\\(ci\\): 升級 GitHub Actions 至 Node.js 24 版本並新增 Dependabot\")",
-      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"chore\\(ci\\): 升級 GitHub Actions 至 Node.js 24 版本並新增 Dependabot\")"
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"chore\\(ci\\): 升級 GitHub Actions 至 Node.js 24 版本並新增 Dependabot\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(investment\\): ETF 近期重大公告面板加入捲動限制\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(investment\\): ETF 近期重大公告面板加入捲動限制\")"
     ]
   },
   "hooks": {

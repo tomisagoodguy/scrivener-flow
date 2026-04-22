@@ -14,6 +14,7 @@ def build_report_prompt(
     technical_map: dict[str, dict],
     top_holdings: list[dict],
     etf_code: str = "00981A",
+    news_context: list[dict] | None = None,
 ) -> str:
     """組裝 ETF AI 分析報告的 Prompt。
 
@@ -23,6 +24,7 @@ def build_report_prompt(
         technical_map: 個股技術/籌碼分析結果，key 為股票代碼。
         top_holdings: 前 10 大持股的基本面資料列表。
         etf_code: ETF 代碼，用於動態產生報告標題。
+        news_context: 近期財經新聞與 MOPS 重大公告列表。
 
     Returns:
         完整的 Prompt 字串。
@@ -49,6 +51,13 @@ def build_report_prompt(
         else "（無資料）"
     )
 
+    news_block = ""
+    if news_context:
+        news_block = (
+            f"\n### 4. 新聞與重大公告（最近 7 日）\n"
+            f"{json.dumps(news_context, ensure_ascii=False, indent=2)}\n"
+        )
+
     return f"""
 你是一位頂尖的 ETF 基金經理人與籌碼分析師。請根據以下提供的 {etf_display_name} **全數持股**數據，深度解析該基金的**投資組合配置邏輯**與**經理人選股偏好**。
 
@@ -66,7 +75,7 @@ def build_report_prompt(
 
 ### 3. 基本面與權重數據 (Fundamental & Weights - Top 10)
 {top_holdings_str}
-{risk_block}
+{risk_block}{news_block}
 ---
 
 ### 分析報告要求

@@ -179,7 +179,11 @@ class SQLStorage:
                 # 5. 營收數據 (月資料)
                 sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'") # 營收年增率需要比較久，保留2年
                 res_revenue = conn.execute(sql_revenue)
-                
+
+                # 6. ETF 新聞（只保留 5 天）
+                sql_news = text("DELETE FROM etf_news WHERE pub_date < CURRENT_DATE - INTERVAL '5 days'")
+                res_news = conn.execute(sql_news)
+
                 conn.commit()
                 logger.info(f"✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
@@ -187,11 +191,47 @@ class SQLStorage:
                 logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
                 logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
                 logger.info(f"   - 營收數據已清理: {res_revenue.rowcount} 筆")
+                logger.info(f"   - ETF 新聞已清理: {res_news.rowcount} 筆")
 
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")
 
     
+    def upsert_etf_news(self, etf_code: str, news_list: list) -> int:
+        """將 MOPS 公告列表 upsert 進 etf_news，重複筆數靜默跳過。"""
+        if not news_list:
+            return 0
+        records = [
+            {
+                "etf_code": etf_code,
+                "stock_code": item["stock_code"],
+                "pub_date": item["pub_date"],
+                "pub_time": item.get("pub_time"),
+                "title": item["title"],
+                "source": item.get("source", "公開資訊觀測站"),
+                "url": item.get("url"),
+            }
+            for item in news_list
+        ]
+        try:
+            with self.engine.connect() as conn:
+                before = conn.execute(text("SELECT COUNT(*) FROM etf_news")).scalar()
+                for rec in records:
+                    conn.execute(
+                        text("""
+                            INSERT INTO etf_news (etf_code, stock_code, pub_date, pub_time, title, source, url)
+                            VALUES (:etf_code, :stock_code, :pub_date, :pub_time, :title, :source, :url)
+                            ON CONFLICT (etf_code, stock_code, pub_date, title) DO NOTHING
+                        """),
+                        rec,
+                    )
+                conn.commit()
+                after = conn.execute(text("SELECT COUNT(*) FROM etf_news")).scalar()
+                return (after or 0) - (before or 0)
+        except Exception as e:
+            logger.error(f"upsert_etf_news 失敗: {e}")
+            return 0
+
     def _get_stock_name(self, stock_code: str) -> str:
         """從 stock_basic_info 取得股票名稱"""
         try:
