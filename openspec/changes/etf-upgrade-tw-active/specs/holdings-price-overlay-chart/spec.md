@@ -1,41 +1,33 @@
 ## ADDED Requirements
 
-### Requirement: 持股比重 + 股價雙軸疊圖元件
+### Requirement: 跨 ETF 持股比重 + 股價雙軸疊圖
 
-`/investment/[etf]` 深潛頁的「持股明細」Tab SHALL 新增 `HoldingsPriceOverlayChart` 元件，對選定個股繪製雙軸折線圖：左軸為該股在此 ETF 的持股比重歷史（來自 `etf_weight_history`），右軸為股價走勢（來自 `stock_prices_daily`）。
+`HoldingsPriceOverlayChart` SHALL 以**個股為中心**，在同一圖表上呈現所有持有該股的 ETF 的比重走勢（多條彩色折線，左軸）+ 股價走勢（單條灰色細線，右軸）。
 
-#### Scenario: 選定個股後顯示圖表
-- **WHEN** 使用者在持股列表點擊某支個股
-- **THEN** 顯示雙軸折線圖：左軸（紫色線）= 持股比重 %，右軸（灰色細線）= 股價 NT$，X 軸 = 近 90 天日期
+此元件在 `StockDetailPanel` 內渲染，資料來源：
+- 持股比重：`etf_weight_history`（每支持有此股的 ETF 各一條線）
+- 股價：`stock_prices_daily`（單條）
 
-#### Scenario: 左右軸標籤清楚標示
+#### Scenario: 多 ETF 持股比重同時顯示
+- **WHEN** 點開某支被 3 支 ETF 持有的個股
+- **THEN** 圖表左軸顯示 3 條彩色折線（每支 ETF 使用 etfRegistry 對應的顏色），右軸顯示 1 條股價線
+
+#### Scenario: 左右軸語意清楚
 - **WHEN** 圖表渲染完成
-- **THEN** 左軸標籤顯示「持股比重 (%)」，右軸標籤顯示「股價 (NT$)」，圖例清楚區分兩條線
+- **THEN** 左軸標籤「持股比重 (%)」，右軸標籤「股價 (NT$)」；圖例列出各 ETF 代號與顏色對應
 
-#### Scenario: 資料不足時的降級顯示
-- **WHEN** 某支個股的 `etf_weight_history` 資料少於 7 天
-- **THEN** 顯示「歷史資料不足」提示，不渲染圖表
+#### Scenario: 資料 merge 對齊
+- **WHEN** 前端 merge `etf_weight_history` 與 `stock_prices_daily`
+- **THEN** 以 `data_date` 為 key join；股價非交易日斷線不填補；無持股比重資料的日期不補 0
 
----
+#### Scenario: 時間區間切換
+- **WHEN** 使用者點擊 30D / 60D / 90D 按鈕
+- **THEN** 所有折線（比重 + 股價）同步縮放至對應區間
 
-### Requirement: 圖表時間區間可調整
+#### Scenario: 資料不足降級
+- **WHEN** 該股在任一 ETF 的 `etf_weight_history` 均少於 7 天
+- **THEN** 顯示「歷史資料不足，待累積後顯示」提示，不渲染圖表
 
-使用者 SHALL 能切換圖表顯示的時間區間（30 天 / 60 天 / 90 天）。
-
-#### Scenario: 切換時間區間
-- **WHEN** 使用者點擊時間區間按鈕（30D / 60D / 90D）
-- **THEN** 圖表重新渲染，X 軸範圍對應所選區間的資料
-
----
-
-### Requirement: 圖表資料來源
-
-前端 SHALL 透過現有 `etf_weight_history` 和 `stock_prices_daily` 表查詢資料，不新增資料表或 API endpoint。
-
-#### Scenario: 資料 join 方式
-- **WHEN** `HoldingsPriceOverlayChart` 載入
-- **THEN** 以 `stock_code` + `data_date` 為 key，在前端 merge 兩組資料，對齊相同日期的比重與股價
-
-#### Scenario: 股價資料缺漏日期
-- **WHEN** 某日有持股比重但無對應股價（非交易日）
-- **THEN** 股價折線在該日斷點，不以 0 或內插值填補
+#### Scenario: 僅被 1 支 ETF 持有
+- **WHEN** 個股只被 1 支 ETF 持有
+- **THEN** 左軸僅顯示 1 條比重線，圖例仍標示 ETF 代號，行為正常

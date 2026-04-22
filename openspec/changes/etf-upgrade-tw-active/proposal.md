@@ -7,8 +7,9 @@
 - **資料來源升級**：新增投信官網直打 API（統一、野村、復華、安聯、群益共 6 家），FinLab 維持主力，官網 API 作備援；移除對 Pocket.tw Selenium 的單點依賴
 - **ETF 擴增**：從 11 支擴增至 21 支，新增 00988A、00990A、00992A、00993A、00984A、00985A、00986A、00987A、00994A、00995A、00996A、00997A 等
 - **AUM 規模儀表板**：新增「申購占成長比」核心指標、AUM 時序 sparkline、申購 vs 資本增值拆解面板
-- **持股比重 + 股價雙軸疊圖**：單一 ETF 深潛頁加入持股比重折線（左軸）+ 股價走勢（右軸）疊加圖
+- **持股比重 + 股價雙軸疊圖**：以個股為中心，疊加所有持有此股的 ETF 比重走勢 + 股價，呈現跨 ETF 視角
 - **進階訊號偵測**：新增 5 種自動化訊號（多基金共識、單檔重壓、跨產品加碼、雙軌落差、季度出場），補強現有 OverlapComputeStep
+- **Stock Detail Panel**：選股池點擊個股後，右側滑出面板整合呈現該股所有維度資訊（持倉、疊圖、訊號、異動、籌碼、AUM）；不跳頁，一頁看完
 
 ## Capabilities
 
@@ -17,8 +18,9 @@
 - `etf-official-api-backup`: 投信官網直打 API scraper（統一/野村/復華/安聯/群益），作為 FinLab 的備援資料來源；含 CATALOG 路由、各家 HTTP 認證處理、回傳格式正規化
 - `etf-expansion`: 將 etfRegistry.ts 與 etf_registry.py 從 11 支擴充到 21 支；補充各 ETF 的 issuer、fund_code、資料來源映射；Pipeline MultiEtfStep 同步擴充
 - `aum-scale-dashboard`: 新增 AUM 規模分析面板於 `/investment/compare` 或獨立頁面；核心指標為「申購占成長比」（inflow_share_of_growth）；資料來自 `etf_aum` 表擴充或新增 `etf_aum_series` 時序表；Python side 新增 `AumSyncStep` 定期抓 NAV × units
-- `holdings-price-overlay-chart`: 單一 ETF 深潛頁（`/investment/[etf]`）新增雙軸折線圖，左軸為持股比重歷史，右軸為個股股價走勢；資料來自 `etf_weight_history` + `stock_prices_daily`
-- `advanced-signal-detection`: 新增 5 種策略訊號偵測，寫入 `etf_signals` 新表；Python side 新增 `SignalDetectStep`；前端在選股池加入訊號欄位顯示
+- `holdings-price-overlay-chart`: 以個股為中心的跨 ETF 雙軸疊圖；左軸為各 ETF 的持股比重折線（多條），右軸為股價走勢；於 Stock Detail Panel 內展示；資料來自 `etf_weight_history` + `stock_prices_daily`
+- `advanced-signal-detection`: 新增 5 種策略訊號偵測，寫入 `etf_signals` 新表；Python side 新增 `SignalDetectStep`；前端於 Stock Detail Panel 展開訊號詳情
+- `stock-detail-panel`: `/investment` 選股池點擊個股後右側滑出的整合面板；包含持倉概況、跨 ETF 雙軸疊圖、訊號詳情、異動記錄、大戶籌碼、持有此股 ETF 的 AUM 對比；不跳頁
 
 ### Modified Capabilities
 
@@ -36,7 +38,7 @@
 - `src/lib/investment/etfRegistry.ts`：新增 10 支 ETF
 - `src/app/investment/compare/`：新增 AUM 規模面板
 - `src/app/investment/[etf]/`：新增雙軸疊圖元件
-- `src/components/features/investment/`：新增 `AumScalePanel`、`HoldingsPriceOverlayChart`、`SignalBadge`
+- `src/components/features/investment/`：新增 `AumScalePanel`、`HoldingsPriceOverlayChart`、`SignalBadge`、`StockDetailPanel`
 
 **資料庫**
 - 新增 migration：`etf_aum_series`（AUM 日時序）、`etf_signals`（訊號記錄）

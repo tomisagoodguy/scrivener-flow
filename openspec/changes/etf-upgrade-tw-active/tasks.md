@@ -30,19 +30,23 @@
 - [ ] 3.3 各訊號以 `(signal_type, stock_code, data_date)` 為鍵 upsert，避免重複
 - [ ] 3.4 在 `orchestrator.py` 的 `OverlapComputeStep` 之後插入 `SignalDetectStep`；確認為輔助步驟
 - [ ] 3.5 建立 `src/components/features/investment/SignalBadge.tsx`，依 strength 顯示顏色（1=灰、2=橙、3=紅）
-- [ ] 3.6 在選股池 `/investment` 的股票列表加入訊號欄位，顯示最高 strength 的 `SignalBadge`
-- [ ] 3.7 實作 hover tooltip：展開所有訊號類型 + 「此為參考指標，非投資建議」說明
-- [ ] 3.8 前端驗證：有訊號的股票正確顯示徽章，無訊號的列空白
+- [ ] 3.6 選股池列表加入訊號欄位，有訊號的股票列右側顯示最高 strength 的 `SignalBadge`
 
-## 4. Phase 4 — 持股比重 + 股價雙軸疊圖
+## 4. Phase 4 — Stock Detail Panel
 
-- [ ] 4.1 建立 `src/components/features/investment/HoldingsPriceOverlayChart.tsx`，使用 Lightweight Charts 實作雙軸折線圖
-- [ ] 4.2 左軸（紫色）= 持股比重 %（來源：`etf_weight_history`），右軸（灰色細線）= 股價 NT$（來源：`stock_prices_daily`）
-- [ ] 4.3 實作前端 merge：以 `data_date` 為 key join 兩組資料；股價缺漏日期斷線不填補
-- [ ] 4.4 加入時間區間切換按鈕（30D / 60D / 90D）
-- [ ] 4.5 加入資料不足降級處理：< 7 天顯示「歷史資料不足」提示
-- [ ] 4.6 在 `/investment/[etf]` 深潛頁的「持股明細」Tab 加入個股點擊事件，點擊後顯示 `HoldingsPriceOverlayChart`
-- [ ] 4.7 前端驗證：雙軸標籤清楚、時間區間切換正常、非交易日斷線正確
+- [ ] 4.1 建立 `src/components/features/investment/StockDetailPanel.tsx`，實作右側 slide-in/out 面板（桌面 480px，手機全螢幕）
+- [ ] 4.2 實作面板開關邏輯：點擊個股開啟、ESC/點擊外部/關閉按鈕關閉、切換個股時 fade 過渡不重開面板
+- [ ] 4.3 實作面板頂部：股票代號、名稱、現價、漲跌幅（立即顯示，不等 API）
+- [ ] 4.4 實作區塊 1「持倉概況」：持有此股的 ETF 列表 + 各自比重 + 週變化箭頭
+- [ ] 4.5 建立 `HoldingsPriceOverlayChart.tsx`，以個股為中心的跨 ETF 雙軸疊圖（左軸各 ETF 比重折線，右軸股價）
+- [ ] 4.6 將 `HoldingsPriceOverlayChart` 嵌入面板區塊 2，實作 30D/60D/90D 切換
+- [ ] 4.7 實作區塊 3「訊號」：查 `etf_signals`，顯示完整訊號卡片；無訊號顯示「今日無特殊訊號」
+- [ ] 4.8 實作區塊 4「近期異動」：查 `etf_diff_logs`，顯示最近 20 筆
+- [ ] 4.9 實作區塊 5「大戶籌碼」：查 `equity_distribution_stats`，顯示大戶比例 + 週變化
+- [ ] 4.10 實作區塊 6「ETF 規模對比」：查 `etf_aum_series`，顯示持有此股各 ETF 的 AUM + 申購占成長比
+- [ ] 4.11 各區塊獨立非同步載入，skeleton placeholder；單一區塊失敗顯示「載入失敗」不影響其他區塊
+- [ ] 4.12 在 `/investment` 選股池列表綁定點擊事件，觸發 `StockDetailPanel` 開啟
+- [ ] 4.13 前端驗證：slide-in/out 動畫、切換個股 fade、ESC 關閉、各區塊 skeleton + 資料顯示正常
 
 ## 5. 收尾
 
