@@ -4,14 +4,15 @@
 
 系統 SHALL 建立 `etf_position_summary` 資料表，每列代表某支 ETF 對某支股票的一段完整持倉紀錄（從首次買進到出清，或持續至今）：
 
-欄位：`etf_code, stock_code, stock_name, entry_date, entry_price, entry_weight, exit_date (nullable), exit_price (nullable), latest_weight, active_days, status ('active'|'exited'), realized_pnl_pct (nullable), unrealized_pnl_pct`
+欄位：`etf_code, stock_code, stock_name, entry_date, entry_price, entry_weight, exit_date (nullable), exit_price (nullable), latest_weight, active_days, status ('active'|'exited'), cost_basis, mv_now, pnl, pnl_pct, delta_days`
 
-計算邏輯：
-- `entry_date` = `etf_diff_logs` 中該股最早的 IN 事件日期
-- `exit_date` = 最後一次 OUT 事件後無後續 IN 事件的日期（null 表示仍持有）
-- `entry_price` / `exit_price` = 對應日期的 `stock_prices_daily.close`
-- `realized_pnl_pct` = `(exit_price - entry_price) / entry_price`（僅 exited）
-- `unrealized_pnl_pct` = `(current_price - entry_price) / entry_price`（僅 active）
+**損益計算採現金流法（CFt = −Δshares × closet）：**
+- `cost_basis` = Σ (買入張數 × 買入當日收盤價)，跨所有異動日累加
+- `mv_now` = 最新張數 × 最新收盤價（exited 時為 0）
+- `pnl` = mv_now + Σ CFt = mv_now − cost_basis + Σ 賣出回收
+- `pnl_pct` = pnl / cost_basis × 100
+- `delta_days` = 張數發生變動的交易日數
+- 價格來源：`stock_prices_daily.close`（與 FinLab 資料對齊，無需 FinMind）
 
 #### Scenario: Migration 建立
 - **WHEN** 執行 `supabase/migrations/<timestamp>_add_etf_position_summary.sql`
@@ -39,13 +40,64 @@ Pipeline SHALL 包含 `PositionSummaryStep`，於 `SignalDetectStep` 之後執�
 - **WHEN** 當日 `etf_diff_logs` 出現某股的 OUT 事件
 - **THEN** 將對應 active 記錄更新為 `status = 'exited'`，填入 `exit_date`、`exit_price`、`realized_pnl_pct`
 
-#### Scenario: 每日更新 unrealized_pnl
+#### Scenario: 現金流法計算 cost_basis 與 pnl
+- **WHEN** `PositionSummaryStep` 處理某股的異動記錄
+- **THEN** 遍歷 `etf_diff_logs` 中所有 BUY/SELL/IN/OUT 事件，套用 CFt = −Δshares × close_price 累加，更新 `cost_basis`、`mv_now`、`pnl`、`pnl_pct`
+
+#### Scenario: 每日更新 mv_now 與 pnl
 - **WHEN** `PositionSummaryStep` 執行
-- **THEN** 所有 active 記錄的 `unrealized_pnl_pct` 以當日收盤價重算
+- **THEN** 所有 active 記錄以當日收盤價重算 `mv_now = latest_shares × close`，`pnl = mv_now - cost_basis + 累計賣出回收`，`pnl_pct = pnl / cost_basis × 100`
 
 #### Scenario: 為輔助步驟
 - **WHEN** `PositionSummaryStep` 拋出例外
 - **THEN** 記錄 ERROR log，不 raise，不中斷 pipeline
+
+---
+
+### Requirement: etf_pnl_series 每日累計損益時序表
+
+系統 SHALL 建立 `etf_pnl_series` 資料表，儲存每支 ETF 每日的整體累計損益時序，供前端繪製走勢圖：
+
+欄位：`etf_code, data_date, total_mv, total_cost, total_pnl, total_pnl_pct, total_shares`
+
+`PositionSummaryStep` 執行完畢後，將當日所有 active+exited 持倉的加總寫入此表。
+
+#### Scenario: 每日寫入彙總
+- **WHEN** `PositionSummaryStep` 完成當日計算
+- **THEN** 以 `(etf_code, data_date)` upsert，寫入當日 Σ(mv_now)、Σ(cost_basis)、Σ(pnl)、Σ(pnl_pct 加權平均)、Σ(shares)
+
+#### Scenario: Migration 建立
+- **WHEN** 執行對應 migration
+- **THEN** 資料表建立，INDEX 在 `(etf_code, data_date)`，RLS 公開讀取
+
+---
+
+### Requirement: ETF 深潛頁損益摘要 Hero Section
+
+`/investment/[etf]` 頁面頂部（6 Tab 上方）SHALL 顯示常駐的損益摘要區塊，4 個 KPI 卡片 + 累計損益走勢圖。
+
+#### Scenario: 4 個 KPI 卡片顯示
+- **WHEN** 使用者進入任一 ETF 深潛頁
+- **THEN** 頁面頂部顯示 4 張卡片（不須切 Tab 即可見）：
+  1. **損益（未實現＋已實現）**：總 pnl（NT$ 億）；正值紅色、負值綠色（台股慣例）
+  2. **報酬率**：total_pnl / total_cost × 100%；同上色彩
+  3. **目前市值**：total_mv（NT$ 億）＋ 當日總張數
+  4. **累計買入成本**：total_cost（NT$ 億）
+
+#### Scenario: 累計損益走勢圖
+- **WHEN** `etf_pnl_series` 資料載入完成
+- **THEN** 顯示三軸走勢圖（X 軸 = 日期）：
+  - 左軸（柱狀/面積）= 總持股張數（ground truth）
+  - 右軸 = 累計損益 NT$（折線，正值紅色區域，負值綠色區域）
+  - 標記：峰值（最高點）+ 谷值（最低點）+ 目前值
+
+#### Scenario: 峰值 / 谷值標記
+- **WHEN** 損益走勢圖渲染
+- **THEN** 自動標出歷史峰值與谷值日期及金額（如「峰值 +2.4億 · 谷值 -1.6億 · 目前 +1.1億」）
+
+#### Scenario: 資料不足時
+- **WHEN** `etf_pnl_series` 資料少於 30 天
+- **THEN** 顯示走勢圖並標註「資料累積中」，不隱藏圖表
 
 ---
 

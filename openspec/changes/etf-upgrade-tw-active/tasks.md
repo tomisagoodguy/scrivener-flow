@@ -50,19 +50,23 @@
 
 ## 5. Phase 5 — ETF Portfolio Analytics（深潛頁 6 Tab）
 
-- [ ] 5.1 建立 migration `supabase/migrations/<timestamp>_add_etf_position_summary.sql`，建立 `etf_position_summary` 表（etf_code, stock_code, entry_date, entry_price, exit_date, exit_price, latest_weight, active_days, status, realized_pnl_pct, unrealized_pnl_pct）
-- [ ] 5.2 建立 `ETF/pipeline/steps/position_summary_step.py`，實作增量更新：IN 事件建立 active 記錄、OUT 事件關閉為 exited、每日重算 unrealized_pnl
-- [ ] 5.3 在 `orchestrator.py` 的 `SignalDetectStep` 之後插入 `PositionSummaryStep`；確認為輔助步驟
-- [ ] 5.4 建立 backfill 腳本 `ETF/scripts/backfill_positions.py`，從既有 `etf_diff_logs` 重算歷史 position_summary
-- [ ] 5.5 執行 backfill，確認各 ETF 的 active + exited 持倉記錄正確
-- [ ] 5.6 重構 `/investment/[etf]` 的 DrilldownTabs 為 6 Tab 結構（目前持股、當日加減碼、歷史軌跡、單股進出場、損益排行、已出清）；Tab 切換以 `?tab=` query string 保留狀態
-- [ ] 5.7 實作「目前持股」Tab：持倉列表（排名/代號/名稱/比重/張數/股價/漲跌幅/未實現損益%）；點擊個股觸發 `StockDetailPanel`
-- [ ] 5.8 實作「當日加減碼」Tab：三區塊（新建倉/加碼/減碼），各含比重變化數字
-- [ ] 5.9 實作「歷史軌跡」Tab：股票選擇器 + 比重折線圖（含持倉期間標示）
-- [ ] 5.10 實作「單股進出場」Tab：active 持倉列表（進場日/進場價/當前價/持倉天數/未實現損益%）
-- [ ] 5.11 實作「損益排行」Tab：active + exited 合併排序，含篩選器（持倉中/已出清）
-- [ ] 5.12 實作「已出清」Tab：exited 列表（進出場日/天數/已實現損益%）+ 頂部匯總統計（出清數/平均天數/平均損益/勝率）
-- [ ] 5.13 前端驗證：6 Tab 切換、URL query string 保留、損益色彩（台股慣例：正=紅/負=綠）
+- [ ] 5.1 建立 migration `supabase/migrations/<timestamp>_add_etf_position_summary.sql`，建立 `etf_position_summary` 表（含 cost_basis, mv_now, pnl, pnl_pct, delta_days 欄位）
+- [ ] 5.2 建立 migration `supabase/migrations/<timestamp>_add_etf_pnl_series.sql`，建立 `etf_pnl_series` 表（etf_code, data_date, total_mv, total_cost, total_pnl, total_pnl_pct, total_shares）
+- [ ] 5.3 建立 `ETF/pipeline/steps/position_summary_step.py`，實作現金流法：CFt = −Δshares × close，遍歷 `etf_diff_logs` 累加 cost_basis；每日重算 mv_now / pnl / pnl_pct；末段彙總寫入 `etf_pnl_series`
+- [ ] 5.4 在 `orchestrator.py` 的 `SignalDetectStep` 之後插入 `PositionSummaryStep`；確認為輔助步驟
+- [ ] 5.5 建立 backfill 腳本 `ETF/scripts/backfill_positions.py`，從既有 `etf_diff_logs` + `stock_prices_daily` 重算所有歷史 position_summary 與 pnl_series
+- [ ] 5.6 執行 backfill，驗證各 ETF 的 pnl / cost_basis / pnl_series 數字與 `reference/tw-active/site/preview/*.json` 的 pnl 欄位一致
+- [ ] 5.7 重構 `/investment/[etf]` 頁面：頂部加入損益摘要 Hero Section（4 KPI 卡片 + 三軸走勢圖），6 Tab 架構置於其下
+- [ ] 5.8 實作 Hero Section 的 4 KPI 卡片（總損益 NT$/報酬率/目前市值/累計買入成本），正負值套用台股色彩慣例
+- [ ] 5.9 實作累計損益走勢圖：左軸總張數（面積/柱狀）、右軸累計損益折線、標記峰值與谷值日期及金額
+- [ ] 5.10 重構 DrilldownTabs 為 6 Tab 結構（目前持股、當日加減碼、歷史軌跡、單股進出場、損益排行、已出清）；Tab 切換以 `?tab=` query string 保留狀態
+- [ ] 5.11 實作「目前持股」Tab：持倉列表（排名/代號/名稱/比重/張數/股價/漲跌幅/未實現損益%）；點擊個股觸發 `StockDetailPanel`
+- [ ] 5.12 實作「當日加減碼」Tab：三區塊（新建倉/加碼/減碼），各含比重與張數變化
+- [ ] 5.13 實作「歷史軌跡」Tab：股票選擇器 + 比重折線圖（持倉期間實線，出清後標記退出點）
+- [ ] 5.14 實作「單股進出場」Tab：active 持倉列表（進場日/進場價/當前價/持倉天數/未實現損益%）
+- [ ] 5.15 實作「損益排行」Tab：active + exited 合併按 pnl_pct 排序，含篩選器；損益色彩台股慣例
+- [ ] 5.16 實作「已出清」Tab：exited 列表（進出場日/天數/已實現損益%）+ 頂部匯總統計（出清數/平均天數/平均損益/勝率）
+- [ ] 5.17 前端驗證：Hero Section 數字與 backfill 資料一致、走勢圖峰谷標記正確、6 Tab 切換正常
 
 ## 6. 收尾
 
