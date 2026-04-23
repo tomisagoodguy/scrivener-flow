@@ -68,12 +68,30 @@
 - [ ] 5.16 實作「已出清」Tab：exited 列表（進出場日/天數/已實現損益%）+ 頂部匯總統計（出清數/平均天數/平均損益/勝率）
 - [ ] 5.17 前端驗證：Hero Section 數字與 backfill 資料一致、走勢圖峰谷標記正確、6 Tab 切換正常
 
-## 6. 收尾
+## 6. Phase 6 — 每日資金流向儀表板
 
-- [ ] 6.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
-- [ ] 6.2 更新 `ETF/CLAUDE.md`，新增官網 API 備援、AumSyncStep、PositionSummaryStep 架構說明
-- [ ] 6.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
-- [ ] 6.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
+- [ ] 6.1 建立 migration `supabase/migrations/<timestamp>_add_etf_flow_daily.sql`，建立 `etf_flow_daily` 表（data_date PK, etfs_covered TEXT[], etfs_lagging TEXT[], inflow JSONB, outflow JSONB, by_etf JSONB, totals JSONB）
+- [ ] 6.2 建立 `ETF/pipeline/steps/flow_compute_step.py`，計算當日跨 ETF 資金流：Δshares × close，套用過濾門檻（|Δshares/prev_shares| ≥ 3% 且 weight ≥ 0.3pp），分類 kind（new/add/reduce/exit），以 data_date upsert 寫入 `etf_flow_daily`
+- [ ] 6.3 `FlowComputeStep` 同時將「≥ 3 支 ETF 同日買入同股」事件寫入 `etf_signals`（signal_type = `cross_etf_same_day_buy`）
+- [ ] 6.4 在 `orchestrator.py` 的 `OverlapComputeStep` 之後插入 `FlowComputeStep`；確認為輔助步驟
+- [ ] 6.5 建立 backfill 腳本 `ETF/scripts/backfill_flow.py`，從 `etf_diff_logs` + `stock_prices_daily` 重算歷史每日流向；以 `reference/tw-active/site/preview/flow.json` 驗證最新一日數字一致
+- [ ] 6.6 在 `/investment` 選股池新增「資金流向」Tab
+- [ ] 6.7 實作頂部摘要列：總流入/流出/淨流向（NT$億）、涉及股數、「X/21 家已揭露」標示
+- [ ] 6.8 實作揭露延遲警示條：`etfs_lagging` 不為空時顯示黃色提示，列出延遲 ETF 代號
+- [ ] 6.9 實作資金流入排行區塊：個股列表（代號/名稱/合計NT$/Δ張數/買入ETF數），點擊展開各 ETF 明細（ETF 徽章 + NT$ + kind 標籤）
+- [ ] 6.10 實作資金流出排行區塊：同上，kind 顯示 reduce/exit
+- [ ] 6.11 實作「分 ETF 小計」切換：改為各 ETF 為維度，顯示淨流向/買入檔數/賣出檔數
+- [ ] 6.12 加入 00981A basket buy 提示：當 00981A 整體加碼時，旁邊顯示 ⚠️ 被動操作說明
+- [ ] 6.13 點擊個股觸發 `StockDetailPanel`（複用 Phase 4 已建元件）
+- [ ] 6.14 實作歷史日期選擇器，切換日期載入對應 `etf_flow_daily` 記錄
+- [ ] 6.15 前端驗證：揭露狀態正確、展開明細、basket buy 警示、日期切換、StockDetailPanel 觸發
+
+## 7. 收尾
+
+- [ ] 7.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
+- [ ] 7.2 更新 `ETF/CLAUDE.md`，新增官網 API 備援、AumSyncStep、PositionSummaryStep、FlowComputeStep 架構說明
+- [ ] 7.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
+- [ ] 7.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
 
 - [ ] 5.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
 - [ ] 5.2 更新 `ETF/CLAUDE.md`，新增「官網 API 備援」和「AumSyncStep」架構說明

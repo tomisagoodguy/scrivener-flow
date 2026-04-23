@@ -21,7 +21,8 @@
 - `holdings-price-overlay-chart`: 以個股為中心的跨 ETF 雙軸疊圖；左軸為各 ETF 的持股比重折線（多條），右軸為股價走勢；於 Stock Detail Panel 內展示；資料來自 `etf_weight_history` + `stock_prices_daily`
 - `advanced-signal-detection`: 新增 5 種策略訊號偵測，寫入 `etf_signals` 新表；Python side 新增 `SignalDetectStep`；前端於 Stock Detail Panel 展開訊號詳情
 - `stock-detail-panel`: `/investment` 選股池點擊個股後右側滑出的整合面板；包含持倉概況、跨 ETF 雙軸疊圖、訊號詳情、異動記錄、大戶籌碼、持有此股 ETF 的 AUM 對比；不跳頁
-- `etf-portfolio-analytics`: `/investment/[etf]` 深潛頁重構為 6 Tab 架構（目前持股、當日加減碼、歷史軌跡、單股進出場、損益排行、已出清）；新增 `etf_position_summary` 表追蹤進出場成本與損益；Python side 新增 `PositionSummaryStep`
+- `etf-portfolio-analytics`: `/investment/[etf]` 深潛頁重構為 6 Tab 架構（目前持股、當日加減碼、歷史軌跡、單股進出場、損益排行、已出清）；新增 `etf_position_summary` + `etf_pnl_series` 表；Hero Section 展示 4 KPI + 三軸損益走勢圖
+- `daily-flow-dashboard`: 跨 21 支主動 ETF 的每日資金流向儀表板；`FlowComputeStep` 計算 Δshares × close 聚合流入/流出排行；新增 `etf_flow_daily` 表；前端選股池新增「資金流向」Tab；整合 `cross_etf_same_day_buy` 訊號
 
 ### Modified Capabilities
 
