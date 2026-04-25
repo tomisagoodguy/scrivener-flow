@@ -254,3 +254,4 @@ else:              signal = "持平"
 | `etf_diff_logs` ON CONFLICT 報錯 | 需有 `(etf_code, stock_code, data_date)` 唯一約束，見 migration `20260420000000` |
 | 大戶籌碼查不到資料 | 確認 `equity_distribution_stats` 表有資料；`sync_equity_distribution.py` 需先執行過 |
 | 新聞用 Cloudflare D1 查詢 | 直接打 MOPS HTTP API（`services/news/mops_client.py`），無需額外環境變數 |
+| 投信持股統計窗口用 10 日 | 台股投信持股統計窗口是 **5 日**，不是 10 日 |
