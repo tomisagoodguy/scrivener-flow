@@ -398,7 +398,7 @@ export default async function InvestmentEtfDrilldownPage({
             .limit(200),
         supabaseForPnl
             .from('etf_diff_logs')
-            .select('etf_code, data_date, stock_code, stock_name, action, diff_shares, curr_shares, prev_weight, curr_weight')
+            .select('etf_code, data_date, stock_code, stock_name, change_type, diff_shares, curr_shares, prev_weight, curr_weight')
             .eq('etf_code', etfCode)
             .eq('data_date', dataDate ?? '')
             .limit(100),
@@ -475,9 +475,9 @@ export default async function InvestmentEtfDrilldownPage({
                             <HoldingsTable initialData={holdingsWithFilters} />
                         </div>
                     }
+                    weightHistory={<RankingTrendChart data={rankingHistory} />}
                     ledgerContent={
                         <div className="w-full space-y-8">
-                            <RankingTrendChart data={rankingHistory} />
                             <ChangeImpactChart logs={logs} />
                             <div>
                                 <div className="flex items-center gap-2 mb-4">

@@ -26,7 +26,7 @@ interface DiffLogRow {
     data_date: string;
     stock_code: string;
     stock_name?: string;
-    action: string;
+    change_type: string;
     diff_shares: number | null;
     curr_shares: number | null;
     prev_weight: number | null;
@@ -74,7 +74,7 @@ function TodayDiffsTab({ diffs }: { diffs: DiffLogRow[] }) {
     if (!diffs.length) return <EmptyState message="今日無加減碼異動" />;
 
     const groups: Record<string, DiffLogRow[]> = { IN: [], BUY: [], SELL: [], OUT: [] };
-    for (const d of diffs) groups[d.action]?.push(d);
+    for (const d of diffs) groups[d.change_type]?.push(d);
 
     return (
         <div className="space-y-6">

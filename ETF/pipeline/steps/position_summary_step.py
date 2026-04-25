@@ -56,9 +56,10 @@ class PositionSummaryStep(BaseStep):
         with ctx.sql_storage.engine.connect() as conn:
             diffs = self._fetch_diffs(conn, all_codes, target_date)
             prices = self._fetch_prices(conn, target_date)
+            hist_prices = self._fetch_historical_prices(conn, diffs)
             snapshots = self._fetch_latest_shares(conn, all_codes, target_date)
 
-        positions, pnl_rows = self._compute(diffs, prices, snapshots, target_date)
+        positions, pnl_rows = self._compute(diffs, prices, hist_prices, snapshots, target_date)
 
         if not positions:
             self.logger.warning("No positions computed for %s", target_date)
@@ -97,6 +98,27 @@ class PositionSummaryStep(BaseStep):
         return {r.stock_code: float(r.close) for r in rows}
 
     @staticmethod
+    def _fetch_historical_prices(conn, diffs: list[dict]) -> dict[tuple[str, str], float]:
+        """取得 diff events 各事件日的收盤價，用 (stock_code, date_str) 查詢。"""
+        pairs: set[tuple[str, str]] = {
+            (d["stock_code"], str(d["data_date"])) for d in diffs
+        }
+        if not pairs:
+            return {}
+        stock_codes = list({p[0] for p in pairs})
+        dates = list({p[1] for p in pairs})
+        rows = conn.execute(text("""
+            SELECT stock_code, data_date, close
+            FROM stock_prices_daily
+            WHERE stock_code = ANY(:codes)
+              AND data_date = ANY(CAST(:dates AS date[]))
+        """), {"codes": stock_codes, "dates": dates})
+        return {
+            (r.stock_code, str(r.data_date)): float(r.close)
+            for r in rows if r.close is not None
+        }
+
+    @staticmethod
     def _fetch_latest_shares(conn, etf_codes: list[str], target_date: str) -> dict[tuple, dict]:
         rows = conn.execute(text("""
             SELECT DISTINCT ON (etf_code, stock_code)
@@ -112,6 +134,7 @@ class PositionSummaryStep(BaseStep):
         self,
         diffs: list[dict],
         prices: dict[str, float],
+        hist_prices: dict[tuple[str, str], float],
         snapshots: dict[tuple, dict],
         target_date: str,
     ) -> tuple[list[dict], list[dict]]:
@@ -141,7 +164,7 @@ class PositionSummaryStep(BaseStep):
 
             for ev in events:
                 delta = float(ev.get("diff_shares") or 0)
-                ev_close = prices.get(stock_code, close)  # fallback to today's price
+                ev_close = hist_prices.get((stock_code, str(ev["data_date"])), close)
                 cf = -delta * ev_close  # 買入 → delta>0 → cf>0
                 cost_basis += cf
                 if ev["change_type"] in ("BUY", "IN") and delta > 0:

@@ -26,12 +26,12 @@ _HEADERS = {
 
 
 def _roc_to_gregorian(roc_date: str) -> str:
-    """民國日期 (115/01/28) → YYYYMMDD"""
+    """民國日期 (115/01/28) → YYYY-MM-DD"""
     m = re.match(r"(\d+)/(\d+)/(\d+)", roc_date)
     if not m:
         return roc_date
     y = int(m.group(1)) + 1911
-    return f"{y}{int(m.group(2)):02d}{int(m.group(3)):02d}"
+    return f"{y}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
 
 
 def fetch_mops_announcements(

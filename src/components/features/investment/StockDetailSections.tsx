@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { SignalBadge } from './SignalBadge';
 import { HoldingsPriceOverlayChart } from './HoldingsPriceOverlayChart';
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
@@ -155,14 +157,23 @@ function BlockWrapper({ id, title, loading, errors, children }: {
 
 export function StockDetailSections({ stockCode }: { stockCode: string }) {
     const { data, loadingBlocks, errors } = useStockDetailData(stockCode);
+    const [open, setOpen] = useState(false);
 
     const holdings = data?.holdings ?? [];
     const etfCodes = holdings.map(h => h.etf_code);
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 mb-4">
-            <h2 className="text-sm font-bold mb-4 text-slate-800 dark:text-slate-200">🏦 ETF 持倉分析</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <button
+                onClick={() => setOpen(v => !v)}
+                className="w-full flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+                <span>🏦 ETF 持倉分析</span>
+                {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+
+            {open && (<>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                 {/* 持倉概況 */}
                 <BlockWrapper id="holdings" title="持倉概況" loading={loadingBlocks} errors={errors}>
                     <HoldingsBlock holdings={holdings} />
@@ -200,6 +211,7 @@ export function StockDetailSections({ stockCode }: { stockCode: string }) {
                     />
                 </div>
             )}
+            </>)}
         </div>
     );
 }

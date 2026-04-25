@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, Briefcase } from 'lucide-react';
+import { Loader2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
 import { StockChart } from '@/components/features/investment/StockChart';
 import { RevenueChart } from '@/components/features/investment/RevenueChart';
 import { ChipsChart } from '@/components/features/investment/ChipsChart';
@@ -14,6 +14,48 @@ import { EtfWeightHistoryChart } from '@/components/features/investment/EtfWeigh
 import { useStockDashboard } from '@/hooks/investment/useStockDashboard';
 import { StockPoolMetrics } from '@/components/features/investment/StockPoolMetrics';
 import { StockDetailSections } from '@/components/features/investment/StockDetailSections';
+
+function SideNavButton({ stock, direction, onNavigate }: {
+    stock: { code: string; name: string } | null;
+    direction: 'prev' | 'next';
+    onNavigate: (code: string) => void;
+}) {
+    const isNext = direction === 'next';
+    if (!stock) return null;
+    return (
+        <button
+            onClick={() => onNavigate(stock.code)}
+            title={`${isNext ? '下一檔' : '上一檔'} ${stock.code} ${stock.name}`}
+            className={`fixed top-1/2 -translate-y-1/2 z-40 group flex items-center overflow-hidden
+                transition-all duration-300 ease-out shadow-lg hover:shadow-2xl
+                ${isNext
+                    ? 'right-0 flex-row-reverse rounded-l-2xl bg-gradient-to-l from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500'
+                    : 'left-0 flex-row rounded-r-2xl bg-gradient-to-r from-slate-600 to-slate-500 hover:from-slate-500 hover:to-slate-400'
+                }
+                text-white py-5 px-3`}
+        >
+            {/* 箭頭圖示，帶圓形背景 */}
+            <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
+                {isNext ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+            </span>
+
+            {/* 展開的股票資訊 */}
+            <span className={`flex flex-col max-w-0 overflow-hidden group-hover:max-w-[5.5rem] transition-all duration-300 ease-out
+                ${isNext ? 'items-end mr-0 group-hover:mr-2.5' : 'items-start ml-0 group-hover:ml-2.5'}`}
+            >
+                <span className="whitespace-nowrap text-[10px] font-mono opacity-75 leading-none mb-0.5">
+                    {stock.code}
+                </span>
+                <span className="whitespace-nowrap text-xs font-semibold leading-none">
+                    {stock.name}
+                </span>
+                <span className="whitespace-nowrap text-[9px] opacity-60 mt-1 leading-none">
+                    {isNext ? '下一檔 →' : '← 上一檔'}
+                </span>
+            </span>
+        </button>
+    );
+}
 
 function ChartPanel({ loading, error, children, emptyText }: {
     loading: boolean;
@@ -54,6 +96,10 @@ export default function StockPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
+            {/* 螢幕側邊懸浮導航 */}
+            <SideNavButton stock={prevStock} direction="prev" onNavigate={handleNavigate} />
+            <SideNavButton stock={nextStock} direction="next" onNavigate={handleNavigate} />
+
             <StockDashboardNav
                 stockCode={stockCode}
                 stockName={stockName}
@@ -157,6 +203,33 @@ export default function StockPage() {
                         data={etfWeightHistory}
                     />
                 )}
+            </div>
+
+            {/* 底部導航列 */}
+            <div className="flex items-center justify-between gap-4 py-4 border-t border-slate-200 dark:border-slate-800 mt-2">
+                <button
+                    disabled={!prevStock}
+                    onClick={() => prevStock && handleNavigate(prevStock.code)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    {prevStock ? <><span className="font-mono text-xs text-slate-400">{prevStock.code}</span><span>{prevStock.name}</span></> : '已是第一檔'}
+                </button>
+
+                {currentIndex != null && totalCount != null && totalCount > 0 && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
+                        {currentIndex} / {totalCount}
+                    </span>
+                )}
+
+                <button
+                    disabled={!nextStock}
+                    onClick={() => nextStock && handleNavigate(nextStock.code)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 text-sm font-medium disabled:cursor-not-allowed transition-colors"
+                >
+                    {nextStock ? <><span>{nextStock.name}</span><span className="font-mono text-xs opacity-75">{nextStock.code}</span></> : '已是最後一檔'}
+                    <ArrowRight className="w-4 h-4" />
+                </button>
             </div>
         </div>
     );
