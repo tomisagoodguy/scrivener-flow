@@ -250,7 +250,8 @@ class ETFStorage:
 
         try:
             url = f"{self.supabase_url}/rest/v1/etf_diff_logs"
-            requests.post(url, headers=self.headers, json=safe_diffs).raise_for_status()
+            headers = {**self.headers, "Prefer": "resolution=merge-duplicates"}
+            requests.post(url, headers=headers, json=safe_diffs).raise_for_status()
             logger.info(f"Saved {len(safe_diffs)} diff logs via REST.")
         except Exception as e:
             logger.error(f"Failed to save diff logs via REST: {e}")
