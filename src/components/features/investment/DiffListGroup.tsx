@@ -71,17 +71,29 @@ export function DiffListGroup({ logs, dateIndex }: DiffListGroupProps) {
         });
     }, [logs]);
 
+    // 合併同股票+動作的多支 ETF，保留排序順序
+    const mergedGroups = useMemo(() => {
+        const map = new Map<string, DiffLog[]>();
+        const order: string[] = [];
+        for (const log of sortedLogs) {
+            const key = `${log.stock_code}|${log.change_type}`;
+            if (!map.has(key)) { map.set(key, []); order.push(key); }
+            map.get(key)!.push(log);
+        }
+        return order.map(k => map.get(k)!);
+    }, [sortedLogs]);
+
     return (
         <div className="space-y-1">
-            {sortedLogs.map((log, idx) => {
+            {mergedGroups.map((group, idx) => {
+                const log = group[0];
                 const config = getStatusConfig(log.change_type);
                 const StatusIcon = config.icon;
-                const etfMeta = log.etf_code ? getEtfMeta(log.etf_code) : undefined;
                 const isConsensus = consensusStocks.has(log.stock_code);
 
                 return (
                     <motion.div
-                        key={log.id}
+                        key={`${log.stock_code}-${log.change_type}`}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: (dateIndex * 0.05) + (idx * 0.02) }}
@@ -89,19 +101,19 @@ export function DiffListGroup({ logs, dateIndex }: DiffListGroupProps) {
                         className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
                         {/* ETF 色塊徽章 */}
-                        <div className="w-14 shrink-0">
-                            {etfMeta ? (
-                                <span
-                                    className="inline-block w-full text-center px-1 py-0.5 rounded text-[9px] font-black tracking-wider"
-                                    style={{ backgroundColor: etfMeta.color + '20', color: etfMeta.color, border: `1px solid ${etfMeta.color}44` }}
-                                >
-                                    {etfMeta.shortCode}
-                                </span>
-                            ) : (
-                                <span className="inline-block w-full text-center px-1 py-0.5 rounded text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800">
-                                    —
-                                </span>
-                            )}
+                        <div className="flex gap-0.5 shrink-0 min-w-[56px]">
+                            {group.map(l => {
+                                const meta = l.etf_code ? getEtfMeta(l.etf_code) : undefined;
+                                return meta ? (
+                                    <span
+                                        key={l.etf_code}
+                                        className="inline-block px-1 py-0.5 rounded text-[8px] font-black tracking-wider"
+                                        style={{ backgroundColor: meta.color + '20', color: meta.color, border: `1px solid ${meta.color}44` }}
+                                    >
+                                        {meta.shortCode}
+                                    </span>
+                                ) : null;
+                            })}
                         </div>
 
                         {/* 異動類型 icon */}
@@ -127,12 +139,16 @@ export function DiffListGroup({ logs, dateIndex }: DiffListGroupProps) {
                             {log.change_type}
                         </span>
 
-                        {/* 權重變化 */}
-                        <div className="w-16 text-right shrink-0">
-                            <span className={`text-sm font-mono font-black ${log.diff_weight > 0 ? 'text-rose-500' : log.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                {log.diff_weight > 0 ? '▲' : log.diff_weight < 0 ? '▼' : ''}
-                                {Math.abs(log.diff_weight).toFixed(2)}%
-                            </span>
+                        {/* 權重變化：多支 ETF 顯示各自變動 */}
+                        <div className="text-right shrink-0">
+                            {group.map(l => (
+                                <div key={l.etf_code} className="text-sm font-mono font-black leading-tight">
+                                    <span className={l.diff_weight > 0 ? 'text-rose-500' : l.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                                        {l.diff_weight > 0 ? '▲' : l.diff_weight < 0 ? '▼' : ''}
+                                        {Math.abs(l.diff_weight).toFixed(2)}%
+                                    </span>
+                                </div>
+                            ))}
                         </div>
 
                         {/* 共識訊號 */}

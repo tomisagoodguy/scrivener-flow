@@ -18,15 +18,16 @@ import { DiffLog } from '@/types/investment';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
 
 export interface DiffLogCardProps {
-    log: DiffLog;
+    logs: DiffLog[];
     index: number;
     dateIndex: number;
     getBehaviorTags: (stockCode: string, currentLog: DiffLog) => { label: string; color: 'red' | 'green' | 'blue' | 'amber'; icon?: LucideIcon }[];
     showEtfBadge?: boolean;
 }
 
-export function DiffLogCard({ log, index, dateIndex, getBehaviorTags, showEtfBadge }: DiffLogCardProps) {
+export function DiffLogCard({ logs, index, dateIndex, getBehaviorTags, showEtfBadge }: DiffLogCardProps) {
     const router = useRouter();
+    const log = logs[0];
 
     const getStatusConfig = (type: string) => {
         switch (type) {
@@ -121,17 +122,19 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags, showEtfBad
 
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            {showEtfBadge && log.etf_code && (() => {
-                                const meta = getEtfMeta(log.etf_code);
+                            {showEtfBadge && logs.map(l => {
+                                if (!l.etf_code) return null;
+                                const meta = getEtfMeta(l.etf_code);
                                 return meta ? (
                                     <span
+                                        key={l.etf_code}
                                         className="inline-block px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider shrink-0"
                                         style={{ backgroundColor: meta.color + '25', color: meta.color, border: `1px solid ${meta.color}55` }}
                                     >
                                         {meta.shortCode}
                                     </span>
                                 ) : null;
-                            })()}
+                            })}
                             <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 {log.stock_name}
                             </span>
@@ -162,7 +165,7 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags, showEtfBad
                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                                  {log.change_type === 'IN' || log.change_type === 'OUT' || log.change_type === 'CLOSE'
                                      ? config.label
-                                     : `${config.label} ${Math.abs(log.diff_shares).toLocaleString()} 股`}
+                                     : `${config.label} ${Math.abs(logs.reduce((s, l) => s + (l.diff_shares ?? 0), 0)).toLocaleString()} 股`}
                              </span>
                          </div>
 
@@ -189,26 +192,47 @@ export function DiffLogCard({ log, index, dateIndex, getBehaviorTags, showEtfBad
                     </div>
                 </div>
 
-                <div className="text-right">
-                    <div className={`text-xl font-mono font-black ${log.diff_weight > 0 ? 'text-rose-500' : log.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
-                        {log.diff_weight > 0 ? '▲' : log.diff_weight < 0 ? '▼' : ''}
-                        {Math.abs(log.diff_weight)}%
-                    </div>
-                    {(log.prev_weight != null || log.curr_weight != null) ? (
-                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                            {log.prev_weight ?? '—'}% → {log.curr_weight ?? '—'}%
+                {logs.length === 1 ? (
+                    <div className="text-right">
+                        <div className={`text-xl font-mono font-black ${log.diff_weight > 0 ? 'text-rose-500' : log.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                            {log.diff_weight > 0 ? '▲' : log.diff_weight < 0 ? '▼' : ''}
+                            {Math.abs(log.diff_weight)}%
                         </div>
-                    ) : (
-                        <div className="text-[10px] font-bold text-slate-400 flex items-center justify-end gap-1">
-                            <div className="flex -space-x-1 mr-1">
-                                {[...Array(3)].map((_, i) => (
-                                    <div key={i} className={`w-1 h-1 rounded-full ${log.diff_weight > 0 ? 'bg-rose-400' : 'bg-emerald-400'} opacity-${60 - (i*20)}`} />
-                                ))}
+                        {(log.prev_weight != null || log.curr_weight != null) ? (
+                            <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                                {log.prev_weight ?? '—'}% → {log.curr_weight ?? '—'}%
                             </div>
-                            權重變動
-                        </div>
-                    )}
-                </div>
+                        ) : (
+                            <div className="text-[10px] font-bold text-slate-400 flex items-center justify-end gap-1">
+                                <div className="flex -space-x-1 mr-1">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div key={i} className={`w-1 h-1 rounded-full ${log.diff_weight > 0 ? 'bg-rose-400' : 'bg-emerald-400'} opacity-${60 - (i*20)}`} />
+                                    ))}
+                                </div>
+                                權重變動
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="text-right space-y-1 min-w-[90px]">
+                        {logs.map(l => {
+                            const meta = l.etf_code ? getEtfMeta(l.etf_code) : undefined;
+                            return (
+                                <div key={l.etf_code ?? l.id} className="flex items-center justify-end gap-1.5">
+                                    {meta && (
+                                        <span className="text-[8px] font-black" style={{ color: meta.color }}>
+                                            {meta.shortCode}
+                                        </span>
+                                    )}
+                                    <span className={`text-sm font-mono font-black ${l.diff_weight > 0 ? 'text-rose-500' : l.diff_weight < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                        {l.diff_weight > 0 ? '▲' : l.diff_weight < 0 ? '▼' : ''}
+                                        {Math.abs(l.diff_weight).toFixed(2)}%
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
             
             {/* Action Link Hint */}

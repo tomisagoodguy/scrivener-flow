@@ -46,6 +46,17 @@ export function DiffLedger({ logs, showEtfFilter = false }: DiffLedgerProps) {
         return acc;
     }, {} as Record<string, DiffLog[]>);
 
+    // 將同日同股票+動作的多支 ETF 紀錄合併成一組
+    const mergeByStock = (logs: DiffLog[]): DiffLog[][] => {
+        const map = new Map<string, DiffLog[]>();
+        for (const log of logs) {
+            const key = `${log.stock_code}|${log.change_type}`;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(log);
+        }
+        return [...map.values()];
+    };
+
     const sortedDates = Object.keys(groupedLogs)
         .sort((a, b) => b.localeCompare(a))
         .slice(0, 10);
@@ -150,10 +161,10 @@ export function DiffLedger({ logs, showEtfFilter = false }: DiffLedgerProps) {
 
                         {viewMode === 'card' ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {groupedLogs[date].map((log, idx) => (
+                                {mergeByStock(groupedLogs[date]).map((logs, idx) => (
                                     <DiffLogCard
-                                        key={log.id}
-                                        log={log}
+                                        key={`${logs[0].stock_code}-${logs[0].change_type}`}
+                                        logs={logs}
                                         index={idx}
                                         dateIndex={dateIdx}
                                         getBehaviorTags={getBehaviorTags}
