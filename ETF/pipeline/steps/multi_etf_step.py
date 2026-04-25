@@ -14,7 +14,7 @@ from typing import Any
 
 import pandas as pd
 
-from ETF.config.etf_registry import SECONDARY_ETF_CODES, ETF_META
+from ETF.config.etf_registry import ETF_META, get_secondary_etf_codes
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.diff_engine import compute_diff
@@ -35,20 +35,32 @@ class MultiEtfStep(BaseStep):
         return ctx.is_dry_run
 
     def execute(self, ctx: PipelineContext) -> PipelineContext:
-        from ETF.scrapers.pocket_scraper import scrape_holdings
+        from ETF.scrapers import official_api_scraper, pocket_scraper
 
         fallback_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
         all_secondary_codes: list[str] = []
 
-        for etf_code in SECONDARY_ETF_CODES:
+        for etf_code in get_secondary_etf_codes():
             entry = ETF_META.get(etf_code)
             name = entry.name if entry else etf_code
             self.logger.info(f"Processing {etf_code} ({name})...")
 
-            # 1. 持股快照（pocket_scraper 統一資料源）
+            # 1. 持股快照：依 source 欄位派送 scraper
+            # official_api → official_api_scraper（投信官網 API）
+            # pocket       → pocket_scraper（Pocket.tw Selenium）
             try:
-                df, data_date = scrape_holdings(etf_code)
+                if entry and entry.source == "official_api":
+                    df = official_api_scraper.fetch_holdings(etf_code, ctx.date_str)
+                    data_date = ctx.date_str or fallback_date
+                    if df.empty:
+                        self.logger.warning(
+                            f"[OFFICIAL_API] {etf_code} 回傳空資料，fallback → pocket_scraper"
+                        )
+                        df, data_date = pocket_scraper.scrape_holdings(etf_code)
+                else:
+                    df, data_date = pocket_scraper.scrape_holdings(etf_code)
+
                 if df is not None and not df.empty:
                     snapshot_date = data_date or fallback_date
                     # Pocket.tw 回傳 YYYY/MM/DD，轉換為 YYYY-MM-DD

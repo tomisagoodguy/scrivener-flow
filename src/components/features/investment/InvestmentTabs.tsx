@@ -10,9 +10,10 @@ interface InvestmentTabsProps {
     ledgerContent: React.ReactNode;
     compareContent: React.ReactNode;
     consensusContent: React.ReactNode;
+    flowContent: React.ReactNode;
 }
 
-const VALID_TABS = ['stock-picker', 'analysis', 'ledger', 'compare', 'consensus'] as const;
+const VALID_TABS = ['stock-picker', 'analysis', 'ledger', 'compare', 'consensus', 'flow'] as const;
 
 export function InvestmentTabs({
     stockPickerContent,
@@ -20,6 +21,7 @@ export function InvestmentTabs({
     ledgerContent,
     compareContent,
     consensusContent,
+    flowContent,
 }: InvestmentTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -61,39 +63,17 @@ export function InvestmentTabs({
         router.push(`?${params.toString()}${hash}`, { scroll: false });
     };
 
+    const triggerClass = "rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm";
+
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 max-w-3xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <TabsTrigger
-                    value="stock-picker"
-                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
-                >
-                    🎯 選股池
-                </TabsTrigger>
-                <TabsTrigger
-                    value="analysis"
-                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
-                >
-                    策略分析
-                </TabsTrigger>
-                <TabsTrigger
-                    value="ledger"
-                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
-                >
-                    異動紀錄
-                </TabsTrigger>
-                <TabsTrigger
-                    value="compare"
-                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
-                >
-                    ETF 對比
-                </TabsTrigger>
-                <TabsTrigger
-                    value="consensus"
-                    className="rounded-lg py-2 transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm"
-                >
-                    共識持股
-                </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-6 max-w-4xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <TabsTrigger value="stock-picker" className={triggerClass}>🎯 選股池</TabsTrigger>
+                <TabsTrigger value="analysis" className={triggerClass}>策略分析</TabsTrigger>
+                <TabsTrigger value="ledger" className={triggerClass}>異動紀錄</TabsTrigger>
+                <TabsTrigger value="compare" className={triggerClass}>ETF 對比</TabsTrigger>
+                <TabsTrigger value="consensus" className={triggerClass}>共識持股</TabsTrigger>
+                <TabsTrigger value="flow" className={triggerClass}>資金流向</TabsTrigger>
             </TabsList>
 
             <TabsContent value="stock-picker">{stockPickerContent}</TabsContent>
@@ -101,6 +81,7 @@ export function InvestmentTabs({
             <TabsContent value="ledger">{ledgerContent}</TabsContent>
             <TabsContent value="compare">{compareContent}</TabsContent>
             <TabsContent value="consensus">{consensusContent}</TabsContent>
+            <TabsContent value="flow">{flowContent}</TabsContent>
         </Tabs>
     );
 }

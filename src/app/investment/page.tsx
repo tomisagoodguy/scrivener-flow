@@ -16,6 +16,7 @@ import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
 import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
+import { DailyFlowPanel } from '@/components/features/investment/DailyFlowPanel';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,24 @@ async function getCompareData(): Promise<{ etfs: EtfData[]; overlap: OverlapData
     return { etfs, overlap: { byCount, totalEtfs: activeCodes.length } };
 }
 
+async function fetchLatestSignals(): Promise<Record<string, { strength: 1 | 2 | 3; type: string }>> {
+    const supabase = await createClient();
+    const { data } = await supabase
+        .from('etf_signals')
+        .select('stock_code, signal_type, strength, data_date')
+        .order('data_date', { ascending: false })
+        .order('strength', { ascending: false })
+        .limit(500);
+
+    const map: Record<string, { strength: 1 | 2 | 3; type: string }> = {};
+    for (const row of data ?? []) {
+        if (!map[row.stock_code]) {
+            map[row.stock_code] = { strength: row.strength as 1 | 2 | 3, type: row.signal_type };
+        }
+    }
+    return map;
+}
+
 // ── 頁面 ──────────────────────────────────────────────────────────────────────
 
 export default async function InvestmentPoolPage() {
@@ -202,12 +221,13 @@ export default async function InvestmentPoolPage() {
     const unionHoldings = buildUnionHoldings(byEtf);
     const allCodes = unionHoldings.map(h => h.stock_code);
 
-    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult] = await Promise.all([
+    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals] = await Promise.all([
         fetchQuantFiltersBatched(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
         getCompareData(),
         fetchConsensusData(),
+        fetchLatestSignals(),
     ]);
 
     const unionWithFilters = unionHoldings.map(h => ({
@@ -307,7 +327,7 @@ export default async function InvestmentPoolPage() {
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <InvestmentTabs
                     stockPickerContent={
-                        <StockPickerHub etfs={etfsForPicker} quantFilters={quantFilters} />
+                        <StockPickerHub etfs={etfsForPicker} quantFilters={quantFilters} signals={signals} />
                     }
                     analysisContent={
                         <GoldenGrowthZone
@@ -336,6 +356,9 @@ export default async function InvestmentPoolPage() {
                     }
                     consensusContent={
                         <ConsensusPanel data={consensusResult.data} date={consensusResult.date} />
+                    }
+                    flowContent={
+                        <DailyFlowPanel totalEtfs={ETF_REGISTRY.length} />
                     }
                 />
             </React.Suspense>

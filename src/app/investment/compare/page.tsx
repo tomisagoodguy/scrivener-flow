@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
-import { EtfComparePanel } from '@/components/features/investment/EtfComparePanel';
+import { ComparePageTabs } from '@/components/features/investment/ComparePageTabs';
 
 const ETF_CODES = ETF_REGISTRY.map(e => e.code);
 const ETF_META = Object.fromEntries(
@@ -135,7 +135,7 @@ export default async function EtfComparePage() {
             </div>
 
             {data ? (
-                <EtfComparePanel etfs={data.etfs} overlap={data.overlap} />
+                <ComparePageTabs etfs={data.etfs} overlap={data.overlap} />
             ) : (
                 <div className="glass-card rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400">
                     <p className="text-lg">暫無資料</p>

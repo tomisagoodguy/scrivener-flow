@@ -9,6 +9,7 @@ import { DrilldownTabs } from '@/components/features/investment/DrilldownTabs';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
 import { EtfSelector } from '@/components/features/investment/EtfSelector';
 import { EtfNewsPanel } from '@/components/features/investment/EtfNewsPanel';
+import { EtfHeroSection } from '@/components/features/investment/EtfHeroSection';
 import React from 'react';
 import { Holding } from '@/types/investment';
 import { redirect } from 'next/navigation';
@@ -377,11 +378,30 @@ export default async function InvestmentEtfDrilldownPage({
     const etfMeta = getEtfMeta(etfCode);
 
     const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
-    const [logs, rankingHistory, quantFilters, news] = await Promise.all([
+    const supabaseForPnl = await createClient();
+    const [logs, rankingHistory, quantFilters, news, pnlSeriesResult, positionsResult, todayDiffsResult] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
         getEtfNews(etfCode),
+        supabaseForPnl
+            .from('etf_pnl_series')
+            .select('data_date, total_mv, total_cost, total_pnl, total_pnl_pct, total_shares')
+            .eq('etf_code', etfCode)
+            .order('data_date', { ascending: true })
+            .limit(365),
+        supabaseForPnl
+            .from('etf_position_summary')
+            .select('stock_code, cost_basis, mv_now, pnl, pnl_pct, delta_days, first_entry_date, entry_price, curr_price, curr_shares, is_active, exit_date, realized_pnl_pct')
+            .eq('etf_code', etfCode)
+            .eq('data_date', dataDate ?? '')
+            .limit(200),
+        supabaseForPnl
+            .from('etf_diff_logs')
+            .select('etf_code, data_date, stock_code, stock_name, action, diff_shares, curr_shares, prev_weight, curr_weight')
+            .eq('etf_code', etfCode)
+            .eq('data_date', dataDate ?? '')
+            .limit(100),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({
@@ -435,6 +455,18 @@ export default async function InvestmentEtfDrilldownPage({
 
             <EtfNewsPanel news={news} />
 
+            <EtfHeroSection
+                etfCode={etfCode}
+                etfName={etfMeta?.name ?? etfCode}
+                pnlSeries={(pnlSeriesResult.data ?? []).map(r => ({
+                    data_date: r.data_date,
+                    total_pnl: Number(r.total_pnl),
+                    total_cost: Number(r.total_cost),
+                    total_pnl_pct: Number(r.total_pnl_pct),
+                    total_shares: Number(r.total_shares),
+                }))}
+            />
+
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <DrilldownTabs
                     holdingsContent={
@@ -456,6 +488,20 @@ export default async function InvestmentEtfDrilldownPage({
                             </div>
                         </div>
                     }
+                    todayDiffs={(todayDiffsResult.data ?? []) as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
+                    positions={(positionsResult.data ?? []).map(p => ({
+                        ...p,
+                        stock_name: undefined,
+                        cost_basis: Number(p.cost_basis),
+                        mv_now: Number(p.mv_now),
+                        pnl: Number(p.pnl),
+                        pnl_pct: Number(p.pnl_pct),
+                        delta_days: p.delta_days ?? 0,
+                        entry_price: p.entry_price != null ? Number(p.entry_price) : null,
+                        curr_price: p.curr_price != null ? Number(p.curr_price) : null,
+                        curr_shares: Number(p.curr_shares),
+                        realized_pnl_pct: p.realized_pnl_pct != null ? Number(p.realized_pnl_pct) : null,
+                    }))}
                 />
             </React.Suspense>
         </div>

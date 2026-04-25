@@ -2,7 +2,7 @@
 
 ## 專案本質
 
-ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤 **11 支主動型 ETF** 的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
+ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤 **21 支主動型 ETF** 的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
 
 ETF 清單統一由 **`ETF/config/etf_registry.py`** 維護（對應 `src/lib/investment/etfRegistry.ts`），新增 ETF 只需改這兩個檔案。
 
@@ -46,10 +46,14 @@ ETF/
 │       ├── save_snapshot_step.py  # 存入 etf_holdings_snapshot
 │       ├── shareholder_signal_step.py  # 讀 stock-data-main JSON，計算大戶積累訊號 → ctx.shareholder_signals
 │       ├── weight_history_step.py # 聚合持股比重走勢
-│       ├── multi_etf_step.py      # 處理 00980A / 00991A（MoneyDJ）
+│       ├── multi_etf_step.py      # 處理所有 official_api/pocket 來源 ETF
+│       ├── aum_sync_step.py       # [輔助] 計算 AUM 時序 → etf_aum_series
 │       ├── sync_company_step.py   # 同步公司基本資料
 │       ├── sync_ohlcv_step.py     # 同步 stock_prices_daily（含次要 ETF 成分股）
 │       ├── overlap_compute_step.py # 聚合跨 ETF 共識持股 → etf_stock_overlap
+│       ├── flow_compute_step.py   # [輔助] 跨 ETF 每日資金流向 → etf_flow_daily
+│       ├── signal_detect_step.py  # [輔助] 偵測進階訊號 → etf_signals
+│       ├── position_summary_step.py # [輔助] 現金流法持倉損益 → etf_position_summary + etf_pnl_series
 │       ├── sync_bare_k_step.py    # 同步 watch_list 裸K快照
 │       ├── news_context_step.py   # 直接呼叫 MOPS API，取重大公告 → ctx.news_context
 │       ├── notify_step.py         # LINE 推送通知（含 💎 大戶積累標記）
@@ -57,8 +61,9 @@ ETF/
 │
 ├── scrapers/
 │   ├── fhtrust_scraper.py     # 00981A 來源：復華投信持股 Excel 下載
-│   ├── pocket_scraper.py      # 次要 ETF 統一來源：Pocket.tw（所有 data_source='pocket' 的 ETF）
-│   └── unified_scraper.py     # 統一爬蟲介面
+│   ├── official_api_scraper.py # 6 家投信官方 API（統一/野村/復華/安聯/群益），備援入口
+│   ├── pocket_scraper.py      # 次要 ETF 統一來源：Pocket.tw（data_source='pocket' 的 ETF）
+│   └── unified_scraper.py     # 統一爬蟲介面，price 空缺率 > 30% 時呼叫 official_api_scraper
 │
 ├── processors/
 │   ├── diff_engine.py         # compute_diff()：持股異動計算核心
@@ -132,17 +137,21 @@ ScrapeStep
   → SaveSnapshotStep
   → ShareholderSignalStep   ← [輔助] 讀 stock-data-main JSON，計算大戶積累 → ctx.shareholder_signals
   → WeightHistoryStep
-  → MultiEtfStep            ← 處理 00980A / 00991A，填入 ctx.secondary_stock_codes
+  → MultiEtfStep            ← 動態讀取 etf_registry，處理所有非 finlab 來源 ETF
+  → AumSyncStep             ← [輔助] 計算 NAV × units = AUM，日差 = inflow → etf_aum_series
   → SyncCompanyStep
   → SyncOHLCVStep           ← 合併 secondary_stock_codes 一起 sync 進 stock_prices_daily
   → OverlapComputeStep      ← 聚合跨 ETF 共識持股 → etf_stock_overlap
+  → FlowComputeStep         ← [輔助] 跨 ETF 資金流，|Δshares/prev|≥3% 且 weight≥0.3pp → etf_flow_daily
+  → SignalDetectStep        ← [輔助] 3 種訊號偵測（multi_fund/overweight/cross_product） → etf_signals
+  → PositionSummaryStep     ← [輔助] 現金流法：CFt=−Δshares×close → etf_position_summary + etf_pnl_series
   → SyncBareKStep           ← 同步 watch_list 裸K快照
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
 ```
 
-> **輔助步驟**（`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
+> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
 
 ---
 
@@ -177,11 +186,15 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 
 ### ETF 資料來源差異
 
-| ETF | 來源 | 爬蟲 | 特性 |
+ETF 清單統一由 `ETF/config/etf_registry.py` 的 `source` 欄位決定爬蟲策略：
+
+| `source` 值 | 適用 ETF 數 | 爬蟲 | 特性 |
 | :--- | :--- | :--- | :--- |
-| **00981A** | 復華投信官網 | `fhtrust_scraper.py` | 主流程，含完整異動計算 |
-| **00980A** | MoneyDJ | `moneydj_scraper.py` | 只存快照，價格從 `stock_prices_daily` 補充 |
-| **00991A** | MoneyDJ | `moneydj_scraper.py` | 同 00980A |
+| `finlab` | 1（00981A） | `fhtrust_scraper.py` | 主流程，含完整異動計算 |
+| `official_api` | ~10 支 | `official_api_scraper.py` | 6 家投信官方 API；備援：price 空缺率 > 30% 時觸發 |
+| `pocket` | ~10 支 | `pocket_scraper.py` | Pocket.tw；公告日才更新（可能數日一筆） |
+
+新增 ETF：只需在 `etf_registry.py` 新增一行（含 `source`），以及在 `src/lib/investment/etfRegistry.ts` 同步更新。
 
 ### 前端資料依賴
 
@@ -189,6 +202,11 @@ STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
 - `stock_prices_daily` — 前端顯示個股現價（`SyncOHLCVStep` 維護）
 - `etf_stock_overlap` — 前端跨 ETF 共識持股頁（`OverlapComputeStep` 維護）
 - `etf_weight_history` — 前端持股比重走勢圖
+- `etf_aum_series` — 前端 AUM 規模儀表板（`AumSyncStep` 維護）
+- `etf_signals` — 前端訊號標記（`SignalDetectStep` + `FlowComputeStep` 維護）
+- `etf_flow_daily` — 前端每日資金流向儀表板（`FlowComputeStep` 維護）
+- `etf_position_summary` — 前端個股進出場損益（`PositionSummaryStep` 維護）
+- `etf_pnl_series` — 前端 ETF 損益走勢圖（`PositionSummaryStep` 維護）
 
 > 修改 DB Schema 時需同步通知前端開發者（`src/app/investment/`）。
 

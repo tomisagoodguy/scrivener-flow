@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
+import { SignalBadge } from './SignalBadge';
+import { StockDetailPanel } from './StockDetailPanel';
 
 // ── 型別定義 ────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,7 @@ interface QuantFilter {
 interface StockPickerHubProps {
     etfs: EtfData[];
     quantFilters: Record<string, QuantFilter>;
+    signals?: Record<string, { strength: 1 | 2 | 3; type: string }>;
 }
 
 type SortField = 'shared_count' | 'filter_score' | 'momentum_60d' | 'it_buy_5d' | string;
@@ -224,7 +227,9 @@ function sortHoldings(
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────────
 
-export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
+export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPickerHubProps) {
+    const [panelStock, setPanelStock] = useState<{ code: string; name: string } | null>(null);
+    const openPanel = useCallback((code: string, name: string) => setPanelStock({ code, name }), []);
     const [selectedEtfs, setSelectedEtfs] = useState<Set<string>>(
         new Set(ETF_CODES)
     );
@@ -310,6 +315,12 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
     const activeEtfCodes = ETF_CODES.filter(c => selectedEtfs.has(c));
 
     return (
+        <>
+        <StockDetailPanel
+            stockCode={panelStock?.code ?? null}
+            stockName={panelStock?.name}
+            onClose={() => setPanelStock(null)}
+        />
         <div className="glass-card rounded-2xl p-6 space-y-4">
             {/* ETF 篩選勾選框 */}
             <div className="flex items-center gap-4 flex-wrap">
@@ -498,9 +509,13 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                             >
                                                 {h.stock_code}
                                             </Link>
-                                            <span className="text-slate-600 dark:text-slate-400 text-xs truncate max-w-[80px]">
+                                            <button
+                                                onClick={() => openPanel(h.stock_code, h.stock_name)}
+                                                className="text-slate-600 dark:text-slate-400 text-xs truncate max-w-[80px] hover:text-indigo-500 transition-colors text-left"
+                                                title="查看詳情"
+                                            >
                                                 {h.stock_name}
-                                            </span>
+                                            </button>
                                             {isTriple && (
                                                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700 font-medium">
                                                     3共
@@ -520,6 +535,13 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                                                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-lime-100 text-lime-700 border border-lime-300 dark:bg-lime-900/40 dark:text-lime-300 dark:border-lime-700 font-medium">
                                                     高20
                                                 </span>
+                                            )}
+                                            {signals[h.stock_code] && (
+                                                <SignalBadge
+                                                    strength={signals[h.stock_code].strength}
+                                                    type={signals[h.stock_code].type}
+                                                    compact
+                                                />
                                             )}
                                         </div>
                                     </td>
@@ -618,5 +640,6 @@ export function StockPickerHub({ etfs, quantFilters }: StockPickerHubProps) {
                 </table>
             </div>
         </div>
+        </>
     );
 }

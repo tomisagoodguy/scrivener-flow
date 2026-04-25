@@ -5,9 +5,9 @@
   1. 此檔案加入 EtfEntry
   2. etfRegistry.ts 加入對應 EtfRegistryEntry
 
-dataSource:
-  - 'fhtrust' : 00981A，走 FHTrust scraper 主流程
-  - 'pocket'  : 其他 ETF，走 pocket_scraper（Pocket.tw）
+source 欄位說明：
+  'official_api' : 有投信官網 API（ETF/scrapers/official_api_scraper.py 支援）
+  'pocket'       : 使用 Pocket.tw 爬蟲（待官網 API 破解前的暫用方案）
 """
 
 from dataclasses import dataclass
@@ -20,68 +20,45 @@ class EtfEntry:
     code: str
     name: str
     manager: str
-    data_source: str  # 'fhtrust' | 'pocket'
+    source: str  # 'official_api' | 'pocket'
+    is_primary: bool = False  # True = 由 ScrapeStep 主流程處理（目前只有 00981A）
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 唯一 ETF 清單（以 TypeScript etfRegistry.ts 為 single source of truth）
 # ──────────────────────────────────────────────────────────────────────────────
 ETF_REGISTRY: list[EtfEntry] = [
-    EtfEntry(
-        code="00981A",
-        name="主動統一台股增長",
-        manager="統一投信",
-        data_source="fhtrust",
-    ),
-    EtfEntry(
-        code="00980A", name="主動野村臺灣優選", manager="野村投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00991A", name="主動復華未來50", manager="復華投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00982A", name="主動群益台灣強棒", manager="群益投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00984A", name="主動安聯台灣高息", manager="安聯投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00985A", name="主動野村台灣50", manager="野村投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00987A", name="主動台新優勢成長", manager="台新投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00992A", name="主動群益科技創新", manager="群益投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00993A", name="主動安聯台灣", manager="安聯投信", data_source="pocket"
-    ),
-    EtfEntry(
-        code="00994A",
-        name="主動第一金台股優",
-        manager="第一金投信",
-        data_source="pocket",
-    ),
-    EtfEntry(
-        code="00995A",
-        name="主動中信台灣卓越",
-        manager="中國信託投信",
-        data_source="pocket",
-    ),
+    # ── 主流程 ETF（ScrapeStep + fhtrust_scraper 處理）──
+    EtfEntry(code="00981A", name="主動統一台股增長", manager="統一投信",       source="official_api", is_primary=True),
+
+    # ── 官網 API 備援（official_api_scraper 支援）──
+    EtfEntry(code="00980A", name="主動野村臺灣優選", manager="野村投信",       source="official_api"),
+    EtfEntry(code="00982A", name="主動群益台灣強棒", manager="群益投信",       source="official_api"),
+    EtfEntry(code="00984A", name="主動安聯台灣高息", manager="安聯投信",       source="official_api"),
+    EtfEntry(code="00985A", name="主動野村台灣50",   manager="野村投信",       source="official_api"),
+    EtfEntry(code="00988A", name="主動統一全球創新", manager="統一投信",       source="official_api"),
+    EtfEntry(code="00991A", name="主動復華未來50",   manager="復華投信",       source="official_api"),
+    EtfEntry(code="00992A", name="主動群益科技創新", manager="群益投信",       source="official_api"),
+    EtfEntry(code="00993A", name="主動安聯台灣",     manager="安聯投信",       source="official_api"),
+    EtfEntry(code="00997A", name="主動群益美國增長", manager="群益投信",       source="official_api"),
+
+    # ── Pocket.tw 爬蟲（官網 API 待破解）──
+    EtfEntry(code="00986A", name="主動兆豐台灣主動", manager="兆豐投信",       source="pocket"),
+    EtfEntry(code="00987A", name="主動台新優勢成長", manager="台新投信",       source="pocket"),
+    EtfEntry(code="00990A", name="主動元大AI新經濟", manager="元大投信",       source="pocket"),
+    EtfEntry(code="00994A", name="主動第一金台股優", manager="第一金投信",     source="pocket"),
+    EtfEntry(code="00995A", name="主動中信台灣卓越", manager="中國信託投信",   source="pocket"),
 ]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 便利查詢視圖
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Pocket 爬蟲負責的次要 ETF（排除 fhtrust 主流程的 00981A）
-SECONDARY_ETF_CODES: list[str] = [
-    e.code for e in ETF_REGISTRY if e.data_source == "pocket"
-]
-
-# 全部 ETF 代碼
+# 全部 ETF 代碼（含主流程 ETF）
 ALL_ETF_CODES: list[str] = [e.code for e in ETF_REGISTRY]
+
+# 次要 ETF 代碼（MultiEtfStep 處理，排除 is_primary）
+SECONDARY_ETF_CODES: list[str] = [e.code for e in ETF_REGISTRY if not e.is_primary]
 
 # code → EtfEntry 快速查詢字典
 ETF_META: dict[str, EtfEntry] = {e.code: e for e in ETF_REGISTRY}
@@ -93,3 +70,13 @@ ETF_NAME_MAP: dict[str, str] = {e.code: e.name for e in ETF_REGISTRY}
 def get_etf(code: str) -> EtfEntry | None:
     """依代碼取得 ETF entry，找不到回傳 None。"""
     return ETF_META.get(code)
+
+
+def get_all_etf_codes() -> list[str]:
+    """回傳全部 ETF 代碼清單（含主流程 ETF）。"""
+    return ALL_ETF_CODES
+
+
+def get_secondary_etf_codes() -> list[str]:
+    """回傳次要 ETF 代碼清單（MultiEtfStep 負責，排除主流程 ETF）。"""
+    return SECONDARY_ETF_CODES

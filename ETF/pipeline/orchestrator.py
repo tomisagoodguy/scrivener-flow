@@ -18,7 +18,11 @@ from ETF.pipeline.steps import (
     SyncOHLCVStep,
     WeightHistoryStep,
     MultiEtfStep,
+    AumSyncStep,
     OverlapComputeStep,
+    FlowComputeStep,
+    SignalDetectStep,
+    PositionSummaryStep,
     SyncBareKStep,
     ShareholderSignalStep,
     NewsContextStep,
@@ -46,9 +50,13 @@ class PipelineOrchestrator:
         ShareholderSignalStep,  # 讀 stock-data-main JSON，計算大戶積累訊號
         WeightHistoryStep,      # 快照存完後聚合排名→走勢表
         MultiEtfStep,           # 爬取 00980A / 00991A 持股、AUM、產業
+        AumSyncStep,            # 同步各 ETF AUM 時序 → etf_aum_series（輔助）
         SyncCompanyStep,
         SyncOHLCVStep,
         OverlapComputeStep,     # 聚合跨 ETF 共識持股 → etf_stock_overlap
+        FlowComputeStep,        # 計算每日跨 ETF 資金流向 → etf_flow_daily（輔助）
+        SignalDetectStep,       # 偵測跨 ETF 進階訊號 → etf_signals（輔助）
+        PositionSummaryStep,    # 現金流法計算持倉損益 → etf_position_summary + etf_pnl_series（輔助）
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
         NotifyStep,
