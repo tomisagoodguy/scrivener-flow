@@ -24,9 +24,9 @@ class SaveSnapshotStep(BaseStep):
         
         storage = ctx.storage
         
-        # 儲存異動記錄
+        # 儲存異動記錄（使用 SQLAlchemy upsert，避免 REST API 409 衝突）
         if ctx.diff_logs:
-            storage.save_diff_logs(ctx.diff_logs)
+            ctx.sql_storage.save_diff_logs(ctx.diff_logs)
             storage.update_holding_periods(ctx.diff_logs)
             self.logger.info(f"Saved {len(ctx.diff_logs)} diff logs.")
         

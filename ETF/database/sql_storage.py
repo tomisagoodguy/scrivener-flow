@@ -73,6 +73,41 @@ class SQLStorage:
             result = conn.execute(query)
             return [row[0] for row in result]
 
+    def save_diff_logs(self, diff_logs: list):
+        """Upsert diff logs 到 etf_diff_logs 表（SQLAlchemy，避免 REST API 409）。"""
+        if not diff_logs:
+            return
+
+        upsert_sql = text("""
+            INSERT INTO etf_diff_logs
+                (etf_code, stock_code, stock_name, data_date, change_type,
+                 prev_shares, curr_shares, diff_shares,
+                 prev_weight, curr_weight, diff_weight,
+                 is_significant, description)
+            VALUES
+                (:etf_code, :stock_code, :stock_name, :data_date, :change_type,
+                 :prev_shares, :curr_shares, :diff_shares,
+                 :prev_weight, :curr_weight, :diff_weight,
+                 :is_significant, :description)
+            ON CONFLICT (etf_code, stock_code, data_date)
+            DO UPDATE SET
+                change_type    = EXCLUDED.change_type,
+                stock_name     = EXCLUDED.stock_name,
+                prev_shares    = EXCLUDED.prev_shares,
+                curr_shares    = EXCLUDED.curr_shares,
+                diff_shares    = EXCLUDED.diff_shares,
+                prev_weight    = EXCLUDED.prev_weight,
+                curr_weight    = EXCLUDED.curr_weight,
+                diff_weight    = EXCLUDED.diff_weight,
+                is_significant = EXCLUDED.is_significant,
+                description    = EXCLUDED.description
+        """)
+
+        with self.engine.connect() as conn:
+            conn.execute(upsert_sql, diff_logs)
+            conn.commit()
+        logger.info(f"Saved {len(diff_logs)} diff logs via SQLAlchemy.")
+
     def upsert_revenue_data(self, records: list):
         """批次更新營收數據 (Bulk)"""
         if not records:
