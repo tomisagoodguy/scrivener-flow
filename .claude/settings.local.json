@@ -102,7 +102,10 @@
       "Bash(FORCE_RUN=true uv run python ETF/scripts/backfill_positions.py --days 365)",
       "Bash(FORCE_RUN=true uv run python ETF/scripts/backfill_positions.py --days 5)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"perf\\(etf\\): 修正 daily pipeline 超時問題（broker chunk_size + 移除每日集保 sync）\")",
-      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf\\(etf\\): 修正 daily pipeline 超時問題（broker chunk_size + 移除每日集保 sync）\")"
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf\\(etf\\): 修正 daily pipeline 超時問題（broker chunk_size + 移除每日集保 sync）\")",
+      "Bash(tasklist /FI \"PID eq 23480\")",
+      "Bash(python3 -c \"import sys,json; runs=json.load\\(sys.stdin\\); [print\\(f\\\\\"{r['createdAt'][:10]} {r['status']:12} {r['conclusion'] or '-':12} {r['displayTitle'][:50]}\\\\\"\\) for r in runs]\")",
+      "PowerShell(gh run list --workflow=etf_daily.yml --limit 15 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",
