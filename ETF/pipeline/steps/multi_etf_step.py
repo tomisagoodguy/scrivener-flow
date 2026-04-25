@@ -40,8 +40,9 @@ class MultiEtfStep(BaseStep):
         fallback_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
         all_secondary_codes: list[str] = []
+        secondary_etf_codes = get_secondary_etf_codes()
 
-        for etf_code in get_secondary_etf_codes():
+        for etf_code in secondary_etf_codes:
             entry = ETF_META.get(etf_code)
             name = entry.name if entry else etf_code
             self.logger.info(f"Processing {etf_code} ({name})...")
@@ -111,7 +112,7 @@ class MultiEtfStep(BaseStep):
             ctx.secondary_stock_codes = list(set(all_secondary_codes))
             self.logger.info(
                 f"Collected {len(ctx.secondary_stock_codes)} unique stock codes "
-                f"from {len(list(SECONDARY_ETF_CODES))} secondary ETFs"
+                f"from {len(secondary_etf_codes)} secondary ETFs"
             )
 
         return ctx
