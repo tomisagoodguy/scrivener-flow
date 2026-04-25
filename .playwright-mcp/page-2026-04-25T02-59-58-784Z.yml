@@ -1,0 +1,1303 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - region "Notifications alt+T"
+    - main [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - generic [ref=e10]:
+              - generic [ref=e12]: S
+              - generic [ref=e13]: 投資監控
+            - navigation [ref=e14]:
+              - link "選股池" [ref=e15] [cursor=pointer]:
+                - /url: /investment
+              - link "裸K看盤" [ref=e16] [cursor=pointer]:
+                - /url: /investment/bare-k
+              - link "法人共識" [ref=e17] [cursor=pointer]:
+                - /url: /investment/consensus
+              - link "ETF 對比" [ref=e18] [cursor=pointer]:
+                - /url: /investment/compare
+              - link "歷史回顧" [ref=e19] [cursor=pointer]:
+                - /url: /investment/history
+              - link "營收實驗室" [ref=e20] [cursor=pointer]:
+                - /url: /investment/revenue-lab
+              - link "觀察清單" [ref=e21] [cursor=pointer]:
+                - /url: /investment/watch-list
+              - link "籌碼排行" [ref=e22] [cursor=pointer]:
+                - /url: /investment/equity
+          - link "代書系統" [ref=e23] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e24]
+            - text: 代書系統
+        - main [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - heading "主動 ETF 對比分析" [level=1] [ref=e30]
+                - paragraph [ref=e31]: 11 支主動 ETF 持股交集與產業分布
+              - generic [ref=e32]: "資料日期: 2026/04/24"
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - button "持股交集" [ref=e36]
+                - button "規模分析" [ref=e37]
+              - generic [ref=e38]:
+                - generic [ref=e39]:
+                  - generic [ref=e42]:
+                    - text: 全 11 支共同持有8支
+                    - generic [ref=e43]: （佔全部持股 4%）
+                  - generic [ref=e46]:
+                    - text: 10 支共同持有2支
+                    - generic [ref=e47]: （佔全部持股 1%）
+                  - generic [ref=e50]:
+                    - text: 9 支共同持有8支
+                    - generic [ref=e51]: （佔全部持股 4%）
+                  - generic [ref=e54]:
+                    - text: 8 支共同持有3支
+                    - generic [ref=e55]: （佔全部持股 2%）
+                  - generic [ref=e58]:
+                    - text: 7 支共同持有5支
+                    - generic [ref=e59]: （佔全部持股 3%）
+                  - generic [ref=e62]:
+                    - text: 6 支共同持有7支
+                    - generic [ref=e63]: （佔全部持股 4%）
+                  - generic [ref=e66]:
+                    - text: 5 支共同持有12支
+                    - generic [ref=e67]: （佔全部持股 6%）
+                  - generic [ref=e70]:
+                    - text: 4 支共同持有11支
+                    - generic [ref=e71]: （佔全部持股 6%）
+                  - generic [ref=e74]:
+                    - text: 3 支共同持有18支
+                    - generic [ref=e75]: （佔全部持股 9%）
+                  - generic [ref=e78]:
+                    - text: 2 支共同持有36支
+                    - generic [ref=e79]: （佔全部持股 18%）
+                - generic [ref=e80]:
+                  - generic [ref=e83]:
+                    - text: 全 11 支共同持有：2308、2330、2345、2368、2383
+                    - generic [ref=e84]: +3 支
+                  - generic [ref=e87]: 10 支共同持有：2360、6805
+                  - generic [ref=e90]:
+                    - text: 9 支共同持有：2454、3037、3653、3711、5274
+                    - generic [ref=e91]: +3 支
+                  - generic [ref=e94]: 8 支共同持有：6669、8046、8996
+                  - generic [ref=e97]: 7 支共同持有：2313、3105、3264、3443、7769
+                  - generic [ref=e100]:
+                    - text: 6 支共同持有：2059、2344、2449、3189、3533
+                    - generic [ref=e101]: +2 支
+                  - generic [ref=e104]:
+                    - text: 5 支共同持有：2327、2382、2404、2412、2881
+                    - generic [ref=e105]: +7 支
+                  - generic [ref=e108]:
+                    - text: 4 支共同持有：1303、1519、2317、2337、2408
+                    - generic [ref=e109]: +6 支
+                  - generic [ref=e112]:
+                    - text: 3 支共同持有：1590、2303、2455、2467、2603
+                    - generic [ref=e113]: +13 支
+                  - generic [ref=e116]:
+                    - text: 2 支共同持有：1319、1477、1560、1815、2347
+                    - generic [ref=e117]: +31 支
+                - generic [ref=e118]:
+                  - generic [ref=e119]:
+                    - generic [ref=e121]:
+                      - generic [ref=e122]:
+                        - generic [ref=e123]: 00985A
+                        - generic [ref=e124]: 主動野村台灣50
+                        - generic [ref=e125]: 野村投信
+                      - generic [ref=e127]: 前10大合計權重 59.89%
+                    - table [ref=e129]:
+                      - rowgroup [ref=e130]:
+                        - row "# 代號 名稱 比重" [ref=e131]:
+                          - columnheader "#" [ref=e132]
+                          - columnheader "代號" [ref=e133]
+                          - columnheader "名稱" [ref=e134]
+                          - columnheader "比重" [ref=e135]
+                      - rowgroup [ref=e136]:
+                        - row "1 2330 台灣積體電路製造11共 29.18%" [ref=e137]:
+                          - cell "1" [ref=e138]
+                          - cell "2330" [ref=e139]:
+                            - link "2330" [ref=e140] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台灣積體電路製造11共" [ref=e141]:
+                            - text: 台灣積體電路製造
+                            - generic [ref=e142]: 11共
+                          - cell "29.18%" [ref=e143]
+                        - row "2 7769 鴻勁精密7共 4.83%" [ref=e144]:
+                          - cell "2" [ref=e145]
+                          - cell "7769" [ref=e146]:
+                            - link "7769" [ref=e147] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/7769.TW
+                          - cell "鴻勁精密7共" [ref=e148]:
+                            - text: 鴻勁精密
+                            - generic [ref=e149]: 7共
+                          - cell "4.83%" [ref=e150]
+                        - row "3 3653 健策精密工業9共 4.44%" [ref=e151]:
+                          - cell "3" [ref=e152]
+                          - cell "3653" [ref=e153]:
+                            - link "3653" [ref=e154] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3653.TW
+                          - cell "健策精密工業9共" [ref=e155]:
+                            - text: 健策精密工業
+                            - generic [ref=e156]: 9共
+                          - cell "4.44%" [ref=e157]
+                        - row "4 3017 奇鋐科技11共 4.19%" [ref=e158]:
+                          - cell "4" [ref=e159]
+                          - cell "3017" [ref=e160]:
+                            - link "3017" [ref=e161] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐科技11共" [ref=e162]:
+                            - text: 奇鋐科技
+                            - generic [ref=e163]: 11共
+                          - cell "4.19%" [ref=e164]
+                        - row "5 2308 台達電子工業11共 3.94%" [ref=e165]:
+                          - cell "5" [ref=e166]
+                          - cell "2308" [ref=e167]:
+                            - link "2308" [ref=e168] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電子工業11共" [ref=e169]:
+                            - text: 台達電子工業
+                            - generic [ref=e170]: 11共
+                          - cell "3.94%" [ref=e171]
+                        - row "6 3665 貿聯控股（BizLink Holding In11共 3.42%" [ref=e172]:
+                          - cell "6" [ref=e173]
+                          - cell "3665" [ref=e174]:
+                            - link "3665" [ref=e175] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯控股（BizLink Holding In11共" [ref=e176]:
+                            - text: 貿聯控股（BizLink Holding In
+                            - generic [ref=e177]: 11共
+                          - cell "3.42%" [ref=e178]
+                        - row "7 2368 金像電子（股）公司11共 2.87%" [ref=e179]:
+                          - cell "7" [ref=e180]
+                          - cell "2368" [ref=e181]:
+                            - link "2368" [ref=e182] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電子（股）公司11共" [ref=e183]:
+                            - text: 金像電子（股）公司
+                            - generic [ref=e184]: 11共
+                          - cell "2.87%" [ref=e185]
+                        - row "8 2454 聯發科技9共 2.80%" [ref=e186]:
+                          - cell "8" [ref=e187]
+                          - cell "2454" [ref=e188]:
+                            - link "2454" [ref=e189] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2454.TW
+                          - cell "聯發科技9共" [ref=e190]:
+                            - text: 聯發科技
+                            - generic [ref=e191]: 9共
+                          - cell "2.80%" [ref=e192]
+                        - row "9 3711 日月光投資控股9共 2.20%" [ref=e193]:
+                          - cell "9" [ref=e194]
+                          - cell "3711" [ref=e195]:
+                            - link "3711" [ref=e196] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3711.TW
+                          - cell "日月光投資控股9共" [ref=e197]:
+                            - text: 日月光投資控股
+                            - generic [ref=e198]: 9共
+                          - cell "2.20%" [ref=e199]
+                        - row "10 6415 矽力杰2共 2.02%" [ref=e200]:
+                          - cell "10" [ref=e201]
+                          - cell "6415" [ref=e202]:
+                            - link "6415" [ref=e203] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6415.TW
+                          - cell "矽力杰2共" [ref=e204]:
+                            - text: 矽力杰
+                            - generic [ref=e205]: 2共
+                          - cell "2.02%" [ref=e206]
+                    - button "顯示全部 50 筆 ▼" [ref=e208]
+                    - generic [ref=e209]:
+                      - generic [ref=e210]: 產業分布
+                      - generic [ref=e211]: 無產業資料
+                  - generic [ref=e212]:
+                    - generic [ref=e214]:
+                      - generic [ref=e215]:
+                        - generic [ref=e216]: 00991A
+                        - generic [ref=e217]: 主動復華未來50
+                        - generic [ref=e218]: 復華投信
+                      - generic [ref=e219]:
+                        - generic [ref=e220]: 規模 8.6 億
+                        - generic [ref=e221]: 前10大合計權重 67.92%
+                    - table [ref=e223]:
+                      - rowgroup [ref=e224]:
+                        - row "# 代號 名稱 比重" [ref=e225]:
+                          - columnheader "#" [ref=e226]
+                          - columnheader "代號" [ref=e227]
+                          - columnheader "名稱" [ref=e228]
+                          - columnheader "比重" [ref=e229]
+                      - rowgroup [ref=e230]:
+                        - row "1 2330 台灣積體11共 14.93%" [ref=e231]:
+                          - cell "1" [ref=e232]
+                          - cell "2330" [ref=e233]:
+                            - link "2330" [ref=e234] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台灣積體11共" [ref=e235]:
+                            - text: 台灣積體
+                            - generic [ref=e236]: 11共
+                          - cell "14.93%" [ref=e237]
+                        - row "2 2383 台光電子11共 10.17%" [ref=e238]:
+                          - cell "2" [ref=e239]
+                          - cell "2383" [ref=e240]:
+                            - link "2383" [ref=e241] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電子11共" [ref=e242]:
+                            - text: 台光電子
+                            - generic [ref=e243]: 11共
+                          - cell "10.17%" [ref=e244]
+                        - row "3 3037 欣興電子9共 7.51%" [ref=e245]:
+                          - cell "3" [ref=e246]
+                          - cell "3037" [ref=e247]:
+                            - link "3037" [ref=e248] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興電子9共" [ref=e249]:
+                            - text: 欣興電子
+                            - generic [ref=e250]: 9共
+                          - cell "7.51%" [ref=e251]
+                        - row "4 8299 群聯電子5共 6.49%" [ref=e252]:
+                          - cell "4" [ref=e253]
+                          - cell "8299" [ref=e254]:
+                            - link "8299" [ref=e255] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/8299.TW
+                          - cell "群聯電子5共" [ref=e256]:
+                            - text: 群聯電子
+                            - generic [ref=e257]: 5共
+                          - cell "6.49%" [ref=e258]
+                        - row "5 2308 台達電子11共 6.29%" [ref=e259]:
+                          - cell "5" [ref=e260]
+                          - cell "2308" [ref=e261]:
+                            - link "2308" [ref=e262] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電子11共" [ref=e263]:
+                            - text: 台達電子
+                            - generic [ref=e264]: 11共
+                          - cell "6.29%" [ref=e265]
+                        - row "6 5274 信驊科技9共 4.86%" [ref=e266]:
+                          - cell "6" [ref=e267]
+                          - cell "5274" [ref=e268]:
+                            - link "5274" [ref=e269] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/5274.TW
+                          - cell "信驊科技9共" [ref=e270]:
+                            - text: 信驊科技
+                            - generic [ref=e271]: 9共
+                          - cell "4.86%" [ref=e272]
+                        - row "7 3017 奇鋐科技11共 4.81%" [ref=e273]:
+                          - cell "7" [ref=e274]
+                          - cell "3017" [ref=e275]:
+                            - link "3017" [ref=e276] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐科技11共" [ref=e277]:
+                            - text: 奇鋐科技
+                            - generic [ref=e278]: 11共
+                          - cell "4.81%" [ref=e279]
+                        - row "8 2345 智邦科技11共 4.45%" [ref=e280]:
+                          - cell "8" [ref=e281]
+                          - cell "2345" [ref=e282]:
+                            - link "2345" [ref=e283] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦科技11共" [ref=e284]:
+                            - text: 智邦科技
+                            - generic [ref=e285]: 11共
+                          - cell "4.45%" [ref=e286]
+                        - row "9 8046 南亞電路8共 4.28%" [ref=e287]:
+                          - cell "9" [ref=e288]
+                          - cell "8046" [ref=e289]:
+                            - link "8046" [ref=e290] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/8046.TW
+                          - cell "南亞電路8共" [ref=e291]:
+                            - text: 南亞電路
+                            - generic [ref=e292]: 8共
+                          - cell "4.28%" [ref=e293]
+                        - row "10 2368 金像電子11共 4.13%" [ref=e294]:
+                          - cell "10" [ref=e295]
+                          - cell "2368" [ref=e296]:
+                            - link "2368" [ref=e297] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電子11共" [ref=e298]:
+                            - text: 金像電子
+                            - generic [ref=e299]: 11共
+                          - cell "4.13%" [ref=e300]
+                    - button "顯示全部 50 筆 ▼" [ref=e302]
+                    - generic [ref=e303]:
+                      - generic [ref=e304]: 產業分布
+                      - generic [ref=e305]: 無產業資料
+                  - generic [ref=e306]:
+                    - generic [ref=e308]:
+                      - generic [ref=e309]:
+                        - generic [ref=e310]: 00994A
+                        - generic [ref=e311]: 主動第一金台股優
+                        - generic [ref=e312]: 第一金投信
+                      - generic [ref=e314]: 前10大合計權重 59.85%
+                    - table [ref=e316]:
+                      - rowgroup [ref=e317]:
+                        - row "# 代號 名稱 比重" [ref=e318]:
+                          - columnheader "#" [ref=e319]
+                          - columnheader "代號" [ref=e320]
+                          - columnheader "名稱" [ref=e321]
+                          - columnheader "比重" [ref=e322]
+                      - rowgroup [ref=e323]:
+                        - row "1 2330 台積電11共 14.75%" [ref=e324]:
+                          - cell "1" [ref=e325]
+                          - cell "2330" [ref=e326]:
+                            - link "2330" [ref=e327] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e328]:
+                            - text: 台積電
+                            - generic [ref=e329]: 11共
+                          - cell "14.75%" [ref=e330]
+                        - row "2 2383 台光電11共 7.05%" [ref=e331]:
+                          - cell "2" [ref=e332]
+                          - cell "2383" [ref=e333]:
+                            - link "2383" [ref=e334] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電11共" [ref=e335]:
+                            - text: 台光電
+                            - generic [ref=e336]: 11共
+                          - cell "7.05%" [ref=e337]
+                        - row "3 3017 奇鋐11共 5.69%" [ref=e338]:
+                          - cell "3" [ref=e339]
+                          - cell "3017" [ref=e340]:
+                            - link "3017" [ref=e341] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐11共" [ref=e342]:
+                            - text: 奇鋐
+                            - generic [ref=e343]: 11共
+                          - cell "5.69%" [ref=e344]
+                        - row "4 2308 台達電11共 5.21%" [ref=e345]:
+                          - cell "4" [ref=e346]
+                          - cell "2308" [ref=e347]:
+                            - link "2308" [ref=e348] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電11共" [ref=e349]:
+                            - text: 台達電
+                            - generic [ref=e350]: 11共
+                          - cell "5.21%" [ref=e351]
+                        - row "5 3653 健策9共 5.01%" [ref=e352]:
+                          - cell "5" [ref=e353]
+                          - cell "3653" [ref=e354]:
+                            - link "3653" [ref=e355] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3653.TW
+                          - cell "健策9共" [ref=e356]:
+                            - text: 健策
+                            - generic [ref=e357]: 9共
+                          - cell "5.01%" [ref=e358]
+                        - row "6 2454 聯發科9共 4.99%" [ref=e359]:
+                          - cell "6" [ref=e360]
+                          - cell "2454" [ref=e361]:
+                            - link "2454" [ref=e362] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2454.TW
+                          - cell "聯發科9共" [ref=e363]:
+                            - text: 聯發科
+                            - generic [ref=e364]: 9共
+                          - cell "4.99%" [ref=e365]
+                        - row "7 3665 貿聯-KY11共 4.58%" [ref=e366]:
+                          - cell "7" [ref=e367]
+                          - cell "3665" [ref=e368]:
+                            - link "3665" [ref=e369] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯-KY11共" [ref=e370]:
+                            - text: 貿聯-KY
+                            - generic [ref=e371]: 11共
+                          - cell "4.58%" [ref=e372]
+                        - row "8 2368 金像電11共 4.53%" [ref=e373]:
+                          - cell "8" [ref=e374]
+                          - cell "2368" [ref=e375]:
+                            - link "2368" [ref=e376] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電11共" [ref=e377]:
+                            - text: 金像電
+                            - generic [ref=e378]: 11共
+                          - cell "4.53%" [ref=e379]
+                        - row "9 2345 智邦11共 4.16%" [ref=e380]:
+                          - cell "9" [ref=e381]
+                          - cell "2345" [ref=e382]:
+                            - link "2345" [ref=e383] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦11共" [ref=e384]:
+                            - text: 智邦
+                            - generic [ref=e385]: 11共
+                          - cell "4.16%" [ref=e386]
+                        - row "10 3037 欣興9共 3.88%" [ref=e387]:
+                          - cell "10" [ref=e388]
+                          - cell "3037" [ref=e389]:
+                            - link "3037" [ref=e390] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興9共" [ref=e391]:
+                            - text: 欣興
+                            - generic [ref=e392]: 9共
+                          - cell "3.88%" [ref=e393]
+                    - button "顯示全部 36 筆 ▼" [ref=e395]
+                    - generic [ref=e396]:
+                      - generic [ref=e397]: 產業分布
+                      - generic [ref=e398]: 無產業資料
+                  - generic [ref=e399]:
+                    - generic [ref=e401]:
+                      - generic [ref=e402]:
+                        - generic [ref=e403]: 00993A
+                        - generic [ref=e404]: 主動安聯台灣
+                        - generic [ref=e405]: 安聯投信
+                      - generic [ref=e407]: 前10大合計權重 59.72%
+                    - table [ref=e409]:
+                      - rowgroup [ref=e410]:
+                        - row "# 代號 名稱 比重" [ref=e411]:
+                          - columnheader "#" [ref=e412]
+                          - columnheader "代號" [ref=e413]
+                          - columnheader "名稱" [ref=e414]
+                          - columnheader "比重" [ref=e415]
+                      - rowgroup [ref=e416]:
+                        - row "1 3037 欣興9共 11.46%" [ref=e417]:
+                          - cell "1" [ref=e418]
+                          - cell "3037" [ref=e419]:
+                            - link "3037" [ref=e420] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興9共" [ref=e421]:
+                            - text: 欣興
+                            - generic [ref=e422]: 9共
+                          - cell "11.46%" [ref=e423]
+                        - row "2 2330 台積電11共 8.30%" [ref=e424]:
+                          - cell "2" [ref=e425]
+                          - cell "2330" [ref=e426]:
+                            - link "2330" [ref=e427] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e428]:
+                            - text: 台積電
+                            - generic [ref=e429]: 11共
+                          - cell "8.30%" [ref=e430]
+                        - row "3 6515 穎崴9共 7.98%" [ref=e431]:
+                          - cell "3" [ref=e432]
+                          - cell "6515" [ref=e433]:
+                            - link "6515" [ref=e434] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6515.TW
+                          - cell "穎崴9共" [ref=e435]:
+                            - text: 穎崴
+                            - generic [ref=e436]: 9共
+                          - cell "7.98%" [ref=e437]
+                        - row "4 3105 穩懋7共 7.82%" [ref=e438]:
+                          - cell "4" [ref=e439]
+                          - cell "3105" [ref=e440]:
+                            - link "3105" [ref=e441] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3105.TW
+                          - cell "穩懋7共" [ref=e442]:
+                            - text: 穩懋
+                            - generic [ref=e443]: 7共
+                          - cell "7.82%" [ref=e444]
+                        - row "5 2337 旺宏4共 7.25%" [ref=e445]:
+                          - cell "5" [ref=e446]
+                          - cell "2337" [ref=e447]:
+                            - link "2337" [ref=e448] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2337.TW
+                          - cell "旺宏4共" [ref=e449]:
+                            - text: 旺宏
+                            - generic [ref=e450]: 4共
+                          - cell "7.25%" [ref=e451]
+                        - row "6 3702 大聯大2共 6.95%" [ref=e452]:
+                          - cell "6" [ref=e453]
+                          - cell "3702" [ref=e454]:
+                            - link "3702" [ref=e455] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3702.TW
+                          - cell "大聯大2共" [ref=e456]:
+                            - text: 大聯大
+                            - generic [ref=e457]: 2共
+                          - cell "6.95%" [ref=e458]
+                        - row "7 2313 華通7共 5.56%" [ref=e459]:
+                          - cell "7" [ref=e460]
+                          - cell "2313" [ref=e461]:
+                            - link "2313" [ref=e462] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2313.TW
+                          - cell "華通7共" [ref=e463]:
+                            - text: 華通
+                            - generic [ref=e464]: 7共
+                          - cell "5.56%" [ref=e465]
+                        - row "8 6213 聯茂 1.62%" [ref=e466]:
+                          - cell "8" [ref=e467]
+                          - cell "6213" [ref=e468]:
+                            - link "6213" [ref=e469] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6213.TW
+                          - cell "聯茂" [ref=e470]
+                          - cell "1.62%" [ref=e471]
+                        - row "9 3583 辛耘2共 1.42%" [ref=e472]:
+                          - cell "9" [ref=e473]
+                          - cell "3583" [ref=e474]:
+                            - link "3583" [ref=e475] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3583.TW
+                          - cell "辛耘2共" [ref=e476]:
+                            - text: 辛耘
+                            - generic [ref=e477]: 2共
+                          - cell "1.42%" [ref=e478]
+                        - row "10 2383 台光電子11共 1.36%" [ref=e479]:
+                          - cell "10" [ref=e480]
+                          - cell "2383" [ref=e481]:
+                            - link "2383" [ref=e482] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電子11共" [ref=e483]:
+                            - text: 台光電子
+                            - generic [ref=e484]: 11共
+                          - cell "1.36%" [ref=e485]
+                    - button "顯示全部 49 筆 ▼" [ref=e487]
+                    - generic [ref=e488]:
+                      - generic [ref=e489]: 產業分布
+                      - generic [ref=e490]: 無產業資料
+                  - generic [ref=e491]:
+                    - generic [ref=e493]:
+                      - generic [ref=e494]:
+                        - generic [ref=e495]: 00981A
+                        - generic [ref=e496]: 主動統一台股增長
+                        - generic [ref=e497]: 統一投信
+                      - generic [ref=e499]: 前10大合計權重 60.18%
+                    - table [ref=e501]:
+                      - rowgroup [ref=e502]:
+                        - row "# 代號 名稱 比重" [ref=e503]:
+                          - columnheader "#" [ref=e504]
+                          - columnheader "代號" [ref=e505]
+                          - columnheader "名稱" [ref=e506]
+                          - columnheader "比重" [ref=e507]
+                      - rowgroup [ref=e508]:
+                        - row "1 2330 台積電11共 9.39%" [ref=e509]:
+                          - cell "1" [ref=e510]
+                          - cell "2330" [ref=e511]:
+                            - link "2330" [ref=e512] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e513]:
+                            - text: 台積電
+                            - generic [ref=e514]: 11共
+                          - cell "9.39%" [ref=e515]
+                        - row "2 2383 台光電11共 8.70%" [ref=e516]:
+                          - cell "2" [ref=e517]
+                          - cell "2383" [ref=e518]:
+                            - link "2383" [ref=e519] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電11共" [ref=e520]:
+                            - text: 台光電
+                            - generic [ref=e521]: 11共
+                          - cell "8.70%" [ref=e522]
+                        - row "3 2308 台達電11共 5.89%" [ref=e523]:
+                          - cell "3" [ref=e524]
+                          - cell "2308" [ref=e525]:
+                            - link "2308" [ref=e526] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電11共" [ref=e527]:
+                            - text: 台達電
+                            - generic [ref=e528]: 11共
+                          - cell "5.89%" [ref=e529]
+                        - row "4 3653 健策9共 5.74%" [ref=e530]:
+                          - cell "4" [ref=e531]
+                          - cell "3653" [ref=e532]:
+                            - link "3653" [ref=e533] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3653.TW
+                          - cell "健策9共" [ref=e534]:
+                            - text: 健策
+                            - generic [ref=e535]: 9共
+                          - cell "5.74%" [ref=e536]
+                        - row "5 3017 奇鋐11共 5.42%" [ref=e537]:
+                          - cell "5" [ref=e538]
+                          - cell "3017" [ref=e539]:
+                            - link "3017" [ref=e540] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐11共" [ref=e541]:
+                            - text: 奇鋐
+                            - generic [ref=e542]: 11共
+                          - cell "5.42%" [ref=e543]
+                        - row "6 3665 貿聯-KY11共 5.34%" [ref=e544]:
+                          - cell "6" [ref=e545]
+                          - cell "3665" [ref=e546]:
+                            - link "3665" [ref=e547] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯-KY11共" [ref=e548]:
+                            - text: 貿聯-KY
+                            - generic [ref=e549]: 11共
+                          - cell "5.34%" [ref=e550]
+                        - row "7 2345 智邦11共 5.28%" [ref=e551]:
+                          - cell "7" [ref=e552]
+                          - cell "2345" [ref=e553]:
+                            - link "2345" [ref=e554] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦11共" [ref=e555]:
+                            - text: 智邦
+                            - generic [ref=e556]: 11共
+                          - cell "5.28%" [ref=e557]
+                        - row "8 2368 金像電11共 5.08%" [ref=e558]:
+                          - cell "8" [ref=e559]
+                          - cell "2368" [ref=e560]:
+                            - link "2368" [ref=e561] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電11共" [ref=e562]:
+                            - text: 金像電
+                            - generic [ref=e563]: 11共
+                          - cell "5.08%" [ref=e564]
+                        - row "9 8046 南電8共 4.90%" [ref=e565]:
+                          - cell "9" [ref=e566]
+                          - cell "8046" [ref=e567]:
+                            - link "8046" [ref=e568] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/8046.TW
+                          - cell "南電8共" [ref=e569]:
+                            - text: 南電
+                            - generic [ref=e570]: 8共
+                          - cell "4.90%" [ref=e571]
+                        - row "10 2454 聯發科9共 4.44%" [ref=e572]:
+                          - cell "10" [ref=e573]
+                          - cell "2454" [ref=e574]:
+                            - link "2454" [ref=e575] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2454.TW
+                          - cell "聯發科9共" [ref=e576]:
+                            - text: 聯發科
+                            - generic [ref=e577]: 9共
+                          - cell "4.44%" [ref=e578]
+                    - button "顯示全部 52 筆 ▼" [ref=e580]
+                    - generic [ref=e581]:
+                      - generic [ref=e582]: 產業分布
+                      - generic [ref=e583]: 無產業資料
+                  - generic [ref=e584]:
+                    - generic [ref=e586]:
+                      - generic [ref=e587]:
+                        - generic [ref=e588]: 00995A
+                        - generic [ref=e589]: 主動中信台灣卓越
+                        - generic [ref=e590]: 中國信託投信
+                      - generic [ref=e592]: 前10大合計權重 55.68%
+                    - table [ref=e594]:
+                      - rowgroup [ref=e595]:
+                        - row "# 代號 名稱 比重" [ref=e596]:
+                          - columnheader "#" [ref=e597]
+                          - columnheader "代號" [ref=e598]
+                          - columnheader "名稱" [ref=e599]
+                          - columnheader "比重" [ref=e600]
+                      - rowgroup [ref=e601]:
+                        - row "1 2330 台灣積體電路製造11共 9.15%" [ref=e602]:
+                          - cell "1" [ref=e603]
+                          - cell "2330" [ref=e604]:
+                            - link "2330" [ref=e605] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台灣積體電路製造11共" [ref=e606]:
+                            - text: 台灣積體電路製造
+                            - generic [ref=e607]: 11共
+                          - cell "9.15%" [ref=e608]
+                        - row "2 2383 台光電子材料11共 6.68%" [ref=e609]:
+                          - cell "2" [ref=e610]
+                          - cell "2383" [ref=e611]:
+                            - link "2383" [ref=e612] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電子材料11共" [ref=e613]:
+                            - text: 台光電子材料
+                            - generic [ref=e614]: 11共
+                          - cell "6.68%" [ref=e615]
+                        - row "3 2308 台達電子工業11共 5.90%" [ref=e616]:
+                          - cell "3" [ref=e617]
+                          - cell "2308" [ref=e618]:
+                            - link "2308" [ref=e619] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電子工業11共" [ref=e620]:
+                            - text: 台達電子工業
+                            - generic [ref=e621]: 11共
+                          - cell "5.90%" [ref=e622]
+                        - row "4 3665 貿聯控股11共 5.85%" [ref=e623]:
+                          - cell "4" [ref=e624]
+                          - cell "3665" [ref=e625]:
+                            - link "3665" [ref=e626] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯控股11共" [ref=e627]:
+                            - text: 貿聯控股
+                            - generic [ref=e628]: 11共
+                          - cell "5.85%" [ref=e629]
+                        - row "5 2368 金像電子11共 5.46%" [ref=e630]:
+                          - cell "5" [ref=e631]
+                          - cell "2368" [ref=e632]:
+                            - link "2368" [ref=e633] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電子11共" [ref=e634]:
+                            - text: 金像電子
+                            - generic [ref=e635]: 11共
+                          - cell "5.46%" [ref=e636]
+                        - row "6 2345 智邦科技11共 5.13%" [ref=e637]:
+                          - cell "6" [ref=e638]
+                          - cell "2345" [ref=e639]:
+                            - link "2345" [ref=e640] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦科技11共" [ref=e641]:
+                            - text: 智邦科技
+                            - generic [ref=e642]: 11共
+                          - cell "5.13%" [ref=e643]
+                        - row "7 6223 旺矽科技11共 4.78%" [ref=e644]:
+                          - cell "7" [ref=e645]
+                          - cell "6223" [ref=e646]:
+                            - link "6223" [ref=e647] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6223.TW
+                          - cell "旺矽科技11共" [ref=e648]:
+                            - text: 旺矽科技
+                            - generic [ref=e649]: 11共
+                          - cell "4.78%" [ref=e650]
+                        - row "8 3017 奇鋐科技11共 4.63%" [ref=e651]:
+                          - cell "8" [ref=e652]
+                          - cell "3017" [ref=e653]:
+                            - link "3017" [ref=e654] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐科技11共" [ref=e655]:
+                            - text: 奇鋐科技
+                            - generic [ref=e656]: 11共
+                          - cell "4.63%" [ref=e657]
+                        - row "9 3037 欣興電子9共 4.14%" [ref=e658]:
+                          - cell "9" [ref=e659]
+                          - cell "3037" [ref=e660]:
+                            - link "3037" [ref=e661] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興電子9共" [ref=e662]:
+                            - text: 欣興電子
+                            - generic [ref=e663]: 9共
+                          - cell "4.14%" [ref=e664]
+                        - row "10 5274 信驊科技9共 3.96%" [ref=e665]:
+                          - cell "10" [ref=e666]
+                          - cell "5274" [ref=e667]:
+                            - link "5274" [ref=e668] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/5274.TW
+                          - cell "信驊科技9共" [ref=e669]:
+                            - text: 信驊科技
+                            - generic [ref=e670]: 9共
+                          - cell "3.96%" [ref=e671]
+                    - button "顯示全部 58 筆 ▼" [ref=e673]
+                    - generic [ref=e674]:
+                      - generic [ref=e675]: 產業分布
+                      - generic [ref=e676]: 無產業資料
+                  - generic [ref=e677]:
+                    - generic [ref=e679]:
+                      - generic [ref=e680]:
+                        - generic [ref=e681]: 00980A
+                        - generic [ref=e682]: 主動野村臺灣優選
+                        - generic [ref=e683]: 野村投信
+                      - generic [ref=e684]:
+                        - generic [ref=e685]: 規模 3.6 億
+                        - generic [ref=e686]: 前10大合計權重 39.09%
+                    - table [ref=e688]:
+                      - rowgroup [ref=e689]:
+                        - row "# 代號 名稱 比重" [ref=e690]:
+                          - columnheader "#" [ref=e691]
+                          - columnheader "代號" [ref=e692]
+                          - columnheader "名稱" [ref=e693]
+                          - columnheader "比重" [ref=e694]
+                      - rowgroup [ref=e695]:
+                        - row "1 2330 台灣積體電路製造11共 8.90%" [ref=e696]:
+                          - cell "1" [ref=e697]
+                          - cell "2330" [ref=e698]:
+                            - link "2330" [ref=e699] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台灣積體電路製造11共" [ref=e700]:
+                            - text: 台灣積體電路製造
+                            - generic [ref=e701]: 11共
+                          - cell "8.90%" [ref=e702]
+                        - row "2 2308 台達電子工業11共 5.47%" [ref=e703]:
+                          - cell "2" [ref=e704]
+                          - cell "2308" [ref=e705]:
+                            - link "2308" [ref=e706] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電子工業11共" [ref=e707]:
+                            - text: 台達電子工業
+                            - generic [ref=e708]: 11共
+                          - cell "5.47%" [ref=e709]
+                        - row "3 2383 台光電子材料11共 3.75%" [ref=e710]:
+                          - cell "3" [ref=e711]
+                          - cell "2383" [ref=e712]:
+                            - link "2383" [ref=e713] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電子材料11共" [ref=e714]:
+                            - text: 台光電子材料
+                            - generic [ref=e715]: 11共
+                          - cell "3.75%" [ref=e716]
+                        - row "4 3017 奇鋐科技11共 3.23%" [ref=e717]:
+                          - cell "4" [ref=e718]
+                          - cell "3017" [ref=e719]:
+                            - link "3017" [ref=e720] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐科技11共" [ref=e721]:
+                            - text: 奇鋐科技
+                            - generic [ref=e722]: 11共
+                          - cell "3.23%" [ref=e723]
+                        - row "5 2454 聯發科技9共 3.20%" [ref=e724]:
+                          - cell "5" [ref=e725]
+                          - cell "2454" [ref=e726]:
+                            - link "2454" [ref=e727] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2454.TW
+                          - cell "聯發科技9共" [ref=e728]:
+                            - text: 聯發科技
+                            - generic [ref=e729]: 9共
+                          - cell "3.20%" [ref=e730]
+                        - row "6 2345 智邦科技11共 3.11%" [ref=e731]:
+                          - cell "6" [ref=e732]
+                          - cell "2345" [ref=e733]:
+                            - link "2345" [ref=e734] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦科技11共" [ref=e735]:
+                            - text: 智邦科技
+                            - generic [ref=e736]: 11共
+                          - cell "3.11%" [ref=e737]
+                        - row "7 2317 鴻海精密工業4共 2.95%" [ref=e738]:
+                          - cell "7" [ref=e739]
+                          - cell "2317" [ref=e740]:
+                            - link "2317" [ref=e741] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2317.TW
+                          - cell "鴻海精密工業4共" [ref=e742]:
+                            - text: 鴻海精密工業
+                            - generic [ref=e743]: 4共
+                          - cell "2.95%" [ref=e744]
+                        - row "8 2368 金像電子（股）公司11共 2.90%" [ref=e745]:
+                          - cell "8" [ref=e746]
+                          - cell "2368" [ref=e747]:
+                            - link "2368" [ref=e748] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2368.TW
+                          - cell "金像電子（股）公司11共" [ref=e749]:
+                            - text: 金像電子（股）公司
+                            - generic [ref=e750]: 11共
+                          - cell "2.90%" [ref=e751]
+                        - row "9 7769 鴻勁精密7共 2.84%" [ref=e752]:
+                          - cell "9" [ref=e753]
+                          - cell "7769" [ref=e754]:
+                            - link "7769" [ref=e755] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/7769.TW
+                          - cell "鴻勁精密7共" [ref=e756]:
+                            - text: 鴻勁精密
+                            - generic [ref=e757]: 7共
+                          - cell "2.84%" [ref=e758]
+                        - row "10 2382 廣達電腦5共 2.74%" [ref=e759]:
+                          - cell "10" [ref=e760]
+                          - cell "2382" [ref=e761]:
+                            - link "2382" [ref=e762] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2382.TW
+                          - cell "廣達電腦5共" [ref=e763]:
+                            - text: 廣達電腦
+                            - generic [ref=e764]: 5共
+                          - cell "2.74%" [ref=e765]
+                    - button "顯示全部 50 筆 ▼" [ref=e767]
+                    - generic [ref=e768]:
+                      - generic [ref=e769]: 產業分布
+                      - generic [ref=e770]: 無產業資料
+                  - generic [ref=e771]:
+                    - generic [ref=e773]:
+                      - generic [ref=e774]:
+                        - generic [ref=e775]: 00982A
+                        - generic [ref=e776]: 主動群益台灣強棒
+                        - generic [ref=e777]: 群益投信
+                      - generic [ref=e779]: 前10大合計權重 53.65%
+                    - table [ref=e781]:
+                      - rowgroup [ref=e782]:
+                        - row "# 代號 名稱 比重" [ref=e783]:
+                          - columnheader "#" [ref=e784]
+                          - columnheader "代號" [ref=e785]
+                          - columnheader "名稱" [ref=e786]
+                          - columnheader "比重" [ref=e787]
+                      - rowgroup [ref=e788]:
+                        - row "1 2330 台積電11共 8.71%" [ref=e789]:
+                          - cell "1" [ref=e790]
+                          - cell "2330" [ref=e791]:
+                            - link "2330" [ref=e792] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e793]:
+                            - text: 台積電
+                            - generic [ref=e794]: 11共
+                          - cell "8.71%" [ref=e795]
+                        - row "2 5536 聖暉* 8.39%" [ref=e796]:
+                          - cell "2" [ref=e797]
+                          - cell "5536" [ref=e798]:
+                            - link "5536" [ref=e799] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/5536.TW
+                          - cell "聖暉*" [ref=e800]
+                          - cell "8.39%" [ref=e801]
+                        - row "3 3105 穩懋7共 5.56%" [ref=e802]:
+                          - cell "3" [ref=e803]
+                          - cell "3105" [ref=e804]:
+                            - link "3105" [ref=e805] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3105.TW
+                          - cell "穩懋7共" [ref=e806]:
+                            - text: 穩懋
+                            - generic [ref=e807]: 7共
+                          - cell "5.56%" [ref=e808]
+                        - row "4 6669 緯穎8共 5.50%" [ref=e809]:
+                          - cell "4" [ref=e810]
+                          - cell "6669" [ref=e811]:
+                            - link "6669" [ref=e812] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6669.TW
+                          - cell "緯穎8共" [ref=e813]:
+                            - text: 緯穎
+                            - generic [ref=e814]: 8共
+                          - cell "5.50%" [ref=e815]
+                        - row "5 2383 台光電11共 5.26%" [ref=e816]:
+                          - cell "5" [ref=e817]
+                          - cell "2383" [ref=e818]:
+                            - link "2383" [ref=e819] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電11共" [ref=e820]:
+                            - text: 台光電
+                            - generic [ref=e821]: 11共
+                          - cell "5.26%" [ref=e822]
+                        - row "6 3264 欣銓7共 4.37%" [ref=e823]:
+                          - cell "6" [ref=e824]
+                          - cell "3264" [ref=e825]:
+                            - link "3264" [ref=e826] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3264.TW
+                          - cell "欣銓7共" [ref=e827]:
+                            - text: 欣銓
+                            - generic [ref=e828]: 7共
+                          - cell "4.37%" [ref=e829]
+                        - row "7 6139 亞翔2共 4.14%" [ref=e830]:
+                          - cell "7" [ref=e831]
+                          - cell "6139" [ref=e832]:
+                            - link "6139" [ref=e833] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6139.TW
+                          - cell "亞翔2共" [ref=e834]:
+                            - text: 亞翔
+                            - generic [ref=e835]: 2共
+                          - cell "4.14%" [ref=e836]
+                        - row "8 3017 奇鋐11共 4.08%" [ref=e837]:
+                          - cell "8" [ref=e838]
+                          - cell "3017" [ref=e839]:
+                            - link "3017" [ref=e840] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐11共" [ref=e841]:
+                            - text: 奇鋐
+                            - generic [ref=e842]: 11共
+                          - cell "4.08%" [ref=e843]
+                        - row "9 2345 智邦11共 3.96%" [ref=e844]:
+                          - cell "9" [ref=e845]
+                          - cell "2345" [ref=e846]:
+                            - link "2345" [ref=e847] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦11共" [ref=e848]:
+                            - text: 智邦
+                            - generic [ref=e849]: 11共
+                          - cell "3.96%" [ref=e850]
+                        - row "10 2308 台達電11共 3.68%" [ref=e851]:
+                          - cell "10" [ref=e852]
+                          - cell "2308" [ref=e853]:
+                            - link "2308" [ref=e854] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電11共" [ref=e855]:
+                            - text: 台達電
+                            - generic [ref=e856]: 11共
+                          - cell "3.68%" [ref=e857]
+                    - button "顯示全部 58 筆 ▼" [ref=e859]
+                    - generic [ref=e860]:
+                      - generic [ref=e861]: 產業分布
+                      - generic [ref=e862]: 無產業資料
+                  - generic [ref=e863]:
+                    - generic [ref=e865]:
+                      - generic [ref=e866]:
+                        - generic [ref=e867]: 00987A
+                        - generic [ref=e868]: 主動台新優勢成長
+                        - generic [ref=e869]: 台新投信
+                      - generic [ref=e871]: 前10大合計權重 51.33%
+                    - table [ref=e873]:
+                      - rowgroup [ref=e874]:
+                        - row "# 代號 名稱 比重" [ref=e875]:
+                          - columnheader "#" [ref=e876]
+                          - columnheader "代號" [ref=e877]
+                          - columnheader "名稱" [ref=e878]
+                          - columnheader "比重" [ref=e879]
+                      - rowgroup [ref=e880]:
+                        - row "1 3017 奇鋐11共 6.48%" [ref=e881]:
+                          - cell "1" [ref=e882]
+                          - cell "3017" [ref=e883]:
+                            - link "3017" [ref=e884] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐11共" [ref=e885]:
+                            - text: 奇鋐
+                            - generic [ref=e886]: 11共
+                          - cell "6.48%" [ref=e887]
+                        - row "2 2383 台光電11共 6.21%" [ref=e888]:
+                          - cell "2" [ref=e889]
+                          - cell "2383" [ref=e890]:
+                            - link "2383" [ref=e891] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電11共" [ref=e892]:
+                            - text: 台光電
+                            - generic [ref=e893]: 11共
+                          - cell "6.21%" [ref=e894]
+                        - row "3 6187 萬潤3共 5.86%" [ref=e895]:
+                          - cell "3" [ref=e896]
+                          - cell "6187" [ref=e897]:
+                            - link "6187" [ref=e898] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6187.TW
+                          - cell "萬潤3共" [ref=e899]:
+                            - text: 萬潤
+                            - generic [ref=e900]: 3共
+                          - cell "5.86%" [ref=e901]
+                        - row "4 2308 台達電11共 5.62%" [ref=e902]:
+                          - cell "4" [ref=e903]
+                          - cell "2308" [ref=e904]:
+                            - link "2308" [ref=e905] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2308.TW
+                          - cell "台達電11共" [ref=e906]:
+                            - text: 台達電
+                            - generic [ref=e907]: 11共
+                          - cell "5.62%" [ref=e908]
+                        - row "5 6274 台燿9共 5.31%" [ref=e909]:
+                          - cell "5" [ref=e910]
+                          - cell "6274" [ref=e911]:
+                            - link "6274" [ref=e912] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6274.TW
+                          - cell "台燿9共" [ref=e913]:
+                            - text: 台燿
+                            - generic [ref=e914]: 9共
+                          - cell "5.31%" [ref=e915]
+                        - row "6 2330 台積電11共 5.25%" [ref=e916]:
+                          - cell "6" [ref=e917]
+                          - cell "2330" [ref=e918]:
+                            - link "2330" [ref=e919] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e920]:
+                            - text: 台積電
+                            - generic [ref=e921]: 11共
+                          - cell "5.25%" [ref=e922]
+                        - row "7 3665 貿聯 -KY11共 4.49%" [ref=e923]:
+                          - cell "7" [ref=e924]
+                          - cell "3665" [ref=e925]:
+                            - link "3665" [ref=e926] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯 -KY11共" [ref=e927]:
+                            - text: 貿聯 -KY
+                            - generic [ref=e928]: 11共
+                          - cell "4.49%" [ref=e929]
+                        - row "8 6223 旺矽11共 4.25%" [ref=e930]:
+                          - cell "8" [ref=e931]
+                          - cell "6223" [ref=e932]:
+                            - link "6223" [ref=e933] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6223.TW
+                          - cell "旺矽11共" [ref=e934]:
+                            - text: 旺矽
+                            - generic [ref=e935]: 11共
+                          - cell "4.25%" [ref=e936]
+                        - row "9 3443 創意7共 3.96%" [ref=e937]:
+                          - cell "9" [ref=e938]
+                          - cell "3443" [ref=e939]:
+                            - link "3443" [ref=e940] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3443.TW
+                          - cell "創意7共" [ref=e941]:
+                            - text: 創意
+                            - generic [ref=e942]: 7共
+                          - cell "3.96%" [ref=e943]
+                        - row "10 2360 致茂10共 3.90%" [ref=e944]:
+                          - cell "10" [ref=e945]
+                          - cell "2360" [ref=e946]:
+                            - link "2360" [ref=e947] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2360.TW
+                          - cell "致茂10共" [ref=e948]:
+                            - text: 致茂
+                            - generic [ref=e949]: 10共
+                          - cell "3.90%" [ref=e950]
+                    - button "顯示全部 28 筆 ▼" [ref=e952]
+                    - generic [ref=e953]:
+                      - generic [ref=e954]: 產業分布
+                      - generic [ref=e955]: 無產業資料
+                  - generic [ref=e956]:
+                    - generic [ref=e958]:
+                      - generic [ref=e959]:
+                        - generic [ref=e960]: 00992A
+                        - generic [ref=e961]: 主動群益科技創新
+                        - generic [ref=e962]: 群益投信
+                      - generic [ref=e964]: 前10大合計權重 40.60%
+                    - table [ref=e966]:
+                      - rowgroup [ref=e967]:
+                        - row "# 代號 名稱 比重" [ref=e968]:
+                          - columnheader "#" [ref=e969]
+                          - columnheader "代號" [ref=e970]
+                          - columnheader "名稱" [ref=e971]
+                          - columnheader "比重" [ref=e972]
+                      - rowgroup [ref=e973]:
+                        - row "1 2330 台積電11共 5.90%" [ref=e974]:
+                          - cell "1" [ref=e975]
+                          - cell "2330" [ref=e976]:
+                            - link "2330" [ref=e977] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e978]:
+                            - text: 台積電
+                            - generic [ref=e979]: 11共
+                          - cell "5.90%" [ref=e980]
+                        - row "2 2383 台光電11共 4.95%" [ref=e981]:
+                          - cell "2" [ref=e982]
+                          - cell "2383" [ref=e983]:
+                            - link "2383" [ref=e984] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2383.TW
+                          - cell "台光電11共" [ref=e985]:
+                            - text: 台光電
+                            - generic [ref=e986]: 11共
+                          - cell "4.95%" [ref=e987]
+                        - row "3 6669 緯穎8共 4.44%" [ref=e988]:
+                          - cell "3" [ref=e989]
+                          - cell "6669" [ref=e990]:
+                            - link "6669" [ref=e991] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6669.TW
+                          - cell "緯穎8共" [ref=e992]:
+                            - text: 緯穎
+                            - generic [ref=e993]: 8共
+                          - cell "4.44%" [ref=e994]
+                        - row "4 8996 高力8共 3.91%" [ref=e995]:
+                          - cell "4" [ref=e996]
+                          - cell "8996" [ref=e997]:
+                            - link "8996" [ref=e998] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/8996.TW
+                          - cell "高力8共" [ref=e999]:
+                            - text: 高力
+                            - generic [ref=e1000]: 8共
+                          - cell "3.91%" [ref=e1001]
+                        - row "5 3105 穩懋7共 3.87%" [ref=e1002]:
+                          - cell "5" [ref=e1003]
+                          - cell "3105" [ref=e1004]:
+                            - link "3105" [ref=e1005] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3105.TW
+                          - cell "穩懋7共" [ref=e1006]:
+                            - text: 穩懋
+                            - generic [ref=e1007]: 7共
+                          - cell "3.87%" [ref=e1008]
+                        - row "6 3665 貿聯-KY11共 3.80%" [ref=e1009]:
+                          - cell "6" [ref=e1010]
+                          - cell "3665" [ref=e1011]:
+                            - link "3665" [ref=e1012] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3665.TW
+                          - cell "貿聯-KY11共" [ref=e1013]:
+                            - text: 貿聯-KY
+                            - generic [ref=e1014]: 11共
+                          - cell "3.80%" [ref=e1015]
+                        - row "7 3037 欣興9共 3.76%" [ref=e1016]:
+                          - cell "7" [ref=e1017]
+                          - cell "3037" [ref=e1018]:
+                            - link "3037" [ref=e1019] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興9共" [ref=e1020]:
+                            - text: 欣興
+                            - generic [ref=e1021]: 9共
+                          - cell "3.76%" [ref=e1022]
+                        - row "8 3017 奇鋐11共 3.65%" [ref=e1023]:
+                          - cell "8" [ref=e1024]
+                          - cell "3017" [ref=e1025]:
+                            - link "3017" [ref=e1026] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3017.TW
+                          - cell "奇鋐11共" [ref=e1027]:
+                            - text: 奇鋐
+                            - generic [ref=e1028]: 11共
+                          - cell "3.65%" [ref=e1029]
+                        - row "9 6510 精測9共 3.16%" [ref=e1030]:
+                          - cell "9" [ref=e1031]
+                          - cell "6510" [ref=e1032]:
+                            - link "6510" [ref=e1033] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/6510.TW
+                          - cell "精測9共" [ref=e1034]:
+                            - text: 精測
+                            - generic [ref=e1035]: 9共
+                          - cell "3.16%" [ref=e1036]
+                        - row "10 2345 智邦11共 3.16%" [ref=e1037]:
+                          - cell "10" [ref=e1038]
+                          - cell "2345" [ref=e1039]:
+                            - link "2345" [ref=e1040] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2345.TW
+                          - cell "智邦11共" [ref=e1041]:
+                            - text: 智邦
+                            - generic [ref=e1042]: 11共
+                          - cell "3.16%" [ref=e1043]
+                    - button "顯示全部 51 筆 ▼" [ref=e1045]
+                    - generic [ref=e1046]:
+                      - generic [ref=e1047]: 產業分布
+                      - generic [ref=e1048]: 無產業資料
+                  - generic [ref=e1049]:
+                    - generic [ref=e1051]:
+                      - generic [ref=e1052]:
+                        - generic [ref=e1053]: 00984A
+                        - generic [ref=e1054]: 主動安聯台灣高息
+                        - generic [ref=e1055]: 安聯投信
+                      - generic [ref=e1057]: 前10大合計權重 31.87%
+                    - table [ref=e1059]:
+                      - rowgroup [ref=e1060]:
+                        - row "# 代號 名稱 比重" [ref=e1061]:
+                          - columnheader "#" [ref=e1062]
+                          - columnheader "代號" [ref=e1063]
+                          - columnheader "名稱" [ref=e1064]
+                          - columnheader "比重" [ref=e1065]
+                      - rowgroup [ref=e1066]:
+                        - row "1 2330 台積電11共 4.98%" [ref=e1067]:
+                          - cell "1" [ref=e1068]
+                          - cell "2330" [ref=e1069]:
+                            - link "2330" [ref=e1070] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2330.TW
+                          - cell "台積電11共" [ref=e1071]:
+                            - text: 台積電
+                            - generic [ref=e1072]: 11共
+                          - cell "4.98%" [ref=e1073]
+                        - row "2 2382 廣達5共 4.63%" [ref=e1074]:
+                          - cell "2" [ref=e1075]
+                          - cell "2382" [ref=e1076]:
+                            - link "2382" [ref=e1077] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2382.TW
+                          - cell "廣達5共" [ref=e1078]:
+                            - text: 廣達
+                            - generic [ref=e1079]: 5共
+                          - cell "4.63%" [ref=e1080]
+                        - row "3 2303 聯電3共 3.56%" [ref=e1081]:
+                          - cell "3" [ref=e1082]
+                          - cell "2303" [ref=e1083]:
+                            - link "2303" [ref=e1084] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2303.TW
+                          - cell "聯電3共" [ref=e1085]:
+                            - text: 聯電
+                            - generic [ref=e1086]: 3共
+                          - cell "3.56%" [ref=e1087]
+                        - row "4 2881 富邦金控5共 3.14%" [ref=e1088]:
+                          - cell "4" [ref=e1089]
+                          - cell "2881" [ref=e1090]:
+                            - link "2881" [ref=e1091] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2881.TW
+                          - cell "富邦金控5共" [ref=e1092]:
+                            - text: 富邦金控
+                            - generic [ref=e1093]: 5共
+                          - cell "3.14%" [ref=e1094]
+                        - row "5 2882 國泰金3共 2.91%" [ref=e1095]:
+                          - cell "5" [ref=e1096]
+                          - cell "2882" [ref=e1097]:
+                            - link "2882" [ref=e1098] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2882.TW
+                          - cell "國泰金3共" [ref=e1099]:
+                            - text: 國泰金
+                            - generic [ref=e1100]: 3共
+                          - cell "2.91%" [ref=e1101]
+                        - row "6 2885 元大金5共 2.78%" [ref=e1102]:
+                          - cell "6" [ref=e1103]
+                          - cell "2885" [ref=e1104]:
+                            - link "2885" [ref=e1105] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2885.TW
+                          - cell "元大金5共" [ref=e1106]:
+                            - text: 元大金
+                            - generic [ref=e1107]: 5共
+                          - cell "2.78%" [ref=e1108]
+                        - row "7 3045 台灣大3共 2.77%" [ref=e1109]:
+                          - cell "7" [ref=e1110]
+                          - cell "3045" [ref=e1111]:
+                            - link "3045" [ref=e1112] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3045.TW
+                          - cell "台灣大3共" [ref=e1113]:
+                            - text: 台灣大
+                            - generic [ref=e1114]: 3共
+                          - cell "2.77%" [ref=e1115]
+                        - row "8 2891 中信金5共 2.72%" [ref=e1116]:
+                          - cell "8" [ref=e1117]
+                          - cell "2891" [ref=e1118]:
+                            - link "2891" [ref=e1119] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2891.TW
+                          - cell "中信金5共" [ref=e1120]:
+                            - text: 中信金
+                            - generic [ref=e1121]: 5共
+                          - cell "2.72%" [ref=e1122]
+                        - row "9 2887 台新新光金 2.21%" [ref=e1123]:
+                          - cell "9" [ref=e1124]
+                          - cell "2887" [ref=e1125]:
+                            - link "2887" [ref=e1126] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/2887.TW
+                          - cell "台新新光金" [ref=e1127]
+                          - cell "2.21%" [ref=e1128]
+                        - row "10 3037 欣興9共 2.17%" [ref=e1129]:
+                          - cell "10" [ref=e1130]
+                          - cell "3037" [ref=e1131]:
+                            - link "3037" [ref=e1132] [cursor=pointer]:
+                              - /url: https://finance.yahoo.com/quote/3037.TW
+                          - cell "欣興9共" [ref=e1133]:
+                            - text: 欣興
+                            - generic [ref=e1134]: 9共
+                          - cell "2.17%" [ref=e1135]
+                    - button "顯示全部 117 筆 ▼" [ref=e1137]
+                    - generic [ref=e1138]:
+                      - generic [ref=e1139]: 產業分布
+                      - generic [ref=e1140]: 無產業資料
+      - link "返回儀表板" [ref=e1142] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e1143]:
+          - img [ref=e1144]
+          - generic: 返回儀表板

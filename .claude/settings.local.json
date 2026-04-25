@@ -91,7 +91,18 @@
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(investment\\): 投資監控介面改用代書系統玻璃擬態風格\")",
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(investment\\): 投資監控介面改用代書系統玻璃擬態風格\")",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(python -c ' *)",
+      "Bash(openspec list *)",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "Bash(git submodule *)",
+      "Bash(git -C reference/tw-active log --oneline -3)",
+      "Bash(touch /c/Users/user/.claude/projects/c--Users-user-Documents-GitHub-scrivener-flow/.reflect-initialized)",
+      "Bash(echo \"[]\")",
+      "Bash(FORCE_RUN=true uv run python ETF/scripts/backfill_positions.py --days 365)",
+      "Bash(FORCE_RUN=true uv run python ETF/scripts/backfill_positions.py --days 5)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"perf\\(etf\\): 修正 daily pipeline 超時問題（broker chunk_size + 移除每日集保 sync）\")",
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf\\(etf\\): 修正 daily pipeline 超時問題（broker chunk_size + 移除每日集保 sync）\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

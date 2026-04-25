@@ -130,16 +130,16 @@ class SQLStorage:
 
         logger.info(f"準備寫入 {len(records)} 筆券商交易記錄...")
         with self.engine.connect() as conn:
-            chunk_size = 50
+            chunk_size = 500
             for i in range(0, len(records), chunk_size):
                 chunk = records[i:i+chunk_size]
                 try:
                     stmt = text("""
-                        INSERT INTO stock_broker_transactions 
+                        INSERT INTO stock_broker_transactions
                         (stock_code, data_date, buy_amount, sell_amount, net_volume, force_metric)
                         VALUES (:stock_code, :data_date, :buy_amount, :sell_amount, :net_volume, :force_metric)
-                        ON CONFLICT (stock_code, data_date) 
-                        DO UPDATE SET 
+                        ON CONFLICT (stock_code, data_date)
+                        DO UPDATE SET
                             buy_amount = EXCLUDED.buy_amount,
                             sell_amount = EXCLUDED.sell_amount,
                             net_volume = EXCLUDED.net_volume,
@@ -151,7 +151,7 @@ class SQLStorage:
                     logger.info(f"已寫入 {i + len(chunk)} / {len(records)} 筆券商記錄...")
                 except Exception as e:
                     logger.error(f"寫入券商數據片段失敗 (index {i}): {e}")
-                    conn.rollback() # Ensure rollback on error
+                    conn.rollback()
                     continue
         logger.info("✅ 券商交易數據寫入完成")
     

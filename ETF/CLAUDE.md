@@ -113,8 +113,11 @@ uv run python ETF/main.py --dry-run
 # 單獨執行 AI 報告
 uv run python ETF/daily_ai_report.py
 
-# 同步股票財務資料
-uv run python ETF/sync_stock_financials.py --days 60
+# 同步股票財務資料（日排程：跳過集保，節省 ~69 分鐘）
+uv run python ETF/sync_stock_financials.py --days 60 --skip-shareholder
+
+# 同步股票財務資料（週排程 / 手動補跑：含集保）
+uv run python ETF/sync_stock_financials.py --days 14
 
 # 執行測試
 uv run pytest ETF/
@@ -125,6 +128,21 @@ uv run ruff check --fix && uv run ruff format
 
 > **本地執行保護**：`main.py` 預設封鎖本地執行（保護 FinLab 5GB/天配額）。  
 > 本地測試需在 `.env` 設定 `FORCE_RUN=true`。
+
+### GitHub Actions 執行時間預算
+
+| 步驟 | 預期耗時 | 備註 |
+| :--- | :--- | :--- |
+| `main.py --days 30`（主 pipeline） | ~10 min | 正常 |
+| `sync_stock_financials.py --skip-shareholder` | ~8 min | broker chunk_size=500 |
+| `daily_ai_report.py`（11 ETF） | ~15 min | Gemini rate limit |
+| **日排程合計** | **~33 min** | 22 交易日/月 ≈ 730 min |
+| `equity_weekly.yml`（集保 + 週排程） | ~30 min | 僅每週一執行 |
+
+> **注意**：日排程若超過 60 分鐘請先確認：
+>
+> 1. `--skip-shareholder` 有帶嗎？
+> 2. `upsert_broker_transactions` 的 `chunk_size` 是否仍為 500？
 
 ---
 
@@ -255,3 +273,5 @@ else:              signal = "持平"
 | 大戶籌碼查不到資料 | 確認 `equity_distribution_stats` 表有資料；`sync_equity_distribution.py` 需先執行過 |
 | 新聞用 Cloudflare D1 查詢 | 直接打 MOPS HTTP API（`services/news/mops_client.py`），無需額外環境變數 |
 | 投信持股統計窗口用 10 日 | 台股投信持股統計窗口是 **5 日**，不是 10 日 |
+| `sync_stock_financials.py` 不加 `--skip-shareholder` 直接跑 daily | TDCC 集保資料每週才更新，加上舊的 `chunk_size=50` 會讓 daily 跑 ~2 小時；**daily 必須帶 `--skip-shareholder`** |
+| 把 `upsert_broker_transactions` 的 `chunk_size` 改回 50 | `chunk_size=50` 會讓 12,600 筆跑 ~34 分鐘；正確值是 **500** |

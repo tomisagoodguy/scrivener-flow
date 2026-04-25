@@ -44,3 +44,9 @@ jobs:
 
       - name: Sync equity distribution stats
         run: uv run python ETF/sync_equity_distribution.py
+
+      - name: Sync raw shareholder weekly data
+        run: |
+          # 週排程同步 stock_shareholder_weekly（原始集保分層數據），不跳過 shareholder
+          # daily 排程因 --skip-shareholder 不跑此步驟，這裡補齊
+          uv run python ETF/sync_stock_financials.py --days 14

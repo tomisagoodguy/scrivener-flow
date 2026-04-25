@@ -37,12 +37,12 @@ class FinancialsSync:
         self.finlab = FinlabService()
         self.storage = SQLStorage()
     
-    def run(self, days=300):
+    def run(self, days=300, skip_shareholder=False):
         """執行完整同步流程"""
         logger.info("=" * 60)
-        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days})")
+        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder})")
         logger.info("=" * 60)
-        
+
         try:
             # 0. Login
             if not self.finlab.login():
@@ -53,11 +53,11 @@ class FinancialsSync:
             logger.info("正在獲取目標股票清單...")
             stock_list = self.storage.get_all_target_stocks()
             logger.info(f"找到 {len(stock_list)} 支成分股（所有 ETF 合計）")
-            
+
             if not stock_list:
                 logger.error("無目標股票，中止同步")
                 return
-            
+
             # 2. 同步券商數據 (Priority)
             logger.info("--- 同步券商交易數據 ---")
             raw_buy, raw_sell, raw_close = self.finlab.get_broker_data()
@@ -67,24 +67,27 @@ class FinancialsSync:
             # 3. 同步營收
             logger.info("--- 同步月營收數據 ---")
             raw_rev, raw_yoy, raw_mom = self.finlab.get_revenue_data()
-            months = max(3, days // 30) # 至少同步 3 個月
+            months = max(3, days // 30)
             rev_records = RevenueProcessor.process(raw_rev, raw_yoy, raw_mom, stock_list, months=months)
             self.storage.upsert_revenue_data(rev_records)
-            
-            # 4. 同步股權分散
-            logger.info("--- 同步股權分散數據 ---")
-            raw_inv = self.finlab.get_shareholder_data()
-            weeks = max(4, days // 7) # 至少同步 4 週
-            inv_records = ShareholderProcessor.process(raw_inv, stock_list, weeks=weeks)
-            self.storage.upsert_shareholder_data(inv_records)
-            
+
+            # 4. 同步股權分散（TDCC 週更新，daily 跳過，改由 equity_weekly.yml 週排程負責）
+            if not skip_shareholder:
+                logger.info("--- 同步股權分散數據 ---")
+                raw_inv = self.finlab.get_shareholder_data()
+                weeks = max(4, days // 7)
+                inv_records = ShareholderProcessor.process(raw_inv, stock_list, weeks=weeks)
+                self.storage.upsert_shareholder_data(inv_records)
+            else:
+                logger.info("--- 跳過股權分散數據（skip_shareholder=True）---")
+
             # 5. 清除舊資料 (自動維護)
             self.storage.cleanup_old_data()
-            
+
             logger.info("=" * 60)
             logger.info("✅ 所有數據同步完成")
             logger.info("=" * 60)
-            
+
         except Exception as e:
             logger.error(f"同步過程發生錯誤: {e}", exc_info=True)
             raise
@@ -92,7 +95,8 @@ class FinancialsSync:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Financials Sync Process")
     parser.add_argument("--days", type=int, default=300, help="Number of days for broker data sync (default: 300)")
+    parser.add_argument("--skip-shareholder", action="store_true", help="Skip raw shareholder sync (TDCC weekly data, handled by equity_weekly.yml)")
     args = parser.parse_args()
-    
+
     sync = FinancialsSync()
-    sync.run(days=args.days)
+    sync.run(days=args.days, skip_shareholder=args.skip_shareholder)
