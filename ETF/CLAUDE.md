@@ -269,7 +269,7 @@ else:              signal = "持平"
 | 輔助步驟的 `except` 加 `raise` | 輔助步驟只 `logger.error()`，不 `raise`，確保主流程不中斷 |
 | catch 用 `except Exception as e: pass` | 必須記錄錯誤，不可靜默失敗（`logger.error` 必填） |
 | AI 報告週末全部跳過 | `reporter.py` 允許 3 天內資料（台股週末不開市，週五資料週日仍有效） |
-| `etf_diff_logs` ON CONFLICT 報錯 | 需有 `(etf_code, stock_code, data_date)` 唯一約束，見 migration `20260420000000` |
+| `etf_diff_logs` ON CONFLICT 報錯（409） | 唯一約束已存在仍可能 409：REST API `resolution=merge-duplicates` 不可靠。正確解法：`ctx.sql_storage.save_diff_logs()`（SQLAlchemy），與 `multi_etf_step._save_diff_logs` 同模式 |
 | 大戶籌碼查不到資料 | 確認 `equity_distribution_stats` 表有資料；`sync_equity_distribution.py` 需先執行過 |
 | 新聞用 Cloudflare D1 查詢 | 直接打 MOPS HTTP API（`services/news/mops_client.py`），無需額外環境變數 |
 | 投信持股統計窗口用 10 日 | 台股投信持股統計窗口是 **5 日**，不是 10 日 |
