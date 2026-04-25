@@ -12,6 +12,8 @@ import { BrokerChart } from '@/components/features/investment/BrokerChart';
 import { StockDashboardNav } from '@/components/features/investment/StockDashboardNav';
 import { EtfWeightHistoryChart } from '@/components/features/investment/EtfWeightHistoryChart';
 import { useStockDashboard } from '@/hooks/investment/useStockDashboard';
+import { StockPoolMetrics } from '@/components/features/investment/StockPoolMetrics';
+import { StockDetailSections } from '@/components/features/investment/StockDetailSections';
 
 function ChartPanel({ loading, error, children, emptyText }: {
     loading: boolean;
@@ -65,6 +67,16 @@ export default function StockPage() {
                 chipRank={chipRank}
                 retailRank={retailRank}
             />
+
+            {!etfWeightHistoryLoading && priceData.length > 0 && (
+                <StockPoolMetrics
+                    etfWeightHistory={etfWeightHistory}
+                    quantMetrics={quantMetrics}
+                    priceData={priceData}
+                />
+            )}
+
+            <StockDetailSections stockCode={stockCode} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">
                 {/* K線圖 */}

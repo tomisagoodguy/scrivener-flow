@@ -10,27 +10,42 @@ const ETF_META = Object.fromEntries(
 async function getCompareData() {
     const supabase = await createClient();
 
-    // 取最新可用日期
-    const { data: dateRow } = await supabase
+    // 取各 ETF 各自最新日期（不同 ETF 更新頻率不同）
+    const { data: dateRows } = await supabase
         .from('etf_holdings_snapshot')
-        .select('data_date')
+        .select('etf_code, data_date')
         .in('etf_code', ETF_CODES)
         .order('data_date', { ascending: false })
-        .limit(1);
+        .limit(ETF_CODES.length * 10);
 
-    const targetDate = dateRow?.[0]?.data_date ?? null;
-    if (!targetDate) return null;
+    const latestDatePerEtf: Record<string, string> = {};
+    for (const row of dateRows ?? []) {
+        if (!latestDatePerEtf[row.etf_code]) {
+            latestDatePerEtf[row.etf_code] = row.data_date;
+        }
+    }
 
-    // 批次查詢持股
-    const { data: allHoldings } = await supabase
+    const uniqueDates = [...new Set(Object.values(latestDatePerEtf))];
+    if (uniqueDates.length === 0) return null;
+
+    // 以各 ETF 最新日期批次查詢持股
+    const { data: rawHoldings } = await supabase
         .from('etf_holdings_snapshot')
         .select('etf_code, stock_code, stock_name, weight, data_date')
         .in('etf_code', ETF_CODES)
-        .eq('data_date', targetDate)
+        .in('data_date', uniqueDates)
         .order('weight', { ascending: false });
 
-    // 只取當天有資料的 ETF
-    const activeCodes = [...new Set((allHoldings ?? []).map(h => h.etf_code))];
+    // 每支 ETF 只保留自己的最新日期資料
+    const allHoldings = (rawHoldings ?? []).filter(
+        h => h.data_date === latestDatePerEtf[h.etf_code]
+    );
+
+    // 代表顯示日期：取最近的一天
+    const targetDate = uniqueDates.sort().reverse()[0];
+
+    // 只取有資料的 ETF
+    const activeCodes = [...new Set(allHoldings.map(h => h.etf_code))];
 
     // AUM
     const { data: aumRows } = await supabase
@@ -88,7 +103,7 @@ async function getCompareData() {
         return {
             etf_code,
             ...(ETF_META[etf_code] ?? { name: etf_code, manager: '', color: '#6366f1' }),
-            data_date: targetDate,
+            data_date: latestDatePerEtf[etf_code] ?? targetDate,
             holdings,
             aum_100m_twd: latestAum?.aum_100m_twd ?? null,
             sectors,
@@ -112,7 +127,7 @@ export default async function EtfComparePage() {
     const data = await getCompareData();
 
     const displayDate = data?.date
-        ? new Date(data.date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        ? new Date(data.date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }) + ' 前後'
         : 'N/A';
 
     const etfCount = data?.etfs.length ?? 0;

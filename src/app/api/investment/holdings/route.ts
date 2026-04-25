@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
                 momentum_pass: qf?.momentum_pass ?? false,
                 it_buy_5d_pass: qf?.it_buy_5d_pass ?? false,
                 rev_ma3_new_high: qf?.rev_ma3_new_high ?? false,
+                revenue_yoy: qf?.revenue_yoy ?? null,
             };
         });
 

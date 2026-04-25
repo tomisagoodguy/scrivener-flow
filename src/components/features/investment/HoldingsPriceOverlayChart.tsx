@@ -46,7 +46,7 @@ function MiniChart({
     priceSeries: PricePoint[];
     etfColors: Record<string, string>;
 }) {
-    const W = 400;
+    const W = 600;
     const H = 120;
     const allDates = [...new Set([
         ...weightSeries.flat().map(p => p.date),
@@ -76,7 +76,7 @@ function MiniChart({
     }).filter(Boolean) as { etf: string; path: string; color: string }[];
 
     return (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-28 overflow-visible">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32 overflow-visible">
             {/* price line (right axis) — grey dashed */}
             <path d={pricePath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 2" />
             {/* weight lines (left axis) */}
@@ -150,7 +150,7 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
                 </span>
             </div>
             {loading ? (
-                <div className="h-28 animate-pulse bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-32 animate-pulse bg-slate-100 dark:bg-slate-800 rounded" />
             ) : (
                 <MiniChart weightSeries={weightSeries} priceSeries={priceSeries} etfColors={etfColors} />
             )}

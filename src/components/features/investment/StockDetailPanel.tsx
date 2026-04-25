@@ -1,55 +1,18 @@
 'use client';
 
-import { useEffect, useCallback, useTransition } from 'react';
-import { XIcon, Loader2Icon } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { XIcon } from 'lucide-react';
 import { SignalBadge } from './SignalBadge';
 import { HoldingsPriceOverlayChart } from './HoldingsPriceOverlayChart';
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
-
-// ── 型別 ──────────────────────────────────────────────────────────────────────
-
-interface HoldingEtf {
-    etf_code: string;
-    weight: number;
-    prev_weight?: number | null;
-}
-
-interface SignalRow {
-    signal_type: string;
-    strength: 1 | 2 | 3;
-    etf_codes: string[];
-    metadata: Record<string, unknown>;
-}
-
-interface DiffRow {
-    etf_code: string;
-    data_date: string;
-    action: string;
-    weight_after: number | null;
-    diff_weight: number | null;
-}
-
-interface AumRow {
-    etf_code: string;
-    aum_100m: number;
-    inflow_share?: number | null;
-}
-
-interface EquityRow {
-    big_holder_pct: number | null;
-    big_holder_pct_change: number | null;
-    data_date: string;
-}
-
-interface SectionData {
-    holdings: HoldingEtf[];
-    signals: SignalRow[];
-    diffs: DiffRow[];
-    equity: EquityRow | null;
-    aum: AumRow[];
-}
+import {
+    useStockDetailData,
+    type HoldingEtf,
+    type SignalRow,
+    type DiffRow,
+    type AumRow,
+    type EquityRow,
+} from '@/hooks/investment/useStockDetailData';
 
 export interface StockDetailPanelProps {
     stockCode: string | null;
@@ -115,7 +78,7 @@ function SignalsBlock({ signals }: { signals: SignalRow[] }) {
 }
 
 const ACTION_LABELS: Record<string, string> = {
-    BUY: '加碼', IN: '建倉', SELL: '減碼', OUT: '出清',
+    BUY: '加碼', IN: '建倉', SELL: '減碼', OUT: '出清', CLOSE: '出清', TRIM: '減碼',
 };
 
 function DiffsBlock({ diffs }: { diffs: DiffRow[] }) {
@@ -126,10 +89,10 @@ function DiffsBlock({ diffs }: { diffs: DiffRow[] }) {
                 <li key={i} className="flex items-center justify-between text-xs">
                     <span className="text-slate-400">{d.data_date}</span>
                     <span className="font-mono text-indigo-500">{d.etf_code}</span>
-                    <span className={`font-medium ${d.action === 'BUY' || d.action === 'IN' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                        {ACTION_LABELS[d.action] ?? d.action}
+                    <span className={`font-medium ${d.change_type === 'BUY' || d.change_type === 'IN' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                        {ACTION_LABELS[d.change_type] ?? d.change_type}
                     </span>
-                    <span className="text-slate-500">{d.weight_after != null ? `${d.weight_after.toFixed(2)}%` : '—'}</span>
+                    <span className="text-slate-500">{d.curr_weight != null ? `${d.curr_weight.toFixed(2)}%` : '—'}</span>
                 </li>
             ))}
         </ul>
@@ -155,7 +118,7 @@ function EquityBlock({ equity }: { equity: EquityRow | null }) {
                     </div>
                 </div>
             )}
-            <div className="text-xs text-slate-400">{equity.data_date}</div>
+            <div className="text-xs text-slate-400">{equity.snapshot_date}</div>
         </div>
     );
 }
@@ -184,109 +147,7 @@ const ETF_COLOR_MAP = Object.fromEntries(ETF_REGISTRY.map(e => [e.code, e.color]
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 
 export function StockDetailPanel({ stockCode, stockName, price, changePct, onClose }: StockDetailPanelProps) {
-    const [data, setData] = useState<SectionData | null>(null);
-    const [loadingBlocks, setLoadingBlocks] = useState<Set<string>>(new Set());
-    const [errors, setErrors] = useState<Set<string>>(new Set());
-    const [, startTransition] = useTransition();
-
-    const setBlockState = useCallback((block: string, ok: boolean) => {
-        startTransition(() => {
-            setLoadingBlocks(prev => { const n = new Set(prev); n.delete(block); return n; });
-            if (!ok) setErrors(prev => new Set([...prev, block]));
-        });
-    }, []);
-
-    useEffect(() => {
-        if (!stockCode) return;
-        setData(null);
-        setErrors(new Set());
-        setLoadingBlocks(new Set(['holdings', 'signals', 'diffs', 'equity', 'aum']));
-
-        const supabase = createClient();
-
-        // holdings（持倉概況）
-        supabase
-            .from('etf_holdings_snapshot')
-            .select('etf_code, weight, data_date')
-            .eq('stock_code', stockCode)
-            .order('data_date', { ascending: false })
-            .limit(50)
-            .then(({ data: rows, error }) => {
-                if (error) { setBlockState('holdings', false); return; }
-                const byEtf: Record<string, HoldingEtf> = {};
-                for (const r of rows ?? []) {
-                    if (!byEtf[r.etf_code]) byEtf[r.etf_code] = { etf_code: r.etf_code, weight: r.weight };
-                }
-                setData(prev => ({ ...EMPTY_DATA, ...prev, holdings: Object.values(byEtf) }));
-                setBlockState('holdings', true);
-            });
-
-        // signals
-        supabase
-            .from('etf_signals')
-            .select('signal_type, strength, etf_codes, metadata')
-            .eq('stock_code', stockCode)
-            .order('data_date', { ascending: false })
-            .limit(10)
-            .then(({ data: rows, error }) => {
-                if (error) { setBlockState('signals', false); return; }
-                setData(prev => ({ ...EMPTY_DATA, ...prev, signals: (rows ?? []) as SignalRow[] }));
-                setBlockState('signals', true);
-            });
-
-        // diffs
-        supabase
-            .from('etf_diff_logs')
-            .select('etf_code, data_date, action, weight_after, diff_weight')
-            .eq('stock_code', stockCode)
-            .order('data_date', { ascending: false })
-            .limit(20)
-            .then(({ data: rows, error }) => {
-                if (error) { setBlockState('diffs', false); return; }
-                setData(prev => ({ ...EMPTY_DATA, ...prev, diffs: (rows ?? []) as DiffRow[] }));
-                setBlockState('diffs', true);
-            });
-
-        // equity
-        supabase
-            .from('equity_distribution_stats')
-            .select('big_holder_pct, big_holder_pct_change, data_date')
-            .eq('stock_code', stockCode)
-            .order('data_date', { ascending: false })
-            .limit(1)
-            .then(({ data: rows, error }) => {
-                if (error) { setBlockState('equity', false); return; }
-                setData(prev => ({ ...EMPTY_DATA, ...prev, equity: (rows?.[0] ?? null) as EquityRow | null }));
-                setBlockState('equity', true);
-            });
-
-        // aum（持有此股的 ETF AUM）
-        supabase
-            .from('etf_holdings_snapshot')
-            .select('etf_code')
-            .eq('stock_code', stockCode)
-            .order('data_date', { ascending: false })
-            .limit(30)
-            .then(async ({ data: holdRows }) => {
-                const etfCodes = [...new Set((holdRows ?? []).map(h => h.etf_code))];
-                if (!etfCodes.length) { setBlockState('aum', true); return; }
-                const { data: aumRows, error } = await supabase
-                    .from('etf_aum_series')
-                    .select('etf_code, aum_100m, inflow_100m, data_date')
-                    .in('etf_code', etfCodes)
-                    .order('data_date', { ascending: false })
-                    .limit(etfCodes.length * 3);
-                if (error) { setBlockState('aum', false); return; }
-                const byEtf: Record<string, AumRow> = {};
-                for (const r of aumRows ?? []) {
-                    if (!byEtf[r.etf_code]) {
-                        byEtf[r.etf_code] = { etf_code: r.etf_code, aum_100m: r.aum_100m };
-                    }
-                }
-                setData(prev => ({ ...EMPTY_DATA, ...prev, aum: Object.values(byEtf) }));
-                setBlockState('aum', true);
-            });
-    }, [stockCode, setBlockState]);
+    const { data, loadingBlocks, errors } = useStockDetailData(stockCode);
 
     // ESC 關閉
     useEffect(() => {
@@ -365,8 +226,6 @@ export function StockDetailPanel({ stockCode, stockName, price, changePct, onClo
 }
 
 // ── 工具函式 ──────────────────────────────────────────────────────────────────
-
-const EMPTY_DATA: SectionData = { holdings: [], signals: [], diffs: [], equity: null, aum: [] };
 
 function renderSection(
     key: string,

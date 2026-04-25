@@ -7,6 +7,7 @@ export interface QuantFilter {
     it_buy_5d_pass: boolean;
     rev_ma3: number | null;
     rev_ma3_new_high: boolean;
+    revenue_yoy: number | null;
     filter_score: number;
 }
 
@@ -103,8 +104,15 @@ export async function fetchQuantFilters(stockCodes: string[]): Promise<Record<st
             rev_ma3 = Number(((Number(revs[0]?.revenue || 0) + Number(revs[1]?.revenue || 0) + Number(revs[2]?.revenue || 0)) / 3).toFixed(0));
         }
 
+        let revenue_yoy: number | null = null;
+        if (revs.length >= 13) {
+            const curr = Number(revs[0]?.revenue || 0);
+            const prev = Number(revs[12]?.revenue || 0);
+            if (prev !== 0) revenue_yoy = Number(((curr - prev) / Math.abs(prev) * 100).toFixed(1));
+        }
+
         const filter_score = (momentum_pass ? 1 : 0) + (it_buy_5d_pass ? 1 : 0) + (rev_ma3_new_high ? 1 : 0);
-        result[code] = { momentum_60d, momentum_pass, it_buy_5d, it_buy_5d_pass, rev_ma3, rev_ma3_new_high, filter_score };
+        result[code] = { momentum_60d, momentum_pass, it_buy_5d, it_buy_5d_pass, rev_ma3, rev_ma3_new_high, revenue_yoy, filter_score };
     }
 
     return result;
