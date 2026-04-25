@@ -17,6 +17,7 @@ import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadB
 import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
 import { DailyFlowPanel } from '@/components/features/investment/DailyFlowPanel';
+import { PreMarketGuide } from '@/components/features/investment/PreMarketGuide';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -323,6 +324,10 @@ export default async function InvestmentPoolPage() {
                     </Link>
                 ))}
             </div>
+
+            <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}>
+                <PreMarketGuide />
+            </React.Suspense>
 
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <InvestmentTabs

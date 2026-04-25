@@ -81,7 +81,7 @@ class FlowComputeStep(BaseStep):
     @staticmethod
     def _fetch_diffs(conn, etf_codes: list[str], target_date: str) -> list[dict]:
         rows = conn.execute(text("""
-            SELECT etf_code, stock_code, stock_name, action,
+            SELECT etf_code, stock_code, stock_name, change_type AS action,
                    diff_shares, curr_shares, prev_shares,
                    prev_weight, curr_weight
             FROM etf_diff_logs

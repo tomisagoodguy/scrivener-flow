@@ -3,7 +3,6 @@ import { ClockIcon } from 'lucide-react';
 import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
-import { RankingTrendChart } from '@/components/features/investment/RankingTrendChart';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
 import { DrilldownTabs } from '@/components/features/investment/DrilldownTabs';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
@@ -475,7 +474,7 @@ export default async function InvestmentEtfDrilldownPage({
                             <HoldingsTable initialData={holdingsWithFilters} />
                         </div>
                     }
-                    weightHistory={<RankingTrendChart data={rankingHistory} />}
+                    historyData={rankingHistory}
                     ledgerContent={
                         <div className="w-full space-y-8">
                             <ChangeImpactChart logs={logs} />

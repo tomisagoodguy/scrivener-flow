@@ -12,7 +12,7 @@ import {
     Legend,
 } from 'recharts';
 
-interface RankingDataRow {
+export interface RankingDataRow {
     data_date: string;
     stock_code: string;
     stock_name: string;
