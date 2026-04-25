@@ -282,9 +282,18 @@ export function BareKChart({ snapshot, stockName, strategies }: Props) {
                         </span>
                     ))}
                 </div>
+                <div className="flex items-center gap-2 text-sm shrink-0">
+                    <span className="font-bold text-gray-800">{lastClose.toFixed(2)}</span>
+                    {lastH260 && <span className="text-gray-400 text-xs">260高 {lastH260.toFixed(2)}</span>}
+                    {distPct !== null && (
+                        <span className="font-medium text-xs" style={{ color: distColor }}>
+                            {distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%
+                        </span>
+                    )}
+                </div>
             </div>
 
-            {/* K 線覆蓋層：左上條件 ✅/❌，右上收盤資訊 */}
+            {/* K 線覆蓋層：左上條件 ✅/❌ */}
             <div className="relative">
                 <div ref={p1Ref} />
                 <div className="absolute top-2 left-2 z-10 pointer-events-none">
@@ -297,17 +306,6 @@ export function BareKChart({ snapshot, stockName, strategies }: Props) {
                                 </span>
                             );
                         })}
-                    </div>
-                </div>
-                <div className="absolute top-2 right-2 z-10 pointer-events-none">
-                    <div className="bg-white/80 rounded px-2 py-1 text-[11px] border border-gray-200/60 text-right">
-                        <span className="font-bold text-gray-800">{lastClose.toFixed(2)}</span>
-                        {lastH260 && <span className="ml-2 text-gray-400">260高 {lastH260.toFixed(2)}</span>}
-                        {distPct !== null && (
-                            <span className="ml-2 font-medium" style={{ color: distColor }}>
-                                {distPct > 0 ? '+' : ''}{distPct.toFixed(1)}%
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>
