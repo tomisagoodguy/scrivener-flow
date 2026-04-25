@@ -82,7 +82,7 @@ class PositionSummaryStep(BaseStep):
             FROM etf_diff_logs
             WHERE etf_code = ANY(:codes)
               AND data_date <= :d
-              AND data_date >= :d::date - :days * INTERVAL '1 day'
+              AND data_date >= CAST(:d AS date) - :days * INTERVAL '1 day'
             ORDER BY data_date
         """), {"codes": etf_codes, "d": target_date, "days": MAX_HISTORY_DAYS})
         return [dict(r._mapping) for r in rows]
