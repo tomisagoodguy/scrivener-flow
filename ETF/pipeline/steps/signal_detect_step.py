@@ -97,10 +97,10 @@ class SignalDetectStep(BaseStep):
     @staticmethod
     def _fetch_diff_logs(conn, target_date: str) -> list[dict]:
         rows = conn.execute(text("""
-            SELECT etf_code, stock_code, action, weight_after
+            SELECT etf_code, stock_code, change_type, weight_after
             FROM etf_diff_logs
             WHERE data_date = :d
-              AND action IN ('BUY', 'IN', 'SELL', 'OUT')
+              AND change_type IN ('BUY', 'IN', 'SELL', 'OUT')
         """), {"d": target_date})
         return [dict(r._mapping) for r in rows]
 
@@ -164,7 +164,7 @@ class SignalDetectStep(BaseStep):
         weight_map: dict[str, dict[str, float]] = {}
 
         for d in diff_logs:
-            if d["action"] not in ("BUY", "IN"):
+            if d["change_type"] not in ("BUY", "IN"):
                 continue
             code = d["stock_code"]
             if code not in buy_map:

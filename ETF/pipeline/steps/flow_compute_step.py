@@ -95,7 +95,7 @@ class FlowComputeStep(BaseStep):
         rows = conn.execute(text("""
             SELECT stock_code, close
             FROM stock_prices_daily
-            WHERE date = :d
+            WHERE data_date = :d
         """), {"d": target_date})
         return {r.stock_code: float(r.close) for r in rows}
 

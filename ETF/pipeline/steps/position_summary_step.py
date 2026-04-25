@@ -77,7 +77,7 @@ class PositionSummaryStep(BaseStep):
     @staticmethod
     def _fetch_diffs(conn, etf_codes: list[str], target_date: str) -> list[dict]:
         rows = conn.execute(text("""
-            SELECT etf_code, stock_code, data_date, action,
+            SELECT etf_code, stock_code, data_date, change_type,
                    diff_shares, curr_shares, prev_shares
             FROM etf_diff_logs
             WHERE etf_code = ANY(:codes)
@@ -92,7 +92,7 @@ class PositionSummaryStep(BaseStep):
         rows = conn.execute(text("""
             SELECT stock_code, close
             FROM stock_prices_daily
-            WHERE date = :d
+            WHERE data_date = :d
         """), {"d": target_date})
         return {r.stock_code: float(r.close) for r in rows}
 
@@ -144,7 +144,7 @@ class PositionSummaryStep(BaseStep):
                 ev_close = prices.get(stock_code, close)  # fallback to today's price
                 cf = -delta * ev_close  # 買入 → delta>0 → cf>0
                 cost_basis += cf
-                if ev["action"] in ("BUY", "IN") and delta > 0:
+                if ev["change_type"] in ("BUY", "IN") and delta > 0:
                     if not first_entry:
                         first_entry = str(ev["data_date"])
                     entry_cost_sum += delta * ev_close
