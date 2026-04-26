@@ -9,6 +9,7 @@ import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnaly
 import { EtfSelector } from '@/components/features/investment/EtfSelector';
 import { EtfNewsPanel } from '@/components/features/investment/EtfNewsPanel';
 import { EtfHeroSection } from '@/components/features/investment/EtfHeroSection';
+import { EtfStockTradeView } from '@/components/features/investment/EtfStockTradeView';
 import React from 'react';
 import { Holding } from '@/types/investment';
 import { redirect } from 'next/navigation';
@@ -419,6 +420,19 @@ export default async function InvestmentEtfDrilldownPage({
         hour12: false
     }) : '';
 
+    // Task 4.3: merge holdings (weight) with positions (pnl_pct) for stock-trade tab
+    const positionMap = new Map(
+        (positionsResult.data ?? []).map(p => [p.stock_code, p.pnl_pct])
+    );
+    const stockTradeHoldings = holdingsWithFilters.map(h => ({
+        stock_code: h.stock_code,
+        stock_name: h.stock_name as string | null | undefined,
+        weight: h.weight as number | null | undefined,
+        pnl_pct: (positionMap.get(h.stock_code) != null
+            ? Number(positionMap.get(h.stock_code))
+            : null),
+    }));
+
     return (
         <div className="container mx-auto py-8 space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -486,6 +500,12 @@ export default async function InvestmentEtfDrilldownPage({
                                 <DiffLedger logs={logs} />
                             </div>
                         </div>
+                    }
+                    stockTradeContent={
+                        <EtfStockTradeView
+                            etfCode={etfCode}
+                            holdings={stockTradeHoldings}
+                        />
                     }
                     todayDiffs={(todayDiffsResult.data ?? []) as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
                     positions={(positionsResult.data ?? []).map(p => ({

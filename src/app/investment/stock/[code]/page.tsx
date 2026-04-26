@@ -11,6 +11,7 @@ import { InvestmentTrustChart } from '@/components/features/investment/Investmen
 import { BrokerChart } from '@/components/features/investment/BrokerChart';
 import { StockDashboardNav } from '@/components/features/investment/StockDashboardNav';
 import { EtfWeightHistoryChart } from '@/components/features/investment/EtfWeightHistoryChart';
+import { ManagerPnlSection } from '@/components/features/investment/ManagerPnlSection';
 import { useStockDashboard } from '@/hooks/investment/useStockDashboard';
 import { StockPoolMetrics } from '@/components/features/investment/StockPoolMetrics';
 import { StockDetailSections } from '@/components/features/investment/StockDetailSections';
@@ -203,6 +204,9 @@ export default function StockPage() {
                         data={etfWeightHistory}
                     />
                 )}
+
+                {/* Task 5.1–5.3: 經理人損益區塊（ETF 持倉歷史圖表下方） */}
+                <ManagerPnlSection stockCode={stockCode} />
             </div>
 
             {/* 底部導航列 */}

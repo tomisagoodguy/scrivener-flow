@@ -39,6 +39,7 @@ interface DiffLogRow {
 interface DrilldownTabsProps {
     holdingsContent: React.ReactNode;
     ledgerContent: React.ReactNode;
+    stockTradeContent?: React.ReactNode;
     todayDiffs?: DiffLogRow[];
     positions?: PositionRow[];
     historyData?: RankingDataRow[];
@@ -56,17 +57,19 @@ const VIEW_OPTIONS = [
     { key: 'sparkline' as const, label: 'Sparkline' },
 ];
 
-const VALID_TABS = ['holdings', 'today', 'history', 'entry', 'pnl', 'exited', 'ledger'] as const;
+// Task 4.1: added 'stock-trade' tab with URL param ?tab=stock-trade
+const VALID_TABS = ['holdings', 'today', 'history', 'entry', 'pnl', 'exited', 'ledger', 'stock-trade'] as const;
 type TabId = typeof VALID_TABS[number];
 
 const TAB_LABELS: Record<TabId, string> = {
-    holdings: '目前持股',
-    today:    '當日加減碼',
-    history:  '歷史軌跡',
-    entry:    '單股進出場',
-    pnl:      '損益排行',
-    exited:   '已出清',
-    ledger:   '異動紀錄',
+    holdings:     '目前持股',
+    today:        '當日加減碼',
+    history:      '歷史軌跡',
+    entry:        '單股進出場',
+    pnl:          '損益排行',
+    exited:       '已出清',
+    ledger:       '異動紀錄',
+    'stock-trade': '📈 損益追蹤',
 };
 
 // ── 子 Tab 元件 ───────────────────────────────────────────────────────────────
@@ -196,6 +199,7 @@ function ExitedSummary({ positions }: { positions: PositionRow[] }) {
 export function DrilldownTabs({
     holdingsContent,
     ledgerContent,
+    stockTradeContent,
     todayDiffs = [],
     positions = [],
     historyData,
@@ -295,6 +299,10 @@ export function DrilldownTabs({
                 <PositionsTab positions={positions} activeOnly={false} />
             </TabsContent>
             <TabsContent value="ledger">{ledgerContent}</TabsContent>
+            {/* Task 4.1–4.3: stock-trade tab */}
+            <TabsContent value="stock-trade">
+                {stockTradeContent ?? <EmptyState message="損益追蹤資料載入中" />}
+            </TabsContent>
         </Tabs>
     );
 }
