@@ -48,24 +48,24 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
             setShowBackToTop(window.scrollY > 400);
         };
         window.addEventListener('scroll', handleScroll);
-        
-        // Initial scroll check
-        checkScroll();
-        
-        // Re-check on window resize
         window.addEventListener('resize', checkScroll);
-        
+        requestAnimationFrame(() => requestAnimationFrame(checkScroll));
         return () => {
             window.removeEventListener('scroll', handleScroll);
             window.removeEventListener('resize', checkScroll);
         };
     }, []);
 
-    // Re-check when cases change (e.g. after filtering)
     useEffect(() => {
-        const timer = setTimeout(checkScroll, 100);
+        const timer = setTimeout(checkScroll, 150);
         return () => clearTimeout(timer);
     }, [cases]);
+
+    const scrollNav = (dir: 'left' | 'right') => {
+        if (!scrollRef.current) return;
+        const amount = scrollRef.current.clientWidth * 0.7;
+        scrollRef.current.scrollBy({ left: dir === 'right' ? amount : -amount, behavior: 'smooth' });
+    };
 
     const scrollToCase = (id: string) => {
         const element = document.getElementById(`case-${id}`);
@@ -109,32 +109,43 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                     </div>
                     
                     <div className="relative flex-1 overflow-hidden">
-                        {/* Edge Masks */}
+                        {/* Left arrow */}
                         <AnimatePresence>
                             {showLeftMask && (
-                                <motion.div
-                                    key="left-mask"
+                                <motion.button
+                                    key="left-arrow"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-r from-white dark:from-slate-900 to-transparent"
-                                />
-                            )}
-                            {showRightMask && (
-                                <motion.div
-                                    key="right-mask"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-linear-to-l from-white dark:from-slate-900 to-transparent"
-                                />
+                                    onClick={() => scrollNav('left')}
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 dark:text-slate-300"><path d="M15 18l-6-6 6-6"/></svg>
+                                </motion.button>
                             )}
                         </AnimatePresence>
 
-                        <div 
+                        {/* Right arrow */}
+                        <AnimatePresence>
+                            {showRightMask && (
+                                <motion.button
+                                    key="right-arrow"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    onClick={() => scrollNav('right')}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 dark:text-slate-300"><path d="M9 18l6-6-6-6"/></svg>
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
+
+                        <div
                             ref={scrollRef}
                             onScroll={checkScroll}
                             className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
+                            style={{ paddingLeft: showLeftMask ? '2rem' : undefined, paddingRight: showRightMask ? '2rem' : undefined }}
                         >
                             {sortedCases.slice(0, 30).map((c, idx) => {
                                 const milestoneLabel = getNextMilestoneLabel(c);
