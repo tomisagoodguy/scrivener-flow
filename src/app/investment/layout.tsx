@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeftIcon } from 'lucide-react';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 const navItems = [
     { name: '選股池', href: '/investment' },
@@ -64,14 +65,17 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                         </nav>
                     </div>
 
-                    {/* Back link */}
-                    <Link
-                        href="/cases"
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all duration-200 font-semibold"
-                    >
-                        <ArrowLeftIcon size={12} />
-                        代書系統
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <ThemeToggle />
+                        {/* Back link */}
+                        <Link
+                            href="/cases"
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all duration-200 font-semibold"
+                        >
+                            <ArrowLeftIcon size={12} />
+                            代書系統
+                        </Link>
+                    </div>
                 </div>
             </header>
 

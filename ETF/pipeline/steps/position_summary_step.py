@@ -165,7 +165,7 @@ class PositionSummaryStep(BaseStep):
             for ev in events:
                 delta = float(ev.get("diff_shares") or 0)
                 ev_close = hist_prices.get((stock_code, str(ev["data_date"])), close)
-                cf = -delta * ev_close  # 買入 → delta>0 → cf>0
+                cf = delta * ev_close  # 買入 → delta>0 → cf>0（成本增加）
                 cost_basis += cf
                 if ev["change_type"] in ("BUY", "IN") and delta > 0:
                     if not first_entry:

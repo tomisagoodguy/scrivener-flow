@@ -1,3 +1,42 @@
+export type ChangeType = 'IN' | 'BUY' | 'SELL' | 'OUT' | 'CLOSE';
+
+export const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
+    IN:    '首次建倉',
+    BUY:   '加碼',
+    SELL:  '減碼',
+    OUT:   '出清',
+    CLOSE: '大幅縮減',
+};
+
+export interface DiffEvent {
+    date: string;
+    changeType: ChangeType;
+    diffShares: number;
+    estimatedAmount: number;
+}
+
+export interface StockPnlResult {
+    etfCode: string;
+    etfName: string;
+    stockCode: string;
+    pnl: number;
+    pnlPct: number;
+    mvNow: number;
+    costBasis: number;
+    minDate: string;
+    curve: { date: string; value: number }[];
+    sharesHistory: { date: string; shares: number }[];
+    priceHistory: { date: string; close: number }[];
+    events: DiffEvent[];
+    status: 'ok' | 'no_price' | 'no_shares';
+    // Reference-style fields from etf_position_summary
+    entryPrice?: number;   // 加權平均進場價
+    currPrice?: number;    // 當前收盤價
+    deltaDays?: number;    // 持倉天數
+    currShares?: number;   // 當前持有股數（股）
+    isActive?: boolean;    // 是否仍持倉
+}
+
 export interface DiffLog {
     id: string;
     etf_code?: string;

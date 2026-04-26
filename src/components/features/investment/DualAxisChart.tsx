@@ -10,7 +10,7 @@ import {
     createSeriesMarkers,
     Time,
 } from 'lightweight-charts';
-import type { DiffEvent, ChangeType } from '@/app/actions/investmentPnl';
+import type { DiffEvent, ChangeType } from '@/types/investment';
 
 interface DualAxisChartProps {
     sharesHistory: { date: string; shares: number }[];

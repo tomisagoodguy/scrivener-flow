@@ -37,6 +37,8 @@ function buildPath(points: { x: number; y: number }[], W: number, H: number): st
         .join(' ');
 }
 
+const MAX_ETF_LINES = 5;
+
 function MiniChart({
     weightSeries,
     priceSeries,
@@ -58,30 +60,40 @@ function MiniChart({
     const dateIdx = Object.fromEntries(allDates.map((d, i) => [d, i]));
     const len = allDates.length;
 
+    // 按最新比重排序，只顯示前 MAX_ETF_LINES 支
+    const sorted = [...weightSeries]
+        .filter(s => s.length > 0)
+        .sort((a, b) => (b[b.length - 1]?.weight ?? 0) - (a[a.length - 1]?.weight ?? 0))
+        .slice(0, MAX_ETF_LINES);
+
+    // 所有 ETF 比重共用一組 min/max，讓高比重的線真的在高位
+    const allWeights = sorted.flatMap(s => s.map(p => p.weight));
+    const sharedMin = Math.min(...allWeights);
+    const sharedMax = Math.max(...allWeights);
+    const sharedRange = sharedMax - sharedMin || 1;
+    const normShared = (v: number) => (v - sharedMin) / sharedRange;
+
     const priceNorm = normalise(priceSeries.map(p => p.close));
     const pricePath = buildPath(
         priceSeries.map((p, i) => ({ x: dateIdx[p.date] / (len - 1 || 1), y: priceNorm[i] })),
         W, H
     );
 
-    const weightPaths = weightSeries.map(series => {
-        if (!series.length) return null;
+    const weightPaths = sorted.map(series => {
         const etf = series[0].etf_code;
-        const norm = normalise(series.map(p => p.weight));
         const path = buildPath(
-            series.map((p, i) => ({ x: dateIdx[p.date] / (len - 1 || 1), y: norm[i] })),
+            series.map(p => ({ x: dateIdx[p.date] / (len - 1 || 1), y: normShared(p.weight) })),
             W, H
         );
-        return { etf, path, color: etfColors[etf] ?? '#6366f1' };
-    }).filter(Boolean) as { etf: string; path: string; color: string }[];
+        const latest = series[series.length - 1]?.weight ?? 0;
+        return { etf, path, color: etfColors[etf] ?? '#6366f1', latest };
+    });
 
     return (
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32 overflow-visible">
-            {/* price line (right axis) — grey dashed */}
             <path d={pricePath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 2" />
-            {/* weight lines (left axis) */}
             {weightPaths.map(wp => (
-                <path key={wp.etf} d={wp.path} fill="none" stroke={wp.color} strokeWidth="1.5" strokeLinecap="round" />
+                <path key={wp.etf} d={wp.path} fill="none" stroke={wp.color} strokeWidth="2" strokeLinecap="round" />
             ))}
         </svg>
     );
@@ -128,9 +140,17 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
         });
     }, [stockCode, etfCodes, period]);
 
+    // 按最新比重排序，決定圖例分組
+    const sortedSeries = [...weightSeries]
+        .filter(s => s.length > 0)
+        .sort((a, b) => (b[b.length - 1]?.weight ?? 0) - (a[a.length - 1]?.weight ?? 0));
+    const shown = sortedSeries.slice(0, MAX_ETF_LINES);
+    const hidden = sortedSeries.slice(MAX_ETF_LINES);
+
     return (
         <div className="space-y-2">
-            <div className="flex gap-1">
+            {/* 工具列 */}
+            <div className="flex items-center gap-1 flex-wrap">
                 {(['30', '60', '90'] as Period[]).map(p => (
                     <button
                         key={p}
@@ -145,14 +165,39 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
                     </button>
                 ))}
                 <span className="ml-auto text-xs text-slate-400 flex items-center gap-2">
-                    <span className="inline-block w-4 border-t-2 border-slate-400 border-dashed" />灰虛=股價
-                    <span className="inline-block w-4 border-t-2 border-indigo-500" />色實=比重
+                    <span className="inline-block w-4 border-t-2 border-slate-400 border-dashed" />股價
+                    <span className="inline-block w-4 border-t-2 border-indigo-500" />比重
                 </span>
             </div>
+
+            {/* 圖表 */}
             {loading ? (
                 <div className="h-32 animate-pulse bg-slate-100 dark:bg-slate-800 rounded" />
             ) : (
                 <MiniChart weightSeries={weightSeries} priceSeries={priceSeries} etfColors={etfColors} />
+            )}
+
+            {/* 圖例：顯示圖上的 ETF + 最新比重 */}
+            {!loading && shown.length > 0 && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {shown.map(s => {
+                        const etf = s[0].etf_code;
+                        const latest = s[s.length - 1]?.weight ?? 0;
+                        const color = etfColors[etf] ?? '#6366f1';
+                        return (
+                            <span key={etf} className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400">
+                                <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: color }} />
+                                <span className="font-mono font-bold" style={{ color }}>{etf}</span>
+                                <span className="text-slate-400">{latest.toFixed(2)}%</span>
+                            </span>
+                        );
+                    })}
+                    {hidden.length > 0 && (
+                        <span className="text-[11px] text-slate-400">
+                            +{hidden.length} 支未顯示（{hidden.map(s => s[0].etf_code).join('、')}）
+                        </span>
+                    )}
+                </div>
             )}
         </div>
     );

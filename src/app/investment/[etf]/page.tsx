@@ -392,10 +392,11 @@ export default async function InvestmentEtfDrilldownPage({
             .limit(365),
         supabaseForPnl
             .from('etf_position_summary')
-            .select('stock_code, cost_basis, mv_now, pnl, pnl_pct, delta_days, first_entry_date, entry_price, curr_price, curr_shares, is_active, exit_date, realized_pnl_pct')
+            .select('stock_code, data_date, cost_basis, mv_now, pnl, pnl_pct, delta_days, first_entry_date, entry_price, curr_price, curr_shares, is_active, exit_date, realized_pnl_pct')
             .eq('etf_code', etfCode)
-            .eq('data_date', dataDate ?? '')
-            .limit(200),
+            .lte('data_date', dataDate ?? '')
+            .order('data_date', { ascending: false })
+            .limit(500),
         supabaseForPnl
             .from('etf_diff_logs')
             .select('etf_code, data_date, stock_code, stock_name, change_type, diff_shares, curr_shares, prev_weight, curr_weight')
@@ -420,9 +421,17 @@ export default async function InvestmentEtfDrilldownPage({
         hour12: false
     }) : '';
 
+    // De-dup: keep latest row per stock (query returns DESC by data_date)
+    const positionSeenCodes = new Set<string>();
+    const latestPositions = (positionsResult.data ?? []).filter(p => {
+        if (positionSeenCodes.has(p.stock_code)) return false;
+        positionSeenCodes.add(p.stock_code);
+        return true;
+    });
+
     // Task 4.3: merge holdings (weight) with positions (pnl_pct) for stock-trade tab
     const positionMap = new Map(
-        (positionsResult.data ?? []).map(p => [p.stock_code, p.pnl_pct])
+        latestPositions.map(p => [p.stock_code, p.pnl_pct])
     );
     const stockTradeHoldings = holdingsWithFilters.map(h => ({
         stock_code: h.stock_code,
@@ -508,7 +517,7 @@ export default async function InvestmentEtfDrilldownPage({
                         />
                     }
                     todayDiffs={(todayDiffsResult.data ?? []) as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
-                    positions={(positionsResult.data ?? []).map(p => ({
+                    positions={latestPositions.map(p => ({
                         ...p,
                         stock_name: undefined,
                         cost_basis: Number(p.cost_basis),

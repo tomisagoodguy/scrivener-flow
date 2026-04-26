@@ -1,202 +1,152 @@
 'use client';
 
 import React from 'react';
-import type { StockPnlResult } from '@/app/actions/investmentPnl';
+import type { StockPnlResult } from '@/types/investment';
 
 interface ManagerPnlCardProps {
     result: StockPnlResult;
     showEtfLabel?: boolean;
 }
 
-// Task 2.3: SVG P&L curve with positive (rose) / negative (emerald) fill areas
-function PnlCurve({ curve }: { curve: StockPnlResult['curve'] }) {
-    if (curve.length < 2) return (
-        <div className="h-16 flex items-center justify-center text-xs text-slate-400">
-            資料累積中…
-        </div>
-    );
+function MiniSparkline({ curve }: { curve: StockPnlResult['curve'] }) {
+    if (curve.length < 2) return <div className="w-20 h-8" />;
 
-    const W = 400;
-    const H = 60;
-    const PAD = 4;
-
+    const W = 80;
+    const H = 32;
     const vals = curve.map(c => c.value);
     const min = Math.min(...vals);
     const max = Math.max(...vals);
     const range = max - min || 1;
-    const toY = (v: number) => H - ((v - min) / range) * (H - PAD * 2) - PAD;
+    const toY = (v: number) => H - ((v - min) / range) * (H - 4) - 2;
 
-    const pts = vals.map((v, i) => {
-        const x = (i / (vals.length - 1)) * W;
-        return { x, y: toY(v) };
-    });
-
-    const polylinePoints = pts.map(p => `${p.x},${p.y}`).join(' ');
-    const polygonPoints = [
-        `0,${toY(0 < min ? min : 0 > max ? max : 0)}`,
+    const pts = vals.map((v, i) => ({ x: (i / (vals.length - 1)) * W, y: toY(v) }));
+    const line = pts.map(p => `${p.x},${p.y}`).join(' ');
+    const fill = [
+        `0,${H}`,
         ...pts.map(p => `${p.x},${p.y}`),
-        `${W},${toY(0 < min ? min : 0 > max ? max : 0)}`,
+        `${W},${H}`,
     ].join(' ');
 
-    const hasZero = min < 0 && max > 0;
-    const zeroY = toY(0);
-    const id = React.useId();
+    const last = vals[vals.length - 1]!;
+    const color = last >= 0 ? '#e11d48' : '#059669';
+    const fillColor = last >= 0 ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.15)';
 
     return (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16" preserveAspectRatio="none">
-            <defs>
-                {hasZero && (
-                    <>
-                        <clipPath id={`${id}-pos`}>
-                            <rect x="0" y="0" width={W} height={zeroY} />
-                        </clipPath>
-                        <clipPath id={`${id}-neg`}>
-                            <rect x="0" y={zeroY} width={W} height={H - zeroY} />
-                        </clipPath>
-                    </>
-                )}
-            </defs>
-
-            {/* Zero line */}
-            {hasZero && (
-                <line x1="0" y1={zeroY} x2={W} y2={zeroY}
-                    stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" />
-            )}
-
-            {/* Positive fill (rose) */}
-            {hasZero ? (
-                <polygon points={polygonPoints}
-                    fill="rgba(244,63,94,0.15)"
-                    clipPath={`url(#${id}-pos)`} />
-            ) : max >= 0 ? (
-                <polygon points={polygonPoints} fill="rgba(244,63,94,0.15)" />
-            ) : null}
-
-            {/* Negative fill (emerald) */}
-            {hasZero ? (
-                <polygon points={polygonPoints}
-                    fill="rgba(16,185,129,0.15)"
-                    clipPath={`url(#${id}-neg)`} />
-            ) : max < 0 ? (
-                <polygon points={polygonPoints} fill="rgba(16,185,129,0.15)" />
-            ) : null}
-
-            {/* Main line */}
-            <polyline
-                points={polylinePoints}
-                fill="none"
-                stroke={vals[vals.length - 1]! >= 0 ? '#e11d48' : '#059669'}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-20 h-8" preserveAspectRatio="none">
+            <polygon points={fill} fill={fillColor} />
+            <polyline points={line} fill="none" stroke={color} strokeWidth="1.5"
+                strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
 }
 
-function MetricCell({ label, value, colorClass }: {
-    label: string; value: string; colorClass?: string;
-}) {
-    return (
-        <div className="space-y-0.5">
-            <div className="text-[10px] text-slate-500 dark:text-slate-400">{label}</div>
-            <div className={`text-base font-bold tabular-nums ${colorClass ?? 'text-slate-800 dark:text-slate-200'}`}>
-                {value}
-            </div>
-        </div>
-    );
-}
-
-// Task 2.1–2.5: ManagerPnlCard
 export function ManagerPnlCard({ result, showEtfLabel = true }: ManagerPnlCardProps) {
-    // Task 2.5: N/A states
-    if (result.status === 'no_shares') {
+    if (result.status === 'no_shares' || result.status === 'no_price') {
         return (
-            <div className="glass-card rounded-xl p-4 space-y-2">
+            <div className="glass-card rounded-lg px-3 py-2 flex items-center gap-3">
                 {showEtfLabel && (
-                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        {result.etfCode} {result.etfName}
-                    </div>
+                    <span className="text-xs font-semibold text-slate-500 w-16 shrink-0">
+                        {result.etfCode}
+                    </span>
                 )}
-                <div className="text-sm text-slate-400">N/A — 無股數資料</div>
+                <span className="text-xs text-slate-400">
+                    {result.status === 'no_shares' ? '無股數資料' : '無收盤價資料'}
+                </span>
             </div>
         );
     }
 
-    if (result.status === 'no_price') {
-        return (
-            <div className="glass-card rounded-xl p-4 space-y-2">
-                {showEtfLabel && (
-                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        {result.etfCode} {result.etfName}
-                    </div>
-                )}
-                <div className="text-sm text-slate-400">N/A — 無收盤價資料</div>
-            </div>
-        );
-    }
-
-    // Task 2.2: 台股色彩慣例 — 正漲 rose, 負跌 emerald
     const isPositive = result.pnl >= 0;
-    const pnlColor = isPositive
-        ? 'text-rose-600 dark:text-rose-400'
-        : 'text-emerald-600 dark:text-emerald-400';
+    const pnlColor = isPositive ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+    const bgAccent = isPositive ? 'border-l-rose-400' : 'border-l-emerald-400';
 
-    const fmt億 = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)} 億`;
     const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
-    const fmtPos億 = (v: number) => `${v.toFixed(2)} 億`;
+    const fmtBil = (v: number) => `${v >= 0 ? '' : '-'}${Math.abs(v).toFixed(2)}億`;
+    const fmtPrice = (v: number | undefined) => v != null ? `$${v.toFixed(0)}` : '—';
+    const fmtLots = (s: number | undefined) => s != null ? `${Math.round(s / 1000).toLocaleString()}張` : '—';
 
     return (
-        <div className="glass-card rounded-xl p-4 space-y-3">
+        <div className={`glass-card rounded-lg px-3 py-2.5 border-l-2 ${bgAccent} flex items-center gap-3`}>
+            {/* ETF label */}
             {showEtfLabel && (
-                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                    {result.etfCode} {result.etfName}
+                <div className="shrink-0 w-16">
+                    <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">
+                        {result.etfCode}
+                    </div>
+                    <div className="text-[9px] text-slate-400 leading-tight truncate">{result.etfName}</div>
                 </div>
             )}
 
-            {/* Task 2.1: 4 metrics */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <MetricCell
-                    label="損益額"
-                    value={fmt億(result.pnl)}
-                    colorClass={pnlColor}
-                />
-                <MetricCell
-                    label="報酬率"
-                    value={fmtPct(result.pnlPct)}
-                    colorClass={pnlColor}
-                />
-                <MetricCell label="目前市值" value={fmtPos億(result.mvNow)} />
-                <MetricCell label="累計成本" value={fmtPos億(result.costBasis)} />
+            {/* PnL 報酬率 + 損益額 */}
+            <div className="shrink-0 text-right w-20">
+                <div className={`text-sm font-bold tabular-nums ${pnlColor}`}>
+                    {fmtPct(result.pnlPct)}
+                </div>
+                <div className={`text-[10px] tabular-nums ${pnlColor}`}>
+                    {fmtBil(result.pnl)}
+                </div>
             </div>
 
-            {/* Task 2.3: P&L curve */}
-            <PnlCurve curve={result.curve} />
+            {/* Divider */}
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 shrink-0" />
 
-            {/* Task 2.4: 資料起算日免責 */}
-            {result.minDate && (
-                <div className="text-[10px] text-slate-400 text-right">
-                    損益計算自 {result.minDate} 起，早於此日的成本未納入
+            {/* 4 mini metrics */}
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 flex-1 min-w-0">
+                <div>
+                    <span className="text-[9px] text-slate-400">市值 </span>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 tabular-nums">
+                        {fmtBil(result.mvNow)}
+                    </span>
                 </div>
-            )}
+                <div>
+                    <span className="text-[9px] text-slate-400">成本 </span>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 tabular-nums">
+                        {fmtBil(result.costBasis)}
+                    </span>
+                </div>
+                <div>
+                    <span className="text-[9px] text-slate-400">均價 </span>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 tabular-nums">
+                        {fmtPrice(result.entryPrice)}
+                    </span>
+                </div>
+                <div>
+                    <span className="text-[9px] text-slate-400">持倉 </span>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 tabular-nums">
+                        {fmtLots(result.currShares)}
+                        {result.deltaDays != null && (
+                            <span className="text-slate-400 ml-1">{result.deltaDays}天</span>
+                        )}
+                    </span>
+                </div>
+            </div>
+
+            {/* Sparkline */}
+            <div className="shrink-0">
+                <MiniSparkline curve={result.curve} />
+            </div>
         </div>
     );
 }
 
-// Task 2.5: Skeleton loading state
 export function ManagerPnlCardSkeleton() {
     return (
-        <div className="glass-card rounded-xl p-4 space-y-3 animate-pulse">
-            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32" />
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="glass-card rounded-lg px-3 py-2.5 flex items-center gap-3 animate-pulse">
+            <div className="w-16 space-y-1 shrink-0">
+                <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-12" />
+                <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded w-10" />
+            </div>
+            <div className="w-20 space-y-1 shrink-0">
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded" />
+            </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <div className="flex-1 grid grid-cols-2 gap-1.5">
                 {[...Array(4)].map((_, i) => (
-                    <div key={i} className="space-y-1">
-                        <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded w-12" />
-                        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20" />
-                    </div>
+                    <div key={i} className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded" />
                 ))}
             </div>
-            <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded" />
+            <div className="w-20 h-8 bg-slate-100 dark:bg-slate-800 rounded shrink-0" />
         </div>
     );
 }

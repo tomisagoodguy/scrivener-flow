@@ -43,7 +43,7 @@ scrivener-flow/
 │   │   ├── actions/            # Server Actions（AI、資料同步）
 │   │   ├── api/                # API Routes（Webhooks、第三方整合）
 │   │   ├── cases/              # 案件詳情頁（含 [id] 動態路由）
-│   │   ├── investment/         # 投資儀表板（[etf] 與 stock/[code]）
+│   │   ├── investment/         # 投資儀表板（[etf]、stock/[code]、bare-k、watch-list、compare、consensus、equity、revenue-lab、history）
 │   │   └── login/components/   # 拆解的登入子元件
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件
@@ -77,8 +77,11 @@ scrivener-flow/
 yarn dev              # 啟動 Next.js dev server（port 3000，被占用則 3001）
 yarn build            # Production 建置
 yarn test             # 執行所有 Jest 單元測試
+yarn test -- --testPathPattern=src/path/to/test  # 執行單一測試檔
 yarn lint             # ESLint 靜態分析
 ```
+
+TypeScript 路徑別名：`@/` → `src/`（對應 `tsconfig.json` 的 `paths`）。
 
 ### ETF Pipeline（Python）
 
@@ -87,7 +90,8 @@ uv run python ETF/main.py --days 30        # 正常執行（同步最近 30 天�
 uv run python ETF/main.py --dry-run        # 只跑 ScrapeStep，不寫 DB（本地安全）
 uv run python ETF/daily_ai_report.py       # 單獨執行 AI 報告
 uv run ruff check --fix && uv run ruff format  # Lint + Format
-uv run pytest ETF/                         # 執行 ETF 單元測試
+uv run pytest ETF/                         # 執行所有 ETF 單元測試
+uv run pytest ETF/tests/test_specific.py   # 執行單一測試檔
 ```
 
 > **本地執行保護**：`main.py` 預設封鎖本地執行（保護 FinLab 5GB/天配額）。本地測試需在 `.env` 設定 `FORCE_RUN=true`。
@@ -139,7 +143,7 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 | 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial、Holding 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 | 3 | `src/lib/constants/caseConstants.ts` | 案件狀態、待辦來源型別常數 |
-| 4 | `src/lib/investment/etfRegistry.ts` | 11 支 ETF 唯一清單（新增 ETF 只改此檔 + Python 端的 `ETF/config/etf_registry.py`） |
+| 4 | `src/lib/investment/etfRegistry.ts` | 15 支 ETF 唯一清單（新增 ETF 只改此檔 + Python 端的 `ETF/config/etf_registry.py`） |
 | 5 | `src/lib/investment/holdingsUtils.ts` | `getAllHoldings()`、`buildUnionHoldings()`（前端聚合邏輯核心） |
 | 6 | `ETF/pipeline/context.py` | Pipeline 步驟間共享狀態，含 `date_str`、`secondary_stock_codes` |
 
@@ -187,7 +191,7 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 
 ### ETF 日期一致性
 
-`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 11 支 ETF 並行使用同一日期。
+`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 15 支 ETF 並行使用同一日期。
 Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fallback。
 
 ### Supabase JOIN 回傳陣列

@@ -2,40 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { ETF_REGISTRY } from '@/lib/investment/etfRegistry';
-
-// Task 1.5: change_type values confirmed from codebase: IN, BUY, SELL, OUT, CLOSE
-export type ChangeType = 'IN' | 'BUY' | 'SELL' | 'OUT' | 'CLOSE';
-
-export const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
-    IN:    '首次建倉',
-    BUY:   '加碼',
-    SELL:  '減碼',
-    OUT:   '出清',
-    CLOSE: '大幅縮減',
-};
-
-export interface DiffEvent {
-    date: string;
-    changeType: ChangeType;
-    diffShares: number;
-    estimatedAmount: number; // |Δshares × close| in 萬元
-}
-
-export interface StockPnlResult {
-    etfCode: string;
-    etfName: string;
-    stockCode: string;
-    pnl: number;        // 億元
-    pnlPct: number;     // %
-    mvNow: number;      // 億元
-    costBasis: number;  // 億元
-    minDate: string;
-    curve: { date: string; value: number }[]; // daily P&L in 億元
-    sharesHistory: { date: string; shares: number }[];
-    priceHistory: { date: string; close: number }[];
-    events: DiffEvent[];
-    status: 'ok' | 'no_price' | 'no_shares';
-}
+import type { ChangeType, DiffEvent, StockPnlResult } from '@/types/investment';
 
 // Task 1.2: close_on_or_before carry-forward
 function buildCloseLookup(priceRows: { data_date: string; close: unknown }[]) {
@@ -170,23 +137,72 @@ export async function computeStockPnl(
     return _computeStockPnlWithClient(supabase, etfCode, stockCode);
 }
 
-// Task 1.4: getStockManagerPnl — parallel across all ETFs holding this stock
+// getStockManagerPnl — reads pre-computed per-stock PnL from etf_position_summary
+// (computed by PositionSummaryStep using etf_diff_logs, more accurate than on-the-fly delta)
 export async function getStockManagerPnl(stockCode: string): Promise<StockPnlResult[]> {
     const supabase = await createClient();
 
-    const { data: etfRows, error: etfErr } = await supabase
-        .from('etf_weight_history')
-        .select('etf_code')
-        .eq('stock_code', stockCode);
+    // Latest active position per ETF for this stock
+    const { data: posRows, error } = await supabase
+        .from('etf_position_summary')
+        .select('etf_code, data_date, cost_basis, mv_now, pnl, pnl_pct, delta_days, first_entry_date, entry_price, curr_price, curr_shares, is_active')
+        .eq('stock_code', stockCode)
+        .eq('is_active', true)
+        .order('etf_code')
+        .order('data_date', { ascending: false });
 
-    if (etfErr || !etfRows || etfRows.length === 0) return [];
+    if (error || !posRows || posRows.length === 0) return [];
 
-    const uniqueEtfs = [...new Set(etfRows.map(r => r.etf_code as string))];
+    // De-dup: keep latest row per ETF
+    const seen = new Set<string>();
+    const latest: typeof posRows = [];
+    for (const row of posRows) {
+        if (!seen.has(row.etf_code)) {
+            seen.add(row.etf_code);
+            latest.push(row);
+        }
+    }
 
-    // Use shared client — avoids concurrent createClient() calls in Promise.all
-    const results = await Promise.all(
-        uniqueEtfs.map(etfCode => _computeStockPnlWithClient(supabase, etfCode, stockCode))
-    );
+    const etfCodes = latest.map(r => r.etf_code);
 
-    return results.filter(r => r.status === 'ok' || r.minDate !== '');
+    // Historical PnL curve from etf_position_summary
+    const { data: histRows } = await supabase
+        .from('etf_position_summary')
+        .select('etf_code, data_date, pnl')
+        .eq('stock_code', stockCode)
+        .in('etf_code', etfCodes)
+        .order('data_date', { ascending: true });
+
+    const curveByEtf = new Map<string, { date: string; value: number }[]>();
+    for (const row of histRows ?? []) {
+        if (!curveByEtf.has(row.etf_code)) curveByEtf.set(row.etf_code, []);
+        curveByEtf.get(row.etf_code)!.push({
+            date: row.data_date as string,
+            value: Number(row.pnl),
+        });
+    }
+
+    return latest.map(row => {
+        const etfMeta = ETF_REGISTRY.find(e => e.code === row.etf_code);
+        return {
+            etfCode: row.etf_code,
+            etfName: etfMeta?.name ?? row.etf_code,
+            stockCode,
+            pnl: Number(row.pnl),
+            pnlPct: Number(row.pnl_pct),
+            mvNow: Number(row.mv_now),
+            costBasis: Number(row.cost_basis),
+            minDate: (row.first_entry_date as string) ?? '',
+            curve: curveByEtf.get(row.etf_code) ?? [],
+            sharesHistory: [],
+            priceHistory: [],
+            events: [],
+            status: 'ok' as const,
+            entryPrice: row.entry_price != null ? Number(row.entry_price) : undefined,
+            currPrice: row.curr_price != null ? Number(row.curr_price) : undefined,
+            deltaDays: row.delta_days != null ? Number(row.delta_days) : undefined,
+            currShares: row.curr_shares != null ? Number(row.curr_shares) : undefined,
+            isActive: row.is_active ?? true,
+        };
+    });
 }

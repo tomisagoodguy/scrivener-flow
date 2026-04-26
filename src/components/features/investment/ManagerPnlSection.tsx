@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getStockManagerPnl } from '@/app/actions/investmentPnl';
-import type { StockPnlResult } from '@/app/actions/investmentPnl';
+import type { StockPnlResult } from '@/types/investment';
 import { ManagerPnlCard, ManagerPnlCardSkeleton } from './ManagerPnlCard';
 
 interface ManagerPnlSectionProps {
@@ -37,11 +37,9 @@ export function ManagerPnlSection({ stockCode }: ManagerPnlSectionProps) {
                 </div>
             )}
 
-            {/* Task 5.2: 2-column grid, each ETF one card */}
             {!error && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {results === null
-                        // Task 5.3: skeleton while loading
                         ? [0, 1].map(i => <ManagerPnlCardSkeleton key={i} />)
                         : results.map(r => (
                             <ManagerPnlCard

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { computeStockPnl, CHANGE_TYPE_LABELS } from '@/app/actions/investmentPnl';
-import type { StockPnlResult } from '@/app/actions/investmentPnl';
+import { computeStockPnl } from '@/app/actions/investmentPnl';
+import { CHANGE_TYPE_LABELS } from '@/types/investment';
+import type { StockPnlResult } from '@/types/investment';
 import { ManagerPnlCard, ManagerPnlCardSkeleton } from './ManagerPnlCard';
 import { DualAxisChart } from './DualAxisChart';
 

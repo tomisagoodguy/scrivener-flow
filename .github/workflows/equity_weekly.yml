@@ -2,8 +2,8 @@ name: Weekly Equity Distribution Sync
 
 on:
   schedule:
-    # 每週一 01:00 UTC（台灣時間 09:00），TDCC 週五公告，週一資料已可用
-    - cron: '0 1 * * 1'
+    # 每週六 14:00 UTC（台灣時間 22:00），TDCC 週五公告，週六晚上資料已可用
+    - cron: '0 14 * * 6'
   workflow_dispatch: # 允許手動觸發
 
 jobs:
