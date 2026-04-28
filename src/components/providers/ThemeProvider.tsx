@@ -73,11 +73,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setThemeState(newTheme);
     };
 
-    // 避免 hydration mismatch：首次渲染時不顯示會受主題影響的內容
-    if (!mounted) {
-        return <>{children}</>;
-    }
-
     return <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>{children}</ThemeContext.Provider>;
 }
 

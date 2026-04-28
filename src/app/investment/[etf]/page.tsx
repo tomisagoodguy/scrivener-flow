@@ -379,7 +379,7 @@ export default async function InvestmentEtfDrilldownPage({
 
     const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
     const supabaseForPnl = await createClient();
-    const [logs, rankingHistory, quantFilters, news, pnlSeriesResult, positionsResult, todayDiffsResult] = await Promise.all([
+    const [logs, rankingHistory, quantFilters, news, pnlSeriesResult, positionsResult, todayDiffsResult, prevDateResult] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
@@ -399,10 +399,18 @@ export default async function InvestmentEtfDrilldownPage({
             .limit(500),
         supabaseForPnl
             .from('etf_diff_logs')
-            .select('etf_code, data_date, stock_code, stock_name, change_type, diff_shares, curr_shares, prev_weight, curr_weight')
+            .select('etf_code, data_date, stock_code, stock_name, change_type, diff_shares, curr_shares, prev_shares, prev_weight, curr_weight, diff_weight, is_significant')
             .eq('etf_code', etfCode)
             .eq('data_date', dataDate ?? '')
+            .order('diff_weight', { ascending: false })
             .limit(100),
+        supabaseForPnl
+            .from('etf_diff_logs')
+            .select('data_date')
+            .eq('etf_code', etfCode)
+            .lt('data_date', dataDate ?? '')
+            .order('data_date', { ascending: false })
+            .limit(1),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({
@@ -428,6 +436,17 @@ export default async function InvestmentEtfDrilldownPage({
         positionSeenCodes.add(p.stock_code);
         return true;
     });
+
+    const prevDate = prevDateResult.data?.[0]?.data_date ?? null;
+
+    const holdingPriceMap = new Map(holdingsWithFilters.map(h => [h.stock_code, h.price as number | null]));
+
+    const todayDiffs = (todayDiffsResult.data ?? []).map(d => ({
+        ...d,
+        amount_亿: d.diff_shares != null && holdingPriceMap.get(d.stock_code) != null
+            ? Math.abs(d.diff_shares) * (holdingPriceMap.get(d.stock_code)!) / 1e8
+            : null,
+    }));
 
     // Task 4.3: merge holdings (weight) with positions (pnl_pct) for stock-trade tab
     const positionMap = new Map(
@@ -516,7 +535,9 @@ export default async function InvestmentEtfDrilldownPage({
                             holdings={stockTradeHoldings}
                         />
                     }
-                    todayDiffs={(todayDiffsResult.data ?? []) as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
+                    todayDiffs={todayDiffs as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
+                    dataDate={dataDate ?? undefined}
+                    prevDate={prevDate ?? undefined}
                     positions={latestPositions.map(p => ({
                         ...p,
                         stock_name: undefined,
