@@ -119,6 +119,32 @@ export function useStockDashboard(stockCode: string) {
                     } else {
                         setStockName(stockCode);
                     }
+
+                    // 從 holdings 補取 quantMetrics（equity-chips 不含動能/投信/營收欄位）
+                    try {
+                        const holdingsRes = await fetch('/api/investment/holdings');
+                        if (holdingsRes.ok) {
+                            type ExtHolding = Holding & { momentum_60d?: number | null; momentum_pass?: boolean; it_buy_5d?: number | null; it_buy_5d_pass?: boolean; rev_ma3_new_high?: boolean; filter_score?: number | null; is_20d_high?: boolean; is_200d_high?: boolean };
+                            const allHoldings: ExtHolding[] = await holdingsRes.json();
+                            const ext = allHoldings.find(h => h.stock_code === stockCode);
+                            if (ext) {
+                                setQuantMetrics({
+                                    momentum_60d: ext.momentum_60d ?? null,
+                                    momentum_pass: ext.momentum_pass ?? false,
+                                    it_buy_5d: ext.it_buy_5d ?? null,
+                                    it_buy_5d_pass: ext.it_buy_5d_pass ?? false,
+                                    rev_ma3_new_high: ext.rev_ma3_new_high ?? false,
+                                    filter_score: ext.filter_score ?? null,
+                                    revenue_yoy: ext.revenue_yoy ?? null,
+                                    is_20d_high: ext.is_20d_high ?? false,
+                                    is_200d_high: ext.is_200d_high ?? false,
+                                });
+                            }
+                        }
+                    } catch {
+                        // quantMetrics 補取失敗時靜默降級，不影響主要導航功能
+                    }
+
                     return;
                 }
 

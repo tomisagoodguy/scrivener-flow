@@ -223,8 +223,10 @@ function TodayDiffsTab({ diffs, dataDate, prevDate }: {
     );
 }
 
-function PositionsTab({ positions, activeOnly }: { positions: PositionRow[]; activeOnly: boolean }) {
-    const filtered = positions.filter(p => activeOnly ? p.is_active : !p.is_active);
+function PositionsTab({ positions, activeOnly }: { positions: PositionRow[]; activeOnly?: boolean }) {
+    const filtered = activeOnly == null
+        ? positions
+        : positions.filter(p => activeOnly ? p.is_active : !p.is_active);
     if (!filtered.length) return <EmptyState />;
 
     const sorted = [...filtered].sort((a, b) => b.pnl_pct - a.pnl_pct);
@@ -386,10 +388,7 @@ export function DrilldownTabs({
             <TabsContent value="entry"><PositionsTab positions={positions} activeOnly={true} /></TabsContent>
             <TabsContent value="pnl">
                 <div className="space-y-4">
-                    {positions.length === 0
-                        ? <EmptyState />
-                        : <PositionsTab positions={[...positions].sort((a, b) => b.pnl_pct - a.pnl_pct)} activeOnly={false} />
-                    }
+                    <PositionsTab positions={[...positions].sort((a, b) => b.pnl_pct - a.pnl_pct)} />
                 </div>
             </TabsContent>
             <TabsContent value="exited">
