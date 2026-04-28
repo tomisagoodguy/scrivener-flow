@@ -235,6 +235,18 @@ export const caseService = {
         if (error) throw error;
     },
 
+    async updateChatGroups(
+        supabase: SupabaseClient,
+        caseId: string,
+        chatGroups: { line?: string; whatsapp?: string; other?: string }
+    ): Promise<void> {
+        const { error } = await supabase
+            .from('cases')
+            .update({ chat_groups: chatGroups, updated_at: new Date().toISOString() })
+            .eq('id', caseId);
+        if (error) throw error;
+    },
+
     /**
      * 刪除案件
      */

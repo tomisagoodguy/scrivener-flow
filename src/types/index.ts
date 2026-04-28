@@ -100,6 +100,7 @@ export interface DemoCase {
     notes?: string; // 備註 (Excel: 備註)
     private_notes?: string;
     pending_tasks?: string;
+    chat_groups?: { line?: string; whatsapp?: string };
     bank_contact_notes?: string;
 
     has_keyed_overtime: boolean; // 加班費申報狀態

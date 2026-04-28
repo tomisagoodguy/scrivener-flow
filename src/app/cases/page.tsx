@@ -24,6 +24,7 @@ export default async function CasesPage({
     const statusParam = resolvedSearchParams?.status || 'Processing';
     const queryParam = resolvedSearchParams?.q || '';
     const stageParam = resolvedSearchParams?.stage || '';
+    const viewParam = typeof resolvedSearchParams?.view === 'string' ? resolvedSearchParams.view : 'all';
 
     const supabase = await createClient();
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
@@ -59,7 +60,7 @@ export default async function CasesPage({
 
     if (queryParam && typeof queryParam === 'string') {
         query = query.or(
-            `case_number.ilike.%${queryParam}%,buyer_name.ilike.%${queryParam}%,seller_name.ilike.%${queryParam}%,city.ilike.%${queryParam}%,district.ilike.%${queryParam}%,notes.ilike.%${queryParam}%`
+            `case_number.ilike.%${queryParam}%,buyer_name.ilike.%${queryParam}%,seller_name.ilike.%${queryParam}%,city.ilike.%${queryParam}%,district.ilike.%${queryParam}%,notes.ilike.%${queryParam}%,chat_groups->>line.ilike.%${queryParam}%,chat_groups->>whatsapp.ilike.%${queryParam}%`
         );
     }
 
@@ -151,7 +152,8 @@ export default async function CasesPage({
                             ENTER
                         </span>
                     </div>
-                    <input type="hidden" name="status" value={activeStatus} />
+                    <input type="hidden" name="status" value={statusParam as string} />
+                    {viewParam !== 'all' && <input type="hidden" name="view" value={viewParam} />}
                 </form>
             </div>
 
@@ -160,7 +162,7 @@ export default async function CasesPage({
 
             {/* Memo Board View */}
             {statusParam === 'Memo' && (
-                <CaseMemoBoard cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
+                <CaseMemoBoard cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} view={viewParam} />
             )}
 
             {/* Timeline Hub View */}

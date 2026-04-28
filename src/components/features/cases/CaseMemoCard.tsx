@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { caseService } from '@/services/caseService';
 import { DemoCase, Milestone, TodoRecord } from '@/types';
 import { stripHtml } from './edit-case/caseUtils';
+import ChatGroupsEditor from './ChatGroupsEditor';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -293,9 +294,10 @@ interface CaseMemoCardProps {
     caseData: DemoCase;
     allCases: DemoCase[];
     currentIndex: number;
+    view?: string;
 }
 
-export default function CaseMemoCard({ caseData, allCases, currentIndex }: CaseMemoCardProps) {
+export default function CaseMemoCard({ caseData, allCases, currentIndex, view = 'all' }: CaseMemoCardProps) {
     const supabase = createClient();
     const milestone = caseData.milestones?.[0];
     const next = getNextMilestone(milestone);
@@ -454,34 +456,48 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex }: CaseM
             )}
 
             {/* ⚠️ 警示備註 */}
-            <EditableNote
-                icon="⚠️"
-                value={cleanNotes}
-                placeholder="新增警示備註…"
-                textClassName="text-rose-600 dark:text-rose-400 font-bold"
-                bgClassName="bg-rose-50 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-800/40"
-                onSave={(v) => save('notes', v)}
-            />
+            {(view === 'all' || view === 'notes') && (
+                <EditableNote
+                    icon="⚠️"
+                    value={cleanNotes}
+                    placeholder="新增警示備註…"
+                    textClassName="text-rose-600 dark:text-rose-400 font-bold"
+                    bgClassName="bg-rose-50 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-800/40"
+                    onSave={(v) => save('notes', v)}
+                />
+            )}
 
             {/* 📝 其他備忘 */}
-            <EditableNote
-                icon="📝"
-                value={stripHtml(caseData.pending_tasks ?? '')}
-                placeholder="新增代辦備忘…"
-                textClassName="text-slate-600 dark:text-slate-400 italic"
-                bgClassName="bg-slate-50 dark:bg-slate-800/50 border-slate-200/60 dark:border-slate-700/40"
-                onSave={(v) => save('pending_tasks', v)}
-            />
+            {(view === 'all' || view === 'pending') && (
+                <EditableNote
+                    icon="📝"
+                    value={stripHtml(caseData.pending_tasks ?? '')}
+                    placeholder="新增代辦備忘…"
+                    textClassName="text-slate-600 dark:text-slate-400 italic"
+                    bgClassName="bg-slate-50 dark:bg-slate-800/50 border-slate-200/60 dark:border-slate-700/40"
+                    onSave={(v) => save('pending_tasks', v)}
+                />
+            )}
 
             {/* 🔒 Private Notes */}
-            <EditableNote
-                icon="🔒"
-                value={stripHtml(caseData.private_notes ?? '')}
-                placeholder="新增私密備註…"
-                textClassName="text-slate-600 dark:text-slate-400"
-                bgClassName="bg-slate-100/80 dark:bg-slate-800/70 border-slate-300/60 dark:border-slate-600/40"
-                onSave={(v) => save('private_notes', v)}
-            />
+            {(view === 'all' || view === 'private') && (
+                <EditableNote
+                    icon="🔒"
+                    value={stripHtml(caseData.private_notes ?? '')}
+                    placeholder="新增私密備註…"
+                    textClassName="text-slate-600 dark:text-slate-400"
+                    bgClassName="bg-slate-100/80 dark:bg-slate-800/70 border-slate-300/60 dark:border-slate-600/40"
+                    onSave={(v) => save('private_notes', v)}
+                />
+            )}
+
+            {/* 📱 通訊群組 */}
+            {view === 'all' && (
+                <ChatGroupsEditor
+                    caseId={caseData.id}
+                    initialGroups={caseData.chat_groups ?? {}}
+                />
+            )}
 
             {/* A: Prev / Next navigation */}
             {(prevCase || nextCase) && (
