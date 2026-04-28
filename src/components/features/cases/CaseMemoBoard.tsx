@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { DemoCase } from '@/types';
 import CaseMemoCard from './CaseMemoCard';
+import CaseMemoListView from './CaseMemoListView';
 import MemoRealtimeRefresh from './MemoRealtimeRefresh';
 
 interface CaseMemoBoardProps {
@@ -25,13 +26,14 @@ const VIEW_TABS = [
     { value: 'notes',   label: '⚠️ 應注意' },
     { value: 'pending', label: '📝 其他代辦' },
     { value: 'private', label: '🔒 私密備註' },
+    { value: 'list',    label: '📋 緊湊清單' },
 ] as const;
 
 function filterByView(cases: DemoCase[], view: string): DemoCase[] {
     if (view === 'notes')   return cases.filter((c) => !!c.notes?.replace(/\[\[ATTR:.*?\]\]/g, '').trim());
     if (view === 'pending') return cases.filter((c) => !!(c.pending_tasks ?? '').trim());
     if (view === 'private') return cases.filter((c) => !!(c.private_notes ?? '').trim());
-    return cases;
+    return cases; // 'all' and 'list' both show everything
 }
 
 export default function CaseMemoBoard({ cases, view = 'all' }: CaseMemoBoardProps) {
@@ -61,8 +63,9 @@ export default function CaseMemoBoard({ cases, view = 'all' }: CaseMemoBoardProp
             {/* Sub-view tabs */}
             <div className="flex items-center gap-1.5 bg-slate-100/70 dark:bg-slate-800/50 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
                 {VIEW_TABS.map((tab) => {
-                    const count = filterByView(orderedCases, tab.value).length;
                     const isActive = view === tab.value;
+                    const showCount = tab.value !== 'list';
+                    const count = showCount ? filterByView(orderedCases, tab.value).length : 0;
                     return (
                         <Link
                             key={tab.value}
@@ -74,13 +77,15 @@ export default function CaseMemoBoard({ cases, view = 'all' }: CaseMemoBoardProp
                             }`}
                         >
                             {tab.label}
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                                isActive
-                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                    : 'bg-slate-200 dark:bg-slate-700 text-slate-400'
-                            }`}>
-                                {count}
-                            </span>
+                            {showCount && (
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                    isActive
+                                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400'
+                                }`}>
+                                    {count}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}
@@ -100,7 +105,9 @@ export default function CaseMemoBoard({ cases, view = 'all' }: CaseMemoBoardProp
             </div>
 
             {/* Cards */}
-            {filteredCases.length === 0 ? (
+            {view === 'list' ? (
+                <CaseMemoListView cases={filteredCases} />
+            ) : filteredCases.length === 0 ? (
                 <div className="glass-card p-16 text-center">
                     <p className="text-2xl mb-2">
                         {view === 'notes' ? '⚠️' : view === 'pending' ? '📝' : '🔒'}
