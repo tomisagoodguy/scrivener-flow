@@ -157,7 +157,7 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 | :--- | :--- |
 | `components.md` | 元件大小上限、Supabase client 選擇（3種）、Server Action vs API Route、**台股色彩慣例（紅漲綠跌）**、useSearchParams 陷阱 |
 | `database.md` | RLS 多租戶隔離、里程碑 vs 任務、E2EE 加密架構、Todo 雙軌同步、Schema 修改流程（禁用 Prisma migrate） |
-| `etf-pipeline.md` | Pipeline 步驟錯誤處理（關鍵 vs 輔助步驟）、日期來源規則（`ctx.date_str` 優先）、SQL `CAST()` vs `::` 語法、自選股名稱查詢三表優先序 |
+| `etf-pipeline.md` | Pipeline 步驟錯誤處理（關鍵 vs 輔助步驟）、日期來源規則（`ctx.date_str` 優先）、SQL `CAST()` vs `::` 語法、自選股名稱查詢三表優先序、`diff_shares` 單位（股→張÷1000） |
 | `ai.md` | Gemini fallback 鏈、`ALLOWED_EMAIL` 功能閘門、AI Server Action 限制 |
 | `dark-mode.md` | `dark-theme.css !important` 覆蓋問題與正確的深色模式做法 |
 | `workflow.md` | openspec 流程、登入重導向處理、套件管理禁令 |
@@ -188,6 +188,18 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 
 台股與歐美**相反**：**紅色 = 上漲**，**綠色 = 下跌**。
 所有漲跌顯示使用 `text-rose-600`（漲）和 `text-emerald-600`（跌）。
+
+### `etf_diff_logs.diff_shares` 單位（當日加減碼）
+
+`diff_shares` 是 **原始股數（股）**，不是張：
+
+```ts
+const 張 = Math.round(Math.abs(diff_shares) / 1000);          // 顯示用
+const amount_亿 = Math.abs(diff_shares) * price / 1e8;         // 億元市值
+```
+
+`amount_亿` 在 DB 無此欄，需 Server 端用 holdings `price` 計算後傳入前端。  
+查詢 `etf_diff_logs` 時需明確 select `diff_weight`、`is_significant`、`prev_shares`（舊程式碼只取了子集）。
 
 ### ETF 日期一致性
 

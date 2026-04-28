@@ -138,6 +138,19 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 `getHoldings()` 在 Server 端偵測 `price = null` 的持股，從 `stock_prices_daily` 補充最新 `price`、`change_percent`、`amount`、`margin_ratio`。  
 資料由 `SyncOHLCVStep` 透過 `ctx.secondary_stock_codes` 合併後 sync。
 
+## etf_diff_logs 欄位單位
+
+| 欄位 | 單位 | 前端轉換 |
+|------|------|---------|
+| `diff_shares` | 原始股數（股） | ÷ 1000 → 張 |
+| `diff_weight` | 百分比差值（pp） | 直接顯示，加 `pp` 後綴 |
+| `is_significant` | boolean | `true` = 異動幅度顯著 |
+| `amount_亿`（前端計算）| N/A（DB 無此欄） | `abs(diff_shares) * price / 1e8` |
+
+**陷阱**：`diff_shares` 是 `diff_engine.py` 計算的原始股數（`c["shares"] - p["shares"]`），**不是 張**。  
+顯示為 張 必須除以 1000；億元市值用 `abs(diff_shares) * 當日收盤價 / 1e8`。  
+當日收盤價從 holdings 的 `price` 欄位取得（Server 端已補齊，見 `getHoldings()`）。
+
 ## 關鍵模組索引
 
 | 路徑 | 說明 |
