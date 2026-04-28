@@ -25,6 +25,7 @@ export default async function CasesPage({
     const queryParam = resolvedSearchParams?.q || '';
     const stageParam = resolvedSearchParams?.stage || '';
     const viewParam = typeof resolvedSearchParams?.view === 'string' ? resolvedSearchParams.view : 'all';
+    const sortParam = typeof resolvedSearchParams?.sort === 'string' ? resolvedSearchParams.sort : 'milestone';
 
     const supabase = await createClient();
     const activeStatus = statusParam === 'Closed' ? 'Closed' : 'Processing';
@@ -70,7 +71,7 @@ export default async function CasesPage({
 
     let cases = rawCases;
 
-    // Client-side sort helper
+    // Sort helper: next upcoming date from priority list
     const getNextActionDate = (c: DemoCase) => {
         const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
         if (!m) return 9999999999999;
@@ -83,10 +84,44 @@ export default async function CasesPage({
         return dates[0] || 9999999999999;
     };
 
-    // Filter by Stage & Sort by Urgency
+    // Sort helper: 印→稅→過→交 priority (pick first upcoming)
+    const getMilestoneSortKey = (c: DemoCase): number => {
+        const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
+        if (!m) return 9999999999999;
+        const now = new Date().getTime();
+        for (const d of [m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]) {
+            if (d) {
+                const t = new Date(d).getTime();
+                if (t >= now) return t;
+            }
+        }
+        return 9999999999999;
+    };
+
+    // Sort helper: single milestone field
+    const getSingleMilestoneDateKey = (c: DemoCase, field: 'seal_date' | 'tax_payment_date' | 'transfer_date' | 'handover_date'): number => {
+        const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
+        if (!m || !m[field]) return 9999999999999;
+        return new Date(m[field]!).getTime();
+    };
+
+    // Filter by Stage
     if (stageParam && typeof stageParam === 'string') {
         cases = cases.filter((c) => getCaseStage(c) === stageParam);
-        cases.sort((a, b) => getNextActionDate(a) - getNextActionDate(b));
+    }
+
+    // Apply sort
+    if (sortParam === 'seal') {
+        cases = [...cases].sort((a, b) => getSingleMilestoneDateKey(a, 'seal_date') - getSingleMilestoneDateKey(b, 'seal_date'));
+    } else if (sortParam === 'tax') {
+        cases = [...cases].sort((a, b) => getSingleMilestoneDateKey(a, 'tax_payment_date') - getSingleMilestoneDateKey(b, 'tax_payment_date'));
+    } else if (sortParam === 'transfer') {
+        cases = [...cases].sort((a, b) => getSingleMilestoneDateKey(a, 'transfer_date') - getSingleMilestoneDateKey(b, 'transfer_date'));
+    } else if (sortParam === 'handover') {
+        cases = [...cases].sort((a, b) => getSingleMilestoneDateKey(a, 'handover_date') - getSingleMilestoneDateKey(b, 'handover_date'));
+    } else {
+        // Default: 印→稅→過→交 priority
+        cases = [...cases].sort((a, b) => getMilestoneSortKey(a) - getMilestoneSortKey(b));
     }
 
     return (
@@ -188,6 +223,32 @@ export default async function CasesPage({
             {/* List Table */}
             {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
+                    <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-wrap">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">排序</span>
+                        {([
+                            { label: '印→稅→過→交', value: 'milestone' },
+                            { label: '印', value: 'seal' },
+                            { label: '稅', value: 'tax' },
+                            { label: '過', value: 'transfer' },
+                            { label: '交', value: 'handover' },
+                        ] as const).map((opt) => {
+                            const base = `/cases?status=${statusParam}${queryParam ? `&q=${queryParam}` : ''}${stageParam ? `&stage=${stageParam}` : ''}`;
+                            const isActive = sortParam === opt.value || (opt.value === 'milestone' && sortParam !== 'seal' && sortParam !== 'tax' && sortParam !== 'transfer' && sortParam !== 'handover');
+                            return (
+                                <Link
+                                    key={opt.value}
+                                    href={`${base}&sort=${opt.value}`}
+                                    className={`px-3 py-1 rounded-full text-[11px] font-black border transition-all ${
+                                        isActive
+                                            ? 'bg-blue-500 text-white border-blue-500 shadow-md'
+                                            : 'bg-white/60 text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-500 dark:bg-slate-800/60 dark:border-slate-700'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </Link>
+                            );
+                        })}
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-[1000px] w-full text-left border-collapse">
                             <thead>

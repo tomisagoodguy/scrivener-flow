@@ -210,6 +210,13 @@ Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fall
 
 即使 1:1 關係，JOIN 回傳仍是陣列：`caseData.milestone?.[0]?.contract_date`，型別定義用 `Milestone[]`。
 
+### 案件列表排序（`/cases` 頁面）
+
+`src/app/cases/page.tsx` 預設以里程碑優先順序排序：**印（seal_date）→ 稅（tax_payment_date）→ 過（transfer_date）→ 交（handover_date）**。  
+排序邏輯：每個案件取第一個「尚未過期」的里程碑日期，最近者排最上方；無未來日期的案件沉底。  
+Table 上方提供五個排序按鈕（`sort` URL param）：`milestone`（預設優先序）、`seal`、`tax`、`transfer`、`handover`。  
+**禁止改動預設排序行為**，代書最常需要看下一個「用印」進度。
+
 ---
 
 ## 功能變更流程
