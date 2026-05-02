@@ -227,3 +227,88 @@ Table 上方提供五個排序按鈕（`sort` URL param）：`milestone`（預�
 openspec new change "<name>"          # 建立新 change
 openspec apply --change "<name>"      # 開始執行 tasks
 ```
+
+---
+
+## App Router 路由模組
+
+| 路由 | 說明 |
+| :--- | :--- |
+| `/cases` | 案件列表（里程碑排序）+ `/cases/[id]` 案件詳情 |
+| `/investment` | 投資儀表板入口，子路由見目錄結構 |
+| `/banks` | 代償銀行管理 |
+| `/calculator` | 稅費試算工具（利用 `src/lib/calculator/`） |
+| `/clauses` | 契約條款範本管理 |
+| `/notes` | 備忘錄板（支援 `view=list` 緊湊模式） |
+| `/redemptions` | 代償案件管理 |
+| `/knowledge` | 知識庫（Tiptap 富文字，全員共用，不做 user_id 隔離） |
+| `/admin` | 管理員功能（import、用戶管理） |
+| `/identify` | 文件辨識（DOCX 解析） |
+| `/login` | 登入頁（Google OAuth + 密碼 + MFA TOTP） |
+
+---
+
+## 服務層與 Repository 索引
+
+### Services（`src/services/`）
+
+| 檔案 | 職責 |
+| :--- | :--- |
+| `caseService.ts` | 案件 CRUD、里程碑更新、自動任務生成（3–5天前） |
+| `todoService.ts` | 待辦事項新增/完成/刪除，含 `source_key` 去重 |
+| `noteService.ts` | 備忘錄 CRUD + E2EE 加密備註 |
+| `dashboardNotesService.ts` | 首頁備忘錄摘要（跨案件） |
+| `revenueLabService.ts` | 營收分析資料查詢 |
+
+### Repositories（`src/repositories/`）— 僅投資模組使用
+
+| 檔案 | 職責 |
+| :--- | :--- |
+| `priceRepo.ts` | 個股每日收盤價查詢 |
+| `revenueRepo.ts` | 月營收資料查詢 |
+| `stockRepo.ts` | 個股基本資料、法人持股 |
+
+Repository Pattern 僅限投資模組，案件模組使用 Service 層直接呼叫 Supabase。
+
+---
+
+## 工具庫索引（`src/lib/`）
+
+| 路徑 | 說明 |
+| :--- | :--- |
+| `calculator/` | 稅費計算：`taxConstants.ts`（稅率）、`landTaxUtils.ts`、`houseTaxUtils.ts`、`feeUtils.ts`、`calculatorUtils.ts` |
+| `docx-parser/` | DOCX 文件解析：extractors 拆分 basicInfo、payments、personnel、redemptions |
+| `crypto/` | E2EE：`encryption.ts`（AES-256-GCM）、`keyManagement.ts`（90 天輪替）、`secureApi.ts`（防流量分析） |
+| `auth/` | `client.ts`（Client 端 session）、`server.ts`（Server 端 session） |
+| `google/drive.ts` | Google Drive 整合（文件上傳/存取） |
+| `emailService.ts` | Email 通知 |
+| `lineService.ts` | LINE Messaging API（通知、Flex Message） |
+| `constants/` | `caseConstants.ts`（案件狀態）、`milestoneConstants.ts` |
+
+---
+
+## 測試策略
+
+測試框架：**Jest** + React Testing Library，設定檔 `jest.config.ts`。
+
+```bash
+yarn test                                        # 執行所有測試
+yarn test -- --testPathPattern=useHoldings       # 執行含關鍵字的測試
+yarn test -- --coverage                          # 產生覆蓋率報告
+```
+
+- 測試檔放在 `**/__tests__/` 或同目錄 `*.test.ts(x)`
+- Setup 檔：`src/__tests__/setup.ts`（全域 mock 設定）
+- 路徑別名 `@/` 在 Jest 中已對應 `src/`（`moduleNameMapper` 設定）
+- 目前測試集中在投資 hooks（`useHoldingsFilter`、`useStockWeightAnalysis`）
+
+---
+
+## CI/CD 工作流
+
+| Workflow | 排程 | 執行內容 |
+| :--- | :--- | :--- |
+| `etf_daily.yml` | 每日 UTC 14:00（台灣 22:00） | `main.py --days 30` → `sync_stock_financials.py --days 60 --skip-shareholder` → `daily_ai_report.py` |
+| `equity_weekly.yml` | 每週六 UTC 14:00 | `sync_equity_distribution.py` → `sync_stock_financials.py --days 14`（含股東結構） |
+
+Pipeline 需要的 GitHub Secrets：`SUPABASE_DB_URL`、`FINLAB_API_TOKEN`、`GOOGLE_GEMINI_API_KEY`、`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`。
