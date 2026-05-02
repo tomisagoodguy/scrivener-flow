@@ -12,6 +12,7 @@ import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 import { getCaseStage } from '@/lib/stageUtils';
 import CasesPendingView from '@/components/features/cases/CasesPendingView';
 import CaseQuickNavigator from '@/components/features/cases/CaseQuickNavigator';
+import { CasesRapidInput } from '@/components/features/cases/CasesRapidInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -191,6 +192,14 @@ export default async function CasesPage({
                     {viewParam !== 'all' && <input type="hidden" name="view" value={viewParam} />}
                 </form>
             </div>
+
+            {/* 閃電快速輸入列 */}
+            <CasesRapidInput cases={rawCases.map((c) => ({
+                id: c.id,
+                case_number: c.case_number,
+                buyer_name: c.buyer_name,
+                seller_name: c.seller_name,
+            }))} />
 
             {/* Quick Navigator - Sticky Top Row & FAB */}
             <CaseQuickNavigator cases={monitoringCases} />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { DemoCase } from '@/types';
+import { DemoCase, TodoRecord } from '@/types';
 import { parseISO, format, isWeekend, startOfDay } from 'date-fns';
 import {
     TimelineEvent,
@@ -36,7 +36,7 @@ const FIELD_TO_SOURCE_KEY: Record<string, string> = {
  * useTimelineHub
  * 將所有案件的 Milestone/Appointment/Tax/Todo 整合為統一的 TimelineEvent[]
  */
-export function useTimelineHub(cases: DemoCase[]) {
+export function useTimelineHub(cases: DemoCase[], standaloneTodos: TodoRecord[] = []) {
     const today = useMemo(() => startOfDay(new Date()), []);
 
     /** 統一事件列表 */
@@ -188,6 +188,34 @@ export function useTimelineHub(cases: DemoCase[]) {
             }
         });
 
+        // 無案件關聯的個人手動事項
+        standaloneTodos.forEach((todo) => {
+            if (!todo.due_date) return;
+            try {
+                const parsedDate = parseISO(todo.due_date);
+                events.push({
+                    id: `personal-todo-${todo.id}`,
+                    caseId: '__personal__',
+                    caseNumber: '個人',
+                    buyerName: '',
+                    sellerName: '',
+                    date: parsedDate,
+                    category: 'todo',
+                    key: 'personal_todo',
+                    label: '個人事項',
+                    icon: '📌',
+                    color: 'bg-violet-100',
+                    textColor: 'text-violet-700',
+                    shape: 'pill',
+                    isCompleted: false,
+                    todoId: todo.id,
+                    content: todo.due_date.includes('T')
+                        ? `⏰ ${format(parsedDate, 'HH:mm')}　${todo.content}`
+                        : todo.content,
+                });
+            } catch { /* skip */ }
+        });
+
         const sorted = events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
         // 將每個案件的未完成 checklist 掛在「最近的未來里程碑」上
@@ -214,7 +242,7 @@ export function useTimelineHub(cases: DemoCase[]) {
             });
 
         return sorted;
-    }, [cases, today]);
+    }, [cases, standaloneTodos, today]);
 
     /** 按日期分組 */
     const dayGroups = useMemo(() => {

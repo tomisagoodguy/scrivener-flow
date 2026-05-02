@@ -59,7 +59,13 @@ export default function TimelineHub({ cases }: TimelineHubProps) {
         }));
     }, [cases, clientTodos]);
 
-    const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(mergedCases);
+    // 無案件關聯的手動事項（首頁閃電輸入產生）
+    const standaloneTodos = useMemo(
+        () => clientTodos.filter((t) => !t.case_id && !t.is_deleted && !t.is_completed && t.due_date),
+        [clientTodos]
+    );
+
+    const { today, allEvents, dayGroups, stats, upcomingAttentions } = useTimelineHub(mergedCases, standaloneTodos);
 
     const handleCompleteTodo = useCallback(async (todoId: string) => {
         await supabase.from('todos').update({ is_completed: true }).eq('id', todoId);

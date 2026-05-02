@@ -1,6 +1,4 @@
 import TodoContainer from '@/components/todo/TodoContainer';
-import DashboardQuickNotes from '@/components/dashboard/DashboardQuickNotes';
-import { RecentCases } from '@/components/features/cases/RecentCases';
 import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 
@@ -21,12 +19,7 @@ export default function Home() {
                     <div className="lg:col-span-12 h-[750px]">
                         <TodoContainer />
                     </div>
-                    <div className="lg:col-span-12 h-[600px]">
-                        <DashboardQuickNotes />
-                    </div>
-                    <div className="lg:col-span-12 min-h-[400px]">
-                        <RecentCases />
-                    </div>
+
                 </div>
 
                 <footer className="text-center text-gray-400 text-xs py-8 font-medium">
