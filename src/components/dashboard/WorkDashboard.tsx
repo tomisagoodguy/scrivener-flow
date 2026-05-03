@@ -6,6 +6,7 @@ import { useWorkDashboard } from './work-dashboard/useWorkDashboard';
 import { UrgentAlerts } from './work-dashboard/UrgentAlerts';
 import { TaxWatch } from './work-dashboard/TaxWatch';
 import { PipelineView } from './work-dashboard/PipelineView';
+import TodoContainer from '@/components/todo/TodoContainer';
 
 interface WorkDashboardProps {
     className?: string;
@@ -16,38 +17,29 @@ export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
 
     if (loading) {
         return (
-            <div className={`grid grid-cols-1 xl:grid-cols-12 gap-6 ${className}`}>
-                <div className="xl:col-span-6 glass-card p-6 h-[400px] skeleton rounded-[32px]" />
-                <div className="xl:col-span-6 glass-card p-6 h-[400px] skeleton rounded-[32px]" />
-                <div className="xl:col-span-12 glass-card p-6 h-[200px] skeleton rounded-[32px]" />
+            <div className={`flex flex-col gap-4 ${className}`}>
+                <div className="glass-card p-4 h-12 skeleton rounded-2xl" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="glass-card p-4 h-[240px] skeleton rounded-2xl" />
+                    <div className="glass-card p-4 h-[240px] skeleton rounded-2xl" />
+                </div>
+                <div className="glass-card p-4 h-[160px] skeleton rounded-2xl" />
             </div>
         );
     }
 
     return (
-        <div className={`flex flex-col gap-6 ${className} animate-fade-in`}>
-            {/* AI Work Assistant */}
-            <div className="w-full">
+        <div className={`flex flex-col gap-4 ${className} animate-fade-in`}>
                 <AIWorkAssistant />
-            </div>
 
-            {/* Main Dashboard Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                {/* LEFT: Urgent Alerts */}
-                <div className="xl:col-span-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <UrgentAlerts tasks={urgentTasks} staleCount={staleTasks.length} onComplete={completeTask} onArchiveStale={archiveStaleTasks} />
-                </div>
-
-                {/* RIGHT: Tax Watch */}
-                <div className="xl:col-span-6">
                     <TaxWatch tasks={taxTasks} onComplete={completeTask} />
                 </div>
 
-                {/* BOTTOM: 7-Day Pipeline (Full Width Horizontal) */}
-                <div className="xl:col-span-12">
-                    <PipelineView tasks={pipelineTasks} />
-                </div>
-            </div>
+                <PipelineView tasks={pipelineTasks} />
+
+                <TodoContainer />
         </div>
     );
 };

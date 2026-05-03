@@ -13,7 +13,7 @@ export default function WelcomeHeader() {
         ?? '...';
 
     return (
-        <div className="mb-8 pl-1">
+        <div className="mb-3 pl-1">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <span>{greeting}，</span>
                 <span className="bg-linear-to-r from-blue-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">

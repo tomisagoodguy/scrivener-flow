@@ -1,28 +1,13 @@
-import TodoContainer from '@/components/todo/TodoContainer';
 import { WorkDashboard } from '@/components/dashboard/WorkDashboard';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 
 export default function Home() {
     return (
-        <div className="pb-12 animate-fade-in">
-            <main className="max-w-7xl mx-auto pt-4 sm:pt-8 bg-transparent">
-                {/* Welcome Section (Client Side) */}
+        <div className="pb-6 animate-fade-in">
+            <main className="max-w-7xl mx-auto pt-4 sm:pt-6 bg-transparent">
                 <WelcomeHeader />
-
-                {/* WORK DASHBOARD (7-Day Risk Radar & Pipeline) */}
-                <div className="mb-8">
-                    <WorkDashboard />
-                </div>
-
-                {/* Dashboard Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-                    <div className="lg:col-span-12 h-[750px]">
-                        <TodoContainer />
-                    </div>
-
-                </div>
-
-                <footer className="text-center text-gray-400 text-xs py-8 font-medium">
+                <WorkDashboard />
+                <footer className="text-center text-gray-400 text-xs py-6 font-medium">
                     Scrivener Flow Professional • v2.0
                 </footer>
             </main>
