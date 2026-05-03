@@ -57,9 +57,7 @@ class PositionSummaryStep(BaseStep):
             diffs = self._fetch_diffs(conn, all_codes, target_date)
             prices = self._fetch_prices(conn, target_date)
             hist_prices = self._fetch_historical_prices(conn, diffs)
-            snapshots = self._fetch_latest_shares(conn, all_codes, target_date)
-
-        positions, pnl_rows = self._compute(diffs, prices, hist_prices, snapshots, target_date)
+        positions, pnl_rows = self._compute(diffs, prices, hist_prices, target_date)
 
         if not positions:
             self.logger.warning("No positions computed for %s", target_date)
@@ -118,24 +116,11 @@ class PositionSummaryStep(BaseStep):
             for r in rows if r.close is not None
         }
 
-    @staticmethod
-    def _fetch_latest_shares(conn, etf_codes: list[str], target_date: str) -> dict[tuple, dict]:
-        rows = conn.execute(text("""
-            SELECT DISTINCT ON (etf_code, stock_code)
-                etf_code, stock_code, shares, data_date
-            FROM etf_holdings_snapshot
-            WHERE etf_code = ANY(:codes)
-              AND data_date <= :d
-            ORDER BY etf_code, stock_code, data_date DESC
-        """), {"codes": etf_codes, "d": target_date})
-        return {(r.etf_code, r.stock_code): dict(r._mapping) for r in rows}
-
     def _compute(
         self,
         diffs: list[dict],
         prices: dict[str, float],
         hist_prices: dict[tuple[str, str], float],
-        snapshots: dict[tuple, dict],
         target_date: str,
     ) -> tuple[list[dict], list[dict]]:
         # 按 (etf_code, stock_code) 分組 diffs
@@ -150,11 +135,15 @@ class PositionSummaryStep(BaseStep):
         })
 
         for (etf_code, stock_code), events in groups.items():
-            snap = snapshots.get((etf_code, stock_code))
-            curr_shares = float(snap["shares"]) if snap else 0.0
             close = prices.get(stock_code)
             if close is None or close <= 0:
                 continue
+
+            # 依日期排序，最新 event 的 curr_shares 才是真實持倉量
+            # snapshot 在股票 OUT 後不會補一筆 shares=0，所以不能用 snapshot 判斷
+            sorted_events = sorted(events, key=lambda e: str(e["data_date"]))
+            latest_ev = sorted_events[-1]
+            curr_shares = float(latest_ev.get("curr_shares") or 0)
 
             # 現金流法累計成本
             cost_basis = 0.0
@@ -162,7 +151,7 @@ class PositionSummaryStep(BaseStep):
             entry_cost_sum = 0.0
             entry_shares_sum = 0.0
 
-            for ev in events:
+            for ev in sorted_events:
                 delta = float(ev.get("diff_shares") or 0)
                 ev_close = hist_prices.get((stock_code, str(ev["data_date"])), close)
                 cf = delta * ev_close  # 買入 → delta>0 → cf>0（成本增加）
@@ -175,10 +164,12 @@ class PositionSummaryStep(BaseStep):
 
             mv_now = curr_shares * close
             is_active = curr_shares > 0
-            pnl = mv_now - cost_basis if is_active else 0.0
-            pnl_pct = (pnl / cost_basis * 100) if cost_basis > 0.01 else 0.0
+            # 出清時 mv_now=0，pnl = -cost_basis（cost_basis 已含所有賣出回收）
+            pnl = mv_now - cost_basis
+            # 分母用 entry_cost_sum（總買入成本），避免 cost_basis 在出清後變負數導致 pnl_pct 失真
+            pnl_pct = (pnl / entry_cost_sum * 100) if entry_cost_sum > 0.01 else 0.0
 
-            first_date = str(events[0]["data_date"]) if events else target_date
+            first_date = str(sorted_events[0]["data_date"]) if sorted_events else target_date
             delta_days_val = (
                 (date.fromisoformat(target_date) - date.fromisoformat(first_entry)).days
                 if first_entry else 0
