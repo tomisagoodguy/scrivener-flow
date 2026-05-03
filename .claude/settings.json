@@ -1,28 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "node -e \"try{const fs=require('fs');let r='';process.stdin.on('data',d=>r+=d);process.stdin.on('end',()=>{try{const i=JSON.parse(r);const p=(i.tool_input&&i.tool_input.file_path)||'';if((p.endsWith('.tsx')||p.endsWith('.ts'))&&!p.includes('node_modules')){const n=fs.readFileSync(p,'utf8').split('\\\\n').length;if(n>150)console.log('⚠️ [元件超標] '+p.split(/[\\\\/]/).pop()+' 已有 '+n+' 行（上限 150），請考慮拆分');}}catch(e){}});}catch(e){}\"",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "Edit|Write"
-      },
-      {
-        "hooks": [
-          {
-            "command": "node -e \"try{let r='';process.stdin.on('data',d=>r+=d);process.stdin.on('end',()=>{try{const i=JSON.parse(r);const cmd=(i.tool_input&&i.tool_input.command)||'';if(cmd.includes('git commit'))console.log('Git commit detected! Feature complete? Run /reflect to process learnings.');}catch(e){}});}catch(e){}\"",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      }
-    ]
-  },
   "includeGitInstructions": false,
   "permissions": {
     "allow": [
@@ -48,7 +24,32 @@
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat\\(investment\\): ETF 近期重大公告面板加入捲動限制\")",
       "WebFetch(domain:marvin-69-jpg.github.io)",
       "Bash(python3 -m json.tool)",
-      "Bash(git -C /c/Users/user/Documents/GitHub/tw-active log --oneline -3)"
+      "Bash(git -C /c/Users/user/Documents/GitHub/tw-active log --oneline -3)",
+      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-GitHub-scrivener-flow\\\\3440a8c5-0a34-49c3-83de-a0f2b5c62ba5\\\\tasks\\\\b008a35jr.output\" 2>&1; Write-Host \"Total lines: $\\($lines.Count\\)\"; $lines | Select-Object -Last 10)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"try{const fs=require('fs');let r='';process.stdin.on('data',d=>r+=d);process.stdin.on('end',()=>{try{const i=JSON.parse(r);const p=(i.tool_input&&i.tool_input.file_path)||'';if((p.endsWith('.tsx')||p.endsWith('.ts'))&&!p.includes('node_modules')){const n=fs.readFileSync(p,'utf8').split('\\\\n').length;if(n>150)console.log('⚠️ [元件超標] '+p.split(/[\\\\/]/).pop()+' 已有 '+n+' 行（上限 150），請考慮拆分');}}catch(e){}});}catch(e){}\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"try{let r='';process.stdin.on('data',d=>r+=d);process.stdin.on('end',()=>{try{const i=JSON.parse(r);const cmd=(i.tool_input&&i.tool_input.command)||'';if(cmd.includes('git commit'))console.log('Git commit detected! Feature complete? Run /reflect to process learnings.');}catch(e){}});}catch(e){}\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

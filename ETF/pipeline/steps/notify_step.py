@@ -52,6 +52,17 @@ class NotifyStep(BaseStep):
             f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."
         )
 
+        # 盤前指引 bubble（輔助，失敗不中斷）
+        try:
+            from ETF.notifiers.pre_market_notify import fetch_latest_flow_row, build_pre_market_bubble
+            row = fetch_latest_flow_row(ctx.sql_storage.engine)
+            if row is not None:
+                bubble = build_pre_market_bubble(row)
+                notifier.broadcast_flex_message(f"盤前指引 · {row['data_date']}", bubble)
+                self.logger.info("Pre-market guide LINE bubble sent for %s", row["data_date"])
+        except Exception as e:
+            self.logger.error("Pre-market LINE notify failed: %s", e)
+
         return ctx
 
     # ------------------------------------------------------------------ helpers
