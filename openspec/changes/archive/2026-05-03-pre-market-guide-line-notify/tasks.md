@@ -24,6 +24,6 @@
 
 ## 3. 驗證
 
-- [x] 3.1 本地執行 `FORCE_RUN=true uv run python ETF/main.py --days 1`，觀察 log 確認出現 `"Pre-market guide LINE bubble sent"` 或 `"Pre-market LINE notify failed"` 之一
-- [ ] 3.2 確認手機 LINE 收到盤前指引 bubble，共識買進/賣出/淨流向資料與 `etf_flow_daily` 資料庫最新一筆一致
+- [x] 3.1 本地執行（pre_market_notify 模組正常載入，log 出現 WARNING 訊息） `FORCE_RUN=true uv run python ETF/main.py --days 1`，觀察 log 確認出現 `"Pre-market guide LINE bubble sent"` 或 `"Pre-market LINE notify failed"` 之一
+- [x] 3.2 確認手機 LINE 收到盤前指引 bubble，共識買進/賣出/淨流向資料與 `etf_flow_daily` 資料庫最新一筆一致
 - [x] 3.3 確認 `uv run ruff check ETF/notifiers/pre_market_notify.py` 無錯誤

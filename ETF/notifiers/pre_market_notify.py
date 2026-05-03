@@ -57,7 +57,7 @@ def fetch_latest_flow_row(engine) -> dict | None:
             logger.warning("etf_flow_daily data_date format unexpected: %s", data_date_str)
             return None
 
-        if date.today() - data_date > timedelta(days=2):
+        if date.today() - data_date > timedelta(days=3):
             logger.warning(
                 "etf_flow_daily latest record (%s) is older than 2 days, skipping",
                 data_date_str,
