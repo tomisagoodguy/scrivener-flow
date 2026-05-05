@@ -129,19 +129,23 @@ class NotifyStep(BaseStep):
                         for _, row in top10.iterrows()
                     ]
 
+            reported_codes: set[str] = set()
             for window in [200, 20, 5]:
                 col = f"is_high_{window}d"
                 key = f"breakout_{window}"
                 if col in df.columns:
                     breakout_stocks = df[df[col] == True]
-                    signals[key] = [
-                        {
-                            "name": row.get("name", "N/A"),
-                            "code": row.get("code", "N/A"),
-                            "value": f"{window}日新高",
-                        }
-                        for _, row in breakout_stocks.iterrows()
-                    ]
+                    entries = []
+                    for _, row in breakout_stocks.iterrows():
+                        code = row.get("code", "N/A")
+                        if code not in reported_codes:
+                            reported_codes.add(code)
+                            entries.append({
+                                "name": row.get("name", "N/A"),
+                                "code": code,
+                                "value": f"{window}日新高",
+                            })
+                    signals[key] = entries
 
             if "amount" in df.columns:
                 amount_df = df[df["amount"].notnull()].sort_values("amount", ascending=False).head(10)

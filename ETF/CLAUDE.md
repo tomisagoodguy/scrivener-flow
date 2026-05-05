@@ -208,9 +208,10 @@ ETF 清單統一由 `ETF/config/etf_registry.py` 的 `source` 欄位決定爬蟲
 
 | `source` 值 | 適用 ETF 數 | 爬蟲 | 特性 |
 | :--- | :--- | :--- | :--- |
-| `finlab` | 1（00981A） | `fhtrust_scraper.py` | 主流程，含完整異動計算 |
-| `official_api` | ~10 支 | `official_api_scraper.py` | 6 家投信官方 API；備援：price 空缺率 > 30% 時觸發 |
-| `pocket` | ~10 支 | `pocket_scraper.py` | Pocket.tw；公告日才更新（可能數日一筆） |
+| `official_api` | 1（00981A） + ~9 支 | `official_api_scraper.py` → fallback `fhtrust_scraper.py` | 00981A：官網 API 優先，失敗才 fallback ezmoney XLSX；其他：官網 API 失敗 fallback pocket |
+| `pocket` | ~5 支 | `pocket_scraper.py` | Pocket.tw；公告日才更新（可能數日一筆） |
+
+> **FinLab** 不用於持股爬取，僅 `PriceAttachStep` 用來補充收盤價（備援角色）。
 
 新增 ETF：只需在 `etf_registry.py` 新增一行（含 `source`），以及在 `src/lib/investment/etfRegistry.ts` 同步更新。
 
