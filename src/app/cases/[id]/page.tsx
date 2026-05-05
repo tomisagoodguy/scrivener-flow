@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server'; // Use server client for RLS
 import EditCaseForm from '@/components/features/cases/EditCaseForm';
 import CaseNavigation from '@/components/features/cases/CaseNavigation';
+import { CaseDetailRapidInput } from '@/components/features/cases/CaseDetailRapidInput';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,15 @@ export default async function CaseDetailPage({ params }: PageProps) {
                         />
                     </div>
                 </header>
+
+                <div className="mb-4">
+                    <CaseDetailRapidInput
+                        caseId={caseData.id}
+                        caseNumber={caseData.case_number}
+                        buyerName={caseData.buyer_name || ''}
+                        sellerName={caseData.seller_name || ''}
+                    />
+                </div>
 
                 <EditCaseForm initialData={caseData as any} />
             </main>
