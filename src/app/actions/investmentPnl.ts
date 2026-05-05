@@ -116,7 +116,7 @@ async function _computeStockPnlWithClient(
             date: d.data_date as string,
             changeType: d.change_type as ChangeType,
             diffShares,
-            estimatedAmount: Math.round(Math.abs(diffShares * close) / 1e4) / 100,
+            estimatedAmount: Math.abs(diffShares * close),
         };
     });
 

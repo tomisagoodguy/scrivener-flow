@@ -7,6 +7,14 @@ import type { StockPnlResult } from '@/types/investment';
 import { ManagerPnlCard, ManagerPnlCardSkeleton } from './ManagerPnlCard';
 import { DualAxisChart } from './DualAxisChart';
 
+function fmtNTValue(n: number): string {
+    const abs = Math.abs(n);
+    const sign = n < 0 ? '-' : '';
+    if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(2)} 億元`;
+    if (abs >= 1e4) return `${sign}${Math.round(abs / 1e4).toLocaleString()} 萬元`;
+    return `${sign}${Math.round(abs).toLocaleString()} 元`;
+}
+
 interface HoldingItem {
     stock_code: string;
     stock_name?: string | null;
@@ -51,7 +59,7 @@ function EventTimeline({ events }: { events: StockPnlResult['events'] }) {
                         {e.diffShares >= 0 ? '+' : ''}{e.diffShares.toLocaleString()} 股
                     </span>
                     <span className="text-slate-400 text-xs tabular-nums ml-auto shrink-0">
-                        ≈ {e.estimatedAmount.toFixed(2)} 萬元
+                        ≈ {fmtNTValue(e.estimatedAmount)}
                     </span>
                 </div>
             ))}
