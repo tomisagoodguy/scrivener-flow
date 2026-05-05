@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "etfedge": {
+      "type": "http",
+      "url": "https://etfedge.xyz/mcp"
+    }
+  }
+}

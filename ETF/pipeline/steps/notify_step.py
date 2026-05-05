@@ -40,7 +40,7 @@ class NotifyStep(BaseStep):
         all_summaries = [main_summary] + (ctx.all_etf_summaries or [])
 
         # 3. 市場訊號：只取 00981A 的資料
-        market_signals = self._extract_market_signals(ctx.df)
+        market_signals = self._extract_market_signals(ctx.df) if ctx.df is not None else {}
 
         # 4. 發送合併 Carousel（一則），帶入大戶籌碼訊號
         notifier.notify_merged_carousel(
@@ -52,14 +52,31 @@ class NotifyStep(BaseStep):
             f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."
         )
 
-        # 盤前指引 bubble（輔助，失敗不中斷）
+        # 盤前指引 bubble（全市場共識，輔助，失敗不中斷）
         try:
-            from ETF.notifiers.pre_market_notify import fetch_latest_flow_row, build_pre_market_bubble
+            from ETF.notifiers.pre_market_notify import (
+                fetch_latest_flow_row, build_pre_market_bubble,
+                fetch_981a_diff_row, build_981a_guide_bubble,
+            )
             row = fetch_latest_flow_row(ctx.sql_storage.engine)
+            row_981a = fetch_981a_diff_row(ctx.sql_storage.engine)
+
+            bubbles = []
             if row is not None:
-                bubble = build_pre_market_bubble(row)
-                notifier.broadcast_flex_message(f"盤前指引 · {row['data_date']}", bubble)
-                self.logger.info("Pre-market guide LINE bubble sent for %s", row["data_date"])
+                bubbles.append(build_pre_market_bubble(row))
+            if row_981a is not None:
+                bubbles.append(build_981a_guide_bubble(row_981a))
+
+            if len(bubbles) == 1:
+                date_label = (row or row_981a or {}).get("data_date", ctx.date_str)
+                notifier.broadcast_flex_message(f"盤前指引 · {date_label}", bubbles[0])
+            elif len(bubbles) == 2:
+                date_label = (row or {}).get("data_date", ctx.date_str)
+                notifier.broadcast_flex_message(
+                    f"盤前指引 · {date_label}",
+                    {"type": "carousel", "contents": bubbles},
+                )
+                self.logger.info("Pre-market carousel (market + 00981A) sent for %s", date_label)
         except Exception as e:
             self.logger.error("Pre-market LINE notify failed: %s", e)
 
@@ -75,7 +92,7 @@ class NotifyStep(BaseStep):
             "adjusted": len([d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]),
         }
 
-    def _extract_market_signals(self, df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
+    def _extract_market_signals(self, df: "pd.DataFrame | None") -> Dict[str, List[Dict[str, Any]]]:
         """
         從 00981A 持股資料中提取市場訊號：
         1. 營收爆發 (YoY Top 10, MoM Top 10, 雙成長)

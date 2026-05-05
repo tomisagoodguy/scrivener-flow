@@ -1,5 +1,6 @@
 {
   "includeGitInstructions": false,
+  "enabledMcpjsonServers": ["etfedge"],
   "permissions": {
     "allow": [
       "Skill(reflect)",
