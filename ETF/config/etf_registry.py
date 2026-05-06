@@ -45,7 +45,7 @@ ETF_REGISTRY: list[EtfEntry] = [
     # ── Pocket.tw 爬蟲（官網 API 待破解）──
     EtfEntry(code="00986A", name="主動兆豐台灣主動", manager="兆豐投信",       source="pocket"),
     EtfEntry(code="00987A", name="主動台新優勢成長", manager="台新投信",       source="pocket"),
-    EtfEntry(code="00990A", name="主動元大AI新經濟", manager="元大投信",       source="pocket"),
+    EtfEntry(code="00990A", name="主動元大AI新經濟", manager="元大投信",       source="official_api"),
     EtfEntry(code="00994A", name="主動第一金台股優", manager="第一金投信",     source="pocket"),
     EtfEntry(code="00995A", name="主動中信台灣卓越", manager="中國信託投信",   source="pocket"),
 ]

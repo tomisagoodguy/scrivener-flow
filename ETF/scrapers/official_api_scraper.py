@@ -1,5 +1,5 @@
 """
-官網 API Scraper — 6 家投信官方 API 備援爬蟲
+官網 API Scraper — 7 家投信官方 API 備援爬蟲
 
 CATALOG 來源：reference/tw-active/tools/etfdaily.py（Round 45 破解）
 
@@ -9,6 +9,7 @@ CATALOG 來源：reference/tw-active/tools/etfdaily.py（Round 45 破解）
   復華 fhtrust  : 00991A          (GET XLSX)
   安聯 allianz  : 00984A, 00993A  (POST JSON + ASP.NET antiforgery)
   群益 capital  : 00982A, 00992A, 00997A (POST JSON)
+  元大 yuanta   : 00990A          (Playwright + window.__NUXT__)
 
 Public interface:
   fetch_holdings(etf_code, date_str=None) -> pd.DataFrame
@@ -45,6 +46,7 @@ CATALOG: dict[str, dict[str, str]] = {
     "00982A": {"issuer": "capital", "name": "群益台灣精選強棒", "fund_code": "399"},
     "00992A": {"issuer": "capital", "name": "群益台灣科技創新", "fund_code": "500"},
     "00997A": {"issuer": "capital", "name": "群益美國增長",     "fund_code": "502"},
+    "00990A": {"issuer": "yuanta",  "name": "元大AI新經濟",     "fund_code": "00990A"},
 }
 
 
@@ -316,4 +318,8 @@ def _dispatch(issuer: str, fund_code: str, date_ymd: str | None) -> list[dict[st
         return _fetch_allianz(fund_code, date_ymd)
     if issuer == "capital":
         return _fetch_capital(fund_code, date_ymd)
+    if issuer == "yuanta":
+        from ETF.scrapers import yuanta_scraper
+        df = yuanta_scraper.fetch_holdings(fund_code)
+        return df.rename(columns={"weight": "weight_pct"}).to_dict("records") if not df.empty else []
     raise RuntimeError(f"未知 issuer: {issuer}")

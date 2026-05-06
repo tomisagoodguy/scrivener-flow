@@ -27,7 +27,7 @@ export const ETF_REGISTRY: EtfRegistryEntry[] = [
     // ── Pocket.tw 爬蟲（官網 API 待破解）──
     { code: '00986A', shortCode: '00986', name: '主動兆豐台灣主動', manager: '兆豐投信',     issuer: '兆豐',   color: '#0ea5e9', dataSource: 'pocket' },
     { code: '00987A', shortCode: '00987', name: '主動台新優勢成長', manager: '台新投信',     issuer: '台新',   color: '#84cc16', dataSource: 'pocket' },
-    { code: '00990A', shortCode: '00990', name: '主動元大AI新經濟', manager: '元大投信',     issuer: '元大',   color: '#14b8a6', dataSource: 'pocket' },
+    { code: '00990A', shortCode: '00990', name: '主動元大AI新經濟', manager: '元大投信',     issuer: '元大',   color: '#14b8a6', dataSource: 'official_api' },
     { code: '00994A', shortCode: '00994', name: '主動第一金台股優', manager: '第一金投信',   issuer: '第一金', color: '#64748b', dataSource: 'pocket' },
     { code: '00995A', shortCode: '00995', name: '主動中信台灣卓越', manager: '中國信託投信', issuer: '中信',   color: '#ec4899', dataSource: 'pocket' },
 ];
