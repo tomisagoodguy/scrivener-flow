@@ -125,7 +125,10 @@
       "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 1 2>&1)",
       "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 2 2>&1)",
       "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 3 2>&1)",
-      "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 4 2>&1)"
+      "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 4 2>&1)",
+      "Bash(spectra unpark *)",
+      "Bash(spectra in-progress *)",
+      "Bash(spectra task *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

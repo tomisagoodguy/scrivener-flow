@@ -6,6 +6,7 @@ import {
     ColorType,
     IChartApi,
     LineSeries,
+    CandlestickSeries,
     SeriesMarker,
     createSeriesMarkers,
     Time,
@@ -14,7 +15,7 @@ import type { DiffEvent, ChangeType } from '@/types/investment';
 
 interface DualAxisChartProps {
     sharesHistory: { date: string; shares: number }[];
-    priceHistory: { date: string; close: number }[];
+    priceHistory: { date: string; open: number; high: number; low: number; close: number }[];
     events: DiffEvent[];
 }
 
@@ -69,15 +70,25 @@ export function DualAxisChart({ sharesHistory, priceHistory, events }: DualAxisC
 
             if (sharesData.length > 0) sharesSeries.setData(sharesData);
 
-            const priceSeries = chart.addSeries(LineSeries, {
-                color: '#f59e0b',
-                lineWidth: 1,
+            // D2: 台股顏色慣例 — 紅漲綠跌
+            const priceSeries = chart.addSeries(CandlestickSeries, {
+                upColor: '#e11d48',
+                downColor: '#059669',
+                borderUpColor: '#e11d48',
+                borderDownColor: '#059669',
+                wickUpColor: '#e11d48',
+                wickDownColor: '#059669',
                 priceScaleId: 'right',
-                title: '收盤價',
-                lineStyle: 2,
+                title: 'K 線',
             });
 
-            const priceData = priceHistory.map(r => ({ time: r.date as Time, value: r.close }));
+            const priceData = priceHistory.map(r => ({
+                time: r.date as Time,
+                open: r.open,
+                high: r.high,
+                low: r.low,
+                close: r.close,
+            }));
             if (priceData.length > 0) priceSeries.setData(priceData);
 
             // Task 3.4: event markers
@@ -138,7 +149,7 @@ export function DualAxisChart({ sharesHistory, priceHistory, events }: DualAxisC
                     <span className="inline-block w-3 h-0.5 bg-indigo-500" /> 股數（左軸，張）
                 </span>
                 <span className="flex items-center gap-1">
-                    <span className="inline-block w-3 h-0.5 bg-amber-500" /> 收盤價（右軸，元）
+                    <span className="inline-block w-3 h-2 bg-rose-600/70 border border-rose-600" /> K 線（右軸，元）
                 </span>
                 <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> 加碼/建倉

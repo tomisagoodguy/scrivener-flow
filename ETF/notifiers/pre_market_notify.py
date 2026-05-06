@@ -101,7 +101,7 @@ def build_pre_market_bubble(row: dict) -> dict:
         date_label = data_date
 
     n_covered = len(etfs_covered)
-    header_text = f"盤前指引 · {date_label} · {n_covered}/{_TOTAL_ETFS} 家已揭露"
+    header_text = f"全部經理人盤前指引 · {date_label} · {n_covered}/{_TOTAL_ETFS} 家揭露"
 
     body_contents: list[dict] = []
 

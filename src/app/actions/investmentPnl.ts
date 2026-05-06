@@ -48,7 +48,7 @@ async function _computeStockPnlWithClient(
             .order('data_date', { ascending: true }),
         supabase
             .from('stock_prices_daily')
-            .select('data_date, close')
+            .select('data_date, open, high, low, close')
             .eq('stock_code', stockCode)
             .order('data_date', { ascending: true }),
         supabase
@@ -106,8 +106,14 @@ async function _computeStockPnlWithClient(
     const pnlPct = costBasis > 0 ? Math.round((pnlRaw / costBasis) * 10000) / 100 : 0;
 
     const priceHistory = priceRows
-        .filter(p => (p.data_date as string) >= minDate)
-        .map(p => ({ date: p.data_date as string, close: Number(p.close) }));
+        .filter(p => (p.data_date as string) >= minDate && p.open != null)
+        .map(p => ({
+            date: p.data_date as string,
+            open: Number(p.open),
+            high: Number(p.high),
+            low: Number(p.low),
+            close: Number(p.close),
+        }));
 
     const events: DiffEvent[] = (diffRes.data ?? []).map(d => {
         const close = closeLookup(d.data_date as string) ?? 0;

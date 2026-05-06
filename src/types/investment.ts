@@ -26,7 +26,7 @@ export interface StockPnlResult {
     minDate: string;
     curve: { date: string; value: number }[];
     sharesHistory: { date: string; shares: number }[];
-    priceHistory: { date: string; close: number }[];
+    priceHistory: { date: string; open: number; high: number; low: number; close: number }[];
     events: DiffEvent[];
     status: 'ok' | 'no_price' | 'no_shares';
     // Reference-style fields from etf_position_summary
