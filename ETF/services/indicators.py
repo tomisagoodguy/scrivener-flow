@@ -36,10 +36,11 @@ def calculate_new_highs(close_df: pd.DataFrame, target_date: str) -> pd.DataFram
             row_h20 = is_high_20.iloc[-1]
             row_h200 = is_high_200.iloc[-1]
 
+        # 互斥旗標：較長週期優先，避免同一股票在多個新高區間重複出現
         res = pd.DataFrame({
-            'is_high_5d': row_h5,
-            'is_high_20d': row_h20,
-            'is_high_200d': row_h200
+            'is_high_200d': row_h200,
+            'is_high_20d': row_h20 & ~row_h200,
+            'is_high_5d': row_h5 & ~row_h20,
         })
         return res
         
