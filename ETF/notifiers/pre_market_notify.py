@@ -219,6 +219,7 @@ def fetch_981a_diff_row(engine) -> dict | None:
             latest = conn.execute(text("""
                 SELECT data_date FROM etf_diff_logs
                 WHERE etf_code = '00981A'
+                  AND change_type IN ('BUY', 'IN', 'SELL', 'CLOSE', 'OUT')
                 ORDER BY data_date DESC LIMIT 1
             """)).fetchone()
 
@@ -287,7 +288,7 @@ def _fmt_amount(e: dict, positive: bool) -> str:
     if a is not None:
         if a >= 1:
             return f"{sign}{a:.2f}億"
-        return f"{sign}{a * 1000:.0f}萬"
+        return f"{sign}{a * 10000:.0f}萬"
     return f"{sign}{e['shares_張']:,}張"
 
 

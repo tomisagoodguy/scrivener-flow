@@ -25,7 +25,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from http.cookiejar import CookieJar
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -234,20 +234,23 @@ def _ymd_to_dash(ymd: str) -> str:
     return f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
 
 
-def _last_weekday_ymd() -> str:
-    from datetime import date, timedelta
-    d = date.today()
+def _last_trading_date() -> "date":
+    from datetime import datetime, timedelta, timezone
+    tw_now = datetime.now(timezone(timedelta(hours=8)))
+    if tw_now.hour < 15:
+        tw_now -= timedelta(days=1)
+    d = tw_now.date()
     while d.weekday() >= 5:
         d -= timedelta(days=1)
-    return d.strftime("%Y%m%d")
+    return d
+
+
+def _last_weekday_ymd() -> str:
+    return _last_trading_date().strftime("%Y%m%d")
 
 
 def _last_weekday_dash() -> str:
-    from datetime import date, timedelta
-    d = date.today()
-    while d.weekday() >= 5:
-        d -= timedelta(days=1)
-    return d.isoformat()
+    return _last_trading_date().isoformat()
 
 
 def _to_ymd(date_str: str | None) -> str | None:
@@ -321,5 +324,6 @@ def _dispatch(issuer: str, fund_code: str, date_ymd: str | None) -> list[dict[st
     if issuer == "yuanta":
         from ETF.scrapers import yuanta_scraper
         df = yuanta_scraper.fetch_holdings(fund_code)
-        return df.rename(columns={"weight": "weight_pct"}).to_dict("records") if not df.empty else []
+        records = df.rename(columns={"weight": "weight_pct"}).to_dict("records")
+        return cast(list[dict[str, Any]], records) if not df.empty else []
     raise RuntimeError(f"未知 issuer: {issuer}")

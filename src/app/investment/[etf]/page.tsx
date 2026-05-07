@@ -10,8 +10,10 @@ import { EtfSelector } from '@/components/features/investment/EtfSelector';
 import { EtfNewsPanel } from '@/components/features/investment/EtfNewsPanel';
 import { EtfHeroSection } from '@/components/features/investment/EtfHeroSection';
 import { EtfStockTradeView } from '@/components/features/investment/EtfStockTradeView';
+import { EtfHoldingsPieChart } from '@/components/features/investment/EtfHoldingsPieChart';
+import { EtfBuyDonutChart } from '@/components/features/investment/EtfBuyDonutChart';
 import React from 'react';
-import { Holding } from '@/types/investment';
+import { Holding, DiffLog } from '@/types/investment';
 import { redirect } from 'next/navigation';
 import { ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistry';
 import Link from 'next/link';
@@ -439,6 +441,27 @@ export default async function InvestmentEtfDrilldownPage({
 
     const prevDate = prevDateResult.data?.[0]?.data_date ?? null;
 
+    const prevDiffsRaw = prevDate ? (await supabaseForPnl
+        .from('etf_diff_logs')
+        .select('stock_code, stock_name, change_type, diff_shares')
+        .eq('etf_code', etfCode)
+        .eq('data_date', prevDate)
+        .in('change_type', ['BUY', 'IN'])
+        .not('diff_shares', 'is', null)
+        .limit(100)
+    ).data ?? [] : [];
+
+    const prevDiffsForChart: DiffLog[] = prevDiffsRaw.map(d => ({
+        id: `${d.stock_code}-prev`,
+        data_date: prevDate!,
+        change_type: d.change_type as DiffLog['change_type'],
+        stock_code: d.stock_code,
+        stock_name: d.stock_name ?? '',
+        diff_shares: d.diff_shares!,
+        diff_weight: 0,
+        description: '',
+    }));
+
     const holdingPriceMap = new Map(holdingsWithFilters.map(h => [h.stock_code, h.price as number | null]));
 
     const todayDiffs = (todayDiffsResult.data ?? []).map(d => ({
@@ -513,6 +536,13 @@ export default async function InvestmentEtfDrilldownPage({
                     holdingsContent={
                         <div className="w-full space-y-6">
                             <HoldingsOverview data={holdingsWithFilters} />
+                            <EtfHoldingsPieChart
+                                holdings={holdingsWithFilters.map(h => ({
+                                    code: h.stock_code,
+                                    name: h.stock_name ?? '',
+                                    weight_pct: h.weight ?? 0,
+                                }))}
+                            />
                             <HoldingsTable initialData={holdingsWithFilters} />
                         </div>
                     }
@@ -536,6 +566,27 @@ export default async function InvestmentEtfDrilldownPage({
                         />
                     }
                     todayDiffs={todayDiffs as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
+                    todayBuyChartContent={
+                        <EtfBuyDonutChart
+                            key="today-buy-chart"
+                            diffLogs={todayDiffs
+                                .filter(d => d.diff_shares != null)
+                                .map(d => ({
+                                    id: `${d.etf_code}-${d.stock_code}-${d.data_date}`,
+                                    data_date: d.data_date,
+                                    change_type: d.change_type as 'IN' | 'OUT' | 'BUY' | 'SELL' | 'CLOSE',
+                                    stock_code: d.stock_code,
+                                    stock_name: d.stock_name ?? '',
+                                    diff_shares: d.diff_shares!,
+                                    diff_weight: d.diff_weight ?? 0,
+                                    description: '',
+                                }))}
+                            holdings={holdingsWithFilters}
+                            prevDiffLogs={prevDiffsForChart}
+                            dataDate={dataDate ?? undefined}
+                            prevDataDate={prevDate ?? undefined}
+                        />
+                    }
                     dataDate={dataDate ?? undefined}
                     prevDate={prevDate ?? undefined}
                     positions={latestPositions.map(p => ({

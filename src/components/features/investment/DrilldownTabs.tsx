@@ -45,6 +45,7 @@ interface DrilldownTabsProps {
     ledgerContent: React.ReactNode;
     stockTradeContent?: React.ReactNode;
     todayDiffs?: DiffLogRow[];
+    todayBuyChartContent?: React.ReactNode;
     positions?: PositionRow[];
     historyData?: RankingDataRow[];
     dataDate?: string;
@@ -299,6 +300,7 @@ export function DrilldownTabs({
     ledgerContent,
     stockTradeContent,
     todayDiffs = [],
+    todayBuyChartContent,
     positions = [],
     historyData,
     dataDate,
@@ -342,7 +344,12 @@ export function DrilldownTabs({
             </TabsList>
 
             <TabsContent value="holdings">{holdingsContent}</TabsContent>
-            <TabsContent value="today"><TodayDiffsTab diffs={todayDiffs} dataDate={dataDate} prevDate={prevDate} /></TabsContent>
+            <TabsContent value="today">
+                <div className="space-y-6">
+                    {todayBuyChartContent}
+                    <TodayDiffsTab diffs={todayDiffs} dataDate={dataDate} prevDate={prevDate} />
+                </div>
+            </TabsContent>
             <TabsContent value="history">
                 {historyData ? (
                     <div>

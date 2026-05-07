@@ -9,15 +9,18 @@ Scrape Step
   FinLab 價格補充由後續 PriceAttachStep 負責，此步驟不處理。
 """
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
 
 
 def _last_weekday() -> str:
-    """回傳最近一個交易日（排除週六日）的 YYYY-MM-DD 字串。"""
-    d = date.today()
+    """回傳最近一個交易日的 YYYY-MM-DD 字串（台灣時間，15:00 前取前一交易日）。"""
+    tw_now = datetime.now(timezone(timedelta(hours=8)))
+    if tw_now.hour < 15:
+        tw_now -= timedelta(days=1)
+    d = tw_now.date()
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     return d.isoformat()
