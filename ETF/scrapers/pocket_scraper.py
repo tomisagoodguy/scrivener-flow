@@ -135,10 +135,8 @@ def scrape_holdings(etf_code: str) -> tuple[Optional[pd.DataFrame], Optional[str
                     errors="coerce",
                 )
                 .fillna(0)
-                .astype(float)
+                .astype(int)
             )
-            # 原始單位為股，轉換為張（/1000，取整數）
-            result["持有數"] = (result["持有數"] / 1000).astype(int)
         else:
             result["持有數"] = 0
 

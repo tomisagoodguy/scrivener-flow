@@ -142,7 +142,12 @@ def _fetch_uni(fund_code: str) -> list[dict[str, Any]]:
         raw = _get(url, cookie_jar=jar)  # retry once after cookie warm-up
     if not raw.startswith(b"PK"):
         raise RuntimeError(f"統一 ezmoney 未回傳 XLSX，前 60 bytes: {raw[:60]!r}")
-    return _parse_xlsx(raw)
+    holdings = _parse_xlsx(raw)
+    # ezmoney XLSX 回傳千股（千株），轉換為股
+    for h in holdings:
+        if h.get("shares") is not None:
+            h["shares"] = int(h["shares"] * 1000)
+    return holdings
 
 
 def _fetch_fhtrust(fund_code: str, date_ymd: str) -> list[dict[str, Any]]:
@@ -169,10 +174,12 @@ def _fetch_nomura(fund_id: str, date_ymd: str | None) -> list[dict[str, Any]]:
         for row in t.get("Rows") or []:
             if len(row) < 4:
                 continue
+            raw_shares = _to_num(row[2])
             holdings.append({
                 "code": str(row[0]).strip(),
                 "name": str(row[1]).strip(),
-                "shares": _to_num(row[2]),
+                # Nomura API 回傳千股（千株），轉換為股
+                "shares": int(raw_shares * 1000) if raw_shares is not None else None,
                 "weight_pct": _to_num(row[3]),
             })
     return holdings
