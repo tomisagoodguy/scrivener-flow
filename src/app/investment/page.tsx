@@ -17,8 +17,7 @@ import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadB
 import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
 import { DailyFlowPanel } from '@/components/features/investment/DailyFlowPanel';
-import { PreMarketGuide } from '@/components/features/investment/PreMarketGuide';
-import { PreMarketGuide981A } from '@/components/features/investment/PreMarketGuide981A';
+import { PreMarketGuidePair } from '@/components/features/investment/PreMarketGuidePair';
 
 // ── 資料層 ──────────────────────────────────────────────────────────────────
 
@@ -326,14 +325,9 @@ export default async function InvestmentPoolPage() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
-                    <PreMarketGuide />
-                </React.Suspense>
-                <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
-                    <PreMarketGuide981A />
-                </React.Suspense>
-            </div>
+            <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
+                <PreMarketGuidePair />
+            </React.Suspense>
 
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <InvestmentTabs

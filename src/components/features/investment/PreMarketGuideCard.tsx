@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import Link from 'next/link';
 
 // ── 型別（與 Server 端共用，複製即可）────────────────────────────────────────
 
@@ -39,10 +40,11 @@ function nt2yi(nt: number): string {
 
 // ── 股票行 ────────────────────────────────────────────────────────────────────
 
-function StockRow({ stock, isInflow }: { stock: FlowStockSummary; isInflow: boolean }) {
+function StockRow({ stock, isInflow, rank, label, stockList }: { stock: FlowStockSummary; isInflow: boolean; rank: number; label: string; stockList: string }) {
+    const href = `/investment/stock/${stock.stock_code}?from=${encodeURIComponent(label)}&rank=${rank}&list=${stockList}`;
     return (
         <div className="flex items-center gap-2 py-1">
-            <span className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0">{stock.stock_code}</span>
+            <Link href={href} className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0 hover:underline hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">{stock.stock_code}</Link>
             <span className="text-sm text-slate-700 dark:text-slate-300 w-20 shrink-0 truncate">{stock.stock_name}</span>
             <span className={`text-sm font-semibold w-16 text-right shrink-0 tabular-nums ${isInflow ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {isInflow ? '+' : ''}{nt2yi(stock.total_nt)}
@@ -69,16 +71,19 @@ function ExpandableSection({
     stocks,
     isInflow,
     emptyText,
+    label,
 }: {
     title: string;
     color: 'rose' | 'emerald' | 'amber';
     stocks: FlowStockSummary[];
     isInflow: boolean;
     emptyText: string;
+    label: string;
 }) {
     const [expanded, setExpanded] = useState(false);
     const hasMore = stocks.length > DEFAULT_SHOW;
     const visible = expanded ? stocks : stocks.slice(0, DEFAULT_SHOW);
+    const stockList = stocks.map(s => s.stock_code).join(',');
 
     const titleColorClass = {
         rose: 'text-rose-600 dark:text-rose-400',
@@ -99,8 +104,8 @@ function ExpandableSection({
 
             {stocks.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
-                    {visible.map(s => (
-                        <StockRow key={s.stock_code} stock={s} isInflow={isInflow} />
+                    {visible.map((s, i) => (
+                        <StockRow key={s.stock_code} stock={s} isInflow={isInflow} rank={i + 1} label={label} stockList={stockList} />
                     ))}
                 </div>
             ) : (
@@ -155,6 +160,7 @@ export function PreMarketGuideCard({ data }: { data: GuideData }) {
                         stocks={data.consensusBuys}
                         isInflow
                         emptyText="無 3 家以上共識"
+                        label="共識買進"
                     />
                     {data.singleBets.length > 0 && (
                         <ExpandableSection
@@ -163,6 +169,7 @@ export function PreMarketGuideCard({ data }: { data: GuideData }) {
                             stocks={data.singleBets}
                             isInflow
                             emptyText=""
+                            label="集中加碼"
                         />
                     )}
                 </div>
@@ -175,6 +182,7 @@ export function PreMarketGuideCard({ data }: { data: GuideData }) {
                         stocks={data.consensusSells}
                         isInflow={false}
                         emptyText={`無 — 沒有任何一檔被 3 家以上同時減碼`}
+                        label="共識賣"
                     />
                 </div>
             </div>

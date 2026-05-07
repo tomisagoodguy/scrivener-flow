@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Loader2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
 import { StockChart } from '@/components/features/investment/StockChart';
 import { RevenueChart } from '@/components/features/investment/RevenueChart';
@@ -74,9 +75,78 @@ function ChartPanel({ loading, error, children, emptyText }: {
     return <>{children}</>;
 }
 
+const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+    '共識買進':  { bg: 'bg-rose-50 dark:bg-rose-900/20',   text: 'text-rose-700 dark:text-rose-300',   border: 'border-rose-200 dark:border-rose-700' },
+    '集中加碼':  { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-700' },
+    '共識賣':    { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-700' },
+    '瑤姐加碼':  { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-700' },
+    '瑤姐新建倉':{ bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-700' },
+    '瑤姐減碼':  { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-700' },
+    '瑤姐出清':  { bg: 'bg-slate-100 dark:bg-slate-800',   text: 'text-slate-600 dark:text-slate-300',   border: 'border-slate-300 dark:border-slate-600' },
+    '共識+瑤姐': { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-300 dark:border-amber-600' },
+};
+
+function SourceNav({ from, rank, list }: { from: string | null; rank: string | null; list: string | null }) {
+    if (!from || !list) return null;
+    const codes = list.split(',').filter(Boolean);
+    const rankNum = rank ? parseInt(rank, 10) : NaN;
+    if (codes.length === 0 || isNaN(rankNum)) return null;
+
+    const colors = SOURCE_COLORS[from] ?? { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-700' };
+
+    const prevCode = rankNum > 1 ? codes[rankNum - 2] : null;
+    const nextCode = rankNum < codes.length ? codes[rankNum] : null;
+
+    const makeHref = (code: string, r: number) =>
+        `/investment/stock/${code}?from=${encodeURIComponent(from)}&rank=${r}&list=${encodeURIComponent(list)}`;
+
+    return (
+        <div className={`inline-flex items-center gap-1 rounded-full border text-xs font-semibold overflow-hidden ${colors.border}`}>
+            {prevCode ? (
+                <Link
+                    href={makeHref(prevCode, rankNum - 1)}
+                    className={`flex items-center gap-1 px-2.5 py-1 ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity`}
+                >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span className="font-mono">{prevCode}</span>
+                    <span className="opacity-50">#{rankNum - 1}</span>
+                </Link>
+            ) : (
+                <span className={`px-2.5 py-1 opacity-30 ${colors.bg} ${colors.text}`}>
+                    <ArrowLeft className="w-3 h-3" />
+                </span>
+            )}
+
+            <span className={`px-3 py-1 ${colors.bg} ${colors.text} border-x ${colors.border}`}>
+                {from} <span className="opacity-60">#{rankNum}</span>
+                <span className="opacity-40 ml-1">/ {codes.length}</span>
+            </span>
+
+            {nextCode ? (
+                <Link
+                    href={makeHref(nextCode, rankNum + 1)}
+                    className={`flex items-center gap-1 px-2.5 py-1 ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity`}
+                >
+                    <span className="opacity-50">#{rankNum + 1}</span>
+                    <span className="font-mono">{nextCode}</span>
+                    <ArrowRight className="w-3 h-3" />
+                </Link>
+            ) : (
+                <span className={`px-2.5 py-1 opacity-30 ${colors.bg} ${colors.text}`}>
+                    <ArrowRight className="w-3 h-3" />
+                </span>
+            )}
+        </div>
+    );
+}
+
 export default function StockPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const stockCode = params.code as string;
+    const sourceFrom = searchParams.get('from');
+    const sourceRank = searchParams.get('rank');
+    const sourceList = searchParams.get('list');
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
     const {
@@ -114,6 +184,10 @@ export default function StockPage() {
                 chipRank={chipRank}
                 retailRank={retailRank}
             />
+
+            <div className="mt-3 mb-1 px-1">
+                <SourceNav from={sourceFrom} rank={sourceRank} list={sourceList} />
+            </div>
 
             {!etfWeightHistoryLoading && priceData.length > 0 && (
                 <StockPoolMetrics

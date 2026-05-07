@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 // ── 型別 ──────────────────────────────────────────────────────────────────────
 
 export interface DiffEntry981A {
@@ -40,21 +42,28 @@ function BarRow({
     maxVal,
     isInflow,
     badge,
+    rank,
+    label,
+    stockList,
 }: {
     e: DiffEntry981A;
     maxVal: number;
     isInflow: boolean;
     badge?: React.ReactNode;
+    rank: number;
+    label: string;
+    stockList: string;
 }) {
     const val = e.amount_亿 ?? e.shares_張 / 1000;
     const pct = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
     const barColor = isInflow ? 'bg-amber-500' : 'bg-emerald-500';
     const amtColor = isInflow ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+    const href = `/investment/stock/${e.stock_code}?from=${encodeURIComponent(label)}&rank=${rank}&list=${stockList}`;
 
     return (
         <div className="py-1.5">
             <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0">{e.stock_code}</span>
+                <Link href={href} className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0 hover:underline hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">{e.stock_code}</Link>
                 <span className="text-sm text-slate-700 dark:text-slate-300 w-20 shrink-0 truncate">{e.stock_name}</span>
                 <span className={`text-sm font-semibold tabular-nums ${amtColor}`}>
                     {fmtAmount(e, isInflow)}
@@ -84,15 +93,18 @@ function Section({
     entries,
     isInflow,
     badge,
+    label,
 }: {
     title: string;
     entries: DiffEntry981A[];
     isInflow: boolean;
     badge?: (e: DiffEntry981A) => React.ReactNode;
+    label: string;
 }) {
     if (entries.length === 0) return null;
     const maxVal = Math.max(...entries.map(e => e.amount_亿 ?? e.shares_張 / 1000));
     const titleColor = isInflow ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+    const stockList = entries.map(e => e.stock_code).join(',');
 
     return (
         <div>
@@ -101,13 +113,16 @@ function Section({
                 <span className="font-normal text-slate-400 dark:text-slate-500 normal-case tracking-normal">{entries.length}</span>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
-                {entries.map(e => (
+                {entries.map((e, i) => (
                     <BarRow
                         key={e.stock_code}
                         e={e}
                         maxVal={maxVal}
                         isInflow={isInflow}
                         badge={badge?.(e)}
+                        rank={i + 1}
+                        label={label}
+                        stockList={stockList}
                     />
                 ))}
             </div>
@@ -140,11 +155,12 @@ export function PreMarketGuide981ACard({ data }: { data: Guide981AData }) {
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-700/50">
                 {/* 左：加碼 + 新建倉 */}
                 <div className="px-4 py-3 space-y-4">
-                    <Section title="加碼" entries={data.buys} isInflow />
+                    <Section title="加碼" entries={data.buys} isInflow label="瑤姐加碼" />
                     <Section
                         title="新建倉"
                         entries={data.newIn}
                         isInflow
+                        label="瑤姐新建倉"
                         badge={() => (
                             <span className="px-1 py-0.5 rounded text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-bold leading-tight">
                                 NEW
@@ -155,11 +171,12 @@ export function PreMarketGuide981ACard({ data }: { data: Guide981AData }) {
 
                 {/* 右：減碼 + 出清 */}
                 <div className="px-4 py-3 space-y-4">
-                    <Section title="減碼" entries={data.sells} isInflow={false} />
+                    <Section title="減碼" entries={data.sells} isInflow={false} label="瑤姐減碼" />
                     <Section
                         title="出清"
                         entries={data.exits}
                         isInflow={false}
+                        label="瑤姐出清"
                         badge={() => (
                             <span className="px-1 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold leading-tight">
                                 OUT
