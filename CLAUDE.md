@@ -78,6 +78,7 @@ scrivener-flow/
 │   │   ├── features/           # 功能型元件
 │   │   ├── layout/             # Header、SideNav、Footer
 │   │   └── todo/               # 待辦事項（List / Matrix / Calendar）
+│   ├── hooks/                  # 自訂 React Hooks（投資分析 + 通用 App）
 │   ├── services/               # 業務邏輯（caseService.ts、syncService.ts）
 │   ├── repositories/           # 資料存取層（投資模組 Repository Pattern）
 │   ├── lib/
@@ -94,7 +95,7 @@ scrivener-flow/
 └── pyproject.toml              # Python 依賴（uv 管理）
 ```
 
-架構模式：**分層架構**（Pages → Services → Repositories → DB），投資模組採 Repository Pattern。
+架構模式：**分層架構**（Pages → Hooks → Services → Repositories → DB），投資模組採 Repository Pattern。
 
 ---
 
@@ -298,6 +299,39 @@ openspec apply --change "<name>"      # 開始執行 tasks
 | `stockRepo.ts` | 個股基本資料、法人持股 |
 
 Repository Pattern 僅限投資模組，案件模組使用 Service 層直接呼叫 Supabase。
+
+---
+
+## Hooks 索引（`src/hooks/`）
+
+### 投資分析 Hooks
+
+| 檔案 | 職責 |
+| :--- | :--- |
+| `useHoldingsFilter.ts` | ETF 持股篩選、排序、搜尋狀態 |
+| `useStockDashboard.ts` | 個股儀表板整合資料（價格 + 法人 + 基本面） |
+| `useStockDetailData.ts` | 個股詳情頁資料聚合 |
+| `usePriceData.ts` | 股價歷史資料查詢（含 K 線） |
+| `useRevenueData.ts` | 月營收趨勢資料 |
+| `useChipsData.ts` | 籌碼面（法人買賣超）資料 |
+| `useBrokerData.ts` | 券商分點進出資料 |
+
+### 通用 App Hooks
+
+| 檔案 | 職責 |
+| :--- | :--- |
+| `useAuthUser.ts` | 取得當前登入用戶（包裝 Supabase session） |
+| `useCaseTodos.ts` | 案件待辦事項清單（含自動任務） |
+| `useSupabaseQuery.ts` | 通用 Supabase 資料查詢 wrapper（含 loading/error 狀態） |
+| `useFormSubmit.ts` | 表單提交狀態管理（loading / error / success） |
+| `useCrudDelete.ts` | 通用刪除確認流程 |
+| `useNotification.ts` | Toast / 通知訊息管理 |
+| `useLoginFlow.ts` | 登入表單狀態與流程控制 |
+| `useNoteDetail.ts` | 備忘錄詳情頁編輯狀態 |
+| `useWeather.ts` | 天氣資料查詢（首頁 widget） |
+| `useIdentifyUpload.ts` | DOCX 文件上傳與辨識流程 |
+| `useWordExport.ts` | Word 文件匯出邏輯 |
+| `useAccessibility.ts` | 無障礙設定讀取 |
 
 ---
 
