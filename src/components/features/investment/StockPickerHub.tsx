@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
+import { ChevronUpIcon, ChevronDownIcon, SearchIcon, XIcon } from 'lucide-react';
 import { SignalBadge } from './SignalBadge';
 import { StockDetailPanel } from './StockDetailPanel';
 
@@ -230,6 +230,7 @@ function sortHoldings(
 export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPickerHubProps) {
     const [panelStock, setPanelStock] = useState<{ code: string; name: string } | null>(null);
     const openPanel = useCallback((code: string, name: string) => setPanelStock({ code, name }), []);
+    const [searchQuery, setSearchQuery] = useState('');
     const [selectedEtfs, setSelectedEtfs] = useState<Set<string>>(
         new Set(ETF_CODES)
     );
@@ -249,8 +250,15 @@ export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPicker
     );
 
     const filteredHoldings = useMemo(() => {
-        if (activeFactors.size === 0) return unifiedHoldings;
-        return unifiedHoldings.filter(h => {
+        const q = searchQuery.trim().toLowerCase();
+        const baseList = q
+            ? unifiedHoldings.filter(h =>
+                h.stock_code.toLowerCase().includes(q) ||
+                h.stock_name.toLowerCase().includes(q)
+            )
+            : unifiedHoldings;
+        if (activeFactors.size === 0) return baseList;
+        return baseList.filter(h => {
             if (activeFactors.has('new_high') && !h.is_high_5d) return false;
             if (activeFactors.has('high_20d') && !h.is_high_20d) return false;
             if (activeFactors.has('high_200d') && !h.is_high_200d) return false;
@@ -274,7 +282,7 @@ export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPicker
             }
             return true;
         });
-    }, [unifiedHoldings, activeFactors, selectedEtfs.size]);
+    }, [unifiedHoldings, activeFactors, selectedEtfs.size, searchQuery]);
 
     const sortedHoldings = useMemo(() =>
         sortHoldings(filteredHoldings, sortField, sortOrder),
@@ -322,6 +330,26 @@ export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPicker
             onClose={() => setPanelStock(null)}
         />
         <div className="glass-card rounded-2xl p-6 space-y-4">
+            {/* 搜尋列 */}
+            <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="搜尋股票代碼或名稱…"
+                    className="w-full pl-9 pr-8 py-2 text-sm rounded-xl bg-white/50 backdrop-blur-sm border border-gray-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-slate-800/50 dark:border-slate-600 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:bg-slate-800 transition-all"
+                />
+                {searchQuery && (
+                    <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                        <XIcon className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
             {/* ETF 篩選勾選框 */}
             <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">篩選 ETF：</span>
