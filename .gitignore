@@ -1,3 +1,6 @@
+# Local reference folders (not tracked as submodules)
+reference/etf_scratch/
+
 # Python
 __pycache__/
 *.py[cod]
