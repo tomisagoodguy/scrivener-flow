@@ -43,6 +43,10 @@ class ScrapeStep(BaseStep):
         if df is None or df.empty:
             raise ValueError("所有資料來源均失敗，無法取得 00981A 持股")
 
+        # 統一欄位名稱：fhtrust_scraper 回傳 stock_code/stock_name，官網 API 回傳 code/name
+        if "stock_code" in df.columns:
+            df = df.rename(columns={"stock_code": "code", "stock_name": "name"})
+
         ctx.df = df
         ctx.date_str = date_str
         ctx.update_finlab_stock_list()
