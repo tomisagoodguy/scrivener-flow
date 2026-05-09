@@ -1,6 +1,5 @@
 {
   "includeGitInstructions": false,
-  "enabledMcpjsonServers": ["etfedge"],
   "permissions": {
     "allow": [
       "Skill(reflect)",
@@ -26,9 +25,14 @@
       "WebFetch(domain:marvin-69-jpg.github.io)",
       "Bash(python3 -m json.tool)",
       "Bash(git -C /c/Users/user/Documents/GitHub/tw-active log --oneline -3)",
-      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-GitHub-scrivener-flow\\\\3440a8c5-0a34-49c3-83de-a0f2b5c62ba5\\\\tasks\\\\b008a35jr.output\" 2>&1; Write-Host \"Total lines: $\\($lines.Count\\)\"; $lines | Select-Object -Last 10)"
+      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-GitHub-scrivener-flow\\\\3440a8c5-0a34-49c3-83de-a0f2b5c62ba5\\\\tasks\\\\b008a35jr.output\" 2>&1; Write-Host \"Total lines: $\\($lines.Count\\)\"; $lines | Select-Object -Last 10)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 統一 fhtrust_scraper 輸出欄位名稱 \\(stock_code→code\\) 修正 pipeline KeyError\")",
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"fix: 統一 fhtrust_scraper 輸出欄位名稱 \\(stock_code→code\\) 修正 pipeline KeyError\")"
     ]
   },
+  "enabledMcpjsonServers": [
+    "etfedge"
+  ],
   "hooks": {
     "PostToolUse": [
       {
