@@ -15,6 +15,7 @@ from sqlalchemy import text
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from ETF.processors.diff_engine import CONSENSUS_WEIGHT_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -99,4 +100,56 @@ class OverlapComputeStep(BaseStep):
         self.logger.info(
             f"Overlap compute done: {len(records)} stocks from {etf_count} ETFs on {target_date}"
         )
+
+        # 計算共識加減碼計數（最近 7 個自然日）
+        self._update_consensus_counts(ctx, target_date)
+
         return ctx
+
+    def _update_consensus_counts(self, ctx: PipelineContext, target_date: str) -> None:
+        """
+        查詢最近 7 個自然日的 etf_diff_logs，按 stock_code 統計：
+        - consensus_buy_count: BUY/IN 且 abs(diff_weight) >= CONSENSUS_WEIGHT_THRESHOLD 的 ETF 支數
+        - consensus_sell_count: SELL/OUT 且 abs(diff_weight) >= CONSENSUS_WEIGHT_THRESHOLD 的 ETF 支數
+        結果 upsert 至 etf_stock_overlap 對應的 target_date row。
+        """
+        consensus_sql = text("""
+            WITH consensus AS (
+                SELECT
+                    stock_code,
+                    COUNT(DISTINCT CASE
+                        WHEN change_type IN ('BUY', 'IN')
+                             AND ABS(diff_weight) >= :threshold
+                        THEN etf_code
+                    END) AS buy_count,
+                    COUNT(DISTINCT CASE
+                        WHEN change_type IN ('SELL', 'OUT')
+                             AND ABS(diff_weight) >= :threshold
+                        THEN etf_code
+                    END) AS sell_count
+                FROM etf_diff_logs
+                WHERE data_date >= CAST(:target_date AS date) - INTERVAL '7 days'
+                  AND data_date <= CAST(:target_date AS date)
+                GROUP BY stock_code
+            )
+            UPDATE etf_stock_overlap o
+            SET
+                consensus_buy_count  = c.buy_count,
+                consensus_sell_count = c.sell_count,
+                updated_at           = NOW()
+            FROM consensus c
+            WHERE o.stock_code = c.stock_code
+              AND o.data_date = CAST(:target_date AS date)
+        """)
+
+        with ctx.sql_storage.engine.connect() as conn:
+            result = conn.execute(
+                consensus_sql,
+                {"target_date": target_date, "threshold": CONSENSUS_WEIGHT_THRESHOLD},
+            )
+            conn.commit()
+
+        self.logger.info(
+            f"Consensus counts updated for {target_date}: "
+            f"{result.rowcount} rows affected (threshold={CONSENSUS_WEIGHT_THRESHOLD}pp, window=7d)"
+        )

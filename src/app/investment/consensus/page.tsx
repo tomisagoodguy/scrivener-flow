@@ -15,6 +15,8 @@ interface OverlapRow {
     etf_count: number;
     total_weight: number;
     etf_list: EtfEntry[];
+    consensus_buy_count: number;
+    consensus_sell_count: number;
 }
 
 async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]; date: string }> {
@@ -32,7 +34,7 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
 
     const { data: overlapData, error } = await supabase
         .from('etf_stock_overlap')
-        .select('stock_code, data_date, etf_count, total_weight, etf_list')
+        .select('stock_code, data_date, etf_count, total_weight, etf_list, consensus_buy_count, consensus_sell_count')
         .eq('data_date', queryDate)
         .gte('etf_count', minEtfCount)
         .order('etf_count', { ascending: false })
@@ -61,6 +63,8 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
         etf_count: row.etf_count,
         total_weight: Number(row.total_weight),
         etf_list: (row.etf_list as EtfEntry[]) ?? [],
+        consensus_buy_count: row.consensus_buy_count ?? 0,
+        consensus_sell_count: row.consensus_sell_count ?? 0,
     }));
 
     return { data: enriched, date: queryDate };
@@ -140,6 +144,7 @@ export default async function ConsensusPage({
                                     <th className="text-left p-4 font-semibold text-slate-600 dark:text-slate-300">股票</th>
                                     <th className="text-center p-4 font-semibold text-slate-600 dark:text-slate-300">持有 ETF 數</th>
                                     <th className="text-right p-4 font-semibold text-slate-600 dark:text-slate-300">合計權重</th>
+                                    <th className="text-center p-4 font-semibold text-slate-600 dark:text-slate-300">共識動向</th>
                                     <th className="text-left p-4 font-semibold text-slate-600 dark:text-slate-300">持有 ETF</th>
                                 </tr>
                             </thead>
@@ -180,6 +185,20 @@ export default async function ConsensusPage({
                                         </td>
                                         <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-300">
                                             {row.total_weight.toFixed(2)}%
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                {row.consensus_buy_count > 0 && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">
+                                                        {row.consensus_buy_count}買
+                                                    </span>
+                                                )}
+                                                {row.consensus_sell_count > 0 && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                                        {row.consensus_sell_count}賣
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-wrap gap-1">

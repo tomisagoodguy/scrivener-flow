@@ -50,6 +50,9 @@ def download_file_playwright(url: str, output_path: pathlib.Path) -> bool:
     """
     Simulated download using Playwright (Robust & Heavy)
     This handles JS challenges, dynamic links, and waits for downloads.
+
+    NOTE: 此函式為 Excel XLSX fallback 路徑專用（fhtrust_scraper._try_excel_scrape）。
+    00981A 的主要取資料路徑（JSON scrape）不依賴此函式，也不需要 Playwright。
     """
     logger.info(f"Attempting download via Playwright: {url}")
     try:

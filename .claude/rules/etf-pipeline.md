@@ -148,8 +148,11 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 | `amount_亿`（前端計算）| N/A（DB 無此欄） | `abs(diff_shares) * price / 1e8` |
 
 **陷阱**：`diff_shares` 是 `diff_engine.py` 計算的原始股數（`c["shares"] - p["shares"]`），**不是 張**。  
-顯示為 張 必須除以 1000；億元市值用 `abs(diff_shares) * 當日收盤價 / 1e8`。  
+顯示為 張 必須除以 1000；億元市值用 `abs(diff_shares) * 當日收盤價 / 1e8`（不要再乘 1000）。  
 當日收盤價從 holdings 的 `price` 欄位取得（Server 端已補齊，見 `getHoldings()`）。
+
+**所有爬蟲輸出單位均為股（株）**：`official_api_scraper`（千株×1000→株）、`pocket_scraper`（Pocket.tw 的「持有數」欄位直接是株）均已驗證。  
+`pocket_scraper.py` docstring 舊版誤寫「單位：張」，已於 2026-05-09 修正。勿再懷疑單位不一致。
 
 ## 關鍵模組索引
 

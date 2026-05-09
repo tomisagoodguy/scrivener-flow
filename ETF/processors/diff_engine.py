@@ -3,6 +3,8 @@ from typing import List, Dict, Any
 
 # 最小顯著變動閾值（對齊 kevin12596 的 0.10%）
 WEIGHT_CHANGE_THRESHOLD = 0.10
+# 共識方向閾值：跨 ETF 共識加減碼計算用（比 is_significant 更細）
+CONSENSUS_WEIGHT_THRESHOLD = 0.05
 # 判定為 CLOSE 的減少幅度（股數歸零或減少超過 99%）
 CLOSE_SHARES_RATIO = 0.99
 

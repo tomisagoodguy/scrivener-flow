@@ -49,7 +49,7 @@ def scrape_holdings(etf_code: str) -> tuple[Optional[pd.DataFrame], Optional[str
 
     Returns:
         (DataFrame | None, data_date | None)
-        DataFrame 欄位：code（str）、name（str）、weight（float）、shares（int，單位：張）
+        DataFrame 欄位：code（str）、name（str）、weight（float）、shares（int，單位：股）
         data_date 格式：YYYY/MM/DD；失敗時回傳 (None, None)
     """
     # 自動補 A 後綴

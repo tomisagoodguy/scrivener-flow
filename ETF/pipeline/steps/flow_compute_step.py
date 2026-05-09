@@ -134,7 +134,7 @@ class FlowComputeStep(BaseStep):
             code = d['stock_code']
             close = prices.get(code, 0)
             delta = float(d.get('diff_shares') or 0)
-            nt = delta * close * 1000  # diff_shares 單位是股，×1000 轉換為元
+            nt = delta * close  # diff_shares 單位是股，× 每股價格 = 元
 
             action = d['action']
             if action in BUY_ACTIONS:
