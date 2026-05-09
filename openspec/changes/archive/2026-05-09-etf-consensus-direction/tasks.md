@@ -14,5 +14,5 @@
 ## 4. 驗證
 
 - [x] 4.1 本地執行 `uv run python ETF/main.py --dry-run` 確認 `OverlapComputeStep` 無語法錯誤
-- [ ] 4.2 執行 `yarn build` 確認 TypeScript 編譯通過（新 `OverlapRow` 欄位型別正確）
-- [ ] 4.3 手動查詢 DB 確認 `etf_stock_overlap` 最新日期 row 的 `consensus_buy_count` / `consensus_sell_count` 非全零（至少有部分股票有值）
+- [x] 4.2 執行 `yarn build` 確認 TypeScript 編譯通過（新 `OverlapRow` 欄位型別正確）
+- [x] 4.3 手動查詢 DB 確認 `etf_stock_overlap` 最新日期 row 的 `consensus_buy_count` / `consensus_sell_count` 非全零（至少有部分股票有值）
