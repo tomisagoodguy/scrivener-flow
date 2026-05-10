@@ -97,7 +97,7 @@ class SignalDetectStep(BaseStep):
     @staticmethod
     def _fetch_diff_logs(conn, target_date: str) -> list[dict]:
         rows = conn.execute(text("""
-            SELECT etf_code, stock_code, change_type, weight_after
+            SELECT etf_code, stock_code, change_type, curr_weight
             FROM etf_diff_logs
             WHERE data_date = :d
               AND change_type IN ('BUY', 'IN', 'SELL', 'OUT')
@@ -171,7 +171,7 @@ class SignalDetectStep(BaseStep):
                 buy_map[code] = []
                 weight_map[code] = {}
             buy_map[code].append(d["etf_code"])
-            weight_map[code][d["etf_code"]] = float(d.get("weight_after") or 0)
+            weight_map[code][d["etf_code"]] = float(d.get("curr_weight") or 0)
 
         results = []
         for stock_code, etfs in buy_map.items():

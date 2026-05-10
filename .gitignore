@@ -1,6 +1,9 @@
 # Local reference folders (not tracked as submodules)
 reference/etf_scratch/
 
+# Claude Code agent worktrees (temporary, should not be committed)
+.claude/worktrees/
+
 # Python
 __pycache__/
 *.py[cod]

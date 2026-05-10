@@ -246,7 +246,7 @@ def fetch_981a_diff_row(engine) -> dict | None:
         def _entry(r):
             price = price_map.get(r.stock_code)
             shares_張 = round(abs(r.diff_shares) / 1000)
-            amount_亿 = abs(r.diff_shares) * price / 1e8 if price else None
+            amount_亿 = float(abs(r.diff_shares)) * float(price) / 1e8 if price else None
             return {
                 "stock_code": r.stock_code,
                 "stock_name": r.stock_name,
