@@ -375,3 +375,7 @@ yarn test -- --coverage                          # 產生覆蓋率報告
 | `equity_weekly.yml` | 每週六 UTC 14:00 | `sync_equity_distribution.py` → `sync_stock_financials.py --days 14`（含股東結構） |
 
 Pipeline 需要的 GitHub Secrets：`SUPABASE_DB_URL`、`FINLAB_API_TOKEN`、`GOOGLE_GEMINI_API_KEY`、`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`。
+
+## CI/CD 已知陷阱
+
+- **Claude Code agent worktree 會變成 gitlink**：`.claude/worktrees/` 目錄若被 commit，git 會以 mode `160000` 記錄為 gitlink；CI 的 `git submodule` 步驟找不到對應 `.gitmodules` 記錄就報錯。已在 `.gitignore` 加入 `.claude/worktrees/`，未來 agent worktree 不會再被追蹤。
