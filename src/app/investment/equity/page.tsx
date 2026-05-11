@@ -23,6 +23,7 @@ interface RankingData {
     snapshotDate: string;
     bigHolderRanking: EquityRow[];
     retailDeclineRanking: EquityRow[];
+    doubleSignalRanking: EquityRow[];
     priceIndicators: Record<string, PriceIndicator>;
 }
 
@@ -35,6 +36,13 @@ type SortKey =
     | 'it_buy_5d'
     | 'amount';
 type SortDir = 'asc' | 'desc';
+type Tier = '200' | '400' | '1000';
+
+const TIER_SORT_KEY: Record<Tier, SortKey> = {
+    '200': 'mid_holder_pct_change',
+    '400': 'big_holder_pct_change',
+    '1000': 'whale_holder_pct_change',
+};
 
 const DB_SORT_KEYS = new Set<SortKey>([
     'total_shareholders',
@@ -126,7 +134,7 @@ function applySortToRows(
     });
 }
 
-async function fetchRankingData(sort: SortKey | null, dir: SortDir): Promise<RankingData | null> {
+async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null): Promise<RankingData | null> {
     const supabase = await createClient();
 
     const { data: latestRow } = await supabase
@@ -139,25 +147,33 @@ async function fetchRankingData(sort: SortKey | null, dir: SortDir): Promise<Ran
     if (!latestRow) return null;
     const snapshotDate: string = latestRow.snapshot_date;
 
-    const bigSortKey = (sort && DB_SORT_KEYS.has(sort)) ? sort : 'big_holder_pct_change';
-    const bigSortAsc = (sort && DB_SORT_KEYS.has(sort)) ? dir === 'asc' : false;
+    const tierKey = tier ? TIER_SORT_KEY[tier] : null;
+    const effectiveSort = sort ?? tierKey;
 
-    const retailSortKey = (sort && DB_SORT_KEYS.has(sort)) ? sort : 'shareholders_change_rate';
-    const retailSortAsc = (sort && DB_SORT_KEYS.has(sort)) ? dir === 'asc' : true;
+    // Left: sort by selected tier (or default 400張+)
+    const bigSortKey = (effectiveSort && DB_SORT_KEYS.has(effectiveSort)) ? effectiveSort : 'big_holder_pct_change';
+    const bigSortAsc = (effectiveSort && DB_SORT_KEYS.has(effectiveSort)) ? dir === 'asc' : false;
+
+    // Right: always sort by retail decline, filter by tier if selected
+    let retailQuery = supabase
+        .from('equity_distribution_stats')
+        .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
+        .eq('snapshot_date', snapshotDate)
+        .not('shareholders_change_rate', 'is', null)
+        .order('shareholders_change_rate', { ascending: true });
+
+    if (tierKey) {
+        retailQuery = retailQuery.gt(tierKey, 0);
+    }
 
     const [{ data: bigHolder }, { data: retailDecline }] = await Promise.all([
         supabase
             .from('equity_distribution_stats')
             .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
             .eq('snapshot_date', snapshotDate)
-            .not('big_holder_pct_change', 'is', null)
+            .gt('big_holder_pct_change', 0)
             .order(bigSortKey, { ascending: bigSortAsc }),
-        supabase
-            .from('equity_distribution_stats')
-            .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
-            .eq('snapshot_date', snapshotDate)
-            .not('shareholders_change_rate', 'is', null)
-            .order(retailSortKey, { ascending: retailSortAsc }),
+        retailQuery,
     ]);
 
     const allCodes = [...new Set([
@@ -169,12 +185,118 @@ async function fetchRankingData(sort: SortKey | null, dir: SortDir): Promise<Ran
     const sortedBig = applySortToRows((bigHolder ?? []) as EquityRow[], sort, dir, priceIndicators);
     const sortedRetail = applySortToRows((retailDecline ?? []) as EquityRow[], sort, dir, priceIndicators);
 
+    // 雙重信號：大戶持股比例上升(>0) AND 總股東人數下降(<0)
+    const doubleSignalRanking = (bigHolder ?? [])
+        .filter(row => (row.shareholders_change_rate ?? 0) < 0)
+        .sort((a, b) => (b.big_holder_pct_change ?? 0) - (a.big_holder_pct_change ?? 0))
+        .slice(0, 10) as EquityRow[];
+
     return {
         snapshotDate,
         bigHolderRanking: sortedBig,
         retailDeclineRanking: sortedRetail,
+        doubleSignalRanking,
         priceIndicators,
     };
+}
+
+function DoubleSignalSection({
+    rows,
+    priceIndicators,
+}: {
+    rows: EquityRow[];
+    priceIndicators: Record<string, PriceIndicator>;
+}) {
+    if (rows.length === 0) return null;
+    const codeList = encodeURIComponent(rows.map(r => r.stock_code).join(','));
+    const fromLabel = encodeURIComponent('雙重信號');
+    return (
+        <div className="glass-card rounded-2xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-violet-500/10 rounded-xl flex items-center justify-center">
+                    <span className="text-sm font-bold text-violet-600">⚡</span>
+                </div>
+                <div>
+                    <h2 className="font-bold text-gray-800 dark:text-gray-100">
+                        雙重信號
+                        <span className="ml-2 text-xs font-normal text-violet-500">主力買進 × 散戶出走</span>
+                    </h2>
+                    <p className="text-xs text-gray-500">同時符合兩條件・籌碼集中最完整訊號・Top {rows.length}</p>
+                </div>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                    <thead>
+                        <tr className="border-b border-gray-200/60 text-[11px] text-gray-500 uppercase tracking-wide">
+                            <th className="text-left py-2 px-2 w-6">#</th>
+                            <th className="text-left py-2 px-2">股票</th>
+                            <th className="text-right py-2 px-2">股東數</th>
+                            <th className="text-right py-2 px-2">人數增減</th>
+                            <th className="text-right py-2 px-2">200張+</th>
+                            <th className="text-right py-2 px-2">400張+</th>
+                            <th className="text-right py-2 px-2">1000張+</th>
+                            <th className="text-right py-2 px-2">投信五日</th>
+                            <th className="text-right py-2 px-2">成交額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((row, i) => {
+                            const pi = priceIndicators[row.stock_code];
+                            const shrChange = row.shareholders_change_rate;
+                            return (
+                                <tr key={row.stock_code} className="border-b border-gray-200/60 hover:bg-violet-50/40 transition-all">
+                                    <td className="py-2.5 px-2 text-gray-400 font-mono">{i + 1}</td>
+                                    <td className="py-2.5 px-2">
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            <Link
+                                                href={`/investment/stock/${row.stock_code}?from=${fromLabel}&rank=${i + 1}&list=${codeList}`}
+                                                className="font-semibold text-gray-800 dark:text-gray-200 hover:text-violet-600 transition-colors"
+                                            >
+                                                {row.stock_name || row.stock_code}
+                                            </Link>
+                                            <span className="text-[10px] text-gray-400">{row.stock_code}</span>
+                                            {pi && <HighBadge is200d={pi.is_200d_high} is20d={pi.is_20d_high} />}
+                                        </div>
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right text-gray-700 font-mono">
+                                        {row.total_shareholders?.toLocaleString() ?? '—'}
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono">
+                                        {shrChange != null ? (
+                                            <span className={shrChange < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                                                {shrChange > 0 ? '+' : ''}{shrChange.toFixed(2)}%
+                                            </span>
+                                        ) : '—'}
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono">
+                                        <HolderPctCell value={row.mid_holder_pct_change} positiveGood={true} />
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono">
+                                        <HolderPctCell value={row.big_holder_pct_change} positiveGood={true} />
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono">
+                                        <HolderPctCell value={row.whale_holder_pct_change} positiveGood={true} />
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono whitespace-nowrap">
+                                        {pi?.it_buy_5d != null ? (
+                                            <span className={pi.it_buy_5d > 0 ? 'text-rose-600 dark:text-rose-400' : pi.it_buy_5d < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'}>
+                                                {pi.it_buy_5d > 0 ? '+' : ''}{pi.it_buy_5d.toLocaleString()}
+                                            </span>
+                                        ) : '—'}
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono text-gray-600 whitespace-nowrap">
+                                        {pi?.amount != null && pi.amount > 0
+                                            ? `${(pi.amount / 1e8).toFixed(1)}億`
+                                            : '—'}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 }
 
 function HighBadge({ is200d, is20d }: { is200d: boolean; is20d: boolean }) {
@@ -230,14 +352,12 @@ function HolderPctCell({ value, positiveGood }: { value: number | null; positive
 
 function RankingTable({
     rows,
-    positiveGood,
     source,
     priceIndicators,
     currentSort,
     currentDir,
 }: {
     rows: EquityRow[];
-    positiveGood: boolean;
     source: 'equity' | 'equity-retail';
     priceIndicators: Record<string, PriceIndicator>;
     currentSort: SortKey | null;
@@ -297,6 +417,13 @@ function RankingTable({
                                         </Link>
                                         <span className="text-[10px] text-gray-400">{row.stock_code}</span>
                                         {pi && <HighBadge is200d={pi.is_200d_high} is20d={pi.is_20d_high} />}
+                                        {row.mid_holder_pct_change != null && row.mid_holder_pct_change > 0 &&
+                                         row.big_holder_pct_change != null && row.big_holder_pct_change > 0 &&
+                                         row.whale_holder_pct_change != null && row.whale_holder_pct_change > 0 && (
+                                            <span className="inline-block ml-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-violet-500 text-white leading-none">
+                                                三全↑
+                                            </span>
+                                        )}
                                     </div>
                                 </td>
                                 <td className={`py-2.5 px-2 text-right text-gray-700 dark:text-gray-300 font-mono ${cellBg}`}>
@@ -312,13 +439,13 @@ function RankingTable({
                                     ) : '—'}
                                 </td>
                                 <td className={`py-2.5 px-2 text-right font-mono ${cellBg}`}>
-                                    <HolderPctCell value={row.mid_holder_pct_change} positiveGood={positiveGood} />
+                                    <HolderPctCell value={row.mid_holder_pct_change} positiveGood={true} />
                                 </td>
                                 <td className={`py-2.5 px-2 text-right font-mono ${cellBg}`}>
-                                    <HolderPctCell value={row.big_holder_pct_change} positiveGood={positiveGood} />
+                                    <HolderPctCell value={row.big_holder_pct_change} positiveGood={true} />
                                 </td>
                                 <td className={`py-2.5 px-2 text-right font-mono ${cellBg}`}>
-                                    <HolderPctCell value={row.whale_holder_pct_change} positiveGood={positiveGood} />
+                                    <HolderPctCell value={row.whale_holder_pct_change} positiveGood={true} />
                                 </td>
                                 <td className={`py-2.5 px-2 text-right font-mono whitespace-nowrap ${cellBg}`}>
                                     {pi?.it_buy_5d != null ? (
@@ -356,8 +483,10 @@ export default async function EquityDistributionPage({
     ];
     const sort: SortKey | null = sortRaw && validSortKeys.includes(sortRaw) ? sortRaw : null;
     const dir: SortDir = params.dir === 'asc' ? 'asc' : 'desc';
+    const tierRaw = params.tier;
+    const tier: Tier | null = tierRaw === '200' || tierRaw === '400' || tierRaw === '1000' ? tierRaw : null;
 
-    const data = await fetchRankingData(sort, dir);
+    const data = await fetchRankingData(sort, dir, tier);
 
     return (
         <div className="min-h-screen p-6 animate-fade-in">
@@ -385,11 +514,40 @@ export default async function EquityDistributionPage({
                     </div>
                 </div>
 
+                {/* Tier filter */}
+                <div className="flex items-center gap-2 mb-5">
+                    <span className="text-xs text-gray-500">同步排序：</span>
+                    {([
+                        { label: '預設', value: null },
+                        { label: '200張+', value: '200' },
+                        { label: '400張+', value: '400' },
+                        { label: '1000張+', value: '1000' },
+                    ] as { label: string; value: Tier | null }[]).map(({ label, value }) => {
+                        const isActive = tier === value;
+                        const href = value ? `?tier=${value}` : '?';
+                        return (
+                            <Link
+                                key={label}
+                                href={href}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                                    isActive
+                                        ? 'bg-violet-500 text-white border-violet-500'
+                                        : 'bg-white/60 text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+                                }`}
+                            >
+                                {label}
+                            </Link>
+                        );
+                    })}
+                </div>
+
                 {!data ? (
                     <div className="glass-card rounded-2xl p-12 text-center">
                         <p className="text-gray-400">尚無資料，每週一更新</p>
                     </div>
                 ) : (
+                    <>
+                    <DoubleSignalSection rows={data.doubleSignalRanking} priceIndicators={data.priceIndicators} />
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* 主力買進 */}
                         <div className="glass-card rounded-2xl p-5">
@@ -407,7 +565,6 @@ export default async function EquityDistributionPage({
                             ) : (
                                 <RankingTable
                                     rows={data.bigHolderRanking}
-                                    positiveGood={true}
                                     source="equity"
                                     priceIndicators={data.priceIndicators}
                                     currentSort={sort}
@@ -432,7 +589,6 @@ export default async function EquityDistributionPage({
                             ) : (
                                 <RankingTable
                                     rows={data.retailDeclineRanking}
-                                    positiveGood={false}
                                     source="equity-retail"
                                     priceIndicators={data.priceIndicators}
                                     currentSort={sort}
@@ -441,6 +597,7 @@ export default async function EquityDistributionPage({
                             )}
                         </div>
                     </div>
+                    </>
                 )}
             </div>
         </div>

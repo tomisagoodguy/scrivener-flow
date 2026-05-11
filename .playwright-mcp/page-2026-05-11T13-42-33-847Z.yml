@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e7]:
+        - button "☰" [ref=e9]
+        - generic [ref=e12]:
+          - button "切換至深色模式" [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+          - link "✨ 新增案件" [ref=e16] [cursor=pointer]:
+            - /url: /cases/new
+            - generic [ref=e17]: ✨
+            - generic [ref=e18]: 新增案件
+      - main [ref=e21]:
+        - generic [ref=e22]:
+          - heading "晚安， ... 👋" [level=1] [ref=e23]:
+            - generic [ref=e24]: 晚安，
+            - generic [ref=e25]: ...
+            - generic [ref=e26]: 👋
+          - paragraph [ref=e27]: 這是您的個人代書工作台，所有工具已準備就緒。
+        - generic [ref=e34]: Scrivener Flow Professional • v2.0
+  - button "Open Next.js Dev Tools" [ref=e40] [cursor=pointer]:
+    - img [ref=e41]
