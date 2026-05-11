@@ -271,6 +271,7 @@ openspec apply --change "<name>"      # 開始執行 tasks
 | `/clauses` | 契約條款範本管理 |
 | `/notes` | 備忘錄板（支援 `view=list` 緊湊模式） |
 | `/redemptions` | 代償案件管理 |
+| `/guidelines` | 不動產法規指引（條文搜尋，全員共用） |
 | `/knowledge` | 知識庫（Tiptap 富文字，全員共用，不做 user_id 隔離） |
 | `/admin` | 管理員功能（import、用戶管理） |
 | `/identify` | 文件辨識（DOCX 解析） |
@@ -304,7 +305,7 @@ Repository Pattern 僅限投資模組，案件模組使用 Service 層直接呼�
 
 ## Hooks 索引（`src/hooks/`）
 
-### 投資分析 Hooks
+### 投資分析 Hooks（`src/hooks/investment/`）
 
 | 檔案 | 職責 |
 | :--- | :--- |
@@ -315,6 +316,7 @@ Repository Pattern 僅限投資模組，案件模組使用 Service 層直接呼�
 | `useRevenueData.ts` | 月營收趨勢資料 |
 | `useChipsData.ts` | 籌碼面（法人買賣超）資料 |
 | `useBrokerData.ts` | 券商分點進出資料 |
+| `useStockPickerHub.ts` | 選股中心資料聚合（跨 ETF 持股比較） |
 
 ### 通用 App Hooks
 
