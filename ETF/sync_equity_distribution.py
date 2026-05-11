@@ -34,6 +34,9 @@ logger = logging.getLogger(__name__)
 
 # 大戶定義：持股 400 張以上（400,000 股）= tier >= 12
 BIG_HOLDER_MIN_TIER = 12
+# mid：200張+ = tier >= 11；whale：1000張+ = tier >= 15
+MID_HOLDER_MIN_TIER = 11
+WHALE_HOLDER_MIN_TIER = 15
 # Tier 17 是集計總列（holder_count = 總股東人數，custody_ratio = 100%），需特別處理
 AGGREGATE_TIER = "17"
 
@@ -91,23 +94,25 @@ def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
     prev_date = all_dates[-2]
     logger.info(f"計算期間：{prev_date.date()} → {latest_date.date()}")
 
+    def _compute_tier_pct(period_df: pd.DataFrame, min_tier: int) -> pd.Series:
+        """回傳以 stock_id 為 index 的 custody_ratio 加總 Series（排除 tier 17）。"""
+        tier_rows = period_df[period_df["tier"].astype(str).astype(int) >= min_tier]
+        tier_rows = tier_rows[tier_rows["tier"] != AGGREGATE_TIER]
+        return tier_rows.groupby("stock_id")["custody_ratio"].sum()
+
     def _summarise(period_df: pd.DataFrame) -> pd.DataFrame:
         """將單期 inventory 資料聚合為每股一列的 summary。"""
         agg_rows = period_df[period_df["tier"] == AGGREGATE_TIER]
-        big_rows = period_df[period_df["tier"].astype(str).astype(int) >= BIG_HOLDER_MIN_TIER]
-        big_rows = big_rows[big_rows["tier"] != AGGREGATE_TIER]
 
         total_sh = (
             agg_rows.groupby("stock_id")["holder_count"]
             .first()
             .rename("total_shareholders")
         )
-        big_pct = (
-            big_rows.groupby("stock_id")["custody_ratio"]
-            .sum()
-            .rename("big_holder_pct")
-        )
-        return pd.concat([total_sh, big_pct], axis=1)
+        mid_pct = _compute_tier_pct(period_df, MID_HOLDER_MIN_TIER).rename("mid_holder_pct")
+        big_pct = _compute_tier_pct(period_df, BIG_HOLDER_MIN_TIER).rename("big_holder_pct")
+        whale_pct = _compute_tier_pct(period_df, WHALE_HOLDER_MIN_TIER).rename("whale_holder_pct")
+        return pd.concat([total_sh, mid_pct, big_pct, whale_pct], axis=1)
 
     latest_df = df[df["date"] == latest_date]
     prev_df = df[df["date"] == prev_date]
@@ -124,6 +129,12 @@ def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
     ).round(4)
     merged["big_holder_pct_change"] = (
         merged["big_holder_pct"] - merged["big_holder_pct_prev"]
+    ).round(3)
+    merged["mid_holder_pct_change"] = (
+        merged["mid_holder_pct"].fillna(0.0) - merged["mid_holder_pct_prev"].fillna(0.0)
+    ).round(3)
+    merged["whale_holder_pct_change"] = (
+        merged["whale_holder_pct"].fillna(0.0) - merged["whale_holder_pct_prev"].fillna(0.0)
     ).round(3)
 
     records = []
@@ -150,6 +161,26 @@ def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
                 "big_holder_pct_change": (
                     round(float(row["big_holder_pct_change"]), 3)
                     if pd.notna(row["big_holder_pct_change"])
+                    else None
+                ),
+                "mid_holder_pct": (
+                    round(float(row["mid_holder_pct"]), 3)
+                    if pd.notna(row.get("mid_holder_pct"))
+                    else None
+                ),
+                "mid_holder_pct_change": (
+                    round(float(row["mid_holder_pct_change"]), 3)
+                    if pd.notna(row.get("mid_holder_pct_change"))
+                    else None
+                ),
+                "whale_holder_pct": (
+                    round(float(row["whale_holder_pct"]), 3)
+                    if pd.notna(row.get("whale_holder_pct"))
+                    else None
+                ),
+                "whale_holder_pct_change": (
+                    round(float(row["whale_holder_pct_change"]), 3)
+                    if pd.notna(row.get("whale_holder_pct_change"))
                     else None
                 ),
             }
@@ -207,15 +238,25 @@ def _upsert(records: list[dict], storage: SQLStorage) -> None:
     upsert_sql = text("""
         INSERT INTO equity_distribution_stats
             (stock_code, snapshot_date, total_shareholders, big_holder_pct,
-             shareholders_change_rate, big_holder_pct_change, stock_name, updated_at)
+             shareholders_change_rate, big_holder_pct_change,
+             mid_holder_pct, mid_holder_pct_change,
+             whale_holder_pct, whale_holder_pct_change,
+             stock_name, updated_at)
         VALUES
             (:stock_code, :snapshot_date, :total_shareholders, :big_holder_pct,
-             :shareholders_change_rate, :big_holder_pct_change, :stock_name, NOW())
+             :shareholders_change_rate, :big_holder_pct_change,
+             :mid_holder_pct, :mid_holder_pct_change,
+             :whale_holder_pct, :whale_holder_pct_change,
+             :stock_name, NOW())
         ON CONFLICT (stock_code, snapshot_date) DO UPDATE SET
             total_shareholders       = EXCLUDED.total_shareholders,
             big_holder_pct           = EXCLUDED.big_holder_pct,
             shareholders_change_rate = EXCLUDED.shareholders_change_rate,
             big_holder_pct_change    = EXCLUDED.big_holder_pct_change,
+            mid_holder_pct           = EXCLUDED.mid_holder_pct,
+            mid_holder_pct_change    = EXCLUDED.mid_holder_pct_change,
+            whale_holder_pct         = EXCLUDED.whale_holder_pct,
+            whale_holder_pct_change  = EXCLUDED.whale_holder_pct_change,
             stock_name               = EXCLUDED.stock_name,
             updated_at               = NOW()
     """)

@@ -27,7 +27,18 @@
       "Bash(git -C /c/Users/user/Documents/GitHub/tw-active log --oneline -3)",
       "PowerShell($lines = Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-GitHub-scrivener-flow\\\\3440a8c5-0a34-49c3-83de-a0f2b5c62ba5\\\\tasks\\\\b008a35jr.output\" 2>&1; Write-Host \"Total lines: $\\($lines.Count\\)\"; $lines | Select-Object -Last 10)",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 統一 fhtrust_scraper 輸出欄位名稱 \\(stock_code→code\\) 修正 pipeline KeyError\")",
-      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"fix: 統一 fhtrust_scraper 輸出欄位名稱 \\(stock_code→code\\) 修正 pipeline KeyError\")"
+      "Bash(bash C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"fix: 統一 fhtrust_scraper 輸出欄位名稱 \\(stock_code→code\\) 修正 pipeline KeyError\")",
+      "WebFetch(domain:finlab.tw)",
+      "Read(//c/Users/user/.claude/skills/finlab/**)",
+      "Read(//c/Users/user/.agents/skills/finlab/**)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); findings=[f for f in data['findings'] if f['severity'] in \\('Critical','Warning'\\)]; print\\(f'Issues: {len\\(findings\\)}'\\); [print\\(f['severity'], f['id'], f['summary']\\) for f in findings]\")",
+      "PowerShell(cd \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\" && yarn dev 2>&1 &)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3000\" -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3001\" -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3000/investment/equity\" -UseBasicParsing -TimeoutSec 10 -MaximumRedirection 0 -ErrorAction SilentlyContinue)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3000/investment/equity\" -UseBasicParsing -TimeoutSec 15 -ErrorAction SilentlyContinue; $r.StatusCode; $r.Content.Length)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['state'], d['progress']\\)\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: 籌碼排行榜新增三級距持股變化欄位與欄標題排序\")"
     ]
   },
   "enabledMcpjsonServers": [
