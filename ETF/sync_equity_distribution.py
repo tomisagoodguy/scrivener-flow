@@ -321,6 +321,7 @@ def main() -> None:
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--backfill-names", action="store_true", help="只補充現有資料的股票名稱，不重算統計")
+    parser.add_argument("--force", action="store_true", help="強制重寫（跳過已存在的 snapshot_date 保護，用於補欄位）")
     args = parser.parse_args()
 
     storage = SQLStorage()
@@ -358,8 +359,8 @@ def main() -> None:
 
     # 5. 本週無新公告保護（同一 snapshot_date 已存在則略過）
     snapshot_date = records[0]["snapshot_date"]
-    if _already_synced(snapshot_date, storage):
-        logger.info(f"本期資料 ({snapshot_date}) 已存在，略過寫入")
+    if not args.force and _already_synced(snapshot_date, storage):
+        logger.info(f"本期資料 ({snapshot_date}) 已存在，略過寫入（使用 --force 可強制覆蓋）")
         return
 
     # 6. 補充股票名稱

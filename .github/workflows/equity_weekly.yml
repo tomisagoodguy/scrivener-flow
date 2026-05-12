@@ -4,7 +4,14 @@ on:
   schedule:
     # 每週六 14:00 UTC（台灣時間 22:00），TDCC 週五公告，週六晚上資料已可用
     - cron: '0 14 * * 6'
-  workflow_dispatch: # 允許手動觸發
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '強制覆蓋現有 snapshot_date（補欄位用）'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 jobs:
   sync:
@@ -43,7 +50,10 @@ jobs:
         run: uv sync
 
       - name: Sync equity distribution stats
-        run: uv run python ETF/sync_equity_distribution.py
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          uv run python ETF/sync_equity_distribution.py $FORCE_FLAG
 
       - name: Sync raw shareholder weekly data
         run: |
