@@ -1,14 +1,25 @@
 import Link from 'next/link';
-import type { EquityRow, PriceIndicator } from '@/lib/investment/equityPageData';
+import type { EquityRow, PriceIndicator, FlowEntry } from '@/lib/investment/equityPageData';
 import { HighBadge } from './HighBadge';
 import { HolderPctCell } from './HolderPctCell';
+import { EtfBadge } from './EtfBadge';
+
+function fmtNt(nt: number): string {
+    const abs = Math.abs(nt);
+    if (abs >= 1e8) return `${(nt / 1e8).toFixed(1)}億`;
+    return `${(nt / 1e4).toFixed(0)}萬`;
+}
 
 export function DoubleSignalSection({
     rows,
     priceIndicators,
+    etfMap,
+    flowMap = {},
 }: {
     rows: EquityRow[];
     priceIndicators: Record<string, PriceIndicator>;
+    etfMap: Record<string, string[]>;
+    flowMap?: Record<string, FlowEntry>;
 }) {
     if (rows.length === 0) return null;
     const codeList = encodeURIComponent(rows.map(r => r.stock_code).join(','));
@@ -40,6 +51,7 @@ export function DoubleSignalSection({
                             <th className="text-right py-2 px-2">1000張+</th>
                             <th className="text-right py-2 px-2">投信五日</th>
                             <th className="text-right py-2 px-2">成交額</th>
+                            <th className="text-right py-2 px-2">ETF流</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -56,6 +68,9 @@ export function DoubleSignalSection({
                                             </Link>
                                             <span className="text-[10px] text-gray-400">{row.stock_code}</span>
                                             {pi && <HighBadge is200d={pi.is_200d_high} is20d={pi.is_20d_high} />}
+                                            {(etfMap[row.stock_code] ?? []).map(code => (
+                                                <EtfBadge key={code} etfCode={code} />
+                                            ))}
                                         </div>
                                     </td>
                                     <td className="py-2.5 px-2 text-right text-gray-700 font-mono">{row.total_shareholders?.toLocaleString() ?? '—'}</td>
@@ -78,6 +93,18 @@ export function DoubleSignalSection({
                                     </td>
                                     <td className="py-2.5 px-2 text-right font-mono text-gray-600 whitespace-nowrap">
                                         {pi?.amount != null && pi.amount > 0 ? `${(pi.amount / 1e8).toFixed(1)}億` : '—'}
+                                    </td>
+                                    <td className="py-2.5 px-2 text-right font-mono whitespace-nowrap">
+                                        {(() => {
+                                            const f = flowMap[row.stock_code];
+                                            if (!f) return <span className="text-gray-300 dark:text-gray-600">—</span>;
+                                            const isIn = f.direction === 'in';
+                                            return (
+                                                <span className={isIn ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-emerald-600 dark:text-emerald-400 font-semibold'}>
+                                                    {isIn ? '+' : '-'}{fmtNt(f.nt)}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                 </tr>
                             );

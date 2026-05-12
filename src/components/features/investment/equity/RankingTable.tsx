@@ -1,8 +1,15 @@
 import Link from 'next/link';
-import type { EquityRow, PriceIndicator, SortKey, SortDir } from '@/lib/investment/equityPageData';
+import type { EquityRow, PriceIndicator, SortKey, SortDir, FlowEntry } from '@/lib/investment/equityPageData';
 import { HighBadge } from './HighBadge';
 import { HolderPctCell } from './HolderPctCell';
 import { SortableHeader } from './SortableHeader';
+import { EtfBadge } from './EtfBadge';
+
+function fmtNt(nt: number): string {
+    const abs = Math.abs(nt);
+    if (abs >= 1e8) return `${(nt / 1e8).toFixed(1)}億`;
+    return `${(nt / 1e4).toFixed(0)}萬`;
+}
 
 export function RankingTable({
     rows,
@@ -10,12 +17,16 @@ export function RankingTable({
     priceIndicators,
     currentSort,
     currentDir,
+    etfMap = {},
+    flowMap = {},
 }: {
     rows: EquityRow[];
     source: 'equity' | 'equity-retail';
     priceIndicators: Record<string, PriceIndicator>;
     currentSort: SortKey | null;
     currentDir: SortDir;
+    etfMap?: Record<string, string[]>;
+    flowMap?: Record<string, FlowEntry>;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -31,6 +42,7 @@ export function RankingTable({
                         <th className="text-right py-2 px-2"><SortableHeader label="1000張+" sortKey="whale_holder_pct_change" currentSort={currentSort} currentDir={currentDir} /></th>
                         <th className="text-right py-2 px-2"><SortableHeader label="投信五日" sortKey="it_buy_5d" currentSort={currentSort} currentDir={currentDir} /></th>
                         <th className="text-right py-2 px-2"><SortableHeader label="成交額" sortKey="amount" currentSort={currentSort} currentDir={currentDir} /></th>
+                        <th className="text-right py-2 px-2 text-[11px] text-gray-500 uppercase tracking-wide">ETF流</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,6 +60,9 @@ export function RankingTable({
                                         </Link>
                                         <span className="text-[10px] text-gray-400">{row.stock_code}</span>
                                         {pi && <HighBadge is200d={pi.is_200d_high} is20d={pi.is_20d_high} />}
+                                        {(etfMap[row.stock_code] ?? []).map(code => (
+                                            <EtfBadge key={code} etfCode={code} />
+                                        ))}
                                         {row.mid_holder_pct_change != null && row.mid_holder_pct_change > 0 &&
                                          row.big_holder_pct_change != null && row.big_holder_pct_change > 0 &&
                                          row.whale_holder_pct_change != null && row.whale_holder_pct_change > 0 && (
@@ -75,6 +90,18 @@ export function RankingTable({
                                 </td>
                                 <td className={`py-2.5 px-2 text-right font-mono text-gray-600 dark:text-gray-400 whitespace-nowrap ${cellBg}`}>
                                     {pi?.amount != null && pi.amount > 0 ? `${(pi.amount / 1e8).toFixed(1)}億` : '—'}
+                                </td>
+                                <td className={`py-2.5 px-2 text-right font-mono whitespace-nowrap ${cellBg}`}>
+                                    {(() => {
+                                        const f = flowMap[row.stock_code];
+                                        if (!f) return <span className="text-gray-300 dark:text-gray-600">—</span>;
+                                        const isIn = f.direction === 'in';
+                                        return (
+                                            <span className={isIn ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                                                {isIn ? '+' : '-'}{fmtNt(f.nt)}
+                                            </span>
+                                        );
+                                    })()}
                                 </td>
                             </tr>
                         );

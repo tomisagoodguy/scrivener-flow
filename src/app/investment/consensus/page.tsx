@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ConsensusFilter } from './ConsensusFilter';
+import { getEtfMeta } from '@/lib/investment/etfRegistry';
 
 interface EtfEntry {
     etf_code: string;
@@ -71,22 +72,12 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
 }
 
 function EtfBadge({ etfCode }: { etfCode: string }) {
-    const colors: Record<string, string> = {
-        '00981A': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        '00980A': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-        '00982A': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-        '00984A': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-        '00985A': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-        '00987A': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-        '00991A': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-        '00992A': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-        '00993A': 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-        '00994A': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
-        '00995A': 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
-    };
-    const cls = colors[etfCode] ?? 'bg-slate-100 text-slate-600';
+    const color = getEtfMeta(etfCode)?.color ?? '#64748b';
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-medium ${cls}`}>
+        <span
+            className="inline-block px-2 py-0.5 rounded-lg text-xs font-medium"
+            style={{ backgroundColor: `${color}22`, color, border: `1px solid ${color}55` }}
+        >
             {etfCode}
         </span>
     );

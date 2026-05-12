@@ -18,12 +18,20 @@ export interface PriceIndicator {
     amount: number | null;
 }
 
+export interface FlowEntry {
+    nt: number;
+    direction: 'in' | 'out';
+    etf_count: number;
+}
+
 export interface RankingData {
     snapshotDate: string;
     bigHolderRanking: EquityRow[];
     retailDeclineRanking: EquityRow[];
     doubleSignalRanking: EquityRow[];
     priceIndicators: Record<string, PriceIndicator>;
+    etfMap: Record<string, string[]>;
+    flowMap: Record<string, FlowEntry>;
 }
 
 export type SortKey =
@@ -129,6 +137,60 @@ export function applySortToRows(
     });
 }
 
+async function fetchFlowMap(): Promise<Record<string, FlowEntry>> {
+    const supabase = await createClient();
+
+    const { data } = await supabase
+        .from('etf_flow_daily')
+        .select('inflow, outflow')
+        .gt('totals->>stocks_count', '0')
+        .order('data_date', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (!data) return {};
+
+    type RawStock = { stock_code: string; total_nt: number; etf_count: number };
+    const map: Record<string, FlowEntry> = {};
+
+    for (const s of (data.inflow as RawStock[] | null) ?? []) {
+        map[s.stock_code] = { nt: s.total_nt, direction: 'in', etf_count: s.etf_count };
+    }
+    for (const s of (data.outflow as RawStock[] | null) ?? []) {
+        if (!map[s.stock_code]) {
+            map[s.stock_code] = { nt: s.total_nt, direction: 'out', etf_count: s.etf_count };
+        }
+    }
+    return map;
+}
+
+async function fetchEtfMap(stockCodes: string[]): Promise<Record<string, string[]>> {
+    if (stockCodes.length === 0) return {};
+    const supabase = await createClient();
+
+    const { data: latest } = await supabase
+        .from('etf_stock_overlap')
+        .select('data_date')
+        .order('data_date', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (!latest) return {};
+
+    const { data } = await supabase
+        .from('etf_stock_overlap')
+        .select('stock_code, etf_list')
+        .eq('data_date', latest.data_date)
+        .in('stock_code', stockCodes);
+
+    const map: Record<string, string[]> = {};
+    for (const row of data ?? []) {
+        const list = (row.etf_list as { etf_code: string }[] | null) ?? [];
+        map[row.stock_code] = list.map(e => e.etf_code);
+    }
+    return map;
+}
+
 export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null): Promise<RankingData | null> {
     const supabase = await createClient();
 
@@ -151,7 +213,7 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         .from('equity_distribution_stats')
         .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
         .eq('snapshot_date', snapshotDate)
-        .not('shareholders_change_rate', 'is', null)
+        .lt('shareholders_change_rate', 0)
         .order('shareholders_change_rate', { ascending: true });
 
     if (tierKey) retailQuery = retailQuery.gt(tierKey, 0);
@@ -170,7 +232,11 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         ...(bigHolder ?? []).map(r => r.stock_code),
         ...(retailDecline ?? []).map(r => r.stock_code),
     ])];
-    const priceIndicators = await fetchPriceIndicators(allCodes);
+    const [priceIndicators, etfMap, flowMap] = await Promise.all([
+        fetchPriceIndicators(allCodes),
+        fetchEtfMap(allCodes),
+        fetchFlowMap(),
+    ]);
 
     const doubleSignalRanking = (bigHolder ?? [])
         .filter(row => (row.shareholders_change_rate ?? 0) < 0)
@@ -183,5 +249,7 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         retailDeclineRanking: applySortToRows((retailDecline ?? []) as EquityRow[], sort, dir, priceIndicators),
         doubleSignalRanking,
         priceIndicators,
+        etfMap,
+        flowMap,
     };
 }

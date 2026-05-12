@@ -14,6 +14,7 @@ export const ETF_REGISTRY: EtfRegistryEntry[] = [
     { code: '00981A', shortCode: '00981', name: '主動統一台股增長', manager: '統一投信',     issuer: '統一',   color: '#8b5cf6', dataSource: 'official_api', isPrimary: true },
 
     // ── 官網 API 備援 ──
+    { code: '00403A', shortCode: '00403', name: '主動統一升級50', manager: '統一投信',   issuer: '統一',   color: '#f97316', dataSource: 'official_api' },
     { code: '00980A', shortCode: '00980', name: '主動野村臺灣優選', manager: '野村投信',     issuer: '野村',   color: '#3b82f6', dataSource: 'official_api' },
     { code: '00982A', shortCode: '00982', name: '主動群益台灣強棒', manager: '群益投信',     issuer: '群益',   color: '#10b981', dataSource: 'official_api' },
     { code: '00984A', shortCode: '00984', name: '主動安聯台灣高息', manager: '安聯投信',     issuer: '安聯',   color: '#f43f5e', dataSource: 'official_api' },

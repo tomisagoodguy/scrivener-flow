@@ -38,6 +38,7 @@ UA = "Mozilla/5.0 (etf-pipeline-official-api; +scrivener-flow)"
 CATALOG: dict[str, dict[str, str]] = {
     "00981A": {"issuer": "uni",     "name": "統一台股增長",     "fund_code": "49YTW"},
     "00988A": {"issuer": "uni",     "name": "統一全球創新",     "fund_code": "61YTW"},
+    "00403A": {"issuer": "uni",     "name": "統一升級50",   "fund_code": "63YTW"},
     "00991A": {"issuer": "fhtrust", "name": "復華台灣未來50",   "fund_code": "ETF23"},
     "00980A": {"issuer": "nomura",  "name": "野村臺灣智慧優選", "fund_code": "00980A"},
     "00985A": {"issuer": "nomura",  "name": "野村臺灣增強50",   "fund_code": "00985A"},
@@ -89,6 +90,8 @@ def _parse_xlsx(raw: bytes) -> list[dict[str, Any]]:
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
     ws = wb.active
+    if ws is None:
+        return []
     rows = list(ws.iter_rows(values_only=True))
 
     header_idx = -1
@@ -115,7 +118,7 @@ def _parse_xlsx(raw: bytes) -> list[dict[str, Any]]:
             continue
         name = str(row[1]).strip() if len(row) > 1 and row[1] else ""
         shares = _to_num(row[2]) if len(row) > 2 else None
-        weight = _to_num(row[-1])
+        weight = _to_num(row[-1]) if row else None
         holdings.append({"code": code, "name": name, "shares": shares, "weight_pct": weight})
     return holdings
 
@@ -241,7 +244,7 @@ def _ymd_to_dash(ymd: str) -> str:
     return f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
 
 
-def _last_trading_date() -> "date":
+def _last_trading_date():
     from datetime import datetime, timedelta, timezone
     tw_now = datetime.now(timezone(timedelta(hours=8)))
     if tw_now.hour < 15:

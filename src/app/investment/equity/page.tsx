@@ -43,7 +43,7 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
                     </div>
                 ) : (
                     <>
-                        <DoubleSignalSection rows={data.doubleSignalRanking} priceIndicators={data.priceIndicators} />
+                        <DoubleSignalSection rows={data.doubleSignalRanking} priceIndicators={data.priceIndicators} etfMap={data.etfMap} flowMap={data.flowMap} />
                         <RankingPanelGrid data={data} sort={sort} dir={dir} />
                     </>
                 )}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import Link from 'next/link';
+import { getEtfMeta } from '@/lib/investment/etfRegistry';
 
 // ── 型別（與 Server 端共用，複製即可）────────────────────────────────────────
 
@@ -50,11 +51,18 @@ function StockRow({ stock, isInflow, rank, label, stockList }: { stock: FlowStoc
                 {isInflow ? '+' : ''}{nt2yi(stock.total_nt)}
             </span>
             <div className="flex flex-wrap gap-1 min-w-0">
-                {stock.etf_codes.map(code => (
-                    <span key={code} className="px-1.5 py-0.5 rounded text-[11px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 font-mono leading-tight">
-                        {code}
-                    </span>
-                ))}
+                {stock.etf_codes.map(code => {
+                    const color = getEtfMeta(code)?.color ?? '#6366f1';
+                    return (
+                        <span
+                            key={code}
+                            className="px-1.5 py-0.5 rounded text-[11px] font-mono leading-tight"
+                            style={{ backgroundColor: `${color}22`, color, border: `1px solid ${color}55` }}
+                        >
+                            {code}
+                        </span>
+                    );
+                })}
             </div>
             <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 shrink-0">{stock.etf_count} 家</span>
         </div>

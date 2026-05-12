@@ -22,17 +22,22 @@ interface Props {
 }
 
 const ETF_COLORS: Record<string, string> = {
-    '00981A': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    '00980A': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    '00982A': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    '00984A': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    '00985A': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-    '00987A': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-    '00991A': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-    '00992A': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    '00981A': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+    '00403A': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    '00980A': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    '00982A': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    '00984A': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+    '00985A': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+    '00986A': 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+    '00987A': 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
+    '00988A': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    '00990A': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+    '00991A': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    '00992A': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
     '00993A': 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-    '00994A': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
-    '00995A': 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
+    '00994A': 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
+    '00995A': 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
+    '00997A': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
 };
 
 const FILTER_OPTIONS = [

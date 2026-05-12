@@ -27,12 +27,12 @@ export function RankingPanelGrid({ data, sort, dir }: { data: RankingData; sort:
             <Panel icon={TrendingUp} title="主力買進" subtitle={`大戶持股比例增加 · 共 ${data.bigHolderRanking.length} 檔`}>
                 {data.bigHolderRanking.length === 0
                     ? <p className="text-sm text-gray-400 text-center py-6">尚無資料</p>
-                    : <RankingTable rows={data.bigHolderRanking} source="equity" priceIndicators={data.priceIndicators} currentSort={sort} currentDir={dir} />}
+                    : <RankingTable rows={data.bigHolderRanking} source="equity" priceIndicators={data.priceIndicators} currentSort={sort} currentDir={dir} etfMap={data.etfMap} flowMap={data.flowMap} />}
             </Panel>
             <Panel icon={Users} title="散戶減少" subtitle={`總股東人數減少 · 共 ${data.retailDeclineRanking.length} 檔`}>
                 {data.retailDeclineRanking.length === 0
                     ? <p className="text-sm text-gray-400 text-center py-6">尚無資料</p>
-                    : <RankingTable rows={data.retailDeclineRanking} source="equity-retail" priceIndicators={data.priceIndicators} currentSort={sort} currentDir={dir} />}
+                    : <RankingTable rows={data.retailDeclineRanking} source="equity-retail" priceIndicators={data.priceIndicators} currentSort={sort} currentDir={dir} etfMap={data.etfMap} flowMap={data.flowMap} />}
             </Panel>
         </div>
     );

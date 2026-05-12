@@ -45,7 +45,9 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('state:', d.get\\('state'\\)\\); print\\('progress:', d.get\\('progress'\\)\\)\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"refactor: 投資模組頁面重構 - 拆分大型元件降低行數\")",
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"refactor: 投資模組頁面重構 - 拆分大型元件降低行數\")",
-      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: add --force flag to equity sync for backfilling new mid/whale holder columns\")"
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: add --force flag to equity sync for backfilling new mid/whale holder columns\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 散戶減少面板僅顯示股東人數實際減少的股票\")",
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: 散戶減少面板僅顯示股東人數實際減少的股票\")"
     ]
   },
   "enabledMcpjsonServers": [

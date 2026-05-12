@@ -32,6 +32,7 @@ ETF_REGISTRY: list[EtfEntry] = [
     EtfEntry(code="00981A", name="主動統一台股增長", manager="統一投信",       source="official_api", is_primary=True),
 
     # ── 官網 API 備援（official_api_scraper 支援）──
+    EtfEntry(code="00403A", name="主動統一升級50", manager="統一投信",     source="official_api"),
     EtfEntry(code="00980A", name="主動野村臺灣優選", manager="野村投信",       source="official_api"),
     EtfEntry(code="00982A", name="主動群益台灣強棒", manager="群益投信",       source="official_api"),
     EtfEntry(code="00984A", name="主動安聯台灣高息", manager="安聯投信",       source="official_api"),
