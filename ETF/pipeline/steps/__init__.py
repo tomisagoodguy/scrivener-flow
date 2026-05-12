@@ -24,6 +24,10 @@ from ETF.pipeline.steps.signal_detect_step import SignalDetectStep
 from ETF.pipeline.steps.position_summary_step import PositionSummaryStep
 from ETF.pipeline.steps.flow_compute_step import FlowComputeStep
 from ETF.pipeline.steps.buying_pattern_step import BuyingPatternStep
+from ETF.pipeline.steps.frontrunning_step import FrontrunningStep
+from ETF.pipeline.steps.active_share_step import ActiveShareStep
+from ETF.pipeline.steps.cumulative_drag_step import CumulativeDragStep
+from ETF.pipeline.steps.matched_pairs_step import MatchedPairsStep
 
 __all__ = [
     "BaseStep",
@@ -44,6 +48,10 @@ __all__ = [
     "PositionSummaryStep",
     "FlowComputeStep",
     "BuyingPatternStep",
+    "FrontrunningStep",
+    "ActiveShareStep",
+    "CumulativeDragStep",
+    "MatchedPairsStep",
     "NotifyStep",
     "CleanupStep",
 ]

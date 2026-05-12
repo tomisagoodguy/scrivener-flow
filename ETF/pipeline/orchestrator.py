@@ -29,6 +29,10 @@ from ETF.pipeline.steps import (
     NewsContextStep,
     NotifyStep,
     CleanupStep,
+    FrontrunningStep,
+    ActiveShareStep,
+    CumulativeDragStep,
+    MatchedPairsStep,
 )
 
 
@@ -59,6 +63,10 @@ class PipelineOrchestrator:
         SignalDetectStep,       # 偵測跨 ETF 進階訊號 → etf_signals（輔助）
         BuyingPatternStep,      # 分類買進模式 + 補前瞻報酬 → etf_buying_patterns（輔助）
         PositionSummaryStep,    # 現金流法計算持倉損益 → etf_position_summary + etf_pnl_series（輔助）
+        FrontrunningStep,       # [輔助] 揭露日異常成交量偵測 → etf_frontrunning_stats
+        CumulativeDragStep,     # [輔助] 年化隱成本 → etf_cumulative_drag
+        MatchedPairsStep,       # [輔助] 主動/被動配對實證 → etf_matched_pairs
+        ActiveShareStep,        # [輔助] 持股重疊度（週一執行，非週一自動 skip）→ etf_active_share
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
         NotifyStep,

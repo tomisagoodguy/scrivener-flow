@@ -48,6 +48,12 @@ class AumSyncStep(BaseStep):
         except Exception as e:
             # 輔助步驟：只 log，不 raise
             self.logger.error(f"AumSyncStep failed: {e}")
+
+        try:
+            self._sync_aum_series(ctx)
+        except Exception as e:
+            self.logger.error(f"AumSyncStep._sync_aum_series failed: {e}")
+
         return ctx
 
     # ------------------------------------------------------------------ private
@@ -163,3 +169,60 @@ class AumSyncStep(BaseStep):
         with ctx.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()
+
+    def _sync_aum_series(self, ctx: PipelineContext) -> None:
+        """計算並更新 cumulative_inflow_yi 與 inflow_share_of_growth（增量欄位）"""
+        all_codes = get_all_etf_codes()
+        sql_read = text("""
+            SELECT etf_code, data_date, aum_100m, nav, units, inflow_100m
+            FROM etf_aum_series
+            WHERE etf_code = ANY(:codes)
+              AND aum_100m IS NOT NULL
+            ORDER BY etf_code, data_date
+        """)
+        with ctx.sql_storage.engine.connect() as conn:
+            rows = conn.execute(sql_read, {"codes": all_codes}).fetchall()
+
+        if not rows:
+            return
+
+        from collections import defaultdict
+        by_etf: dict[str, list] = defaultdict(list)
+        for r in rows:
+            by_etf[r.etf_code].append(r)
+
+        updates = []
+        for etf_code, series in by_etf.items():
+            cumulative = 0.0
+            aum_first = float(series[0].aum_100m)
+            for i, r in enumerate(series):
+                inflow = float(r.inflow_100m) if r.inflow_100m is not None else 0.0
+                if i == 0:
+                    inflow = 0.0
+                cumulative += inflow
+
+                aum_now = float(r.aum_100m)
+                growth = aum_now - aum_first
+                if growth > 0:
+                    share = cumulative / growth
+                else:
+                    share = None
+
+                updates.append({
+                    "etf_code": etf_code,
+                    "data_date": str(r.data_date),
+                    "cumulative_inflow_yi": round(cumulative, 6),
+                    "inflow_share_of_growth": round(share, 6) if share is not None else None,
+                })
+
+        sql_update = text("""
+            UPDATE etf_aum_series SET
+                cumulative_inflow_yi   = :cumulative_inflow_yi,
+                inflow_share_of_growth = :inflow_share_of_growth
+            WHERE etf_code = :etf_code
+              AND data_date = :data_date
+        """)
+        with ctx.sql_storage.engine.connect() as conn:
+            conn.execute(sql_update, updates)
+            conn.commit()
+        logger.info("Updated cumulative_inflow_yi for %d rows", len(updates))
