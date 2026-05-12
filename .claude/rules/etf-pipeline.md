@@ -164,3 +164,20 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 | `ETF/services/finlab/facade.py` | FinLab 股價 / OHLCV / 公司資料統一入口 |
 | `ETF/database/sql_storage.py` | SQLAlchemy 直接操作 Supabase（繞過 RLS） |
 | `ETF/daily_ai_report.py` | Gemini AI 報告產生 + LINE 發送 |
+| `ETF/pipeline/steps/buying_pattern_step.py` | 7 種買進模式分類 + 前 30 天前瞻報酬增量補齊 → `etf_buying_patterns` |
+
+## 買進模式（BuyingPatternStep）陷阱
+
+| 模式 | 判定規則摘要 |
+|------|------------|
+| `volume_spike` | `abs(diff_shares)` > mean + **5.5×std**（過去 20 交易日，同 stock-ETF 對） |
+| `chase_high` | `close >= high * 0.99` 且漲幅 ≥ 3%（需 `stock_prices_daily` 當日有資料） |
+| `dip_buy` | `close <= low * 1.01` 且跌幅 ≤ -2% |
+| `window_break` | 前 **60 曆日**無 BUY/IN（不是交易日）|
+| `sustained_buy` | 過去 20 個交易日**全部**有 BUY/IN（20/20，非 ≥ 1）|
+| `single_lot` | `800 ≤ abs(diff_shares) ≤ 1200`（股，約 1 張）|
+| `new_position` | `change_type = 'IN'` |
+
+**前瞻報酬單位**：`future_returns` jsonb 的 key 是天期字串（`"1"/"5"/...`），value 是小數報酬率（0.07 = 7%）。  
+**增量 merge**：UPDATE 用 `future_returns = COALESCE(future_returns, '{}') || :new_data`，不可整欄覆蓋。  
+**前端聚合**：`src/app/actions/getBuyingPatternStats.ts`（Server Action）在 Server 端 reduce，不回傳原始事件給瀏覽器。

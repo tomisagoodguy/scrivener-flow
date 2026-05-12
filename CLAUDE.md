@@ -72,7 +72,7 @@ scrivener-flow/
 │   │   ├── actions/            # Server Actions（AI、資料同步）
 │   │   ├── api/                # API Routes（Webhooks、第三方整合）
 │   │   ├── cases/              # 案件詳情頁（含 [id] 動態路由）
-│   │   ├── investment/         # 投資儀表板（[etf]、stock/[code]、bare-k、watch-list、compare、consensus、equity、revenue-lab、history）
+│   │   ├── investment/         # 投資儀表板（[etf]、stock/[code]、bare-k、watch-list、compare、consensus、equity、revenue-lab、history、buying-patterns）
 │   │   └── login/components/   # 拆解的登入子元件
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件
@@ -266,6 +266,7 @@ openspec apply --change "<name>"      # 開始執行 tasks
 | :--- | :--- |
 | `/cases` | 案件列表（里程碑排序）+ `/cases/[id]` 案件詳情 |
 | `/investment` | 投資儀表板入口，子路由見目錄結構 |
+| `/investment/buying-patterns` | ETF 買進模式前瞻報酬分析（折線圖 / 熱力圖 / 勝率圖） |
 | `/banks` | 代償銀行管理 |
 | `/calculator` | 稅費試算工具（利用 `src/lib/calculator/`） |
 | `/clauses` | 契約條款範本管理 |

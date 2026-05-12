@@ -14,6 +14,7 @@ const navItems = [
     { name: '營收實驗室', href: '/investment/revenue-lab' },
     { name: '觀察清單', href: '/investment/watch-list' },
     { name: '籌碼排行', href: '/investment/equity' },
+    { name: '模式分析', href: '/investment/buying-patterns' },
 ];
 
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {

@@ -53,6 +53,7 @@ ETF/
 │       ├── overlap_compute_step.py # 聚合跨 ETF 共識持股 → etf_stock_overlap
 │       ├── flow_compute_step.py   # [輔助] 跨 ETF 每日資金流向 → etf_flow_daily
 │       ├── signal_detect_step.py  # [輔助] 偵測進階訊號 → etf_signals
+│       ├── buying_pattern_step.py # [輔助] 分類 7 種買進模式 + 補前瞻報酬 → etf_buying_patterns
 │       ├── position_summary_step.py # [輔助] 現金流法持倉損益 → etf_position_summary + etf_pnl_series
 │       ├── sync_bare_k_step.py    # 同步 watch_list 裸K快照
 │       ├── news_context_step.py   # 直接呼叫 MOPS API，取重大公告 → ctx.news_context
@@ -162,6 +163,7 @@ ScrapeStep
   → OverlapComputeStep      ← 聚合跨 ETF 共識持股 → etf_stock_overlap
   → FlowComputeStep         ← [輔助] 跨 ETF 資金流，|Δshares/prev|≥3% 且 weight≥0.3pp → etf_flow_daily
   → SignalDetectStep        ← [輔助] 3 種訊號偵測（multi_fund/overweight/cross_product） → etf_signals
+  → BuyingPatternStep       ← [輔助] 分類 7 種買進模式 + 補前 30 天前瞻報酬 → etf_buying_patterns
   → PositionSummaryStep     ← [輔助] 現金流法：CFt=−Δshares×close → etf_position_summary + etf_pnl_series
   → SyncBareKStep           ← 同步 watch_list 裸K快照
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
@@ -169,7 +171,7 @@ ScrapeStep
   → CleanupStep
 ```
 
-> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
+> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`BuyingPatternStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
 
 ---
 
@@ -223,6 +225,7 @@ ETF 清單統一由 `ETF/config/etf_registry.py` 的 `source` 欄位決定爬蟲
 - `etf_weight_history` — 前端持股比重走勢圖
 - `etf_aum_series` — 前端 AUM 規模儀表板（`AumSyncStep` 維護）
 - `etf_signals` — 前端訊號標記（`SignalDetectStep` + `FlowComputeStep` 維護）
+- `etf_buying_patterns` — 買進模式 + 前瞻報酬（`BuyingPatternStep` 維護）；前端 `/investment/buying-patterns` 頁面讀取
 - `etf_flow_daily` — 前端每日資金流向儀表板（`FlowComputeStep` 維護）
 - `etf_position_summary` — 前端個股進出場損益（`PositionSummaryStep` 維護）
 - `etf_pnl_series` — 前端 ETF 損益走勢圖（`PositionSummaryStep` 維護）

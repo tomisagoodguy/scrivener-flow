@@ -22,6 +22,7 @@ from ETF.pipeline.steps import (
     OverlapComputeStep,
     FlowComputeStep,
     SignalDetectStep,
+    BuyingPatternStep,
     PositionSummaryStep,
     SyncBareKStep,
     ShareholderSignalStep,
@@ -56,6 +57,7 @@ class PipelineOrchestrator:
         OverlapComputeStep,     # 聚合跨 ETF 共識持股 → etf_stock_overlap
         FlowComputeStep,        # 計算每日跨 ETF 資金流向 → etf_flow_daily（輔助）
         SignalDetectStep,       # 偵測跨 ETF 進階訊號 → etf_signals（輔助）
+        BuyingPatternStep,      # 分類買進模式 + 補前瞻報酬 → etf_buying_patterns（輔助）
         PositionSummaryStep,    # 現金流法計算持倉損益 → etf_position_summary + etf_pnl_series（輔助）
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用

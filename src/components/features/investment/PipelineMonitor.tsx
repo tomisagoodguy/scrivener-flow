@@ -135,7 +135,7 @@ export async function PipelineMonitor() {
                     {statuses.map(s => {
                         const level = getStatusLevel(s.staleDays);
                         const dateLabel = s.latest_date
-                            ? new Date(s.latest_date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+                            ? s.latest_date.slice(5).replace('-', '/')   // "YYYY-MM-DD" → "MM/DD"
                             : '—';
                         const staleLabel =
                             s.staleDays < 0 ? '無資料' :

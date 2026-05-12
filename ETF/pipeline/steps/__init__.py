@@ -23,6 +23,7 @@ from ETF.pipeline.steps.aum_sync_step import AumSyncStep
 from ETF.pipeline.steps.signal_detect_step import SignalDetectStep
 from ETF.pipeline.steps.position_summary_step import PositionSummaryStep
 from ETF.pipeline.steps.flow_compute_step import FlowComputeStep
+from ETF.pipeline.steps.buying_pattern_step import BuyingPatternStep
 
 __all__ = [
     "BaseStep",
@@ -42,6 +43,7 @@ __all__ = [
     "SignalDetectStep",
     "PositionSummaryStep",
     "FlowComputeStep",
+    "BuyingPatternStep",
     "NotifyStep",
     "CleanupStep",
 ]
