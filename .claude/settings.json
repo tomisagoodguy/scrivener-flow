@@ -60,7 +60,8 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); findings=[f for f in d['findings'] if f['severity'] in \\('Critical','Warning'\\)]; print\\(f'{len\\(findings\\)} Warning/Critical findings'\\); [print\\(f'  [{f[\\\\\"severity\\\\\"]}] {f[\\\\\"summary\\\\\"]}'\\) for f in findings]\")",
       "Bash(findstr /i \"state all_done\")",
       "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\investment\\\\matched-pairs\")",
-      "Bash(Remove-Item -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\actions\\\\getEtfMatchedPairs.ts\")"
+      "Bash(Remove-Item -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\actions\\\\getEtfMatchedPairs.ts\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 籌碼排行榜多週日期範圍顯示錯誤（prevDates.at\\(-1\\) 取代固定索引）\")"
     ]
   },
   "enabledMcpjsonServers": [

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { fetchRankingData } from '@/lib/investment/equityPageData';
-import type { SortKey, SortDir, Tier } from '@/lib/investment/equityPageData';
+import type { SortKey, SortDir, Tier, Weeks } from '@/lib/investment/equityPageData';
 import { DoubleSignalSection } from '@/components/features/investment/equity/DoubleSignalSection';
 import { TierNav } from '@/components/features/investment/equity/TierNav';
+import { WeekNav } from '@/components/features/investment/equity/WeekNav';
 import { RankingPanelGrid } from '@/components/features/investment/equity/RankingPanelGrid';
 
 const VALID_SORT_KEYS: SortKey[] = [
@@ -12,6 +13,8 @@ const VALID_SORT_KEYS: SortKey[] = [
     'it_buy_5d', 'amount',
 ];
 
+const VALID_WEEKS: Weeks[] = [1, 2, 3, 4];
+
 export default async function EquityDistributionPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
     const params = await searchParams;
     const sortRaw = params.sort as SortKey | undefined;
@@ -19,7 +22,9 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
     const dir: SortDir = params.dir === 'asc' ? 'asc' : 'desc';
     const tierRaw = params.tier;
     const tier: Tier | null = tierRaw === '200' || tierRaw === '400' || tierRaw === '1000' ? tierRaw : null;
-    const data = await fetchRankingData(sort, dir, tier);
+    const weeksRaw = parseInt(params.weeks ?? '1', 10);
+    const weeks: Weeks = (VALID_WEEKS.includes(weeksRaw as Weeks) ? weeksRaw : 1) as Weeks;
+    const data = await fetchRankingData(sort, dir, tier, weeks);
 
     return (
         <div className="min-h-screen p-6 animate-fade-in">
@@ -36,10 +41,16 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
                         </p>
                     </div>
                 </div>
-                <TierNav tier={tier} />
+                <TierNav tier={tier} weeks={weeks} />
+                <WeekNav weeks={weeks} tier={tier} dateRange={data?.dateRange} />
                 {!data ? (
                     <div className="glass-card rounded-2xl p-12 text-center">
                         <p className="text-gray-400">尚無資料，每週一更新</p>
+                    </div>
+                ) : data.insufficientData ? (
+                    <div className="glass-card rounded-2xl p-12 text-center">
+                        <p className="text-gray-500 font-medium">歷史快照不足 {weeks} 期</p>
+                        <p className="text-sm text-gray-400 mt-1">資料累積中，請選擇較短的觀察區間</p>
                     </div>
                 ) : (
                     <>

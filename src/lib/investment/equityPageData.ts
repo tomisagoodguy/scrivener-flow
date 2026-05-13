@@ -32,6 +32,9 @@ export interface RankingData {
     priceIndicators: Record<string, PriceIndicator>;
     etfMap: Record<string, string[]>;
     flowMap: Record<string, FlowEntry>;
+    weeks: Weeks;
+    dateRange: { from: string; to: string };
+    insufficientData?: boolean;
 }
 
 export type SortKey =
@@ -45,8 +48,10 @@ export type SortKey =
 
 export type SortDir = 'asc' | 'desc';
 export type Tier = '200' | '400' | '1000';
+export type Weeks = 1 | 2 | 3 | 4;
+type TierSortKey = 'big_holder_pct_change' | 'mid_holder_pct_change' | 'whale_holder_pct_change';
 
-const TIER_SORT_KEY: Record<Tier, SortKey> = {
+const TIER_SORT_KEY: Record<Tier, TierSortKey> = {
     '200': 'mid_holder_pct_change',
     '400': 'big_holder_pct_change',
     '1000': 'whale_holder_pct_change',
@@ -191,7 +196,12 @@ async function fetchEtfMap(stockCodes: string[]): Promise<Record<string, string[
     return map;
 }
 
-export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null): Promise<RankingData | null> {
+function formatDateMD(dateStr: string): string {
+    const parts = dateStr.split('-');
+    return `${parts[1]}/${parts[2]}`;
+}
+
+export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null, weeks: Weeks = 1): Promise<RankingData | null> {
     const supabase = await createClient();
 
     const { data: latestRow } = await supabase
@@ -204,33 +214,115 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
     if (!latestRow) return null;
     const snapshotDate: string = latestRow.snapshot_date;
 
-    const tierKey = tier ? TIER_SORT_KEY[tier] : null;
-    const effectiveSort = sort ?? tierKey;
-    const bigSortKey = (effectiveSort && DB_SORT_KEYS.has(effectiveSort)) ? effectiveSort : 'big_holder_pct_change';
-    const bigSortAsc = (effectiveSort && DB_SORT_KEYS.has(effectiveSort)) ? dir === 'asc' : false;
-
-    let retailQuery = supabase
+    // Fetch previous N distinct snapshot dates (needed for multi-week comparison)
+    const { data: prevRows } = await supabase
         .from('equity_distribution_stats')
-        .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
-        .eq('snapshot_date', snapshotDate)
-        .lt('shareholders_change_rate', 0)
-        .order('shareholders_change_rate', { ascending: true });
+        .select('snapshot_date')
+        .lt('snapshot_date', snapshotDate)
+        .order('snapshot_date', { ascending: false })
+        .limit(weeks * 1000);
 
-    if (tierKey) retailQuery = retailQuery.gt(tierKey, 0);
+    const prevDates: string[] = [];
+    const seen = new Set<string>();
+    for (const row of prevRows ?? []) {
+        const d = row.snapshot_date as string;
+        if (!seen.has(d)) {
+            seen.add(d);
+            prevDates.push(d);
+            if (prevDates.length >= weeks) break;
+        }
+    }
 
-    const [{ data: bigHolder }, { data: retailDecline }] = await Promise.all([
-        supabase
-            .from('equity_distribution_stats')
-            .select('stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
-            .eq('snapshot_date', snapshotDate)
-            .gt('big_holder_pct_change', 0)
-            .order(bigSortKey, { ascending: bigSortAsc }),
-        retailQuery,
+    const dateRange = {
+        from: formatDateMD(prevDates.at(-1) ?? snapshotDate),
+        to: formatDateMD(snapshotDate),
+    };
+
+    if (prevDates.length < weeks) {
+        return {
+            snapshotDate,
+            bigHolderRanking: [],
+            retailDeclineRanking: [],
+            doubleSignalRanking: [],
+            priceIndicators: {},
+            etfMap: {},
+            flowMap: {},
+            weeks,
+            dateRange,
+            insufficientData: true,
+        };
+    }
+
+    const oldDate = prevDates[weeks - 1];
+    const tierKey = tier ? TIER_SORT_KEY[tier] : null;
+    const changeField: keyof Pick<EquityRow, 'big_holder_pct_change' | 'mid_holder_pct_change' | 'whale_holder_pct_change'> =
+        tier === '200' ? 'mid_holder_pct_change' :
+        tier === '1000' ? 'whale_holder_pct_change' :
+        'big_holder_pct_change';
+
+    const CURRENT_SELECT = 'stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct, mid_holder_pct, whale_holder_pct';
+    const OLD_SELECT = 'stock_code, big_holder_pct, mid_holder_pct, whale_holder_pct';
+
+    const [{ data: currentRows }, { data: oldRows }] = await Promise.all([
+        supabase.from('equity_distribution_stats').select(CURRENT_SELECT).eq('snapshot_date', snapshotDate),
+        supabase.from('equity_distribution_stats').select(OLD_SELECT).eq('snapshot_date', oldDate),
     ]);
 
+    // Build old pct lookup map
+    const oldPctMap = new Map<string, { big: number | null; mid: number | null; whale: number | null }>();
+    for (const row of oldRows ?? []) {
+        oldPctMap.set(row.stock_code, {
+            big: row.big_holder_pct != null ? Number(row.big_holder_pct) : null,
+            mid: row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null,
+            whale: row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null,
+        });
+    }
+
+    // Compute N-week pct changes; override _change fields with dynamic values
+    const allRows: EquityRow[] = (currentRows ?? []).map(row => {
+        const old = oldPctMap.get(row.stock_code);
+        const curBig = row.big_holder_pct != null ? Number(row.big_holder_pct) : null;
+        const curMid = row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null;
+        const curWhale = row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null;
+        return {
+            stock_code: row.stock_code as string,
+            stock_name: row.stock_name as string | null,
+            total_shareholders: row.total_shareholders as number | null,
+            shareholders_change_rate: row.shareholders_change_rate as number | null,
+            big_holder_pct_change: (curBig != null && old?.big != null) ? curBig - old.big : null,
+            mid_holder_pct_change: (curMid != null && old?.mid != null) ? curMid - old.mid : null,
+            whale_holder_pct_change: (curWhale != null && old?.whale != null) ? curWhale - old.whale : null,
+        };
+    });
+
+    // Filter big holder ranking: N-week change > 0 for the relevant tier
+    let bigHolder = allRows.filter(r => (r[changeField] ?? 0) > 0);
+    if (tierKey) bigHolder = bigHolder.filter(r => (r[tierKey] ?? 0) > 0);
+
+    // App-layer sort: DB sort keys sorted here; price indicator keys handled by applySortToRows
+    const effectiveSort = sort ?? tierKey;
+    if (effectiveSort && DB_SORT_KEYS.has(effectiveSort)) {
+        const s = effectiveSort as keyof EquityRow;
+        bigHolder = [...bigHolder].sort((a, b) => {
+            const aVal = a[s] as number | null ?? null;
+            const bVal = b[s] as number | null ?? null;
+            if (aVal === null && bVal === null) return 0;
+            if (aVal === null) return 1;
+            if (bVal === null) return -1;
+            return dir === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+    } else if (!effectiveSort || !['it_buy_5d', 'amount'].includes(effectiveSort)) {
+        bigHolder = [...bigHolder].sort((a, b) => (b[changeField] ?? 0) - (a[changeField] ?? 0));
+    }
+
+    // Retail decline: always filter by 1-week shareholders_change_rate (pre-computed field)
+    let retailDecline = allRows.filter(r => (r.shareholders_change_rate ?? 0) < 0);
+    if (tierKey) retailDecline = retailDecline.filter(r => (r[tierKey] ?? 0) > 0);
+    retailDecline = [...retailDecline].sort((a, b) => (a.shareholders_change_rate ?? 0) - (b.shareholders_change_rate ?? 0));
+
     const allCodes = [...new Set([
-        ...(bigHolder ?? []).map(r => r.stock_code),
-        ...(retailDecline ?? []).map(r => r.stock_code),
+        ...bigHolder.map(r => r.stock_code),
+        ...retailDecline.map(r => r.stock_code),
     ])];
     const [priceIndicators, etfMap, flowMap] = await Promise.all([
         fetchPriceIndicators(allCodes),
@@ -238,18 +330,20 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         fetchFlowMap(),
     ]);
 
-    const doubleSignalRanking = (bigHolder ?? [])
+    const doubleSignalRanking = bigHolder
         .filter(row => (row.shareholders_change_rate ?? 0) < 0)
-        .sort((a, b) => (b.big_holder_pct_change ?? 0) - (a.big_holder_pct_change ?? 0))
-        .slice(0, 10) as EquityRow[];
+        .sort((a, b) => (b[changeField] ?? 0) - (a[changeField] ?? 0))
+        .slice(0, 10);
 
     return {
         snapshotDate,
-        bigHolderRanking: applySortToRows((bigHolder ?? []) as EquityRow[], sort, dir, priceIndicators),
-        retailDeclineRanking: applySortToRows((retailDecline ?? []) as EquityRow[], sort, dir, priceIndicators),
+        bigHolderRanking: applySortToRows(bigHolder, sort, dir, priceIndicators),
+        retailDeclineRanking: applySortToRows(retailDecline, sort, dir, priceIndicators),
         doubleSignalRanking,
         priceIndicators,
         etfMap,
         flowMap,
+        weeks,
+        dateRange,
     };
 }

@@ -72,6 +72,27 @@ def _fetch_inventory() -> pd.DataFrame:
     return raw.rename(columns=rename)
 
 
+def _compute_tier_pct(period_df: pd.DataFrame, min_tier: int) -> pd.Series:
+    """回傳以 stock_id 為 index 的 custody_ratio 加總 Series（排除 tier 17）。"""
+    tier_rows = period_df[period_df["tier"].astype(str).astype(int) >= min_tier]
+    tier_rows = tier_rows[tier_rows["tier"] != AGGREGATE_TIER]
+    return tier_rows.groupby("stock_id")["custody_ratio"].sum()
+
+
+def _summarise(period_df: pd.DataFrame) -> pd.DataFrame:
+    """將單期 inventory 資料聚合為每股一列的 summary。"""
+    agg_rows = period_df[period_df["tier"] == AGGREGATE_TIER]
+    total_sh = (
+        agg_rows.groupby("stock_id")["holder_count"]
+        .first()
+        .rename("total_shareholders")
+    )
+    mid_pct = _compute_tier_pct(period_df, MID_HOLDER_MIN_TIER).rename("mid_holder_pct")
+    big_pct = _compute_tier_pct(period_df, BIG_HOLDER_MIN_TIER).rename("big_holder_pct")
+    whale_pct = _compute_tier_pct(period_df, WHALE_HOLDER_MIN_TIER).rename("whale_holder_pct")
+    return pd.concat([total_sh, mid_pct, big_pct, whale_pct], axis=1)
+
+
 def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
     """
     從 inventory DataFrame 計算每股最新一期與前期的統計差值。
@@ -93,26 +114,6 @@ def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
     latest_date = all_dates[-1]
     prev_date = all_dates[-2]
     logger.info(f"計算期間：{prev_date.date()} → {latest_date.date()}")
-
-    def _compute_tier_pct(period_df: pd.DataFrame, min_tier: int) -> pd.Series:
-        """回傳以 stock_id 為 index 的 custody_ratio 加總 Series（排除 tier 17）。"""
-        tier_rows = period_df[period_df["tier"].astype(str).astype(int) >= min_tier]
-        tier_rows = tier_rows[tier_rows["tier"] != AGGREGATE_TIER]
-        return tier_rows.groupby("stock_id")["custody_ratio"].sum()
-
-    def _summarise(period_df: pd.DataFrame) -> pd.DataFrame:
-        """將單期 inventory 資料聚合為每股一列的 summary。"""
-        agg_rows = period_df[period_df["tier"] == AGGREGATE_TIER]
-
-        total_sh = (
-            agg_rows.groupby("stock_id")["holder_count"]
-            .first()
-            .rename("total_shareholders")
-        )
-        mid_pct = _compute_tier_pct(period_df, MID_HOLDER_MIN_TIER).rename("mid_holder_pct")
-        big_pct = _compute_tier_pct(period_df, BIG_HOLDER_MIN_TIER).rename("big_holder_pct")
-        whale_pct = _compute_tier_pct(period_df, WHALE_HOLDER_MIN_TIER).rename("whale_holder_pct")
-        return pd.concat([total_sh, mid_pct, big_pct, whale_pct], axis=1)
 
     latest_df = df[df["date"] == latest_date]
     prev_df = df[df["date"] == prev_date]
@@ -283,6 +284,87 @@ def _already_synced(snapshot_date: str, storage: SQLStorage) -> bool:
     return (count or 0) > 0
 
 
+def _get_existing_dates(storage: SQLStorage) -> set[str]:
+    """取得 DB 中已存在的 snapshot_date 集合。"""
+    with storage.engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT DISTINCT snapshot_date FROM equity_distribution_stats")
+        ).fetchall()
+    return {str(r[0]) for r in rows}
+
+
+def backfill_history(storage: SQLStorage) -> None:
+    """
+    從 FinLab inventory 補存所有尚未入庫的歷史快照。
+
+    只儲存絕對 pct 值（big/mid/whale_holder_pct + total_shareholders），
+    不計算 _change 欄位（前端 fetchRankingData 會動態計算多週差異）。
+    跳過已存在的 snapshot_date（冪等）。
+    """
+    logger.info("=" * 60)
+    logger.info("Backfill 歷史股東分散快照")
+    logger.info("=" * 60)
+
+    stock_list = storage.get_all_target_stocks()
+    if not stock_list:
+        logger.warning("etf_holdings_snapshot 無資料，中止")
+        return
+    logger.info(f"成分股池：{len(stock_list)} 支")
+
+    if not _login_finlab():
+        return
+
+    logger.info("從 FinLab 取得股東分散表（含完整歷史）...")
+    inv_df = _fetch_inventory()
+    if inv_df.empty:
+        logger.error("FinLab inventory 資料為空，中止")
+        return
+
+    df = inv_df[inv_df["stock_id"].isin(stock_list)].copy()
+    if df.empty:
+        logger.warning("成分股池與 inventory 無交集")
+        return
+
+    df["date"] = pd.to_datetime(df["date"])
+    all_dates = sorted(df["date"].unique())
+    logger.info(f"FinLab 共有 {len(all_dates)} 期資料：{all_dates[0].date()} → {all_dates[-1].date()}")
+
+    existing = _get_existing_dates(storage)
+    logger.info(f"DB 已有 {len(existing)} 期快照")
+
+    to_process = [d for d in all_dates if d.strftime("%Y-%m-%d") not in existing]
+    logger.info(f"待補存：{len(to_process)} 期")
+    if not to_process:
+        logger.info("所有歷史快照已存在，無需補存")
+        return
+
+    all_records: list[dict] = []
+    for d in to_process:
+        date_str = d.strftime("%Y-%m-%d")
+        period_df = df[df["date"] == d]
+        summary = _summarise(period_df)
+
+        for stock_code, row in summary.iterrows():
+            all_records.append({
+                "stock_code": str(stock_code),
+                "snapshot_date": date_str,
+                "total_shareholders": int(row["total_shareholders"]) if pd.notna(row.get("total_shareholders")) else None,
+                "big_holder_pct": round(float(row["big_holder_pct"]), 3) if pd.notna(row.get("big_holder_pct")) else None,
+                "mid_holder_pct": round(float(row["mid_holder_pct"]), 3) if pd.notna(row.get("mid_holder_pct")) else None,
+                "whale_holder_pct": round(float(row["whale_holder_pct"]), 3) if pd.notna(row.get("whale_holder_pct")) else None,
+                "shareholders_change_rate": None,
+                "big_holder_pct_change": None,
+                "mid_holder_pct_change": None,
+                "whale_holder_pct_change": None,
+                "stock_name": None,
+            })
+
+    logger.info(f"共 {len(all_records)} 筆待寫入，開始補充名稱...")
+    all_records = _enrich_stock_names(all_records, storage)
+    _upsert(all_records, storage)
+    logger.info(f"✅ Backfill 完成：補存 {len(to_process)} 期歷史快照")
+
+
 def backfill_names(storage: SQLStorage) -> None:
     """只補充 equity_distribution_stats 現有資料的 stock_name，不重算統計。"""
     logger.info("=" * 60)
@@ -321,6 +403,7 @@ def main() -> None:
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--backfill-names", action="store_true", help="只補充現有資料的股票名稱，不重算統計")
+    parser.add_argument("--backfill-history", action="store_true", help="補存 FinLab 所有歷史快照（冪等，跳過已存在的期數）")
     parser.add_argument("--force", action="store_true", help="強制重寫（跳過已存在的 snapshot_date 保護，用於補欄位）")
     args = parser.parse_args()
 
@@ -328,6 +411,10 @@ def main() -> None:
 
     if args.backfill_names:
         backfill_names(storage)
+        return
+
+    if args.backfill_history:
+        backfill_history(storage)
         return
 
     logger.info("=" * 60)
