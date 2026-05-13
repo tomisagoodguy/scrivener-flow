@@ -50,7 +50,17 @@
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: 散戶減少面板僅顯示股東人數實際減少的股票\")",
       "Bash(2>&1)",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); findings=[f for f in data['findings'] if f['severity'] in \\('Critical','Warning'\\)]; print\\(f'Findings: {len\\(findings\\)}'\\); [print\\(f['id'], f['summary']\\) for f in findings]\")",
-      "Bash(bash \"c:/Users/user/Documents/GitHub/scrivener-flow/skills/git-pushing/scripts/smart_commit.sh\")"
+      "Bash(bash \"c:/Users/user/Documents/GitHub/scrivener-flow/skills/git-pushing/scripts/smart_commit.sh\")",
+      "Bash(xargs -I {} basename {})",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'Progress: {d[\\\\\"progress\\\\\"][\\\\\"complete\\\\\"]}/{d[\\\\\"progress\\\\\"][\\\\\"total\\\\\"]}'\\); [print\\(f'  Pending: {t[\\\\\"id\\\\\"]}. {t[\\\\\"description\\\\\"][:80]}'\\) for t in d['tasks'] if not t['done']]\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf\\): 整合 tw-active 研究工具至 pipeline\")",
+      "Read(//c/Users/user/**)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['instruction'][:800]\\)\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['instruction'][:600]\\)\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); findings=[f for f in d['findings'] if f['severity'] in \\('Critical','Warning'\\)]; print\\(f'{len\\(findings\\)} Warning/Critical findings'\\); [print\\(f'  [{f[\\\\\"severity\\\\\"]}] {f[\\\\\"summary\\\\\"]}'\\) for f in findings]\")",
+      "Bash(findstr /i \"state all_done\")",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\investment\\\\matched-pairs\")",
+      "Bash(Remove-Item -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\actions\\\\getEtfMatchedPairs.ts\")"
     ]
   },
   "enabledMcpjsonServers": [

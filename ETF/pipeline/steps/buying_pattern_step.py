@@ -62,7 +62,7 @@ class BuyingPatternStep(BaseStep):
                 self.logger.info("No buying events to classify for %s", ctx.date_str)
             self._fill_forward_returns(ctx)
         except Exception as e:
-            self.logger.error("BuyingPatternStep failed: %s", e)
+            self.logger.error("BuyingPatternStep failed: %s", e, exc_info=True)
         return ctx
 
     # ------------------------------------------------------------------ classify
@@ -141,16 +141,16 @@ class BuyingPatternStep(BaseStep):
         codes_arr = "{" + ",".join(stock_codes) + "}"
         rows = conn.execute(text("""
             WITH ranked AS (
-                SELECT stock_code, date, close, high, low,
-                       LAG(close) OVER (PARTITION BY stock_code ORDER BY date) AS prev_close
+                SELECT stock_code, data_date, close, high, low,
+                       LAG(close) OVER (PARTITION BY stock_code ORDER BY data_date) AS prev_close
                 FROM stock_prices_daily
                 WHERE stock_code = ANY(CAST(:codes AS text[]))
-                  AND date <= CAST(:d AS date)
-                ORDER BY date DESC
+                  AND data_date <= CAST(:d AS date)
+                ORDER BY data_date DESC
             )
-            SELECT stock_code, date, close, high, low, prev_close
+            SELECT stock_code, data_date, close, high, low, prev_close
             FROM ranked
-            WHERE date = CAST(:d AS date)
+            WHERE data_date = CAST(:d AS date)
         """), {"codes": codes_arr, "d": target_date})
         return {r.stock_code: dict(r._mapping) for r in rows}
 
@@ -275,13 +275,13 @@ class BuyingPatternStep(BaseStep):
             return {}
         codes_arr = "{" + ",".join(stock_codes) + "}"
         rows = conn.execute(text("""
-            SELECT stock_code, date, close
+            SELECT stock_code, data_date, close
             FROM stock_prices_daily
             WHERE stock_code = ANY(CAST(:codes AS text[]))
-              AND date >= CAST(:cutoff AS date)
-              AND date <= CAST(:today AS date)
+              AND data_date >= CAST(:cutoff AS date)
+              AND data_date <= CAST(:today AS date)
         """), {"codes": codes_arr, "cutoff": cutoff, "today": today})
-        return {(r.stock_code, str(r.date)): float(r.close) for r in rows if r.close is not None}
+        return {(r.stock_code, str(r.data_date)): float(r.close) for r in rows if r.close is not None}
 
     def _compute_missing_returns(
         self,
