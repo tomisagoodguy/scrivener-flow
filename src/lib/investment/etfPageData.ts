@@ -1,8 +1,14 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import type { Holding, DiffLog } from '@/types/investment';
+import { getEtfMeta } from '@/lib/investment/etfRegistry';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
 export type { QuantFilter } from '@/lib/investment/quantFilters';
+
+export interface EtfFreshnessMeta {
+    dataDate: string;
+    dataSource: 'official_api' | 'pocket';
+}
 
 export interface RankingHistoryRow {
     data_date: string;
@@ -27,6 +33,7 @@ export async function getHoldings(etfCode: string): Promise<{
     holdings: Holding[];
     updatedAt: string | null;
     dataDate: string | null;
+    meta: EtfFreshnessMeta | null;
 }> {
     const supabase = await createClient();
 
@@ -39,7 +46,7 @@ export async function getHoldings(etfCode: string): Promise<{
         .limit(2);
 
     if (!dateCandidates || dateCandidates.length === 0) {
-        return { holdings: [], updatedAt: null, dataDate: null };
+        return { holdings: [], updatedAt: null, dataDate: null, meta: null };
     }
 
     const fetchHoldingsForDate = async (date: string) => {
@@ -133,7 +140,15 @@ export async function getHoldings(etfCode: string): Promise<{
         };
     }) as Holding[];
 
-    return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate };
+    const etfMeta = getEtfMeta(etfCode);
+    const meta: EtfFreshnessMeta | null = targetDate
+        ? {
+              dataDate: targetDate,
+              dataSource: etfMeta?.dataSource ?? 'pocket',
+          }
+        : null;
+
+    return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate, meta };
 }
 
 export async function getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {

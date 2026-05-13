@@ -8,6 +8,9 @@ Shareholder Signal Step
 from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 ACCUMULATE_THRESHOLD = 0.1
@@ -24,12 +27,12 @@ class ShareholderSignalStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run or ctx.df is None or ctx.df.empty
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
             stock_codes = ctx.df["code"].tolist()
             signals: dict[str, str] = {}
 
-            with ctx.sql_storage.engine.connect() as conn:
+            with services.sql_storage.engine.connect() as conn:
                 rows = conn.execute(
                     text("""
                         SELECT DISTINCT ON (stock_code) stock_code, big_holder_pct_change

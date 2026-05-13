@@ -12,6 +12,9 @@ from datetime import date
 from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 from ETF.services.finlab.bare_k_service import BareKService
 
@@ -30,9 +33,9 @@ class SyncBareKStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         # 1. 從 watch_list 聚合所有使用者的股票（service role 繞過 RLS）
-        stock_ids = self._fetch_watch_list_stocks(ctx)
+        stock_ids = self._fetch_watch_list_stocks(ctx, services)
 
         if not stock_ids:
             self.logger.info("watch_list is empty, skipping BareK sync.")
@@ -72,7 +75,7 @@ class SyncBareKStep(BaseStep):
 
         # 4. 批次 upsert
         if snapshots:
-            self._upsert_snapshots(ctx, snapshots)
+            self._upsert_snapshots(ctx, snapshots, services)
 
         ctx.bare_k_synced_count = success_count
         self.logger.info(
@@ -82,13 +85,13 @@ class SyncBareKStep(BaseStep):
 
     # ──────────────────────────────────────────────────────────────────────
 
-    def _fetch_watch_list_stocks(self, ctx: PipelineContext) -> list[str]:
+    def _fetch_watch_list_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
         """
         從 watch_list 讀取所有使用者的自選股（service role 繞過 RLS）。
         按 created_at 升序排列，取最多 MAX_STOCKS 支。
         """
         try:
-            with ctx.sql_storage.engine.connect() as conn:
+            with services.sql_storage.engine.connect() as conn:
                 result = conn.execute(text("""
                     SELECT DISTINCT stock_id
                     FROM watch_list
@@ -100,7 +103,7 @@ class SyncBareKStep(BaseStep):
             self.logger.error(f"Failed to fetch watch_list: {e}")
             return []
 
-    def _upsert_snapshots(self, ctx: PipelineContext, snapshots: list[dict]) -> None:
+    def _upsert_snapshots(self, ctx: PipelineContext, snapshots: list[dict], services: "PipelineServices") -> None:
         """批次 upsert snapshots 至 bare_k_snapshots"""
         upsert_sql = text("""
             INSERT INTO bare_k_snapshots
@@ -120,7 +123,7 @@ class SyncBareKStep(BaseStep):
         """)
 
         try:
-            with ctx.sql_storage.engine.connect() as conn:
+            with services.sql_storage.engine.connect() as conn:
                 for snap in snapshots:
                     conn.execute(upsert_sql, {
                         "stock_id":  snap["stock_id"],

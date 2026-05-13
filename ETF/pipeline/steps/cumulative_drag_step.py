@@ -19,6 +19,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -36,26 +39,26 @@ class CumulativeDragStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            self._run(ctx)
+            self._run(ctx, services)
         except Exception as e:
             self.logger.error(f"CumulativeDragStep failed: {e}")
         return ctx
 
     # ------------------------------------------------------------------ private
 
-    def _run(self, ctx: PipelineContext) -> None:
+    def _run(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         computed_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
         all_codes = get_all_etf_codes()
 
-        events_by_etf = self._fetch_events(ctx, all_codes)
+        events_by_etf = self._fetch_events(ctx, all_codes, services)
         if not events_by_etf:
             self.logger.info("No frontrunning events available; skipping drag computation")
             return
 
-        aum_map = self._fetch_latest_aum(ctx, all_codes)
-        vol_baseline_map = self._fetch_baseline_volumes(ctx)
+        aum_map = self._fetch_latest_aum(ctx, all_codes, services)
+        vol_baseline_map = self._fetch_baseline_volumes(ctx, services)
 
         records = []
         for etf_code in all_codes:
@@ -67,10 +70,10 @@ class CumulativeDragStep(BaseStep):
                 records.append(rec)
 
         if records:
-            self._upsert(ctx, records)
+            self._upsert(services, records, services)
             self.logger.info("Upserted %d drag records for %s", len(records), computed_date)
 
-    def _fetch_events(self, ctx: PipelineContext, all_codes: list[str]) -> dict:
+    def _fetch_events(self, ctx: PipelineContext, all_codes: list[str], services: "PipelineServices") -> dict:
         """從 etf_frontrunning_stats 讀取所有有效事件"""
         sql = text("""
             SELECT etf_code, stock_code, event_date,
@@ -80,7 +83,7 @@ class CumulativeDragStep(BaseStep):
               AND r_t0 IS NOT NULL
             ORDER BY etf_code, event_date
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql, {"codes": all_codes}).fetchall()
 
         from collections import defaultdict
@@ -94,7 +97,7 @@ class CumulativeDragStep(BaseStep):
             })
         return result
 
-    def _fetch_latest_aum(self, ctx: PipelineContext, all_codes: list[str]) -> dict[str, float]:
+    def _fetch_latest_aum(self, ctx: PipelineContext, all_codes: list[str], services: "PipelineServices") -> dict[str, float]:
         """取各 ETF 最新 AUM（億元）"""
         sql = text("""
             SELECT DISTINCT ON (etf_code) etf_code, aum_100m
@@ -103,11 +106,11 @@ class CumulativeDragStep(BaseStep):
               AND aum_100m IS NOT NULL
             ORDER BY etf_code, data_date DESC
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql, {"codes": all_codes}).fetchall()
         return {r.etf_code: float(r.aum_100m) for r in rows}
 
-    def _fetch_baseline_volumes(self, ctx: PipelineContext) -> dict[str, float]:
+    def _fetch_baseline_volumes(self, ctx: PipelineContext, services: "PipelineServices") -> dict[str, float]:
         """從 stock_prices_daily 取各股近 20 日成交量 median 作為 baseline"""
         sql = text("""
             SELECT stock_code, volume
@@ -118,7 +121,7 @@ class CumulativeDragStep(BaseStep):
         from collections import defaultdict
         vols: dict[str, list[float]] = defaultdict(list)
         try:
-            with ctx.sql_storage.engine.connect() as conn:
+            with services.sql_storage.engine.connect() as conn:
                 rows = conn.execute(sql).fetchall()
             for r in rows:
                 vols[r.stock_code].append(float(r.volume))
@@ -171,7 +174,7 @@ class CumulativeDragStep(BaseStep):
         }
 
     @staticmethod
-    def _upsert(ctx: PipelineContext, records: list[dict]) -> None:
+    def _upsert(services: "PipelineServices", records: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_cumulative_drag
                 (etf_code, computed_date, n_events, days_span, events_per_year,
@@ -186,6 +189,6 @@ class CumulativeDragStep(BaseStep):
                 annual_excess_volume_kshares_per_yi = EXCLUDED.annual_excess_volume_kshares_per_yi,
                 annual_manager_drag_kshares_per_yi  = EXCLUDED.annual_manager_drag_kshares_per_yi
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()

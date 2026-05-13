@@ -6,6 +6,9 @@ Sync OHLCV Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 
 
 class SyncOHLCVStep(BaseStep):
@@ -18,7 +21,7 @@ class SyncOHLCVStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
     
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         if ctx.df is None:
             raise ValueError("No DataFrame available for OHLCV sync")
         
@@ -38,10 +41,10 @@ class SyncOHLCVStep(BaseStep):
         all_codes = list(set(ctx.df['code'].tolist() + ctx.secondary_stock_codes))
         self.logger.info(f"Syncing historical OHLCV for charts ({days} days, {len(all_codes)} stocks)...")
 
-        ohlcv_df = ctx.finlab_srv.get_ohlcv(all_codes, days=days)
+        ohlcv_df = services.finlab_srv.get_ohlcv(all_codes, days=days)
         
         if not ohlcv_df.empty:
-            ctx.storage.save_stock_prices(ohlcv_df)
+            services.storage.save_stock_prices(ohlcv_df)
             self.logger.info(f"OHLCV sync completed. {len(ohlcv_df)} records.")
         else:
             self.logger.warning("No OHLCV data returned from Finlab.")

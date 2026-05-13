@@ -13,6 +13,9 @@ from datetime import datetime, timedelta, timezone
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 
 
 def _last_weekday() -> str:
@@ -33,7 +36,7 @@ class ScrapeStep(BaseStep):
     def name(self) -> str:
         return "Scrape Holdings"
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         df, date_str = self._try_official_api()
 
         if df is None or df.empty:
@@ -49,9 +52,33 @@ class ScrapeStep(BaseStep):
 
         ctx.df = df
         ctx.date_str = date_str
-        ctx.update_finlab_stock_list()
+        self._update_finlab_stock_list(ctx, services)
         self.logger.info(f"[SCRAPE] 取得 {date_str} 資料，共 {len(df)} 筆")
         return ctx
+
+    def _update_finlab_stock_list(self, ctx: PipelineContext, services: "PipelineServices") -> None:
+        """更新 services.finlab_srv 的股票清單（含策略選股）"""
+        from ETF.services.finlab_service import FinlabService
+
+        stock_list = ctx.df['code'].tolist() if ctx.df is not None else []
+
+        try:
+            from sqlalchemy import text
+            with services.sql_storage.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT DISTINCT stock_code
+                    FROM strategy_daily_holdings
+                    WHERE data_date >= CURRENT_DATE - INTERVAL '3 months'
+                    ORDER BY stock_code
+                """))
+                strategy_stocks = [row[0] for row in result.fetchall()]
+            stock_list = list(set(stock_list + strategy_stocks))
+        except Exception as e:
+            self.logger.warning(f"無法載入策略股票清單: {e}")
+
+        if stock_list:
+            services.finlab_srv = FinlabService(stock_list=stock_list)
+            self.logger.info(f"📋 Finlab 追蹤清單已更新: {len(stock_list)} 檔股票")
 
     def _try_official_api(self):
         try:

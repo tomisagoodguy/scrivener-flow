@@ -21,6 +21,9 @@ import pandas as pd
 from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -43,19 +46,19 @@ class MatchedPairsStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            self._run(ctx)
+            self._run(ctx, services)
         except Exception as e:
             self.logger.error(f"MatchedPairsStep failed: {e}")
         return ctx
 
     # ------------------------------------------------------------------ private
 
-    def _run(self, ctx: PipelineContext) -> None:
+    def _run(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         computed_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
-        active_events = self._fetch_active_events(ctx)
+        active_events = self._fetch_active_events(ctx, services)
         if not active_events:
             self.logger.info("No active ETF frontrunning events; skipping matched pairs")
             return
@@ -70,13 +73,13 @@ class MatchedPairsStep(BaseStep):
             self.logger.info("No overlap stocks with sufficient events")
             return
 
-        self._upsert_detail(ctx, detail_rows)
-        self._upsert_summary(ctx, summary)
+        self._upsert_detail(services, detail_rows, services)
+        self._upsert_summary(services, summary, services)
         self.logger.info(
             "Upserted %d matched-pair rows + summary for %s", len(detail_rows), computed_date
         )
 
-    def _fetch_active_events(self, ctx: PipelineContext) -> dict[str, list[dict]]:
+    def _fetch_active_events(self, ctx: PipelineContext, services: "PipelineServices") -> dict[str, list[dict]]:
         """從 etf_frontrunning_stats 讀取主動 ETF 事件（含 r_t0）"""
         sql = text("""
             SELECT stock_code, event_date, r_t0
@@ -84,7 +87,7 @@ class MatchedPairsStep(BaseStep):
             WHERE r_t0 IS NOT NULL
             ORDER BY stock_code, event_date
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql).fetchall()
 
         result: dict[str, list[dict]] = defaultdict(list)
@@ -190,7 +193,7 @@ class MatchedPairsStep(BaseStep):
         return detail_rows, summary
 
     @staticmethod
-    def _upsert_detail(ctx: PipelineContext, records: list[dict]) -> None:
+    def _upsert_detail(services: "PipelineServices", records: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_matched_pairs
                 (computed_date, stock_code, stock_name, n_active_events, n_passive_events,
@@ -206,12 +209,12 @@ class MatchedPairsStep(BaseStep):
                 passive_median_r = EXCLUDED.passive_median_r,
                 diff_median      = EXCLUDED.diff_median
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()
 
     @staticmethod
-    def _upsert_summary(ctx: PipelineContext, summary: dict) -> None:
+    def _upsert_summary(services: "PipelineServices", summary: dict) -> None:
         sql = text("""
             INSERT INTO etf_matched_pairs_summary
                 (computed_date, n_pairs, n_active_higher, n_passive_higher, median_of_diffs)
@@ -223,6 +226,6 @@ class MatchedPairsStep(BaseStep):
                 n_passive_higher = EXCLUDED.n_passive_higher,
                 median_of_diffs  = EXCLUDED.median_of_diffs
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, [summary])
             conn.commit()

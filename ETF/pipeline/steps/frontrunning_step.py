@@ -19,6 +19,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -39,15 +42,15 @@ class FrontrunningStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            events = self._build_add_events(ctx)
+            events = self._build_add_events(ctx, services)
             if not events:
                 self.logger.info("No add events found; skipping frontrunning analysis")
                 return ctx
 
             events = self._attach_volume_ratios(ctx, events)
-            self._upsert(ctx, events)
+            self._upsert(services, events, services)
             self.logger.info("Upserted %d frontrunning events", len(events))
         except Exception as e:
             self.logger.error(f"FrontrunningStep failed: {e}")
@@ -55,7 +58,7 @@ class FrontrunningStep(BaseStep):
 
     # ------------------------------------------------------------------ private
 
-    def _build_add_events(self, ctx: PipelineContext) -> list[dict]:
+    def _build_add_events(self, ctx: PipelineContext, services: "PipelineServices") -> list[dict]:
         """比較相鄰揭露日的持股差異，抽取加碼事件"""
         all_codes = get_all_etf_codes()
 
@@ -65,7 +68,7 @@ class FrontrunningStep(BaseStep):
             WHERE etf_code = ANY(:codes)
             ORDER BY etf_code, stock_code, data_date
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql, {"codes": all_codes}).fetchall()
 
         if not rows:
@@ -174,7 +177,7 @@ class FrontrunningStep(BaseStep):
         return round(target_vol / baseline_median, 4)
 
     @staticmethod
-    def _upsert(ctx: PipelineContext, events: list[dict]) -> None:
+    def _upsert(services: "PipelineServices", events: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_frontrunning_stats
                 (etf_code, stock_code, event_date, delta_shares, prev_shares, cur_shares,
@@ -196,6 +199,6 @@ class FrontrunningStep(BaseStep):
             {k: v for k, v in ev.items() if k != "stock_name"}
             for ev in events
         ]
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()

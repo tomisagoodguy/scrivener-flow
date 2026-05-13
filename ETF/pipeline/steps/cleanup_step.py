@@ -6,6 +6,9 @@ Cleanup Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 
 
 class CleanupStep(BaseStep):
@@ -18,10 +21,10 @@ class CleanupStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
     
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         self.logger.info("Running database capacity cleanup...")
         
-        ctx.sql_storage.cleanup_old_data()
+        services.sql_storage.cleanup_old_data()
         
         self.logger.info("Cleanup completed.")
         

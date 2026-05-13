@@ -15,6 +15,9 @@ from sqlalchemy import text
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.processors.diff_engine import CONSENSUS_WEIGHT_THRESHOLD
 
 logger = logging.getLogger(__name__)
@@ -30,12 +33,12 @@ class OverlapComputeStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         # 使用最新快照的實際日期（而非系統日期），避免非交易日跳過
         latest_date_sql = text("""
             SELECT MAX(data_date) FROM etf_holdings_snapshot
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             result = conn.execute(latest_date_sql).scalar()
 
         if not result:
@@ -53,7 +56,7 @@ class OverlapComputeStep(BaseStep):
               AND weight > 0
         """)
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(select_sql, {"data_date": target_date}).fetchall()
 
         if not rows:
@@ -92,7 +95,7 @@ class OverlapComputeStep(BaseStep):
                 updated_at   = NOW()
         """)
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(upsert_sql, records)
             conn.commit()
 
@@ -102,11 +105,11 @@ class OverlapComputeStep(BaseStep):
         )
 
         # 計算共識加減碼計數（最近 7 個自然日）
-        self._update_consensus_counts(ctx, target_date)
+        self._update_consensus_counts(ctx, target_date, services)
 
         return ctx
 
-    def _update_consensus_counts(self, ctx: PipelineContext, target_date: str) -> None:
+    def _update_consensus_counts(self, ctx: PipelineContext, target_date: str, services: "PipelineServices") -> None:
         """
         查詢最近 7 個自然日的 etf_diff_logs，按 stock_code 統計：
         - consensus_buy_count: BUY/IN 且 abs(diff_weight) >= CONSENSUS_WEIGHT_THRESHOLD 的 ETF 支數
@@ -142,7 +145,7 @@ class OverlapComputeStep(BaseStep):
               AND o.data_date = CAST(:target_date AS date)
         """)
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             result = conn.execute(
                 consensus_sql,
                 {"target_date": target_date, "threshold": CONSENSUS_WEIGHT_THRESHOLD},

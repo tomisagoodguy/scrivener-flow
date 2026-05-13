@@ -8,6 +8,7 @@ import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnaly
 import { EtfSelector } from '@/components/features/investment/EtfSelector';
 import { EtfNewsPanel } from '@/components/features/investment/EtfNewsPanel';
 import { EtfHeroSection } from '@/components/features/investment/EtfHeroSection';
+import { EtfHeader } from '@/components/features/investment/EtfHeader';
 import { EtfStockTradeView } from '@/components/features/investment/EtfStockTradeView';
 import { EtfHoldingsPieChart } from '@/components/features/investment/EtfHoldingsPieChart';
 import { EtfBuyDonutChart } from '@/components/features/investment/EtfBuyDonutChart';
@@ -31,7 +32,7 @@ export default async function InvestmentEtfDrilldownPage({
 
     const etfCode = etf;
     const etfMeta = getEtfMeta(etfCode);
-    const { holdings, updatedAt, dataDate } = await getHoldings(etfCode);
+    const { holdings, updatedAt, dataDate, meta } = await getHoldings(etfCode);
 
     const [logs, rankingHistory, quantFilters, news, drilldown] = await Promise.all([
         getDiffLogs(etfCode),
@@ -68,6 +69,7 @@ export default async function InvestmentEtfDrilldownPage({
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         資料日期: {displayDate} <span className="text-slate-400 dark:text-slate-300 text-xs ml-1">({updateTime})</span>
                     </div>
+                    {meta && <EtfHeader dataDate={meta.dataDate} dataSource={meta.dataSource} />}
                     <AIAnalysisPromptButton holdings={holdingsWithFilters} dataDate={displayDate} />
                 </div>
             </div>

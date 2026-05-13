@@ -10,6 +10,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import ALL_ETF_CODES
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 TOP_N = 10    # 取前幾大持股查公告
@@ -26,12 +29,12 @@ class NewsContextStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run or ctx.df is None or ctx.df.empty
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
             from ETF.services.news.mops_client import fetch_mops_announcements
 
             # 1. 從 DB 查所有 ETF 最新快照的前十大持股
-            etf_top_codes = self._fetch_all_etf_top_codes(ctx)
+            etf_top_codes = self._fetch_all_etf_top_codes(ctx, services)
 
             # 2. 00981A 用 ctx.df（最新、尚未落 DB）覆蓋
             if ctx.df is not None and not ctx.df.empty:
@@ -58,7 +61,7 @@ class NewsContextStep(BaseStep):
                 codes_set = set(codes)
                 etf_news = [n for n in news if n["stock_code"] in codes_set]
                 if etf_news:
-                    inserted = ctx.sql_storage.upsert_etf_news(etf_code, etf_news)
+                    inserted = services.sql_storage.upsert_etf_news(etf_code, etf_news)
                     total_inserted += inserted
 
             self.logger.info(f"📰 etf_news 寫入：{total_inserted} 筆新公告（{len(etf_top_codes)} 支 ETF）")
@@ -69,11 +72,11 @@ class NewsContextStep(BaseStep):
 
         return ctx
 
-    def _fetch_all_etf_top_codes(self, ctx: PipelineContext) -> dict[str, list[str]]:
+    def _fetch_all_etf_top_codes(self, ctx: PipelineContext, services: "PipelineServices") -> dict[str, list[str]]:
         """從 etf_holdings_snapshot 查各 ETF 最新快照前十大持股代碼"""
         result: dict[str, list[str]] = {}
         try:
-            with ctx.sql_storage.engine.connect() as conn:
+            with services.sql_storage.engine.connect() as conn:
                 for etf_code in ALL_ETF_CODES:
                     rows = conn.execute(
                         text("""

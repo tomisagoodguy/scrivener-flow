@@ -19,6 +19,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -43,20 +46,20 @@ class FlowComputeStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            self._run(ctx)
+            self._run(ctx, services)
         except Exception as e:
             self.logger.error(f"FlowComputeStep failed: {e}")
         return ctx
 
     # ------------------------------------------------------------------ private
 
-    def _run(self, ctx: PipelineContext) -> None:
+    def _run(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         target_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
         all_codes = get_all_etf_codes()
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             diffs = self._fetch_diffs(conn, all_codes, target_date)
             prices = self._fetch_prices(conn, target_date)
             prev_shares_map = self._fetch_prev_shares(conn, all_codes, target_date)
@@ -68,7 +71,7 @@ class FlowComputeStep(BaseStep):
         inflow, outflow, by_etf_map = self._aggregate(filtered, prices)
         totals = self._compute_totals(inflow, outflow)
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             self._upsert_flow(conn, target_date, etfs_covered, etfs_lagging, inflow, outflow, by_etf_map, totals)
             self._write_cross_buy_signals(conn, inflow, target_date)
             conn.commit()

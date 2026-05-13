@@ -6,6 +6,9 @@ Notify Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 import pandas as pd
 from typing import List, Dict, Any
 
@@ -20,10 +23,10 @@ class NotifyStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         from ETF.config.etf_registry import ETF_META
 
-        notifier = ctx.notifier
+        notifier = services.notifier
 
         # 1. 整合 00981A 摘要（主流程）
         entry = ETF_META.get(ctx.etf_code)
@@ -58,8 +61,8 @@ class NotifyStep(BaseStep):
                 fetch_latest_flow_row, build_pre_market_bubble,
                 fetch_981a_diff_row, build_981a_guide_bubble,
             )
-            row = fetch_latest_flow_row(ctx.sql_storage.engine)
-            row_981a = fetch_981a_diff_row(ctx.sql_storage.engine)
+            row = fetch_latest_flow_row(services.sql_storage.engine)
+            row_981a = fetch_981a_diff_row(services.sql_storage.engine)
 
             bubbles = []
             if row is not None:

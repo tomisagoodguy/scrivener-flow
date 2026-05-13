@@ -6,6 +6,9 @@ Diff Compute Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.processors.diff_engine import compute_diff, filter_significant
 import pandas as pd
 
@@ -20,7 +23,7 @@ class DiffComputeStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         if ctx.df is None:
             raise ValueError("No DataFrame available for diff computation")
         
@@ -34,19 +37,19 @@ class DiffComputeStep(BaseStep):
 
         try:
             # Check latest date available in DB
-            latest_date_in_db = ctx.storage.get_latest_date(ctx.etf_code)
+            latest_date_in_db = services.storage.get_latest_date(ctx.etf_code)
 
             if latest_date_in_db == ctx.date_str:
                 self.logger.info(f"Latest DB snapshot is already today ({latest_date_in_db}). Comparing against previous day (Index 1).")
                 # Fetch index 1 (2nd latest)
-                target_df = ctx.storage.get_snapshot_by_index(ctx.etf_code, index=1)
+                target_df = services.storage.get_snapshot_by_index(ctx.etf_code, index=1)
             else:
                 self.logger.info(f"Comparing against latest DB snapshot: {latest_date_in_db}")
-                target_df = ctx.storage.get_snapshot_from_date(ctx.etf_code, latest_date_in_db)
+                target_df = services.storage.get_snapshot_from_date(ctx.etf_code, latest_date_in_db)
 
         except Exception as e:
             self.logger.warning(f"Could not intelligently determine snapshot date: {e}. Falling back to simple latest fetch.")
-            target_df = ctx.storage.get_latest_snapshot(ctx.etf_code)
+            target_df = services.storage.get_latest_snapshot(ctx.etf_code)
 
         prev_df = target_df
 

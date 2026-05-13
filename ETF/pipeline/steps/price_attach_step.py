@@ -6,6 +6,9 @@ Price Attach Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 
 
 class PriceAttachStep(BaseStep):
@@ -18,7 +21,7 @@ class PriceAttachStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
     
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         if ctx.df is None:
             raise ValueError("No DataFrame available for price attachment")
         
@@ -30,7 +33,7 @@ class PriceAttachStep(BaseStep):
         
         if len(numeric_codes) > 10:
             self.logger.info("Detected Taiwan stocks. Fetching prices, amounts and margins...")
-            ctx.df = ctx.finlab_srv.attach_prices(ctx.df, ctx.date_str)
+            ctx.df = services.finlab_srv.attach_prices(ctx.df, ctx.date_str)
         else:
             self.logger.info("Codes do not look like Taiwan stocks. Skipping Finlab price fetch.")
             ctx.df['price'] = None

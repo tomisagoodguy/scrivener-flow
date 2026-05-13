@@ -17,6 +17,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -42,15 +45,15 @@ class AumSyncStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            self._sync_all(ctx)
+            self._sync_all(ctx, services)
         except Exception as e:
             # 輔助步驟：只 log，不 raise
             self.logger.error(f"AumSyncStep failed: {e}")
 
         try:
-            self._sync_aum_series(ctx)
+            self._sync_aum_series(ctx, services)
         except Exception as e:
             self.logger.error(f"AumSyncStep._sync_aum_series failed: {e}")
 
@@ -58,11 +61,11 @@ class AumSyncStep(BaseStep):
 
     # ------------------------------------------------------------------ private
 
-    def _sync_all(self, ctx: PipelineContext) -> None:
+    def _sync_all(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         target_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
         all_codes = get_all_etf_codes()
 
-        nav_df, units_df = self._fetch_finlab_etf_data(ctx)
+        nav_df, units_df = self._fetch_finlab_etf_data(ctx, services)
         if nav_df is None or units_df is None:
             self.logger.warning("FinLab ETF fund data not available; skipping AUM sync")
             return
@@ -77,12 +80,12 @@ class AumSyncStep(BaseStep):
             self.logger.warning("No AUM records produced for %s", target_date)
             return
 
-        self._upsert(ctx, records)
+        self._upsert(services, records, services)
         self.logger.info("Upserted %d AUM records for %s", len(records), target_date)
 
-    def _fetch_finlab_etf_data(self, ctx):
+    def _fetch_finlab_etf_data(self, ctx, services: "PipelineServices"):
         """從 FinLab 取 ETF NAV 與流通單位數 DataFrame"""
-        client = ctx.finlab_srv._client if hasattr(ctx.finlab_srv, "_client") else None
+        client = services.finlab_srv._client if hasattr(services.finlab_srv, "_client") else None
         if client and not client.login():
             return None, None
 
@@ -154,7 +157,7 @@ class AumSyncStep(BaseStep):
         return max(past_rows, key=lambda x: x[0])[1]
 
     @staticmethod
-    def _upsert(ctx: PipelineContext, records: list[dict]) -> None:
+    def _upsert(services: "PipelineServices", records: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_aum_series
                 (etf_code, data_date, aum_100m, nav, units, inflow_100m)
@@ -166,11 +169,11 @@ class AumSyncStep(BaseStep):
                 units       = EXCLUDED.units,
                 inflow_100m = COALESCE(EXCLUDED.inflow_100m, etf_aum_series.inflow_100m)
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()
 
-    def _sync_aum_series(self, ctx: PipelineContext) -> None:
+    def _sync_aum_series(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         """計算並更新 cumulative_inflow_yi 與 inflow_share_of_growth（增量欄位）"""
         all_codes = get_all_etf_codes()
         sql_read = text("""
@@ -180,7 +183,7 @@ class AumSyncStep(BaseStep):
               AND aum_100m IS NOT NULL
             ORDER BY etf_code, data_date
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql_read, {"codes": all_codes}).fetchall()
 
         if not rows:
@@ -222,7 +225,7 @@ class AumSyncStep(BaseStep):
             WHERE etf_code = :etf_code
               AND data_date = :data_date
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql_update, updates)
             conn.commit()
         logger.info("Updated cumulative_inflow_yi for %d rows", len(updates))

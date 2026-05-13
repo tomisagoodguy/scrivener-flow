@@ -19,6 +19,9 @@ from typing import Any
 from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -57,19 +60,19 @@ class SignalDetectStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            self._detect_all(ctx)
+            self._detect_all(ctx, services)
         except Exception as e:
             self.logger.error(f"SignalDetectStep failed: {e}")
         return ctx
 
     # ------------------------------------------------------------------ private
 
-    def _detect_all(self, ctx: PipelineContext) -> None:
+    def _detect_all(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         target_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             holdings = self._fetch_holdings(conn, target_date)
             diff_logs = self._fetch_diff_logs(conn, target_date)
 
@@ -82,7 +85,7 @@ class SignalDetectStep(BaseStep):
             self.logger.info("No signals detected for %s", target_date)
             return
 
-        self._upsert(ctx, signals)
+        self._upsert(services, signals, services)
         self.logger.info("Upserted %d signals for %s", len(signals), target_date)
 
     @staticmethod
@@ -191,7 +194,7 @@ class SignalDetectStep(BaseStep):
         return results
 
     @staticmethod
-    def _upsert(ctx: PipelineContext, signals: list[dict]) -> None:
+    def _upsert(services: "PipelineServices", signals: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_signals
                 (signal_type, stock_code, data_date, strength, etf_codes, metadata)
@@ -213,6 +216,6 @@ class SignalDetectStep(BaseStep):
             }
             for s in signals
         ]
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, params)
             conn.commit()

@@ -6,6 +6,9 @@ Sync Company Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 
 
 class SyncCompanyStep(BaseStep):
@@ -18,16 +21,16 @@ class SyncCompanyStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
     
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         if ctx.df is None:
             raise ValueError("No DataFrame available for company sync")
         
         self.logger.info("Syncing company basic info and industry categories...")
         
-        company_df = ctx.finlab_srv.get_company_info(ctx.df['code'].tolist())
+        company_df = services.finlab_srv.get_company_info(ctx.df['code'].tolist())
         
         if not company_df.empty:
-            ctx.storage.save_company_info(company_df)
+            services.storage.save_company_info(company_df)
             self.logger.info(f"Company info sync completed. {len(company_df)} records.")
         else:
             self.logger.warning("No company info returned from Finlab.")

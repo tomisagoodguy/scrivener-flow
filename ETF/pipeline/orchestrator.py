@@ -8,6 +8,7 @@ import logging
 from typing import List, Optional, Type
 
 from ETF.pipeline.context import PipelineContext
+from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.steps import (
     ScrapeStep,
@@ -76,11 +77,46 @@ class PipelineOrchestrator:
     def __init__(self, steps: Optional[List[Type[BaseStep]]] = None):
         """
         初始化編排器。
-        
+
         Args:
             steps: 自訂步驟列表，預設使用 DEFAULT_STEPS
         """
         self.step_classes = steps or self.DEFAULT_STEPS
+
+    def _build_services(self, ctx: PipelineContext) -> PipelineServices:
+        """初始化並回傳 PipelineServices（由 ctx 的環境變數驅動）"""
+        import os
+        from dotenv import load_dotenv
+        from ETF.database.storage import ETFStorage
+        from ETF.database.sql_storage import SQLStorage
+        from ETF.notifiers.line_notifier import LineNotifier
+        from ETF.services.finlab_service import FinlabService
+
+        if os.path.exists('.env.local'):
+            load_dotenv('.env.local')
+        else:
+            load_dotenv()
+
+        storage = ETFStorage()
+        sql_storage = SQLStorage()
+
+        if os.getenv("STOCK_LINE_CHANNEL_ACCESS_TOKEN"):
+            notifier = LineNotifier(
+                token_env="STOCK_LINE_CHANNEL_ACCESS_TOKEN",
+                user_id_env="STOCK_LINE_USER_ID",
+            )
+        else:
+            notifier = LineNotifier()
+
+        stock_list = ctx.df['code'].tolist() if ctx.df is not None else []
+        finlab_srv = FinlabService(stock_list=stock_list)
+
+        return PipelineServices(
+            storage=storage,
+            notifier=notifier,
+            finlab_srv=finlab_srv,
+            sql_storage=sql_storage,
+        )
     
     def run(self, ctx: PipelineContext) -> PipelineContext:
         """
@@ -96,22 +132,29 @@ class PipelineOrchestrator:
         logger.info(f"   Steps: {len(self.step_classes)}")
         logger.info(f"   Dry Run: {ctx.is_dry_run}")
 
+        services = self._build_services(ctx)
         current_step_name = "unknown"
         try:
             for step_class in self.step_classes:
                 step = step_class()
                 current_step_name = step.name
-                ctx = step.run(ctx)
+                ctx = step.run(ctx, services)
 
             logger.info("🎉 Pipeline completed successfully!")
             return ctx
 
         except Exception as e:
             logger.error(f"❌ Pipeline failed at [{current_step_name}]: {e}")
-            self._send_error_alert(ctx, current_step_name, e)
+            self._send_error_alert(ctx, services, current_step_name, e)
             raise
 
-    def _send_error_alert(self, ctx: PipelineContext, step_name: str, error: Exception) -> None:
+    def _send_error_alert(
+        self,
+        ctx: PipelineContext,
+        services: PipelineServices,
+        step_name: str,
+        error: Exception,
+    ) -> None:
         """Pipeline 失敗時發 LINE 警報給管理員"""
         if ctx.is_dry_run:
             return
@@ -124,7 +167,7 @@ class PipelineOrchestrator:
                 f"💬 錯誤：{str(error)[:200]}\n\n"
                 f"請至 GitHub Actions 查看完整 log。"
             )
-            ctx.notifier.send_text(msg)
+            services.notifier.send_text(msg)
         except Exception as notify_err:
             logger.error(f"Failed to send error alert via LINE: {notify_err}")
     

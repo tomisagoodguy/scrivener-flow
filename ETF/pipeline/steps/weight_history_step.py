@@ -11,6 +11,9 @@ etf_weight_history 表，供前端 Dashboard 繪製各成分股歷史權重走�
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.processors.weight_history_processor import WeightHistoryProcessor
 
 
@@ -24,7 +27,7 @@ class WeightHistoryStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         if ctx.df is None or ctx.df.empty:
             self.logger.warning("No holdings DataFrame. Skipping weight history.")
             return ctx
@@ -47,7 +50,7 @@ class WeightHistoryStep(BaseStep):
             })
 
         # 3. Upsert 至 DB
-        ctx.storage.save_weight_history(records)
+        services.storage.save_weight_history(records)
         self.logger.info(
             f"Weight history saved: {len(records)} 檔"
             f"（Top5: {WeightHistoryProcessor.get_top_n_stocks(df_ranked, 5)}）"

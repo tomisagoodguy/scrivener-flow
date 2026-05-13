@@ -20,6 +20,9 @@ from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
@@ -42,16 +45,16 @@ class ActiveShareStep(BaseStep):
         today = date.today()
         return today.weekday() != 0
 
-    def execute(self, ctx: PipelineContext) -> PipelineContext:
+    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
-            portfolios = self._load_portfolios(ctx)
+            portfolios = self._load_portfolios(ctx, services)
             if len(portfolios) < 2:
                 self.logger.warning("Fewer than 2 ETFs with sufficient TW exposure; skipping")
                 return ctx
 
             computed_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
             records = self._compute_matrix(portfolios, computed_date)
-            self._upsert(ctx, records)
+            self._upsert(services, records, services)
             self.logger.info(
                 "Upserted %d Active Share records for %s (%d ETFs)",
                 len(records), computed_date, len(portfolios),
@@ -62,7 +65,7 @@ class ActiveShareStep(BaseStep):
 
     # ------------------------------------------------------------------ private
 
-    def _load_portfolios(self, ctx: PipelineContext) -> dict[str, dict[str, float]]:
+    def _load_portfolios(self, ctx: PipelineContext, services: "PipelineServices") -> dict[str, dict[str, float]]:
         """讀取各 ETF 最新快照，過濾 TW 股票並 renormalize"""
         all_codes = get_all_etf_codes()
 
@@ -73,7 +76,7 @@ class ActiveShareStep(BaseStep):
             WHERE etf_code = ANY(:codes)
             ORDER BY etf_code, stock_code, data_date DESC
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             rows = conn.execute(sql, {"codes": all_codes}).fetchall()
 
         raw: dict[str, dict[str, float]] = defaultdict(dict)
@@ -141,7 +144,7 @@ class ActiveShareStep(BaseStep):
         return 0.5 * sum(abs(port_a.get(s, 0.0) - port_b.get(s, 0.0)) for s in all_stocks)
 
     @staticmethod
-    def _upsert(ctx: PipelineContext, records: list[dict]) -> None:
+    def _upsert(services: "PipelineServices", records: list[dict]) -> None:
         sql = text("""
             INSERT INTO etf_active_share
                 (computed_date, etf_a, etf_b, active_share_pct, as_vs_mean_a, as_vs_mean_b)
@@ -152,6 +155,6 @@ class ActiveShareStep(BaseStep):
                 as_vs_mean_a     = EXCLUDED.as_vs_mean_a,
                 as_vs_mean_b     = EXCLUDED.as_vs_mean_b
         """)
-        with ctx.sql_storage.engine.connect() as conn:
+        with services.sql_storage.engine.connect() as conn:
             conn.execute(sql, records)
             conn.commit()
