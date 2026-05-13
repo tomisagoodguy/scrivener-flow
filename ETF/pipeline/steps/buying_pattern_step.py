@@ -1,17 +1,19 @@
 """
 Buying Pattern Step
 
-每日分類 BUY/IN 事件為 7 種買進模式，並補齊前 30 天事件的前瞻報酬。
+每日分類 BUY/IN 事件為 6 種買進模式，並補齊前 30 天事件的前瞻報酬。
 屬於輔助步驟，失敗時只 log，不中斷 pipeline。
 
-7 種模式：
+6 種模式：
   volume_spike   — abs(diff_shares) 超過同股同 ETF 過去 20 交易日的 mean + 5.5×std
   chase_high     — 事件日 close >= high*0.99 且漲幅 >= 3%
-  single_lot     — abs(diff_shares) 介於 800~1200
   window_break   — 事件日前 60 日內無 BUY/IN 記錄
-  sustained_buy  — 過去 20 個交易日均有 BUY/IN（全 20 日）
+  sustained_buy  — 過去 20 個 BUY/IN 事件中至少 12 個不同交易日（持續買進）
   new_position   — change_type = 'IN'
   dip_buy        — 事件日 close <= low*1.01 且跌幅 <= -2%
+
+已移除：
+  single_lot     — 回測顯示無超額報酬（勝率 27.7%，低於 baseline）
 """
 
 import json
@@ -35,10 +37,8 @@ FILL_BATCH_SIZE = 500
 
 VOLUME_SPIKE_WINDOW = 20
 VOLUME_SPIKE_MULTIPLIER = 5.5
-SINGLE_LOT_MIN = 800
-SINGLE_LOT_MAX = 1200
 WINDOW_BREAK_DAYS = 60
-SUSTAINED_BUY_THRESHOLD = 20
+SUSTAINED_BUY_THRESHOLD = 12  # 過去 20 個 BUY/IN 事件中至少有 12 個不同交易日
 CHASE_HIGH_RATIO = 0.99
 CHASE_HIGH_GAIN = 0.03
 DIP_BUY_RATIO = 1.01
@@ -176,9 +176,6 @@ class BuyingPatternStep(BaseStep):
         if change_type == "IN":
             patterns.append("new_position")
 
-        if SINGLE_LOT_MIN <= diff_shares <= SINGLE_LOT_MAX:
-            patterns.append("single_lot")
-
         past_vals = [abs(float(h.get("diff_shares") or 0)) for h in history[:VOLUME_SPIKE_WINDOW]]
         if len(past_vals) >= 2:
             import statistics
@@ -304,7 +301,12 @@ class BuyingPatternStep(BaseStep):
             target_day = event_date + timedelta(days=d)
             if target_day > today:
                 continue
-            close_td = price_lookup.get((event["stock_code"], target_day.isoformat()))
+            # 掃最多 +2 天找最近的交易日（處理週末/假日）
+            close_td = None
+            for offset in range(3):
+                close_td = price_lookup.get((event["stock_code"], (target_day + timedelta(days=offset)).isoformat()))
+                if close_td is not None:
+                    break
             if close_td is None:
                 continue
             new_data[key] = round((close_td - close_t) / close_t, 6)
