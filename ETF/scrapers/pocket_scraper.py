@@ -15,7 +15,8 @@ from io import StringIO
 from typing import Optional
 
 import pandas as pd
-from selenium import webdriver
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -27,9 +28,9 @@ BASE_URL = "https://www.pocket.tw/etf/tw/{etf_code}/fundholding"
 PAGE_WAIT_TIMEOUT = 35  # seconds
 
 
-def _build_driver() -> webdriver.Chrome:
+def _build_driver() -> Chrome:
     """建立 headless Chrome WebDriver"""
-    options = webdriver.ChromeOptions()
+    options = ChromeOptions()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -37,7 +38,7 @@ def _build_driver() -> webdriver.Chrome:
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     )
-    return webdriver.Chrome(service=Service(), options=options)
+    return Chrome(service=Service(), options=options)
 
 
 def scrape_holdings(etf_code: str) -> tuple[Optional[pd.DataFrame], Optional[str]]:

@@ -52,10 +52,14 @@ class BrokerProcessor:
         force = net_volume.rolling(60).mean() / net_volume.rolling(60).std()
         
         # Transform to Records
-        buy_s = buy_vol.stack().rename('buy_amount')
-        sell_s = sell_vol.stack().rename('sell_amount')
-        net_vol_s = net_volume.stack().rename('net_volume')
-        force_s = force.stack().rename('force_metric')
+        buy_s = buy_vol.stack()
+        buy_s.name = 'buy_amount'
+        sell_s = sell_vol.stack()
+        sell_s.name = 'sell_amount'
+        net_vol_s = net_volume.stack()
+        net_vol_s.name = 'net_volume'
+        force_s = force.stack()
+        force_s.name = 'force_metric'
         
         merged = pd.concat([buy_s, sell_s, net_vol_s, force_s], axis=1)
         
@@ -65,7 +69,8 @@ class BrokerProcessor:
             merged = merged.loc[final_dates]
 
         records = []
-        for (date, stock), row in merged.iterrows():
+        for idx, row in merged.iterrows():
+            date, stock = idx  # type: ignore[misc]
             if row['buy_amount'] == 0 and row['sell_amount'] == 0 and pd.isna(row['force_metric']):
                 continue
                 

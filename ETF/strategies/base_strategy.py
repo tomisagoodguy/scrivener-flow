@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
 if TYPE_CHECKING:
     from ETF.strategies.shared_cache import StrategyDataCache
 
@@ -20,7 +22,7 @@ class BaseStrategy(ABC):
     description: str
 
     @abstractmethod
-    def get_positions(self, cache: 'StrategyDataCache | None' = None):
+    def get_positions(self, cache: 'StrategyDataCache | None' = None) -> pd.DataFrame | None:
         """回傳持倉 DataFrame（Boolean 或 numeric）。
 
         Args:

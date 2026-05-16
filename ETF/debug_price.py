@@ -25,7 +25,7 @@ def debug_price():
         latest_prices = price_df.iloc[-1]
         
     print(f"Latest prices index head: {latest_prices.index[:5]}")
-    print(f"Mapping result:\n{df['code'].map(latest_prices)}")
+    print(f"Mapping result:\n{df['code'].map(pd.Series(latest_prices))}")
 
 if __name__ == "__main__":
     debug_price()

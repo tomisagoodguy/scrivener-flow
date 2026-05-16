@@ -15,6 +15,7 @@ import logging
 import sys
 from datetime import date, timedelta
 from pathlib import Path
+from typing import cast
 
 from dotenv import load_dotenv
 from sqlalchemy import text
@@ -23,6 +24,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 load_dotenv(project_root / ".env.local")
 
+from ETF.pipeline.context import PipelineContext
+from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.position_summary_step import PositionSummaryStep
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -91,7 +94,7 @@ def backfill(days: int | None, dry_run: bool) -> None:
     for d in target_dates:
         ctx.date_str = d
         try:
-            step._run(ctx, services)
+            step._run(cast(PipelineContext, ctx), cast(PipelineServices, services))
             success += 1
             logger.info("[%d/%d] %s 完成", success, len(target_dates), d)
         except Exception as e:

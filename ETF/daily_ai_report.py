@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import argparse
+from typing import Optional
 
 # Setup Path
 try:
@@ -26,6 +27,52 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
+    """從 sector_strength 查詢當日/本週強勢族群 TOP 5，回傳純文字摘要。
+
+    當日無資料時回傳空字串（降級處理）。
+    """
+    from datetime import date as _date
+    from sqlalchemy import text
+
+    query_date = target_date or _date.today().strftime("%Y-%m-%d")
+
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT category, ret_1d, ret_5d
+                    FROM sector_strength
+                    WHERE date = :d
+                    ORDER BY ret_1d DESC NULLS LAST
+                    LIMIT 10
+                """),
+                {"d": query_date},
+            ).fetchall()
+    except Exception as e:
+        logger.warning(f"build_sector_summary query failed: {e}")
+        return ""
+
+    if not rows:
+        return ""
+
+    top_1d = rows[:5]
+    top_5d = sorted(rows, key=lambda r: (r[2] or 0), reverse=True)[:5]
+
+    lines = [f"📊 今日強勢族群 ({query_date})"]
+    for i, r in enumerate(top_1d, 1):
+        pct = f"{float(r[1]) * 100:+.2f}%" if r[1] is not None else "N/A"
+        lines.append(f"{i}. {r[0]}  {pct}")
+
+    lines.append("")
+    lines.append("📈 本週強勢族群")
+    for i, r in enumerate(top_5d, 1):
+        pct = f"{float(r[2]) * 100:+.2f}%" if r[2] is not None else "N/A"
+        lines.append(f"{i}. {r[0]}  {pct}")
+
+    return "\n".join(lines)
 
 
 def run_report(etf_code: str, dry_run: bool = False) -> None:

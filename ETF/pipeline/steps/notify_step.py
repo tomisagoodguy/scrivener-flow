@@ -6,11 +6,11 @@ Notify Step
 
 from ETF.pipeline.steps.base import BaseStep
 from ETF.pipeline.context import PipelineContext
-from typing import TYPE_CHECKING
+from ETF.daily_ai_report import build_sector_summary
+from typing import TYPE_CHECKING, List, Dict, Any
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
 import pandas as pd
-from typing import List, Dict, Any
 
 
 class NotifyStep(BaseStep):
@@ -82,6 +82,15 @@ class NotifyStep(BaseStep):
                 self.logger.info("Pre-market carousel (market + 00981A) sent for %s", date_label)
         except Exception as e:
             self.logger.error("Pre-market LINE notify failed: %s", e)
+
+        # 族群強弱摘要（輔助，失敗不中斷）
+        try:
+            summary = build_sector_summary(services.sql_storage.engine, ctx.date_str)
+            if summary:
+                notifier.send_text(summary)
+                self.logger.info("Sector strength summary sent to LINE.")
+        except Exception as e:
+            self.logger.error("Sector summary LINE notify failed: %s", e)
 
         return ctx
 

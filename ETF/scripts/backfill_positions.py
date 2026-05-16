@@ -36,18 +36,22 @@ def main() -> None:
     args = parser.parse_args()
 
     from ETF.database.sql_storage import SQLStorage
+    from ETF.pipeline.context import PipelineContext
+    from ETF.pipeline.services import PipelineServices
     from ETF.pipeline.steps.position_summary_step import PositionSummaryStep
     import argparse as _ap
     import pathlib
 
     # 建立最小 ctx
-    from ETF.pipeline.context import PipelineContext
     ctx = PipelineContext(
         args=_ap.Namespace(),
         output_dir=pathlib.Path('.'),
         is_dry_run=False,
         is_ci=True,
     )
+
+    sql_storage = SQLStorage()
+    services = PipelineServices(storage=None, notifier=None, finlab_srv=None, sql_storage=sql_storage)
 
     step = PositionSummaryStep()
     today = date.today()
@@ -57,7 +61,7 @@ def main() -> None:
         target = (today - timedelta(days=i)).isoformat()
         ctx.date_str = target
         try:
-            step.execute(ctx)
+            step.execute(ctx, services)
             logger.info("✓ %s", target)
         except Exception as e:
             logger.error("✗ %s: %s", target, e)

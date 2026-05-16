@@ -9,7 +9,7 @@ from sqlalchemy import text
 load_dotenv('.env.local')
 
 def clean_stale_data():
-    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or ""
     project_ref = supabase_url.split("//")[1].split(".")[0]
     db_password = os.getenv("SUPABASE_DB_PASSWORD")
     db_url = f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres"

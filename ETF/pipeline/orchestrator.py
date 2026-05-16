@@ -36,6 +36,7 @@ from ETF.pipeline.steps import (
     MatchedPairsStep,
 )
 from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
 
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class PipelineOrchestrator:
         MatchedPairsStep,       # [輔助] 主動/被動配對實證 → etf_matched_pairs
         ActiveShareStep,        # [輔助] 持股重疊度（週一執行，非週一自動 skip）→ etf_active_share
         StrategySignalStep,     # [輔助] 執行量化策略，upsert 訊號 → strategy_signals
+        SectorStrengthStep,     # [輔助] 計算全市場族群漲幅 → sector_strength
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
         NotifyStep,

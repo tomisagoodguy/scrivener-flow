@@ -303,6 +303,12 @@ export default async function InvestmentPoolPage() {
                     >
                         📊 裸K看盤
                     </Link>
+                    <Link
+                        href="/investment/sectors"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-900/30 dark:text-violet-400 dark:hover:bg-violet-900/50 transition-colors"
+                    >
+                        🔥 族群強弱
+                    </Link>
                 </div>
             </div>
 

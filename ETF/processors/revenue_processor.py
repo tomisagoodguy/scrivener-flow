@@ -34,8 +34,8 @@ class RevenueProcessor:
                     records.append({
                         'stock_code': stock,
                         'data_date': date.strftime('%Y-%m-%d'),
-                        'revenue': float(rev),
-                        'revenue_yoy': float(yoy) if pd.notna(yoy) else None,
-                        'revenue_mom': float(mom) if pd.notna(mom) else None
+                        'revenue': float(str(rev)),
+                        'revenue_yoy': float(str(yoy)) if pd.notna(yoy) else None,
+                        'revenue_mom': float(str(mom)) if pd.notna(mom) else None
                     })
         return records
