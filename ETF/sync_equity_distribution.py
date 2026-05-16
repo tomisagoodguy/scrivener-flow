@@ -293,13 +293,13 @@ def _get_existing_dates(storage: SQLStorage) -> set[str]:
     return {str(r[0]) for r in rows}
 
 
-def backfill_history(storage: SQLStorage) -> None:
+def backfill_history(storage: SQLStorage, force: bool = False) -> None:
     """
     從 FinLab inventory 補存所有尚未入庫的歷史快照。
 
     只儲存絕對 pct 值（big/mid/whale_holder_pct + total_shareholders），
     不計算 _change 欄位（前端 fetchRankingData 會動態計算多週差異）。
-    跳過已存在的 snapshot_date（冪等）。
+    跳過已存在的 snapshot_date（冪等）。若 force=True，則強制重新計算所有期數（用於補欄位）。
     """
     logger.info("=" * 60)
     logger.info("Backfill 歷史股東分散快照")
@@ -329,14 +329,17 @@ def backfill_history(storage: SQLStorage) -> None:
     all_dates = sorted(df["date"].unique())
     logger.info(f"FinLab 共有 {len(all_dates)} 期資料：{all_dates[0].date()} → {all_dates[-1].date()}")
 
-    existing = _get_existing_dates(storage)
-    logger.info(f"DB 已有 {len(existing)} 期快照")
-
-    to_process = [d for d in all_dates if d.strftime("%Y-%m-%d") not in existing]
-    logger.info(f"待補存：{len(to_process)} 期")
-    if not to_process:
-        logger.info("所有歷史快照已存在，無需補存")
-        return
+    if force:
+        to_process = all_dates
+        logger.info(f"--force-backfill 模式：強制重算所有 {len(to_process)} 期（補欄位用）")
+    else:
+        existing = _get_existing_dates(storage)
+        logger.info(f"DB 已有 {len(existing)} 期快照")
+        to_process = [d for d in all_dates if d.strftime("%Y-%m-%d") not in existing]
+        logger.info(f"待補存：{len(to_process)} 期")
+        if not to_process:
+            logger.info("所有歷史快照已存在，無需補存（使用 --force-backfill 可強制重算）")
+            return
 
     all_records: list[dict] = []
     for d in to_process:
@@ -404,6 +407,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--backfill-names", action="store_true", help="只補充現有資料的股票名稱，不重算統計")
     parser.add_argument("--backfill-history", action="store_true", help="補存 FinLab 所有歷史快照（冪等，跳過已存在的期數）")
+    parser.add_argument("--force-backfill", action="store_true", help="強制重算所有歷史期數並 upsert（用於新增欄位後回填，如 mid/whale_holder_pct）")
     parser.add_argument("--force", action="store_true", help="強制重寫（跳過已存在的 snapshot_date 保護，用於補欄位）")
     args = parser.parse_args()
 
@@ -411,6 +415,10 @@ def main() -> None:
 
     if args.backfill_names:
         backfill_names(storage)
+        return
+
+    if args.force_backfill:
+        backfill_history(storage, force=True)
         return
 
     if args.backfill_history:
