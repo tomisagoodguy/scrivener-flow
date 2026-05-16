@@ -45,6 +45,13 @@ class _MinimalCtx:
         return self._sql_storage
 
 
+class _MinimalServices:
+    """只提供 sql_storage，讓 PositionSummaryStep._run() 能正常呼叫。"""
+
+    def __init__(self, sql_storage):
+        self.sql_storage = sql_storage
+
+
 def get_distinct_dates(ctx: _MinimalCtx, since: str | None) -> list[str]:
     """從 etf_diff_logs 撈出所有有資料的日期，依時間升序。"""
     with ctx.sql_storage.engine.connect() as conn:
@@ -79,11 +86,12 @@ def backfill(days: int | None, dry_run: bool) -> None:
         return
 
     step = PositionSummaryStep()
+    services = _MinimalServices(ctx.sql_storage)
     success = 0
     for d in target_dates:
         ctx.date_str = d
         try:
-            step._run(ctx)
+            step._run(ctx, services)
             success += 1
             logger.info("[%d/%d] %s 完成", success, len(target_dates), d)
         except Exception as e:

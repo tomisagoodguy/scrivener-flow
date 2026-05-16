@@ -96,7 +96,7 @@ class PositionSummaryStep(BaseStep):
             FROM stock_prices_daily
             WHERE data_date = :d
         """), {"d": target_date})
-        return {r.stock_code: float(r.close) for r in rows}
+        return {r.stock_code: float(r.close) for r in rows if r.close is not None}
 
     @staticmethod
     def _fetch_historical_prices(conn, diffs: list[dict]) -> dict[tuple[str, str], float]:
@@ -153,6 +153,18 @@ class PositionSummaryStep(BaseStep):
             first_entry: Optional[str] = None
             entry_cost_sum = 0.0
             entry_shares_sum = 0.0
+
+            # 視窗外殘存持倉：第一筆 diff 的 prev_shares 代表視窗開始前已持有的股數
+            # 用第一筆 diff 當日收盤價作為成本近似值，避免因 MAX_HISTORY_DAYS 截窗
+            # 導致 cost_basis 遠低於 mv_now 而產生虛假高報酬
+            first_ev = sorted_events[0]
+            pre_window_shares = float(first_ev.get("prev_shares") or 0)
+            if pre_window_shares > 0:
+                pre_price = hist_prices.get((stock_code, str(first_ev["data_date"])), close)
+                pre_cost = pre_window_shares * pre_price
+                cost_basis += pre_cost
+                entry_cost_sum += pre_cost
+                entry_shares_sum += pre_window_shares
 
             for ev in sorted_events:
                 delta = float(ev.get("diff_shares") or 0)

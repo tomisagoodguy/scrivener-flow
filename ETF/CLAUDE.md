@@ -217,6 +217,75 @@ ETF 清單統一由 `ETF/config/etf_registry.py` 的 `source` 欄位決定爬蟲
 
 新增 ETF：只需在 `etf_registry.py` 新增一行（含 `source`），以及在 `src/lib/investment/etfRegistry.ts` 同步更新。
 
+### 各投信直接 API 規格
+
+升級爬蟲或新增 ETF 時參考，以下為各投信官方來源（JS 參考實作位於 `reference/etf_scratch/skills/`）：
+
+#### 復華投信（策略 A — 最穩定）
+
+```http
+GET https://www.fhtrust.com.tw/api/assetsExcel/{fhtrustCode}/{YYYYMMDD}
+```
+
+- `fhtrustCode`：ETF 內部代碼（00991A → `ETF23`）
+- `responseType: arraybuffer` → openpyxl / xlrd 解析
+- 找表頭：遍歷所有列找含 `"證券代號"` 的列，**不能硬編碼行號**（各基金前幾列可能是簡介）
+- 欄位順序：`[0]=代號 [1]=名稱 [2]=股數 [3]=金額(不用) [4]=權重%`
+- 日期不是交易日時 API 回空 Excel → 偵測到無表頭列直接 return None
+
+#### 統一投信 / ezmoney（策略 B — 需 Playwright）
+
+```http
+https://www.ezmoney.com.tw/ETF/Fund/Info?fundCode={ezmoneyCCode}
+```
+
+- SPA，需 Playwright/Puppeteer 等待 `networkidle`，再 sleep 5s 讓前端渲染完
+- DOM：`#assetBody tr`，欄位順序 `[0]=代號 [1]=名稱* [2]=股數, [3]=權重%`
+- 清洗：名稱去 `*`，股數去逗號 `parseInt`，權重去 `%` `float`
+- 過濾：排除列 `tds[0]` 為 `'股票代號'` 或 `'期貨(名目本金)'`
+- `ezmoneyCCode` 對照：00981A → `49YTW`、00988A → `61YTW`
+
+#### 野村投信（策略 D — REST API）
+
+```http
+POST https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundTradeInfo
+Body: {"FundNo": "00980A", "Date": "YYYY/MM/DD"}   # 注意斜線格式
+Headers: Referer: https://www.nomurafunds.com.tw/   # 缺少會 403
+```
+
+- 回傳：`res["Entries"]["Stocks"]`，若不存在則嘗試 `res`（Array 型態）
+- 欄位名稱不固定：`CStockCode` / `CStocNo`，`CStockName` / `CStocName`，`CQuantity` / `CShares`，`CWeightsPct` / `CProportion` → 用 `or` / `.get()` 雙匹配
+- 適用：00980A、00985A
+
+#### 元大投信（策略 C — Playwright + NUXT state）
+
+```http
+https://www.yuantaetfs.com/tradeInfo/pcf/{fundCode}
+```
+
+- 前端 DOM **只顯示前 5 名**（設計限制），完整持股（53+ 筆）在 SSR hydration state
+- Playwright 導航後 sleep 3s，執行 `page.evaluate()` 讀取 `window.__NUXT__`
+- 路徑：`window.__NUXT__.data[]`（遍歷找含 `pcfData` 的項目）→ `.pcfData.FundWeights.StockWeights`
+- 欄位：`s.code`（含交易所後綴需清洗）、`s.name`、`s.qty`（含逗號）、`s.weights`
+- 後綴清洗 regex：`\s+(US|TW|HK|JP|KP|GR|FP|SG|KR|GB)$`
+- `__NUXT__` < 3 筆時 fallback MoneyDJ DOM：`table.datalist tr`（取名稱/權重/股數三欄）
+- 00990A 資料時間：T+1 公告（4/28 資料在 4/29 才出現），注意日期對齊
+- 若元大升級 Nuxt 版本，`__NUXT__` 路徑可能變更，需重新探勘
+
+#### 群益投信（策略 E — REST API）
+
+```http
+POST https://www.capitalfund.com.tw/CFWeb/api/etf/buyback
+Body: {"fundId": 399}   # 數字 id，非 ETF 代碼
+Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfolio
+```
+
+- 群益使用內部數字 `fundId`，需維護對照表：`{"00982A": 399}`（新基金需手動到官網查詢）
+- 回傳：`res["data"]["stocks"]`；欄位：`stocNo / stocName / share / weight`
+- 此 API **不需傳日期**，預設回傳最新一期
+
+---
+
 ### 前端資料依賴
 
 - `etf_holdings_snapshot` — 前端持股明細頁的主要資料來源
