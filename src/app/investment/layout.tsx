@@ -16,6 +16,7 @@ const navItems = [
     { name: '籌碼排行', href: '/investment/equity' },
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
+    { name: '策略選股', href: '/investment/strategy' },
 ];
 
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {

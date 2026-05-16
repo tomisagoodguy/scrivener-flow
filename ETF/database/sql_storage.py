@@ -267,6 +267,37 @@ class SQLStorage:
             logger.error(f"upsert_etf_news 失敗: {e}")
             return 0
 
+    def upsert_strategy_signals(self, records: list) -> None:
+        """Upsert strategy signal rows into strategy_signals table.
+
+        Args:
+            records: list of dicts with keys:
+                strategy_id, date, stock_id, score, is_selected, conditions
+        """
+        if not records:
+            return
+        logger.info(f"準備寫入 {len(records)} 筆策略訊號...")
+        with self.engine.connect() as conn:
+            chunk_size = 500
+            for i in range(0, len(records), chunk_size):
+                chunk = records[i : i + chunk_size]
+                conn.execute(
+                    text("""
+                        INSERT INTO strategy_signals
+                            (strategy_id, date, stock_id, score, is_selected, conditions)
+                        VALUES
+                            (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
+                        ON CONFLICT (strategy_id, date, stock_id)
+                        DO UPDATE SET
+                            score = EXCLUDED.score,
+                            is_selected = EXCLUDED.is_selected,
+                            conditions = EXCLUDED.conditions
+                    """),
+                    chunk,
+                )
+                conn.commit()
+        logger.info("✅ 策略訊號寫入完成")
+
     def _get_stock_name(self, stock_code: str) -> str:
         """從 stock_basic_info 取得股票名稱"""
         try:
