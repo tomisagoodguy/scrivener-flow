@@ -51,7 +51,7 @@ class ScrapeStep(BaseStep):
             df = df.rename(columns={"stock_code": "code", "stock_name": "name"})
 
         ctx.df = df
-        ctx.date_str = date_str
+        ctx.date_str = date_str or _last_weekday()
         self._update_finlab_stock_list(ctx, services)
         self.logger.info(f"[SCRAPE] 取得 {date_str} 資料，共 {len(df)} 筆")
         return ctx

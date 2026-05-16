@@ -73,8 +73,8 @@ class MatchedPairsStep(BaseStep):
             self.logger.info("No overlap stocks with sufficient events")
             return
 
-        self._upsert_detail(services, detail_rows, services)
-        self._upsert_summary(services, summary, services)
+        self._upsert_detail(services, detail_rows)
+        self._upsert_summary(services, summary)
         self.logger.info(
             "Upserted %d matched-pair rows + summary for %s", len(detail_rows), computed_date
         )

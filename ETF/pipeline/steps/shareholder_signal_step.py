@@ -29,6 +29,7 @@ class ShareholderSignalStep(BaseStep):
 
     def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:
+            assert ctx.df is not None
             stock_codes = ctx.df["code"].tolist()
             signals: dict[str, str] = {}
 

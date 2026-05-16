@@ -75,8 +75,10 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
         return (close / close.shift(n)).rank(pct=True, axis=1)
 
     def conv(n):
+        import pandas as pd
+        bm: pd.Series = pd.Series(benchmark)
         return (
-            (close / close.shift(n) - 1) * (benchmark / benchmark.shift(n) - 1)
+            (close / close.shift(n) - 1) * (bm / bm.shift(n) - 1)
         ).rank(axis=1, pct=True)
 
     def price_to_high(n):

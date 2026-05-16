@@ -54,7 +54,7 @@ class ActiveShareStep(BaseStep):
 
             computed_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
             records = self._compute_matrix(portfolios, computed_date)
-            self._upsert(services, records, services)
+            self._upsert(services, records)
             self.logger.info(
                 "Upserted %d Active Share records for %s (%d ETFs)",
                 len(records), computed_date, len(portfolios),

@@ -70,7 +70,7 @@ class CumulativeDragStep(BaseStep):
                 records.append(rec)
 
         if records:
-            self._upsert(services, records, services)
+            self._upsert(services, records)
             self.logger.info("Upserted %d drag records for %s", len(records), computed_date)
 
     def _fetch_events(self, ctx: PipelineContext, all_codes: list[str], services: "PipelineServices") -> dict:

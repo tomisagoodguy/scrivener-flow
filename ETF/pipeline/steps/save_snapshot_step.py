@@ -47,6 +47,7 @@ class SaveSnapshotStep(BaseStep):
         try:
             csv_filename = f"{ctx.etf_code}_{ctx.date_str}.csv"
             csv_path = ctx.output_dir / csv_filename
+            assert ctx.df is not None
             ctx.df.to_csv(csv_path, index=False, encoding='utf-8-sig')
             self.logger.info(f"Saved CSV archive: {csv_path}")
         except Exception as e:
