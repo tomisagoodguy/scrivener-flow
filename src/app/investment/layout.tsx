@@ -2,17 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, ChevronDownIcon } from 'lucide-react';
+import { useState, useRef } from 'react';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 const navItems = [
     { name: '選股池', href: '/investment' },
-    { name: '裸K看盤', href: '/investment/bare-k' },
     { name: '法人共識', href: '/investment/consensus' },
     { name: 'ETF 對比', href: '/investment/compare' },
     { name: '歷史回顧', href: '/investment/history' },
     { name: '營收實驗室', href: '/investment/revenue-lab' },
-    { name: '觀察清單', href: '/investment/watch-list' },
     { name: '籌碼排行', href: '/investment/equity' },
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
@@ -20,8 +19,25 @@ const navItems = [
     { name: '族群強弱', href: '/investment/sectors' },
 ];
 
+const watchGroup = [
+    { name: '觀察清單', href: '/investment/watch-list' },
+    { name: '裸K看盤', href: '/investment/bare-k' },
+];
+
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const [watchOpen, setWatchOpen] = useState(false);
+    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const isWatchActive = watchGroup.some((i) => pathname.startsWith(i.href));
+
+    function handleMouseEnter() {
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+        setWatchOpen(true);
+    }
+    function handleMouseLeave() {
+        closeTimer.current = setTimeout(() => setWatchOpen(false), 150);
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -66,6 +82,48 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                     </Link>
                                 );
                             })}
+
+                            {/* 觀察清單 + 裸K 下拉群組 */}
+                            <div
+                                className="relative"
+                                onMouseEnter={handleMouseEnter}
+                                onMouseLeave={handleMouseLeave}
+                            >
+                                <button
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                                        isWatchActive
+                                            ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                    }`}
+                                >
+                                    觀察清單
+                                    <ChevronDownIcon
+                                        size={11}
+                                        className={`transition-transform duration-200 ${watchOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+
+                                {watchOpen && (
+                                    <div className="absolute top-full left-0 mt-1.5 min-w-[7rem] rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-slate-200/40 dark:shadow-slate-950/40 py-1 z-50">
+                                        {watchGroup.map((item) => {
+                                            const isActive = pathname.startsWith(item.href);
+                                            return (
+                                                <Link
+                                                    key={item.href}
+                                                    href={item.href}
+                                                    className={`block px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
+                                                        isActive
+                                                            ? 'text-blue-600 dark:text-blue-400 bg-blue-600/8'
+                                                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                                    }`}
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </nav>
                     </div>
 
