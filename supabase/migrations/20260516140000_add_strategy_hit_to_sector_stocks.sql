@@ -1,0 +1,3 @@
+ALTER TABLE sector_strength_stocks
+  ADD COLUMN IF NOT EXISTS is_strategy_hit BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS momentum_score  NUMERIC(8, 4);

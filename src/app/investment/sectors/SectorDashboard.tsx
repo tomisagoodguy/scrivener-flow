@@ -82,6 +82,9 @@ function SectorItem({ sector, date, rank, sortKey }: SectorRowProps) {
                                         <td className="py-1.5 font-medium">
                                             {s.stock_name ?? s.stock_id}
                                             <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                            {s.is_strategy_hit && (
+                                                <span className="ml-1.5 text-yellow-400 text-xs" title="均線多頭＋月營收成長">⚡</span>
+                                            )}
                                         </td>
                                         <td className={`text-right py-1.5 ${pctClass(s.ret_1d)}`}>{fmtPct(s.ret_1d)}</td>
                                         <td className={`text-right py-1.5 hidden sm:table-cell ${pctClass(s.ret_5d)}`}>{fmtPct(s.ret_5d)}</td>

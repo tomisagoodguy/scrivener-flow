@@ -16,6 +16,8 @@ export interface SectorStock {
     ret_1d: number | null;
     ret_5d: number | null;
     ret_20d: number | null;
+    is_strategy_hit: boolean;
+    momentum_score: number | null;
 }
 
 export interface SectorData {
@@ -54,7 +56,7 @@ export async function getSectorStocks(category: string, date: string): Promise<S
 
     const { data, error } = await supabase
         .from('sector_strength_stocks')
-        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d')
+        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score')
         .eq('date', date)
         .eq('category', category)
         .order('ret_1d', { ascending: false });

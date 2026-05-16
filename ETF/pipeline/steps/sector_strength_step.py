@@ -73,7 +73,7 @@ class SectorStrengthStep(BaseStep):
         exploded = themes.explode("category").dropna(subset=["category"])
         exploded = exploded[exploded["category"].str.strip() != ""]
 
-        # 2. 取收盤價，計算日/週/月漲幅
+        # 2. 取收盤價，計算日/週/月漲幅 + 策略均線條件
         self.logger.info("Fetching price data...")
         close = fd.get("price:收盤價")
         if close is None or close.empty:
@@ -84,11 +84,35 @@ class SectorStrengthStep(BaseStep):
         ret_5d = close.pct_change(5).iloc[-1]
         ret_20d = close.pct_change(20).iloc[-1]
 
-        # 3. 合併漲幅到 exploded DataFrame
+        # 策略動能分數：5 日滾動均漲幅
+        momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
+
+        # 三均線多頭條件（最後一日）
+        ma20 = close.average(20).iloc[-1]
+        ma60 = close.average(60).iloc[-1]
+        ma120 = close.average(120).iloc[-1]
+        last_close = close.iloc[-1]
+        above_ma = (last_close > ma20) & (last_close > ma60) & (last_close > ma120)
+
+        # 月營收短期 > 長期
+        self.logger.info("Fetching monthly revenue data...")
+        try:
+            rev = fd.get("monthly_revenue:當月營收")
+            rev_cond = rev.average(3).iloc[-1] > rev.average(12).iloc[-1]
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch monthly revenue, strategy hit will be False: {e}")
+            rev_cond = pd.Series(False, index=last_close.index)
+
+        # 合併策略命中
+        strategy_hit = above_ma & rev_cond  # NaN → False 自動排除
+
+        # 3. 合併漲幅 + 策略欄位到 exploded DataFrame
         df = exploded.copy()
-        df["ret_1d"] = df["stock_id"].map(ret_1d)
-        df["ret_5d"] = df["stock_id"].map(ret_5d)
-        df["ret_20d"] = df["stock_id"].map(ret_20d)
+        df["ret_1d"]         = df["stock_id"].map(ret_1d)
+        df["ret_5d"]         = df["stock_id"].map(ret_5d)
+        df["ret_20d"]        = df["stock_id"].map(ret_20d)
+        df["momentum_score"] = df["stock_id"].map(momentum_score)
+        df["is_strategy_hit"] = df["stock_id"].map(strategy_hit).fillna(False).astype(bool)
 
         # 4. 計算族群平均漲幅（家數 >= MIN_STOCK_COUNT）
         count_by_cat = df.groupby("category")["stock_id"].count()
@@ -140,29 +164,35 @@ class SectorStrengthStep(BaseStep):
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
         upsert_sql = text("""
             INSERT INTO sector_strength_stocks
-                (date, category, stock_id, stock_name, ret_1d, ret_5d, ret_20d)
+                (date, category, stock_id, stock_name, ret_1d, ret_5d, ret_20d,
+                 is_strategy_hit, momentum_score)
             VALUES
-                (:date, :category, :stock_id, :stock_name, :ret_1d, :ret_5d, :ret_20d)
+                (:date, :category, :stock_id, :stock_name, :ret_1d, :ret_5d, :ret_20d,
+                 :is_strategy_hit, :momentum_score)
             ON CONFLICT (date, category, stock_id) DO UPDATE SET
-                stock_name = EXCLUDED.stock_name,
-                ret_1d     = EXCLUDED.ret_1d,
-                ret_5d     = EXCLUDED.ret_5d,
-                ret_20d    = EXCLUDED.ret_20d,
-                created_at = now()
+                stock_name      = EXCLUDED.stock_name,
+                ret_1d          = EXCLUDED.ret_1d,
+                ret_5d          = EXCLUDED.ret_5d,
+                ret_20d         = EXCLUDED.ret_20d,
+                is_strategy_hit = EXCLUDED.is_strategy_hit,
+                momentum_score  = EXCLUDED.momentum_score,
+                created_at      = now()
         """)
 
         name_col = "name" if "name" in df.columns else None
 
+        def _f(v):
+            return float(v) if v == v else None  # NaN → None
+
         for _, row in df.iterrows():
-            ret_1d = row.get("ret_1d")
-            ret_5d = row.get("ret_5d")
-            ret_20d = row.get("ret_20d")
             conn.execute(upsert_sql, {
-                "date":       target_date,
-                "category":   row["category"],
-                "stock_id":   row["stock_id"],
-                "stock_name": row[name_col] if name_col else None,
-                "ret_1d":     float(ret_1d) if ret_1d == ret_1d else None,
-                "ret_5d":     float(ret_5d) if ret_5d == ret_5d else None,
-                "ret_20d":    float(ret_20d) if ret_20d == ret_20d else None,
+                "date":            target_date,
+                "category":        row["category"],
+                "stock_id":        row["stock_id"],
+                "stock_name":      row[name_col] if name_col else None,
+                "ret_1d":          _f(row.get("ret_1d")),
+                "ret_5d":          _f(row.get("ret_5d")),
+                "ret_20d":         _f(row.get("ret_20d")),
+                "is_strategy_hit": bool(row.get("is_strategy_hit", False)),
+                "momentum_score":  _f(row.get("momentum_score")),
             })

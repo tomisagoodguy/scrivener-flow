@@ -72,6 +72,35 @@ def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
         pct = f"{float(r[2]) * 100:+.2f}%" if r[2] is not None else "N/A"
         lines.append(f"{i}. {r[0]}  {pct}")
 
+    # 策略命中：強勢族群（ret_1d 前 10）內，is_strategy_hit=True，按 momentum_score 降序前 10
+    try:
+        with engine.connect() as conn:
+            strong_cats = [r[0] for r in rows]
+            placeholders = ",".join(f":c{i}" for i in range(len(strong_cats)))
+            hit_rows = conn.execute(
+                text(f"""
+                    SELECT stock_name, stock_id, category, momentum_score
+                    FROM sector_strength_stocks
+                    WHERE date = :d
+                      AND is_strategy_hit = TRUE
+                      AND category IN ({placeholders})
+                    ORDER BY momentum_score DESC NULLS LAST
+                    LIMIT 10
+                """),
+                {"d": query_date, **{f"c{i}": c for i, c in enumerate(strong_cats)}},
+            ).fetchall()
+
+        if hit_rows:
+            lines.append("")
+            lines.append("⚡ 族群策略命中（均線多頭＋月營收成長）")
+            for i, r in enumerate(hit_rows, 1):
+                name = r[0] or r[1]
+                cat_short = r[2].split(":")[-1] if ":" in r[2] else r[2]
+                score = f"{float(r[3]) * 100:+.2f}%" if r[3] is not None else ""
+                lines.append(f"{i}. {name} {r[1]}  [{cat_short}]  {score}")
+    except Exception as e:
+        logger.warning(f"build_sector_summary strategy hits query failed: {e}")
+
     return "\n".join(lines)
 
 
