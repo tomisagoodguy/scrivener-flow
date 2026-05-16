@@ -3,13 +3,13 @@
 失敗時只 log，不中斷 pipeline（不 re-raise）。
 """
 
-import json
 import logging
 from typing import TYPE_CHECKING
 
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
 from ETF.strategies import ALL_STRATEGIES
+from ETF.strategies.shared_cache import StrategyDataCache
 
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
@@ -31,9 +31,12 @@ class StrategySignalStep(BaseStep):
         date_str = ctx.date_str
         all_rows: list[dict] = []
 
+        cache = StrategyDataCache()
+        logger.info("[StrategySignalStep] 共用快取建立完成，開始執行策略")
+
         for strategy in ALL_STRATEGIES:
             try:
-                positions = strategy.get_positions()
+                positions = strategy.get_positions(cache=cache)
                 if positions is None or positions.empty:
                     logger.warning(f"[{strategy.strategy_id}] get_positions() returned empty")
                     continue

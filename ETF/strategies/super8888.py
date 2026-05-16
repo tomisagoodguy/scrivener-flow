@@ -5,8 +5,12 @@
 
 import logging
 import numpy as np
+from typing import TYPE_CHECKING
 
 from ETF.strategies.base_strategy import BaseStrategy
+
+if TYPE_CHECKING:
+    from ETF.strategies.shared_cache import StrategyDataCache
 
 logger = logging.getLogger(__name__)
 
@@ -22,31 +26,43 @@ class Super8888Strategy(BaseStrategy):
     strategy_id = "super8888"
     description = "超級8888 量化選股"
 
-    def get_positions(self):
-        return _build_position()
+    def get_positions(self, cache: 'StrategyDataCache | None' = None):
+        return _build_position(cache)
 
 
-def _build_position():
-    """
-    回傳 positionJ：Boolean DataFrame（index=date, columns=stock_id）
-    True 表示當日應持有該股票（前5名）
-    """
-    import finlab
+def _build_position(cache: 'StrategyDataCache | None' = None):
     from finlab import data
     from finlab.dataframe import FinlabDataFrame
 
-    c = data.get("price:收盤價")
-    v = data.get("price:成交股數") / 1000
-    rev = data.get('monthly_revenue:當月營收')
-    cap = data.get('etl:market_value')
-    margin_transaction_ratio = data.get('margin_transactions:融資使用率').fillna(0)
-    amt = data.get('price:成交金額')
-    disposal_stocks = data.get('etl:disposal_stock_filter')
-    rev_year_growth = data.get('monthly_revenue:去年同月增減(%)')
-    share = data.get('financial_statement:普通股股本')
+    # 從 cache 取基礎資料，cache 無則自行下載
+    if cache is not None:
+        c = cache.close
+        v = cache.v
+        rev = cache.rev
+        cap = cache.cap
+        margin_transaction_ratio = cache.margin_transaction_ratio
+        amt = cache.amt
+        disposal_stocks = cache.disposal_stocks
+        inv = cache.inv
+        volatility = cache.candle_volatility
+        rev_year_growth = cache.rev_yoy
+        share = cache.share
+    else:
+        c = data.get("price:收盤價")
+        v = data.get("price:成交股數")
+        rev = data.get('monthly_revenue:當月營收')
+        cap = data.get('etl:market_value')
+        margin_transaction_ratio = data.get('margin_transactions:融資使用率').fillna(0)
+        amt = data.get('price:成交金額')
+        disposal_stocks = data.get('etl:disposal_stock_filter')
+        inv = data.get('inventory')
+        volatility = _compute_candle_volatility(c)
+        rev_year_growth = data.get('monthly_revenue:去年同月增減(%)')
+        share = data.get('financial_statement:普通股股本')
 
-    # 股東持股結構
-    inv = data.get('inventory')
+    v = v / 1000
+
+    # 股東持股結構（super8888 使用 ≤5 / 11-15，與其他策略不同，獨立計算）
     h1 = FinlabDataFrame(
         inv[inv.持股分級.astype(int) <= 5]
         .reset_index()
@@ -64,9 +80,6 @@ def _build_position():
         .pivot(index='date', columns='stock_id', values='持有股數')
     )
     h = (FinlabDataFrame(h2 / (h1 + h2)).rank(pct=True, axis=1) * (c.notna()))
-
-    # 蠟燭波動率
-    volatility = _compute_candle_volatility(c)
 
     # 選股條件
     c1 = (amt > 2 * 10**7) & (amt > amt.average(60) * 1.3) & (amt / cap).rolling(5).mean().rise()
