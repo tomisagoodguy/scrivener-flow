@@ -73,7 +73,7 @@ class SectorStrengthStep(BaseStep):
         exploded = themes.explode("category").dropna(subset=["category"])
         exploded = exploded[exploded["category"].str.strip() != ""]
 
-        # 2. 取收盤價，計算日/週/月漲幅 + 策略均線條件
+        # 2. 取收盤價 + 成交金額，計算日/週/月漲幅 + 策略均線條件
         self.logger.info("Fetching price data...")
         close = fd.get("price:收盤價")
         if close is None or close.empty:
@@ -83,6 +83,14 @@ class SectorStrengthStep(BaseStep):
         ret_1d = close.pct_change(1).iloc[-1]
         ret_5d = close.pct_change(5).iloc[-1]
         ret_20d = close.pct_change(20).iloc[-1]
+
+        # 當日成交金額（元）
+        try:
+            amount = fd.get("price:成交金額")
+            last_amount = amount.iloc[-1] if amount is not None and not amount.empty else None
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch 成交金額: {e}")
+            last_amount = None
 
         # 策略動能分數：5 日滾動均漲幅
         momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
@@ -113,19 +121,30 @@ class SectorStrengthStep(BaseStep):
         df["ret_20d"]        = df["stock_id"].map(ret_20d)
         df["momentum_score"] = df["stock_id"].map(momentum_score)
         df["is_strategy_hit"] = df["stock_id"].map(strategy_hit).fillna(False).astype(bool)
+        if last_amount is not None:
+            df["amount"] = df["stock_id"].map(last_amount)
+        else:
+            df["amount"] = None
 
-        # 4. 計算族群平均漲幅（家數 >= MIN_STOCK_COUNT）
+        # 4. 計算族群平均漲幅 + 總成交金額（家數 >= MIN_STOCK_COUNT）
         count_by_cat = df.groupby("category")["stock_id"].count()
         valid_cats = count_by_cat[count_by_cat >= MIN_STOCK_COUNT].index
 
+        valid_df = df[df["category"].isin(valid_cats)]
         sector_df = (
-            df[df["category"].isin(valid_cats)]
-            .groupby("category")[["ret_1d", "ret_5d", "ret_20d"]]
+            valid_df.groupby("category")[["ret_1d", "ret_5d", "ret_20d"]]
             .mean()
             .reset_index()
         )
         sector_df["stock_count"] = sector_df["category"].map(count_by_cat)
         sector_df["date"] = target_date
+
+        # 計算族群總成交金額
+        if "amount" in valid_df.columns and valid_df["amount"].notna().any():
+            total_amount_by_cat = valid_df.groupby("category")["amount"].sum()
+            sector_df["total_amount"] = sector_df["category"].map(total_amount_by_cat)
+        else:
+            sector_df["total_amount"] = None
 
         self.logger.info(f"Computed {len(sector_df)} sectors for {target_date}")
 
@@ -139,26 +158,34 @@ class SectorStrengthStep(BaseStep):
             f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}"
         )
 
+    @staticmethod
+    def _f(v) -> float | None:
+        """NaN-safe float conversion."""
+        return float(v) if v is not None and v == v else None
+
     def _upsert_sectors(self, conn, sector_df, target_date: str) -> None:
         upsert_sql = text("""
-            INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count)
-            VALUES (:date, :category, :ret_1d, :ret_5d, :ret_20d, :stock_count)
+            INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count, total_amount)
+            VALUES (:date, :category, :ret_1d, :ret_5d, :ret_20d, :stock_count, :total_amount)
             ON CONFLICT (date, category) DO UPDATE SET
-                ret_1d      = EXCLUDED.ret_1d,
-                ret_5d      = EXCLUDED.ret_5d,
-                ret_20d     = EXCLUDED.ret_20d,
-                stock_count = EXCLUDED.stock_count,
-                created_at  = now()
+                ret_1d       = EXCLUDED.ret_1d,
+                ret_5d       = EXCLUDED.ret_5d,
+                ret_20d      = EXCLUDED.ret_20d,
+                stock_count  = EXCLUDED.stock_count,
+                total_amount = EXCLUDED.total_amount,
+                created_at   = now()
         """)
 
         for _, row in sector_df.iterrows():
+            amt = self._f(row.get("total_amount"))
             conn.execute(upsert_sql, {
-                "date":        target_date,
-                "category":    row["category"],
-                "ret_1d":      float(row["ret_1d"]) if row["ret_1d"] == row["ret_1d"] else None,
-                "ret_5d":      float(row["ret_5d"]) if row["ret_5d"] == row["ret_5d"] else None,
-                "ret_20d":     float(row["ret_20d"]) if row["ret_20d"] == row["ret_20d"] else None,
-                "stock_count": int(row["stock_count"]),
+                "date":         target_date,
+                "category":     row["category"],
+                "ret_1d":       self._f(row["ret_1d"]),
+                "ret_5d":       self._f(row["ret_5d"]),
+                "ret_20d":      self._f(row["ret_20d"]),
+                "stock_count":  int(row["stock_count"]),
+                "total_amount": int(amt) if amt is not None else None,
             })
 
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
@@ -181,18 +208,15 @@ class SectorStrengthStep(BaseStep):
 
         name_col = "name" if "name" in df.columns else None
 
-        def _f(v):
-            return float(v) if v == v else None  # NaN → None
-
         for _, row in df.iterrows():
             conn.execute(upsert_sql, {
                 "date":            target_date,
                 "category":        row["category"],
                 "stock_id":        row["stock_id"],
                 "stock_name":      row[name_col] if name_col else None,
-                "ret_1d":          _f(row.get("ret_1d")),
-                "ret_5d":          _f(row.get("ret_5d")),
-                "ret_20d":         _f(row.get("ret_20d")),
+                "ret_1d":          self._f(row.get("ret_1d")),
+                "ret_5d":          self._f(row.get("ret_5d")),
+                "ret_20d":         self._f(row.get("ret_20d")),
                 "is_strategy_hit": bool(row.get("is_strategy_hit", False)),
-                "momentum_score":  _f(row.get("momentum_score")),
+                "momentum_score":  self._f(row.get("momentum_score")),
             })

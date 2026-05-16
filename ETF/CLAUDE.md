@@ -2,7 +2,7 @@
 
 ## 專案本質
 
-ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤 **21 支主動型 ETF** 的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
+ETF Pipeline 是一個獨立的 Python 後端服務，每日自動追蹤 **16 支主動型 ETF** 的持股異動，透過 FinLab 補充股價/財務資料後存入 Supabase，最後由 Gemini AI 產生報告並推送 LINE 通知。
 
 ETF 清單統一由 **`ETF/config/etf_registry.py`** 維護（對應 `src/lib/investment/etfRegistry.ts`），新增 ETF 只需改這兩個檔案。
 

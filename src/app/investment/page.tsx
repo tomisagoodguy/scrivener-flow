@@ -5,7 +5,7 @@ import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZ
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { EtfComparePanel, type OverlapData, type EtfData } from '@/components/features/investment/EtfComparePanel';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
-import { ClockIcon, FlaskConicalIcon, HistoryIcon } from 'lucide-react';
+import { ClockIcon } from 'lucide-react';
 import React from 'react';
 import { Holding, DiffLog } from '@/types/investment';
 import { ETF_REGISTRY, ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistry';
@@ -14,7 +14,6 @@ import { ConsensusPanel, type ConsensusRow } from '@/components/features/investm
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
 import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
-import { WatchlistButton } from '@/components/features/investment/WatchlistButton';
 import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
 import { DailyFlowPanel } from '@/components/features/investment/DailyFlowPanel';
 import { PreMarketGuidePair } from '@/components/features/investment/PreMarketGuidePair';
@@ -279,36 +278,8 @@ export default async function InvestmentPoolPage() {
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         資料日期: {displayDate}
                     </div>
-                    {/* Task 5.3: Revenue Lab 入口 */}
-                    <Link
-                        href="/investment/history"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-400 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                        <HistoryIcon className="w-4 h-4" />
-                        持倉歷史
-                    </Link>
-                    <Link
-                        href="/investment/revenue-lab"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 transition-colors"
-                    >
-                        <FlaskConicalIcon className="w-4 h-4" />
-                        Revenue Lab
-                    </Link>
                     <PipelineMonitor />
-                    <WatchlistButton />
                     <ExcelDownloadButton />
-                    <Link
-                        href="/investment/bare-k"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50 transition-colors"
-                    >
-                        📊 裸K看盤
-                    </Link>
-                    <Link
-                        href="/investment/sectors"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-900/30 dark:text-violet-400 dark:hover:bg-violet-900/50 transition-colors"
-                    >
-                        🔥 族群強弱
-                    </Link>
                 </div>
             </div>
 

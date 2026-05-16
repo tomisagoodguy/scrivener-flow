@@ -1,20 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { getSectorStocks } from '@/app/actions/getSectorStrength';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
+import { pctClass, fmtPct, fmtAmount } from '@/lib/investment/formatUtils';
 
-type SortKey = '1d' | '5d' | '20d';
-
-function pctClass(val: number | null): string {
-    if (val === null) return 'text-gray-400';
-    return val >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
-}
-
-function fmtPct(val: number | null): string {
-    if (val === null) return '—';
-    return `${(val * 100).toFixed(2)}%`;
-}
+type SortKey = '1d' | '5d' | '20d' | 'amount';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -38,7 +30,8 @@ function SectorItem({ sector, date, rank, sortKey }: SectorRowProps) {
         setExpanded((v) => !v);
     };
 
-    const primaryVal = sortKey === '1d' ? sector.ret_1d : sortKey === '5d' ? sector.ret_5d : sector.ret_20d;
+    const primaryKey = SORT_VAL_MAP[sortKey];
+    const primaryVal = primaryKey ? (sector[primaryKey] as number | null) : null;
 
     return (
         <div className="glass-card mb-2 overflow-hidden">
@@ -51,11 +44,16 @@ function SectorItem({ sector, date, rank, sortKey }: SectorRowProps) {
                     <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{sector.category}</span>
                     <span className="text-xs text-gray-400 shrink-0">{sector.stock_count} 支</span>
                 </div>
-                <div className="flex items-center gap-4 shrink-0 ml-4">
-                    <div className="hidden sm:flex gap-4 text-sm">
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                    <div className="hidden sm:flex gap-3 text-sm items-center">
                         <span className={pctClass(sector.ret_1d)}>日 {fmtPct(sector.ret_1d)}</span>
                         <span className={pctClass(sector.ret_5d)}>週 {fmtPct(sector.ret_5d)}</span>
                         <span className={pctClass(sector.ret_20d)}>月 {fmtPct(sector.ret_20d)}</span>
+                        {sector.total_amount !== null && (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs border-l border-white/30 pl-3">
+                                {fmtAmount(sector.total_amount)}
+                            </span>
+                        )}
                     </div>
                     <span className={`sm:hidden font-semibold ${pctClass(primaryVal)}`}>{fmtPct(primaryVal)}</span>
                     <span className="text-gray-400 text-sm">{expanded ? '▲' : '▼'}</span>
@@ -104,25 +102,50 @@ interface Props {
     data: { date: string; sectors: SectorRow[] };
 }
 
+const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
+    '1d': 'ret_1d',
+    '5d': 'ret_5d',
+    '20d': 'ret_20d',
+    'amount': null,
+};
+
 export default function SectorDashboard({ data }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
+    const [positiveOnly, setPositiveOnly] = useState(true);
 
-    const sorted = [...data.sectors].sort((a, b) => {
-        const va = sortKey === '1d' ? a.ret_1d : sortKey === '5d' ? a.ret_5d : a.ret_20d;
-        const vb = sortKey === '1d' ? b.ret_1d : sortKey === '5d' ? b.ret_5d : b.ret_20d;
-        return (vb ?? -Infinity) - (va ?? -Infinity);
-    });
+    const filtered = useMemo(
+        () => positiveOnly ? data.sectors.filter((s) => (s.ret_1d ?? 0) > 0) : data.sectors,
+        [data.sectors, positiveOnly],
+    );
+
+    const sorted = useMemo(() => [...filtered].sort((a, b) => {
+        if (sortKey === 'amount') {
+            return (b.total_amount ?? 0) - (a.total_amount ?? 0);
+        }
+        const key = SORT_VAL_MAP[sortKey] as 'ret_1d' | 'ret_5d' | 'ret_20d';
+        return ((b[key] as number | null) ?? -Infinity) - ((a[key] as number | null) ?? -Infinity);
+    }), [filtered, sortKey]);
 
     const tabs: { key: SortKey; label: string }[] = [
         { key: '1d', label: '今日' },
         { key: '5d', label: '本週' },
         { key: '20d', label: '本月' },
+        { key: 'amount', label: '成交金額' },
     ];
+
+    const positiveCount = filtered.length;
+    const totalCount = data.sectors.length;
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-2">
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
+                <Link href="/investment" className="hover:text-blue-600 transition-colors">選股池</Link>
+                <span>›</span>
+                <span className="text-gray-700 dark:text-gray-300">族群強弱</span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2 flex-wrap">
                     {tabs.map((t) => (
                         <button
                             key={t.key}
@@ -137,13 +160,28 @@ export default function SectorDashboard({ data }: Props) {
                         </button>
                     ))}
                 </div>
-                {data.date && (
-                    <span className="text-xs text-gray-400">資料日期：{data.date}</span>
-                )}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setPositiveOnly((v) => !v)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                            positiveOnly
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                                : 'bg-white/50 text-gray-500 hover:bg-white/70'
+                        }`}
+                    >
+                        <span>{positiveOnly ? '▲' : '≡'}</span>
+                        <span>{positiveOnly ? `正報酬 ${positiveCount}/${totalCount}` : `全部 ${totalCount}`}</span>
+                    </button>
+                    {data.date && (
+                        <span className="text-xs text-gray-400">資料日期：{data.date}</span>
+                    )}
+                </div>
             </div>
 
             {sorted.length === 0 ? (
-                <p className="text-gray-400 text-center py-12">尚無族群資料，請等待 Pipeline 執行後重整。</p>
+                <p className="text-gray-400 text-center py-12">
+                    {positiveOnly ? '今日無正報酬族群' : '尚無族群資料，請等待 Pipeline 執行後重整。'}
+                </p>
             ) : (
                 sorted.map((sector, i) => (
                     <SectorItem

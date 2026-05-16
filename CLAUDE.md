@@ -173,8 +173,9 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 | 1 | `src/types/index.ts` | 全域核心型別（Case、Milestone、Financial、Holding 等） |
 | 2 | `src/domain/case/types.ts` | 案件領域模型（Single Source of Truth） |
 | 3 | `src/lib/constants/caseConstants.ts` | 案件狀態、待辦來源型別常數 |
-| 4 | `src/lib/investment/etfRegistry.ts` | 15 支 ETF 唯一清單（新增 ETF 只改此檔 + Python 端的 `ETF/config/etf_registry.py`） |
+| 4 | `src/lib/investment/etfRegistry.ts` | 16 支 ETF 唯一清單（新增 ETF 只改此檔 + Python 端的 `ETF/config/etf_registry.py`） |
 | 5 | `src/lib/investment/holdingsUtils.ts` | `getAllHoldings()`、`buildUnionHoldings()`（前端聚合邏輯核心） |
+| 7 | `src/lib/investment/strategyUtils.ts` | 策略選股型別（`StrategySignalsResult`、`computeMovement()`）、與 `strategy_signals` 資料表對接 |
 | 6 | `ETF/pipeline/context.py` | Pipeline 步驟間共享狀態，含 `date_str`、`secondary_stock_codes` |
 
 ---
@@ -233,12 +234,19 @@ const amount_亿 = Math.abs(diff_shares) * price / 1e8;         // 億元市值
 
 ### ETF 日期一致性
 
-`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 15 支 ETF 並行使用同一日期。
+`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 16 支 ETF 並行使用同一日期。
 Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fallback。
 
 ### Supabase JOIN 回傳陣列
 
 即使 1:1 關係，JOIN 回傳仍是陣列：`caseData.milestone?.[0]?.contract_date`，型別定義用 `Milestone[]`。
+
+### 量化策略模組架構
+
+`ETF/strategies/` 存放 5 種 FinLab 量化選股策略，所有策略繼承 `BaseStrategy`（實作 `strategy_id`、`description`、`get_positions(cache)`）。  
+每日 CI 執行後結果寫入 `strategy_signals`（`strategy_id, stock_id, date, score, is_selected`）。  
+前端透過 `getStrategySignals()` Server Action 讀取，並用 `computeMovement()` 標記 00981A 的增減碼狀態（`adding / reducing / holding / none`）。  
+新增策略：繼承 `BaseStrategy`，在 `ETF/strategies/__init__.py` 註冊，並在 `strategyRegistry.ts` 新增 `strategy_id` → 描述對照。
 
 ### 案件列表排序（`/cases` 頁面）
 
@@ -267,6 +275,10 @@ openspec apply --change "<name>"      # 開始執行 tasks
 | `/cases` | 案件列表（里程碑排序）+ `/cases/[id]` 案件詳情 |
 | `/investment` | 投資儀表板入口，子路由見目錄結構 |
 | `/investment/buying-patterns` | ETF 買進模式前瞻報酬分析（折線圖 / 熱力圖 / 勝率圖） |
+| `/investment/strategy` | 策略選股中心（`strategy_signals` 資料表，5 種量化策略訊號） |
+| `/investment/frontrunning` | ETF 持股公告前後成交量異常偵測（買貴了嗎？） |
+| `/investment/sectors` | 族群強弱分析（全市場資金流向，含成分股展開） |
+| `/investment/dashboard/[code]` | 個股儀表板（動態路由，整合法人 + 基本面 + K 線） |
 | `/banks` | 代償銀行管理 |
 | `/calculator` | 稅費試算工具（利用 `src/lib/calculator/`） |
 | `/clauses` | 契約條款範本管理 |

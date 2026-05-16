@@ -17,6 +17,7 @@ const navItems = [
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
     { name: '策略選股', href: '/investment/strategy' },
+    { name: '族群強弱', href: '/investment/sectors' },
 ];
 
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {
