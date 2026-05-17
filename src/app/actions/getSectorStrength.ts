@@ -9,6 +9,9 @@ export interface SectorRow {
     ret_20d: number | null;
     stock_count: number;
     total_amount: number | null;
+    breadth: number | null;
+    avg_amount_5d: number | null;
+    strength_score: number | null;
 }
 
 export interface SectorStock {
@@ -40,7 +43,7 @@ export async function getSectorStrength(): Promise<SectorData> {
 
     const { data, error } = await supabase
         .from('sector_strength')
-        .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount')
+        .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount, breadth, avg_amount_5d, strength_score')
         .eq('date', queryDate)
         .order('ret_1d', { ascending: false });
 

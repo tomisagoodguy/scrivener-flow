@@ -1,10 +1,4 @@
-# sector-strength-line Specification
-
-## Purpose
-
-TBD - created by archiving change 'sector-strength-dashboard'. Update Purpose after archive.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: LINE 每日報告附上族群摘要
 每日 LINE 報告 SHALL 在現有 ETF 異動訊息之後，附加依品質條件篩選的強勢族群 TOP 5 與本週強勢族群 TOP 5。
@@ -37,45 +31,3 @@ TBD - created by archiving change 'sector-strength-dashboard'. Update Purpose af
 | WHERE | `ret_1d > 0 AND ret_5d > 0 AND breadth >= 0.40` |
 | ORDER BY | `strength_score DESC NULLS LAST` |
 | LIMIT | 10（取前 5 名展示，剩餘 5 名供策略命中查詢用） |
-
-
-<!-- @trace
-source: sector-strength-quality-filter
-updated: 2026-05-17
-code:
-  - next-env.d.ts
-  - src/app/actions/getSectorStrength.ts
-  - ETF/run_strategies.py
-  - ETF/daily_ai_report.py
-  - src/app/investment/sectors/SectorDashboard.tsx
-  - .github/workflows/etf_daily.yml
-  - supabase/migrations/20260516160000_add_sector_quality_metrics.sql
-  - ETF/pipeline/steps/sector_strength_step.py
--->
-
----
-### Requirement: LINE 族群摘要格式
-族群摘要 SHALL 使用純文字格式，包含排名、族群名稱、漲幅數字。
-
-#### Scenario: 格式範例
-- **WHEN** 族群資料存在
-- **THEN** 輸出格式為：
-  ```
-  📊 今日強勢族群
-  1. 半導體:記憶體IC  +3.2%
-  2. 被動元件:電容器  +2.8%
-  3. ...
-
-  📈 本週強勢族群
-  1. 半導體:記憶體IC  +17.5%
-  2. ...
-  ```
-
-<!-- @trace
-source: sector-strength-dashboard
-updated: 2026-05-16
-code:
-  - tsconfig.tsbuildinfo
-  - ETF/CLAUDE.md
-  - CLAUDE.md
--->

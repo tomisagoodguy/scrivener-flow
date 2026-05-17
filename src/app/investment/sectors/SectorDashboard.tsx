@@ -6,7 +6,7 @@ import { getSectorStocks } from '@/app/actions/getSectorStrength';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { pctClass, fmtPct, fmtAmount } from '@/lib/investment/formatUtils';
 
-type SortKey = '1d' | '5d' | '20d' | 'amount';
+type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -107,20 +107,36 @@ const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
     '5d': 'ret_5d',
     '20d': 'ret_20d',
     'amount': null,
+    'strength': 'strength_score',
 };
+
+function isStrengthSector(s: SectorRow): boolean {
+    if ((s.ret_1d ?? 0) <= 0) return false;
+    if ((s.ret_5d ?? 0) <= 0) return false;
+    if ((s.breadth ?? 0) < 0.4) return false;
+    if (s.total_amount !== null && s.avg_amount_5d !== null) {
+        if (s.total_amount < s.avg_amount_5d * 0.8) return false;
+    }
+    return true;
+}
 
 export default function SectorDashboard({ data }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
 
-    const filtered = useMemo(
-        () => positiveOnly ? data.sectors.filter((s) => (s.ret_1d ?? 0) > 0) : data.sectors,
-        [data.sectors, positiveOnly],
-    );
+    const isStrengthMode = sortKey === 'strength';
+
+    const filtered = useMemo(() => {
+        if (sortKey === 'strength') return data.sectors.filter(isStrengthSector);
+        return positiveOnly ? data.sectors.filter((s) => (s.ret_1d ?? 0) > 0) : data.sectors;
+    }, [data.sectors, positiveOnly, sortKey]);
 
     const sorted = useMemo(() => [...filtered].sort((a, b) => {
         if (sortKey === 'amount') {
             return (b.total_amount ?? 0) - (a.total_amount ?? 0);
+        }
+        if (sortKey === 'strength') {
+            return (b.strength_score ?? -Infinity) - (a.strength_score ?? -Infinity);
         }
         const key = SORT_VAL_MAP[sortKey] as 'ret_1d' | 'ret_5d' | 'ret_20d';
         return ((b[key] as number | null) ?? -Infinity) - ((a[key] as number | null) ?? -Infinity);
@@ -131,10 +147,11 @@ export default function SectorDashboard({ data }: Props) {
         { key: '5d', label: '本週' },
         { key: '20d', label: '本月' },
         { key: 'amount', label: '成交金額' },
+        { key: 'strength', label: '強勢' },
     ];
 
-    const positiveCount = filtered.length;
     const totalCount = data.sectors.length;
+    const badgeCount = !isStrengthMode && !positiveOnly ? totalCount : filtered.length;
 
     return (
         <div>
@@ -161,17 +178,23 @@ export default function SectorDashboard({ data }: Props) {
                     ))}
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setPositiveOnly((v) => !v)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
-                            positiveOnly
-                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
-                                : 'bg-white/50 text-gray-500 hover:bg-white/70'
-                        }`}
-                    >
-                        <span>{positiveOnly ? '▲' : '≡'}</span>
-                        <span>{positiveOnly ? `正報酬 ${positiveCount}/${totalCount}` : `全部 ${totalCount}`}</span>
-                    </button>
+                    {isStrengthMode ? (
+                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            強勢 {badgeCount}/{totalCount}
+                        </span>
+                    ) : (
+                        <button
+                            onClick={() => setPositiveOnly((v) => !v)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                                positiveOnly
+                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                                    : 'bg-white/50 text-gray-500 hover:bg-white/70'
+                            }`}
+                        >
+                            <span>{positiveOnly ? '▲' : '≡'}</span>
+                            <span>{positiveOnly ? `正報酬 ${badgeCount}/${totalCount}` : `全部 ${totalCount}`}</span>
+                        </button>
+                    )}
                     {data.date && (
                         <span className="text-xs text-gray-400">資料日期：{data.date}</span>
                     )}
@@ -180,7 +203,7 @@ export default function SectorDashboard({ data }: Props) {
 
             {sorted.length === 0 ? (
                 <p className="text-gray-400 text-center py-12">
-                    {positiveOnly ? '今日無正報酬族群' : '尚無族群資料，請等待 Pipeline 執行後重整。'}
+                    {isStrengthMode ? '今日無強勢族群' : (positiveOnly ? '今日無正報酬族群' : '尚無族群資料，請等待 Pipeline 執行後重整。')}
                 </p>
             ) : (
                 sorted.map((sector, i) => (

@@ -43,10 +43,13 @@ def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
         with engine.connect() as conn:
             rows = conn.execute(
                 text("""
-                    SELECT category, ret_1d, ret_5d
+                    SELECT category, ret_1d, ret_5d, breadth, strength_score
                     FROM sector_strength
                     WHERE date = :d
-                    ORDER BY ret_1d DESC NULLS LAST
+                      AND ret_1d > 0
+                      AND ret_5d > 0
+                      AND breadth >= 0.40
+                    ORDER BY strength_score DESC NULLS LAST
                     LIMIT 10
                 """),
                 {"d": query_date},

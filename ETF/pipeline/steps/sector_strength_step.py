@@ -84,13 +84,15 @@ class SectorStrengthStep(BaseStep):
         ret_5d = close.pct_change(5).iloc[-1]
         ret_20d = close.pct_change(20).iloc[-1]
 
-        # 當日成交金額（元）
+        # 當日成交金額（元）+ 5 日均量
         try:
             amount = fd.get("price:成交金額")
             last_amount = amount.iloc[-1] if amount is not None and not amount.empty else None
+            avg_5d_by_stock = amount.iloc[-6:-1].mean() if amount is not None and not amount.empty else None
         except Exception as e:
             self.logger.warning(f"Failed to fetch 成交金額: {e}")
             last_amount = None
+            avg_5d_by_stock = None
 
         # 策略動能分數：5 日滾動均漲幅
         momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
@@ -126,6 +128,11 @@ class SectorStrengthStep(BaseStep):
         else:
             df["amount"] = None
 
+        if avg_5d_by_stock is not None:
+            df["avg_5d"] = df["stock_id"].map(avg_5d_by_stock)
+        else:
+            df["avg_5d"] = None
+
         # 4. 計算族群平均漲幅 + 總成交金額（家數 >= MIN_STOCK_COUNT）
         count_by_cat = df.groupby("category")["stock_id"].count()
         valid_cats = count_by_cat[count_by_cat >= MIN_STOCK_COUNT].index
@@ -146,6 +153,17 @@ class SectorStrengthStep(BaseStep):
         else:
             sector_df["total_amount"] = None
 
+        breadth_by_cat = valid_df.groupby("category")["ret_1d"].agg(lambda x: (x > 0).sum() / len(x))
+        sector_df["breadth"] = sector_df["category"].map(breadth_by_cat)
+
+        if "avg_5d" in valid_df.columns and valid_df["avg_5d"].notna().any():
+            avg_amount_5d_by_cat = valid_df.groupby("category")["avg_5d"].sum(min_count=1)
+            sector_df["avg_amount_5d"] = sector_df["category"].map(avg_amount_5d_by_cat)
+        else:
+            sector_df["avg_amount_5d"] = None
+
+        sector_df["strength_score"] = sector_df["ret_1d"] * sector_df["breadth"]
+
         self.logger.info(f"Computed {len(sector_df)} sectors for {target_date}")
 
         # 5. Upsert 族群資料 + 成分股資料
@@ -165,27 +183,36 @@ class SectorStrengthStep(BaseStep):
 
     def _upsert_sectors(self, conn, sector_df, target_date: str) -> None:
         upsert_sql = text("""
-            INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count, total_amount)
-            VALUES (:date, :category, :ret_1d, :ret_5d, :ret_20d, :stock_count, :total_amount)
+            INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count, total_amount,
+                                         breadth, avg_amount_5d, strength_score)
+            VALUES (:date, :category, :ret_1d, :ret_5d, :ret_20d, :stock_count, :total_amount,
+                    :breadth, :avg_amount_5d, :strength_score)
             ON CONFLICT (date, category) DO UPDATE SET
-                ret_1d       = EXCLUDED.ret_1d,
-                ret_5d       = EXCLUDED.ret_5d,
-                ret_20d      = EXCLUDED.ret_20d,
-                stock_count  = EXCLUDED.stock_count,
-                total_amount = EXCLUDED.total_amount,
-                created_at   = now()
+                ret_1d         = EXCLUDED.ret_1d,
+                ret_5d         = EXCLUDED.ret_5d,
+                ret_20d        = EXCLUDED.ret_20d,
+                stock_count    = EXCLUDED.stock_count,
+                total_amount   = EXCLUDED.total_amount,
+                breadth        = EXCLUDED.breadth,
+                avg_amount_5d  = EXCLUDED.avg_amount_5d,
+                strength_score = EXCLUDED.strength_score,
+                created_at     = now()
         """)
 
         for _, row in sector_df.iterrows():
             amt = self._f(row.get("total_amount"))
+            avg5 = self._f(row.get("avg_amount_5d"))
             conn.execute(upsert_sql, {
-                "date":         target_date,
-                "category":     row["category"],
-                "ret_1d":       self._f(row["ret_1d"]),
-                "ret_5d":       self._f(row["ret_5d"]),
-                "ret_20d":      self._f(row["ret_20d"]),
-                "stock_count":  int(row["stock_count"]),
-                "total_amount": int(amt) if amt is not None else None,
+                "date":           target_date,
+                "category":       row["category"],
+                "ret_1d":         self._f(row["ret_1d"]),
+                "ret_5d":         self._f(row["ret_5d"]),
+                "ret_20d":        self._f(row["ret_20d"]),
+                "stock_count":    int(row["stock_count"]),
+                "total_amount":   int(amt) if amt is not None else None,
+                "breadth":        self._f(row.get("breadth")),
+                "avg_amount_5d":  int(avg5) if avg5 is not None else None,
+                "strength_score": self._f(row.get("strength_score")),
             })
 
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
