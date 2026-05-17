@@ -5,6 +5,7 @@ import './globals.css';
 import { SideNav } from '@/components/layout/SideNav';
 import { MainWrapper } from '@/components/layout/MainWrapper';
 import { HeaderWrapper } from '@/components/layout/HeaderWrapper';
+import { ContentWrapper } from '@/components/layout/ContentWrapper';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import QuickScrollNavigator from '@/components/shared/QuickScrollNavigator';
 
@@ -40,9 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                             ></div>
 
                             <HeaderWrapper />
-                            <div className="w-full pr-4 md:pr-8 py-4 md:py-6 animate-fade-in relative z-10">
+                            <ContentWrapper>
                                 {children}
-                            </div>
+                            </ContentWrapper>
                             <QuickScrollNavigator />
                         </MainWrapper>
                     </div>

@@ -73,6 +73,19 @@ class SQLStorage:
             result = conn.execute(query)
             return [row[0] for row in result]
 
+    def get_strategy_hit_stocks(self) -> list:
+        """取得最新一期 sector_strength_stocks 中策略命中的股票代號"""
+        with self.engine.connect() as conn:
+            query = text("""
+                SELECT DISTINCT stock_id
+                FROM sector_strength_stocks
+                WHERE date = (SELECT MAX(date) FROM sector_strength_stocks)
+                  AND is_strategy_hit = true
+                ORDER BY stock_id
+            """)
+            result = conn.execute(query)
+            return [row[0] for row in result]
+
     def save_diff_logs(self, diff_logs: list):
         """Upsert diff logs 到 etf_diff_logs 表（SQLAlchemy，避免 REST API 409）。"""
         if not diff_logs:

@@ -50,7 +50,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
 
             {/* Header */}
             <header className="sticky top-0 z-50 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
-                <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+                <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
                     {/* Brand + Nav */}
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2.5">
@@ -142,7 +142,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
             </header>
 
             {/* Content */}
-            <main className="max-w-screen-2xl mx-auto px-6 py-6 animate-fade-in">
+            <main className="max-w-screen-2xl mx-auto px-4 py-6 animate-fade-in">
                 {children}
             </main>
         </div>

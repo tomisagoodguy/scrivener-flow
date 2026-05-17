@@ -23,6 +23,7 @@ export interface SectorStock {
     is_strategy_hit: boolean;
     momentum_score: number | null;
     amount: number | null;
+    category?: string;
 }
 
 export interface SectorData {
@@ -56,12 +57,30 @@ export async function getSectorStrength(): Promise<SectorData> {
     return { date: queryDate, sectors: (data ?? []) as SectorRow[] };
 }
 
+export async function getAllStrategyHitStocks(date: string): Promise<SectorStock[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('sector_strength_stocks')
+        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
+        .eq('date', date)
+        .eq('is_strategy_hit', true)
+        .order('momentum_score', { ascending: false, nullsFirst: false });
+
+    if (error) {
+        console.error('[getAllStrategyHitStocks]', error.message);
+        return [];
+    }
+
+    return (data ?? []) as SectorStock[];
+}
+
 export async function getSectorStocks(category: string, date: string): Promise<SectorStock[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
         .from('sector_strength_stocks')
-        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount')
+        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
         .eq('date', date)
         .eq('category', category)
         .order('amount', { ascending: false, nullsFirst: false });

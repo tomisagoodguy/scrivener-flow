@@ -60,7 +60,8 @@ class PipelineOrchestrator:
         MultiEtfStep,           # 爬取 00980A / 00991A 持股、AUM、產業
         AumSyncStep,            # 同步各 ETF AUM 時序 → etf_aum_series（輔助）
         SyncCompanyStep,
-        SyncOHLCVStep,
+        SectorStrengthStep,     # [輔助] 計算全市場族群漲幅 → sector_strength；命中股加進 secondary_stock_codes
+        SyncOHLCVStep,          # 合併 ETF 持股 + sector strategy-hit 股一起 sync K 線
         OverlapComputeStep,     # 聚合跨 ETF 共識持股 → etf_stock_overlap
         FlowComputeStep,        # 計算每日跨 ETF 資金流向 → etf_flow_daily（輔助）
         SignalDetectStep,       # 偵測跨 ETF 進階訊號 → etf_signals（輔助）
@@ -71,7 +72,6 @@ class PipelineOrchestrator:
         MatchedPairsStep,       # [輔助] 主動/被動配對實證 → etf_matched_pairs
         ActiveShareStep,        # [輔助] 持股重疊度（週一執行，非週一自動 skip）→ etf_active_share
         StrategySignalStep,     # [輔助] 執行量化策略，upsert 訊號 → strategy_signals
-        SectorStrengthStep,     # [輔助] 計算全市場族群漲幅 → sector_strength
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
         NotifyStep,

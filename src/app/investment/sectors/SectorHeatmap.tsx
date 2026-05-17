@@ -147,7 +147,7 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
             <div
                 ref={containerRef}
                 className="relative w-full overflow-hidden rounded-xl"
-                style={{ height: '60vh', minHeight: 380 }}
+                style={{ height: '78vh', minHeight: 520 }}
             >
                 {blocks.map((block) => {
                     const pct = block.sector[retKey] as number | null;

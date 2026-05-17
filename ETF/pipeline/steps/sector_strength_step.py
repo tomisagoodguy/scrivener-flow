@@ -12,6 +12,8 @@ import logging
 from datetime import date
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
@@ -114,12 +116,18 @@ class SectorStrengthStep(BaseStep):
         # 策略動能分數：5 日滾動均漲幅
         momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
 
-        # 三均線多頭條件（最後一日）
+        # 均線多頭排列：股價 > MA5 > MA20 > MA60，且 MA20 近 5 日向上
+        ma5  = close.average(5).iloc[-1]
         ma20 = close.average(20).iloc[-1]
         ma60 = close.average(60).iloc[-1]
-        ma120 = close.average(120).iloc[-1]
         last_close = close.iloc[-1]
-        above_ma = (last_close > ma20) & (last_close > ma60) & (last_close > ma120)
+        ma20_rising = close.average(20).rise(5).iloc[-1]
+        above_ma = (
+            (last_close > ma5)
+            & (ma5 > ma20)
+            & (ma20 > ma60)
+            & ma20_rising
+        )
 
         # 月營收短期 > 長期
         self.logger.info("Fetching monthly revenue data...")
@@ -130,8 +138,29 @@ class SectorStrengthStep(BaseStep):
             self.logger.warning(f"Failed to fetch monthly revenue, strategy hit will be False: {e}")
             rev_cond = pd.Series(False, index=last_close.index)
 
+        # 蠟燭波動率 <= 12%：濾除高波動股（candle path ÷ close，20 日均值）
+        low_volatility = pd.Series(True, index=last_close.index)
+        try:
+            high  = fd.get("price:最高價")
+            low_p = fd.get("price:最低價")
+            open_ = fd.get("price:開盤價")
+            bullish = close >= open_
+            bull_path = (abs(close.shift() - open_) + abs(open_ - low_p)
+                         + abs(low_p - high) + abs(high - close))
+            bear_path = (abs(close.shift() - open_) + abs(open_ - high)
+                         + abs(high - low_p) + abs(low_p - close))
+            candle_path = pd.DataFrame(
+                np.where(bullish, bull_path, bear_path),
+                index=close.index,
+                columns=close.columns,
+            )
+            volatility = candle_path.rolling(20).mean() / close.rolling(20).mean() * 100
+            low_volatility = volatility.iloc[-1] <= 12
+        except Exception as e:
+            self.logger.warning(f"Failed to compute candle volatility, skipping filter: {e}")
+
         # 合併策略命中
-        strategy_hit = above_ma & rev_cond  # NaN → False 自動排除
+        strategy_hit = above_ma & rev_cond & low_volatility  # NaN → False 自動排除
 
         # 3. 合併漲幅 + 策略欄位到 exploded DataFrame
         df = exploded.copy()
@@ -195,8 +224,12 @@ class SectorStrengthStep(BaseStep):
             self._upsert_stocks(conn, valid_df, target_date)
             conn.commit()
 
+        # 6. 把策略命中股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
+        hit_codes = valid_df[valid_df["is_strategy_hit"]]["stock_id"].astype(str).tolist()
+        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + hit_codes))
         self.logger.info(
-            f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}"
+            f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}, "
+            f"{len(hit_codes)} strategy-hit stocks added to secondary_stock_codes"
         )
 
     @staticmethod

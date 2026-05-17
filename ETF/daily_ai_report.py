@@ -49,6 +49,8 @@ def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
                       AND ret_1d > 0
                       AND ret_5d > 0
                       AND breadth >= 0.40
+                      AND (total_amount IS NULL OR avg_amount_5d IS NULL
+                           OR total_amount >= avg_amount_5d * 0.8)
                     ORDER BY strength_score DESC NULLS LAST
                     LIMIT 10
                 """),

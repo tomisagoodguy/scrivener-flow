@@ -2,12 +2,12 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { getSectorStocks } from '@/app/actions/getSectorStrength';
+import { getSectorStocks, getAllStrategyHitStocks } from '@/app/actions/getSectorStrength';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { pctClass, fmtPct, fmtAmount } from '@/lib/investment/formatUtils';
 import SectorHeatmap, { type HeatmapPeriod } from './SectorHeatmap';
 
-type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength';
+type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -109,6 +109,7 @@ const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
     '20d': 'ret_20d',
     'amount': null,
     'strength': 'strength_score',
+    'hit': null,
 };
 
 function isStrengthSector(s: SectorRow): boolean {
@@ -124,9 +125,37 @@ function isStrengthSector(s: SectorRow): boolean {
 export default function SectorDashboard({ data }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
-    const [viewMode, setViewMode] = useState<'list' | 'heatmap'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'heatmap'>('heatmap');
+    const [hitStocks, setHitStocks] = useState<SectorStock[]>([]);
+    const [hitLoading, setHitLoading] = useState(false);
 
     const isStrengthMode = sortKey === 'strength';
+    const isHitMode = sortKey === 'hit';
+
+    const dedupedHitStocks = useMemo(() => {
+        const map = new Map<string, SectorStock & { categories: string[] }>();
+        for (const s of hitStocks) {
+            if (map.has(s.stock_id)) {
+                if (s.category) map.get(s.stock_id)!.categories.push(s.category.split(':').pop()!);
+            } else {
+                map.set(s.stock_id, { ...s, categories: s.category ? [s.category.split(':').pop()!] : [] });
+            }
+        }
+        return Array.from(map.values());
+    }, [hitStocks]);
+
+    const handleTabClick = (key: SortKey) => {
+        setSortKey(key);
+        if (key === 'hit' && hitStocks.length === 0 && !hitLoading) {
+            setHitLoading(true);
+            getAllStrategyHitStocks(data.date)
+                .then(setHitStocks)
+                .finally(() => setHitLoading(false));
+        }
+        if (key === 'amount' || key === 'strength' || key === 'hit') {
+            setViewMode('list');
+        }
+    };
 
     const filtered = useMemo(() => {
         if (sortKey === 'strength') return data.sectors.filter(isStrengthSector);
@@ -150,6 +179,7 @@ export default function SectorDashboard({ data }: Props) {
         { key: '20d', label: '本月' },
         { key: 'amount', label: '成交金額' },
         { key: 'strength', label: '強勢' },
+        { key: 'hit', label: '⚡ 命中' },
     ];
 
     const totalCount = data.sectors.length;
@@ -166,12 +196,12 @@ export default function SectorDashboard({ data }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
                     {tabs.map((t) => {
-                        const hidden = viewMode === 'heatmap' && (t.key === 'amount' || t.key === 'strength');
+                        const hidden = viewMode === 'heatmap' && (t.key === 'amount' || t.key === 'strength' || t.key === 'hit');
                         if (hidden) return null;
                         return (
                             <button
                                 key={t.key}
-                                onClick={() => setSortKey(t.key)}
+                                onClick={() => handleTabClick(t.key)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                                     sortKey === t.key
                                         ? 'bg-blue-600 text-white'
@@ -207,7 +237,7 @@ export default function SectorDashboard({ data }: Props) {
                     <button
                         onClick={() => {
                             setViewMode((v) => v === 'list' ? 'heatmap' : 'list');
-                            if (sortKey === 'amount' || sortKey === 'strength') setSortKey('1d');
+                            if (sortKey === 'amount' || sortKey === 'strength' || sortKey === 'hit') setSortKey('1d');
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-white/50 text-gray-600 hover:bg-white/70 transition-colors"
                         title={viewMode === 'list' ? '切換熱力圖' : '切換列表'}
@@ -217,7 +247,51 @@ export default function SectorDashboard({ data }: Props) {
                 </div>
             </div>
 
-            {viewMode === 'heatmap' ? (
+            {isHitMode ? (
+                <div>
+                    {hitLoading ? (
+                        <p className="text-gray-400 text-center py-12">載入中...</p>
+                    ) : dedupedHitStocks.length === 0 ? (
+                        <p className="text-gray-400 text-center py-12">今日無策略命中個股</p>
+                    ) : (
+                        <div className="glass-card overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-gray-400 text-xs border-b border-white/20">
+                                        <th className="text-left px-4 py-2">股票</th>
+                                        <th className="text-left px-4 py-2 hidden sm:table-cell">族群</th>
+                                        <th className="text-right px-4 py-2">日漲幅</th>
+                                        <th className="text-right px-4 py-2 hidden sm:table-cell">週漲幅</th>
+                                        <th className="text-right px-4 py-2 hidden sm:table-cell">月漲幅</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {dedupedHitStocks.map((s) => (
+                                        <tr key={s.stock_id} className="border-b border-white/10 last:border-0 hover:bg-white/20 transition-colors">
+                                            <td className="px-4 py-2 font-medium">
+                                                <Link href={`/investment/dashboard/${s.stock_id}`} className="hover:text-blue-600 transition-colors">
+                                                    {s.stock_name ?? s.stock_id}
+                                                    <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                                </Link>
+                                            </td>
+                                            <td className="px-4 py-2 hidden sm:table-cell">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {s.categories.map((cat, i) => (
+                                                        <span key={`${cat}-${i}`} className="text-xs bg-white/40 text-gray-500 px-1.5 py-0.5 rounded">{cat}</span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className={`px-4 py-2 text-right ${pctClass(s.ret_1d)}`}>{fmtPct(s.ret_1d)}</td>
+                                            <td className={`px-4 py-2 text-right hidden sm:table-cell ${pctClass(s.ret_5d)}`}>{fmtPct(s.ret_5d)}</td>
+                                            <td className={`px-4 py-2 text-right hidden sm:table-cell ${pctClass(s.ret_20d)}`}>{fmtPct(s.ret_20d)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            ) : viewMode === 'heatmap' ? (
                 <SectorHeatmap
                     sectors={data.sectors}
                     date={data.date}
