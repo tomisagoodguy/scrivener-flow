@@ -14,12 +14,13 @@ export const SideNav = () => {
     const supabase = createClient();
     const pathname = usePathname();
     const router = useRouter();
-
-    if (pathname.startsWith('/investment')) return null;
     const { user } = useAuthUser();
-    const email = user?.email ?? null;
     const [lineMsg, setLineMsg] = useState('');
     const [sending, setSending] = useState(false);
+
+    const email = user?.email ?? null;
+
+    if (pathname.startsWith('/investment')) return null;
 
     const handleQuickLine = async (e: React.FormEvent) => {
         e.preventDefault();

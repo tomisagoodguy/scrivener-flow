@@ -50,8 +50,8 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
         .from('etf_diff_logs')
         .select('stock_code, change_type, diff_weight')
         .eq('etf_code', '00981A')
-        .gte('date', sevenDaysAgoStr)
-        .lte('date', targetDate)
+        .gte('data_date', sevenDaysAgoStr)
+        .lte('data_date', targetDate)
         .in('stock_code', allStockIds);
 
     const diffEvents: DiffEvent[] = (diffRows ?? []).map((r) => ({

@@ -73,17 +73,17 @@ class SQLStorage:
             result = conn.execute(query)
             return [row[0] for row in result]
 
-    def get_strategy_hit_stocks(self) -> list:
-        """取得最新一期 sector_strength_stocks 中策略命中的股票代號"""
+    def get_strategy_hit_stocks(self, lookback_days: int = 30) -> list:
+        """取得最近 N 天內曾策略命中的股票代號（曾命中就持續追蹤）"""
         with self.engine.connect() as conn:
             query = text("""
                 SELECT DISTINCT stock_id
                 FROM sector_strength_stocks
-                WHERE date = (SELECT MAX(date) FROM sector_strength_stocks)
+                WHERE date >= CURRENT_DATE - :lookback_days
                   AND is_strategy_hit = true
                 ORDER BY stock_id
             """)
-            result = conn.execute(query)
+            result = conn.execute(query, {"lookback_days": lookback_days})
             return [row[0] for row in result]
 
     def save_diff_logs(self, diff_logs: list):

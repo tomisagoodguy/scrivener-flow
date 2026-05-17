@@ -88,7 +88,7 @@ export default async function BareKOverviewPage() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {entries.map((entry, i) => (
-                            <BareKSummaryCard key={entry.id} entry={entry} index={i} />
+                            <BareKSummaryCard key={entry.id} entry={entry} index={i} isOwner={isOwner} />
                         ))}
                     </div>
                 )}

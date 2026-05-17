@@ -3,20 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeftIcon, ChevronDownIcon } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
-const navItems = [
+const primaryNavItems = [
     { name: '選股池', href: '/investment' },
+    { name: '籌碼排行', href: '/investment/equity' },
+    { name: '策略選股', href: '/investment/strategy' },
+    { name: '族群強弱', href: '/investment/sectors' },
+];
+
+const moreGroup = [
     { name: '法人共識', href: '/investment/consensus' },
     { name: 'ETF 對比', href: '/investment/compare' },
     { name: '歷史回顧', href: '/investment/history' },
     { name: '營收實驗室', href: '/investment/revenue-lab' },
-    { name: '籌碼排行', href: '/investment/equity' },
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
-    { name: '策略選股', href: '/investment/strategy' },
-    { name: '族群強弱', href: '/investment/sectors' },
 ];
 
 const watchGroup = [
@@ -24,20 +27,22 @@ const watchGroup = [
     { name: '裸K看盤', href: '/investment/bare-k' },
 ];
 
+function useHoverDropdown() {
+    const [open, setOpen] = useState(false);
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+    const onEnter = () => { if (timer.current) clearTimeout(timer.current); setOpen(true); };
+    const onLeave = () => { timer.current = setTimeout(() => setOpen(false), 150); };
+    return { open, onEnter, onLeave };
+}
+
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const [watchOpen, setWatchOpen] = useState(false);
-    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const watch = useHoverDropdown();
+    const more = useHoverDropdown();
 
     const isWatchActive = watchGroup.some((i) => pathname.startsWith(i.href));
-
-    function handleMouseEnter() {
-        if (closeTimer.current) clearTimeout(closeTimer.current);
-        setWatchOpen(true);
-    }
-    function handleMouseLeave() {
-        closeTimer.current = setTimeout(() => setWatchOpen(false), 150);
-    }
+    const isMoreActive = moreGroup.some((i) => pathname.startsWith(i.href));
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -63,7 +68,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                         </div>
 
                         <nav className="flex items-center gap-1">
-                            {navItems.map((item) => {
+                            {primaryNavItems.map((item) => {
                                 const isActive =
                                     item.href === '/investment'
                                         ? pathname === '/investment'
@@ -83,11 +88,53 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                 );
                             })}
 
+                            {/* 更多 下拉群組 */}
+                            <div
+                                className="relative"
+                                onMouseEnter={more.onEnter}
+                                onMouseLeave={more.onLeave}
+                            >
+                                <button
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                                        isMoreActive
+                                            ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                    }`}
+                                >
+                                    更多
+                                    <ChevronDownIcon
+                                        size={11}
+                                        className={`transition-transform duration-200 ${more.open ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+
+                                {more.open && (
+                                    <div className="absolute top-full left-0 mt-1.5 min-w-[7rem] rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-slate-200/40 dark:shadow-slate-950/40 py-1 z-50">
+                                        {moreGroup.map((item) => {
+                                            const isActive = pathname.startsWith(item.href);
+                                            return (
+                                                <Link
+                                                    key={item.href}
+                                                    href={item.href}
+                                                    className={`block px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
+                                                        isActive
+                                                            ? 'text-blue-600 dark:text-blue-400 bg-blue-600/8'
+                                                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                                    }`}
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* 觀察清單 + 裸K 下拉群組 */}
                             <div
                                 className="relative"
-                                onMouseEnter={handleMouseEnter}
-                                onMouseLeave={handleMouseLeave}
+                                onMouseEnter={watch.onEnter}
+                                onMouseLeave={watch.onLeave}
                             >
                                 <button
                                     className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
@@ -99,11 +146,11 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                     觀察清單
                                     <ChevronDownIcon
                                         size={11}
-                                        className={`transition-transform duration-200 ${watchOpen ? 'rotate-180' : ''}`}
+                                        className={`transition-transform duration-200 ${watch.open ? 'rotate-180' : ''}`}
                                     />
                                 </button>
 
-                                {watchOpen && (
+                                {watch.open && (
                                     <div className="absolute top-full left-0 mt-1.5 min-w-[7rem] rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-slate-200/40 dark:shadow-slate-950/40 py-1 z-50">
                                         {watchGroup.map((item) => {
                                             const isActive = pathname.startsWith(item.href);

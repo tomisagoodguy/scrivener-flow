@@ -224,12 +224,13 @@ class SectorStrengthStep(BaseStep):
             self._upsert_stocks(conn, valid_df, target_date)
             conn.commit()
 
-        # 6. 把策略命中股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
-        hit_codes = valid_df[valid_df["is_strategy_hit"]]["stock_id"].astype(str).tolist()
-        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + hit_codes))
+        # 6. 把最近 30 天曾命中的股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
+        tracked_codes = services.sql_storage.get_strategy_hit_stocks()
+        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + tracked_codes))
+        today_hit = int(valid_df["is_strategy_hit"].sum())
         self.logger.info(
             f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}, "
-            f"{len(hit_codes)} strategy-hit stocks added to secondary_stock_codes"
+            f"today_hit={today_hit}, tracked_30d={len(tracked_codes)} stocks added to secondary_stock_codes"
         )
 
     @staticmethod

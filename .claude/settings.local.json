@@ -137,7 +137,12 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
       "PowerShell(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
       "PowerShell(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
-      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"refactor: 程式碼品質改善 — 修正 memo bug、移除 eval、常數化設定物件\")"
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"refactor: 程式碼品質改善 — 修正 memo bug、移除 eval、常數化設定物件\")",
+      "Skill(spectra-propose)",
+      "Skill(spectra-propose:*)",
+      "Skill(spectra-apply)",
+      "Skill(spectra-apply:*)",
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: 投資導覽列重構 + 裸K刪除功能 + 策略追蹤優化\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",
