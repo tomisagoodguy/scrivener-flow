@@ -9,6 +9,7 @@ import { HOLDING_SORT_FIELDS } from './StockPickerHub.types';
 interface HoldingsTableRowProps {
     holding: UnifiedHolding;
     activeEtfCodes: string[];
+    etfColorMap: Record<string, string>;
     selectedEtfsSize: number;
     sortField: SortField;
     sortOrder: SortOrder;
@@ -37,6 +38,7 @@ function toStockLink(code: string, sortField: SortField, sortOrder: SortOrder): 
 export function HoldingsTableRow({
     holding: h,
     activeEtfCodes,
+    etfColorMap,
     selectedEtfsSize,
     sortField,
     sortOrder,
@@ -45,6 +47,7 @@ export function HoldingsTableRow({
 }: HoldingsTableRowProps) {
     const isTriple = h.shared_count >= 3;
     const isDouble = h.shared_count === 2;
+    const holdingEtfs = activeEtfCodes.filter(c => h.weights[c] !== undefined);
 
     return (
         <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -63,6 +66,18 @@ export function HoldingsTableRow({
                     >
                         {h.stock_name}
                     </button>
+                    {holdingEtfs.map(code => {
+                        const color = etfColorMap[code] ?? '#888';
+                        return (
+                            <span
+                                key={code}
+                                className="text-[10px] px-1 py-0.5 rounded font-mono whitespace-nowrap"
+                                style={{ backgroundColor: color + '20', color, border: `1px solid ${color}50` }}
+                            >
+                                {code.replace(/[A-Z]$/, '')}
+                            </span>
+                        );
+                    })}
                     {h.industry && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 font-normal whitespace-nowrap">
                             {h.industry}

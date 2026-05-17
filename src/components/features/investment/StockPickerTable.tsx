@@ -73,6 +73,7 @@ export function StockPickerTable({
                             key={h.stock_code}
                             holding={h}
                             activeEtfCodes={activeEtfCodes}
+                            etfColorMap={etfColorMap}
                             selectedEtfsSize={selectedEtfsSize}
                             sortField={sortField}
                             sortOrder={sortOrder}
