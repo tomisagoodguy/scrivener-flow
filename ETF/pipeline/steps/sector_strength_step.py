@@ -214,7 +214,9 @@ class SectorStrengthStep(BaseStep):
         else:
             sector_df["avg_amount_5d"] = None
 
-        sector_df["strength_score"] = sector_df["ret_1d"] * sector_df["breadth"]
+        hit_ratio = valid_df.groupby("category")["is_strategy_hit"].mean()
+        sector_df["hit_ratio"] = sector_df["category"].map(hit_ratio).fillna(0)
+        sector_df["strength_score"] = sector_df["ret_1d"] * sector_df["breadth"] * (1 + sector_df["hit_ratio"] * 2)
 
         self.logger.info(f"Computed {len(sector_df)} sectors for {target_date}")
 

@@ -1,8 +1,14 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { StrategyEntry, MovementLabel } from '@/lib/investment/strategyUtils';
+import type { FactorICRow } from '@/app/actions/getFactorIC';
+import FactorICSparkline from './FactorICSparkline';
 
 interface Props {
     strategy: StrategyEntry;
+    factorIC?: FactorICRow[];
 }
 
 const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }> = {
@@ -12,10 +18,47 @@ const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }
     none:     { label: '未持有', className: 'bg-slate-100/60 text-slate-500 dark:text-slate-400' },
 };
 
-export default function StrategySignalCard({ strategy }: Props) {
+const FACTOR_LABELS: Record<string, string> = {
+    rev_momentum_3_12: '營收動能',
+    rsv_180:           'RSV180',
+    rs_100:            'RS100',
+    ma_trend_score:    '均線趨勢',
+    broker_force:      '主力籌碼',
+    vol_breakout:      '量能突破',
+    smallcap_pct:      '小市值',
+    price_to_high_240: '近高點',
+};
+
+function icBadgeClass(ic: number | null): string {
+    if (ic === null) return 'bg-gray-100/60 text-gray-400';
+    if (ic >= 0.04) return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+    if (ic >= 0.02) return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400';
+    return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+}
+
+export default function StrategySignalCard({ strategy, factorIC }: Props) {
+    const [expandedFactor, setExpandedFactor] = useState<string | null>(null);
+
     const consensusCount = strategy.stocks.filter((s) => s.movement === 'adding').length;
     const encodedStockList = encodeURIComponent(strategy.stocks.map((s) => s.stock_id).join(','));
     const fromLabel = encodeURIComponent(`策略:${strategy.description}`);
+
+    const factorMap = useMemo(() => {
+        const map = new Map<string, FactorICRow[]>();
+        for (const row of factorIC ?? []) {
+            if (!map.has(row.factor)) map.set(row.factor, []);
+            map.get(row.factor)!.push(row);
+        }
+        return map;
+    }, [factorIC]);
+
+    const factorKeys = useMemo(
+        () => [...factorMap.keys()].filter((k) => factorMap.get(k)!.some((r) => r.ic_20d !== null)),
+        [factorMap],
+    );
+
+    const toggleFactor = (key: string) =>
+        setExpandedFactor((prev) => (prev === key ? null : key));
 
     return (
         <div className="glass-card rounded-xl p-5 space-y-3 animate-slide-up">
@@ -71,6 +114,42 @@ export default function StrategySignalCard({ strategy }: Props) {
                         );
                     })}
                 </ul>
+            )}
+
+            {factorKeys.length > 0 && (
+                <div className="pt-2 border-t border-gray-100/50 dark:border-gray-700/40 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                        {factorKeys.map((key) => {
+                            const sparkRows = [...factorMap.get(key)!].sort((a, b) => a.month.localeCompare(b.month));
+                            const latest = sparkRows[sparkRows.length - 1];
+                            const hasSparkline = sparkRows.filter((r) => r.ic_20d !== null).length >= 3;
+                            return (
+                                <button
+                                    key={key}
+                                    onClick={() => toggleFactor(key)}
+                                    disabled={!hasSparkline}
+                                    className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${icBadgeClass(latest?.ic_20d ?? null)} ${hasSparkline ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                                    title={hasSparkline ? '點擊展開 12 個月走勢' : '資料不足，無法展開'}
+                                >
+                                    {FACTOR_LABELS[key] ?? key} {latest?.ic_20d != null ? latest.ic_20d.toFixed(3) : '—'}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {expandedFactor && factorMap.has(expandedFactor) && (
+                        <div className="pl-1">
+                            <p className="text-xs text-gray-400 mb-1">
+                                {FACTOR_LABELS[expandedFactor] ?? expandedFactor} — ic_20d 近 12 個月走勢
+                            </p>
+                            <FactorICSparkline
+                                data={[...factorMap.get(expandedFactor)!]
+                                    .sort((a, b) => a.month.localeCompare(b.month))
+                                    .map((r) => ({ month: r.month, ic_20d: r.ic_20d }))}
+                            />
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

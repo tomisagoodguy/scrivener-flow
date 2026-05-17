@@ -43,15 +43,19 @@ def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
         with engine.connect() as conn:
             rows = conn.execute(
                 text("""
-                    SELECT category, ret_1d, ret_5d, breadth, strength_score
-                    FROM sector_strength
-                    WHERE date = :d
-                      AND ret_1d > 0
-                      AND ret_5d > 0
-                      AND breadth >= 0.40
-                      AND (total_amount IS NULL OR avg_amount_5d IS NULL
-                           OR total_amount >= avg_amount_5d * 0.8)
-                    ORDER BY strength_score DESC NULLS LAST
+                    SELECT s.category, s.ret_1d, s.ret_5d, s.breadth, s.strength_score,
+                           AVG(CASE WHEN ss.is_strategy_hit THEN 1.0 ELSE 0.0 END) AS hit_ratio
+                    FROM sector_strength s
+                    LEFT JOIN sector_strength_stocks ss
+                           ON s.date = ss.date AND s.category = ss.category
+                    WHERE s.date = :d
+                      AND s.ret_1d > 0
+                      AND s.ret_5d > 0
+                      AND s.breadth >= 0.40
+                      AND (s.total_amount IS NULL OR s.avg_amount_5d IS NULL
+                           OR s.total_amount >= s.avg_amount_5d * 0.8)
+                    GROUP BY s.category, s.ret_1d, s.ret_5d, s.breadth, s.strength_score
+                    ORDER BY s.strength_score DESC NULLS LAST
                     LIMIT 10
                 """),
                 {"d": query_date},
@@ -69,7 +73,8 @@ def build_sector_summary(engine, target_date: Optional[str] = None) -> str:
     lines = [f"📊 今日強勢族群 ({query_date})"]
     for i, r in enumerate(top_1d, 1):
         pct = f"{float(r[1]) * 100:+.2f}%" if r[1] is not None else "N/A"
-        lines.append(f"{i}. {r[0]}  {pct}")
+        hit = f"（命中率 {float(r[5]) * 100:.0f}%）" if r[5] else ""
+        lines.append(f"{i}. {r[0]}  {pct}{hit}")
 
     lines.append("")
     lines.append("📈 本週強勢族群")

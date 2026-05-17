@@ -1,0 +1,42 @@
+name: Monthly Factor IC Computation
+
+on:
+  schedule:
+    # 每月 1–5 日且為週一，UTC 15:00（台灣 23:00）
+    - cron: '0 15 1-5 * 1'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: '指定月份 YYYY-MM（留空為當月）'
+        required: false
+        default: ''
+
+jobs:
+  compute-ic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Compute Factor IC
+        env:
+          FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.month }}" ]; then
+            uv run --with "finlab>=1.5.9" python ETF/compute_factor_ic.py --month "${{ github.event.inputs.month }}"
+          else
+            uv run --with "finlab>=1.5.9" python ETF/compute_factor_ic.py
+          fi

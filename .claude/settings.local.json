@@ -142,7 +142,11 @@
       "Skill(spectra-propose:*)",
       "Skill(spectra-apply)",
       "Skill(spectra-apply:*)",
-      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: 投資導覽列重構 + 裸K刪除功能 + 策略追蹤優化\")"
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: 投資導覽列重構 + 裸K刪除功能 + 策略追蹤優化\")",
+      "PowerShell(spectra status --change \"factor-ic-dashboard\" --json)",
+      "Bash(spectra show *)",
+      "Bash(spectra --help)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\\) for f in d.get\\('contextFiles',{}\\).values\\(\\)]\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

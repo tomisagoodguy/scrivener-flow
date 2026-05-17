@@ -1,10 +1,31 @@
 import { getStrategySignals } from '@/app/actions/getStrategySignals';
+import { getFactorIC } from '@/app/actions/getFactorIC';
+import type { FactorICRow } from '@/app/actions/getFactorIC';
 import StrategySignalCard from '@/components/features/StrategySignalCard';
 
 export const dynamic = 'force-dynamic';
 
+const STRATEGY_FACTORS: Record<string, string[]> = {
+    super8888:     ['vol_breakout'],
+    capital_layer: ['rev_momentum_3_12', 'rsv_180', 'broker_force'],
+    low_vol_cap:   ['rev_momentum_3_12', 'rsv_180', 'price_to_high_240'],
+    broker_ranked: ['rev_momentum_3_12', 'broker_force', 'rsv_180'],
+    low_vol_alpha: ['rev_momentum_3_12', 'rs_100'],
+};
+
+function icForStrategy(allIC: FactorICRow[], strategyId: string): FactorICRow[] {
+    const factors = new Set(STRATEGY_FACTORS[strategyId] ?? []);
+    return allIC.filter((r) => factors.has(r.factor));
+}
+
 export default async function StrategyPage() {
-    const result = await getStrategySignals();
+    const [result, allIC] = await Promise.all([
+        getStrategySignals(),
+        getFactorIC(
+            [...new Set(Object.values(STRATEGY_FACTORS).flat())],
+            12,
+        ),
+    ]);
 
     if (!result) {
         return (
@@ -28,7 +49,11 @@ export default async function StrategyPage() {
             ) : (
                 <div className="space-y-5">
                     {result.strategies.map((strategy) => (
-                        <StrategySignalCard key={strategy.id} strategy={strategy} />
+                        <StrategySignalCard
+                            key={strategy.id}
+                            strategy={strategy}
+                            factorIC={icForStrategy(allIC, strategy.id)}
+                        />
                     ))}
                 </div>
             )}
