@@ -44,6 +44,7 @@ export function buildUnifiedHoldings(
                     is_high_20d: h.is_high_20d ?? false,
                     is_high_200d: h.is_high_200d ?? false,
                     volatility: h.volatility ?? null,
+                    industry: h.industry ?? null,
                 });
             }
             const entry = stockMap.get(h.stock_code)!;
@@ -242,7 +243,7 @@ export function useStockPickerHub(
             }
             return true;
         });
-    }, [unifiedHoldings, activeFactors, selectedEtfs.size, searchQuery]);
+    }, [unifiedHoldings, activeFactors, selectedEtfs, searchQuery]);
 
     const sortedHoldings = useMemo(
         () => sortHoldings(filteredHoldings, sortField, sortOrder),

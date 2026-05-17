@@ -14,6 +14,7 @@ export interface DiffEntry981A {
     is_significant: boolean | null;
     shares_張: number;
     amount_亿: number | null;
+    sector?: string;
 }
 
 export interface Guide981AData {
@@ -64,7 +65,17 @@ function BarRow({
         <div className="py-1.5">
             <div className="flex items-center gap-2 mb-0.5">
                 <Link href={href} className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0 hover:underline hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">{e.stock_code}</Link>
-                <span className="text-sm text-slate-700 dark:text-slate-300 w-20 shrink-0 truncate">{e.stock_name}</span>
+                <div className="flex flex-col w-20 shrink-0 min-w-0">
+                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{e.stock_name}</span>
+                    {e.sector && (
+                        <span
+                            title={e.sector}
+                            className="max-w-[80px] truncate text-[9px] px-1 py-0 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50 leading-4"
+                        >
+                            {e.sector}
+                        </span>
+                    )}
+                </div>
                 <span className={`text-sm font-semibold tabular-nums ${amtColor}`}>
                     {fmtAmount(e, isInflow)}
                 </span>

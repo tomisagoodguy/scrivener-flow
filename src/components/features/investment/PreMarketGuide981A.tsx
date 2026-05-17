@@ -1,5 +1,6 @@
 import { getServiceClient } from '@/lib/supabase/service';
 import { PreMarketGuide981ACard, type Guide981AData } from './PreMarketGuide981ACard';
+import { fetchSectorCategoryMap } from '@/lib/investment/sectorUtils';
 
 // ── 型別 ──────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,9 @@ async function fetch981AData(): Promise<Guide981AData | null> {
             .map(h => [h.stock_code, h.price as number])
     );
 
+    const allCodes = [...new Set((logs ?? []).map(l => l.stock_code))];
+    const sectorMap = await fetchSectorCategoryMap(allCodes);
+
     const toEntry = (log: RawDiffLog) => {
         const price = priceMap.get(log.stock_code) ?? null;
         const shares_張 = Math.round(Math.abs(log.diff_shares) / 1000);
@@ -67,6 +71,7 @@ async function fetch981AData(): Promise<Guide981AData | null> {
             is_significant: log.is_significant,
             shares_張,
             amount_亿,
+            sector: sectorMap[log.stock_code],
         };
     };
 

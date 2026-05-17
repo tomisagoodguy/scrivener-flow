@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition, useCallback } from 'react';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { getSectorStocks } from '@/app/actions/getSectorStrength';
-import { fmtPct, pctClass } from '@/lib/investment/formatUtils';
+import { fmtPct, pctClass, fmtAmount } from '@/lib/investment/formatUtils';
 
 export type HeatmapPeriod = '1d' | '5d' | '20d';
 
@@ -249,6 +249,7 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                             <thead>
                                 <tr className="text-gray-400 text-xs border-b border-white/20">
                                     <th className="text-left py-1">股票</th>
+                                    <th className="text-right py-1 hidden sm:table-cell">成交金額</th>
                                     <th className="text-right py-1">日漲幅</th>
                                     <th className="text-right py-1 hidden sm:table-cell">週漲幅</th>
                                     <th className="text-right py-1 hidden sm:table-cell">月漲幅</th>
@@ -264,6 +265,7 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                                                 <span className="ml-1.5 text-yellow-400 text-xs" title="策略命中">⚡</span>
                                             )}
                                         </td>
+                                        <td className="text-right py-1.5 hidden sm:table-cell text-gray-500 text-xs">{fmtAmount(s.amount)}</td>
                                         <td className={`text-right py-1.5 ${pctClass(s.ret_1d)}`}>{fmtPct(s.ret_1d)}</td>
                                         <td className={`text-right py-1.5 hidden sm:table-cell ${pctClass(s.ret_5d)}`}>{fmtPct(s.ret_5d)}</td>
                                         <td className={`text-right py-1.5 hidden sm:table-cell ${pctClass(s.ret_20d)}`}>{fmtPct(s.ret_20d)}</td>

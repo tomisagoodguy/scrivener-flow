@@ -13,6 +13,7 @@ export interface FlowStockSummary {
     total_nt: number;
     etf_count: number;
     etf_codes: string[];
+    sector?: string;
 }
 
 export interface GuideData {
@@ -46,7 +47,17 @@ function StockRow({ stock, isInflow, rank, label, stockList }: { stock: FlowStoc
     return (
         <div className="flex items-center gap-2 py-1">
             <Link href={href} className="font-mono text-xs text-indigo-500 dark:text-indigo-400 w-11 shrink-0 hover:underline hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">{stock.stock_code}</Link>
-            <span className="text-sm text-slate-700 dark:text-slate-300 w-20 shrink-0 truncate">{stock.stock_name}</span>
+            <div className="flex flex-col w-20 shrink-0 min-w-0">
+                <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{stock.stock_name}</span>
+                {stock.sector && (
+                    <span
+                        title={stock.sector}
+                        className="max-w-[80px] truncate text-[9px] px-1 py-0 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50 leading-4"
+                    >
+                        {stock.sector}
+                    </span>
+                )}
+            </div>
             <span className={`text-sm font-semibold w-16 text-right shrink-0 tabular-nums ${isInflow ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {isInflow ? '+' : ''}{nt2yi(stock.total_nt)}
             </span>

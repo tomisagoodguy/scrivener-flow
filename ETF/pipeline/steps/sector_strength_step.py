@@ -7,6 +7,7 @@ Sector Strength Step
 屬於輔助步驟，失敗時只 log，不中斷 pipeline。
 """
 
+import ast
 import logging
 from datetime import date
 from typing import TYPE_CHECKING
@@ -22,6 +23,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 MIN_STOCK_COUNT = 5  # 族群內至少需要幾支股票才計算
+
+
+def _safe_eval_list(s: str) -> list:
+    try:
+        result = ast.literal_eval(s)
+        return result if isinstance(result, list) else [result]
+    except Exception:
+        return []
 
 
 class SectorStrengthStep(BaseStep):
@@ -59,16 +68,8 @@ class SectorStrengthStep(BaseStep):
             self.logger.warning("security_industry_themes is empty, skipping.")
             return
 
-        # category 欄位是字串格式的陣列，需 eval 轉換；逐行保護
-        def safe_eval(s: str) -> list:
-            try:
-                result = eval(s)  # noqa: S307
-                return result if isinstance(result, list) else [result]
-            except Exception:
-                return []
-
         themes = themes.copy()
-        themes["category"] = themes["category"].apply(safe_eval)
+        themes["category"] = themes["category"].apply(_safe_eval_list)
         exploded = themes.explode("category").dropna(subset=["category"])
         exploded = exploded[exploded["category"].str.strip() != ""]
 
@@ -203,6 +204,12 @@ class SectorStrengthStep(BaseStep):
         """NaN-safe float conversion."""
         return float(v) if v is not None and v == v else None
 
+    @staticmethod
+    def _int_or_none(v) -> int | None:
+        """NaN-safe int conversion."""
+        f = SectorStrengthStep._f(v)
+        return int(f) if f is not None else None
+
     def _upsert_sectors(self, conn, sector_df, target_date: str) -> None:
         upsert_sql = text("""
             INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count, total_amount,
@@ -223,8 +230,6 @@ class SectorStrengthStep(BaseStep):
 
         params = []
         for _, row in sector_df.iterrows():
-            amt = self._f(row.get("total_amount"))
-            avg5 = self._f(row.get("avg_amount_5d"))
             params.append({
                 "date":           target_date,
                 "category":       row["category"],
@@ -232,9 +237,9 @@ class SectorStrengthStep(BaseStep):
                 "ret_5d":         self._f(row["ret_5d"]),
                 "ret_20d":        self._f(row["ret_20d"]),
                 "stock_count":    int(row["stock_count"]),
-                "total_amount":   int(amt) if amt is not None else None,
+                "total_amount":   self._int_or_none(row.get("total_amount")),
                 "breadth":        self._f(row.get("breadth")),
-                "avg_amount_5d":  int(avg5) if avg5 is not None else None,
+                "avg_amount_5d":  self._int_or_none(row.get("avg_amount_5d")),
                 "strength_score": self._f(row.get("strength_score")),
             })
         conn.execute(upsert_sql, params)
@@ -243,10 +248,10 @@ class SectorStrengthStep(BaseStep):
         upsert_sql = text("""
             INSERT INTO sector_strength_stocks
                 (date, category, stock_id, stock_name, ret_1d, ret_5d, ret_20d,
-                 is_strategy_hit, momentum_score)
+                 is_strategy_hit, momentum_score, amount)
             VALUES
                 (:date, :category, :stock_id, :stock_name, :ret_1d, :ret_5d, :ret_20d,
-                 :is_strategy_hit, :momentum_score)
+                 :is_strategy_hit, :momentum_score, :amount)
             ON CONFLICT (date, category, stock_id) DO UPDATE SET
                 stock_name      = EXCLUDED.stock_name,
                 ret_1d          = EXCLUDED.ret_1d,
@@ -254,6 +259,7 @@ class SectorStrengthStep(BaseStep):
                 ret_20d         = EXCLUDED.ret_20d,
                 is_strategy_hit = EXCLUDED.is_strategy_hit,
                 momentum_score  = EXCLUDED.momentum_score,
+                amount          = EXCLUDED.amount,
                 created_at      = now()
         """)
 
@@ -270,6 +276,7 @@ class SectorStrengthStep(BaseStep):
                 "ret_20d":         self._f(row.get("ret_20d")),
                 "is_strategy_hit": bool(row.get("is_strategy_hit", False)),
                 "momentum_score":  self._f(row.get("momentum_score")),
+                "amount":          self._int_or_none(row.get("amount")),
             }
             for _, row in df.iterrows()
         ]

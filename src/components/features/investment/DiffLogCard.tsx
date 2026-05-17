@@ -25,70 +25,70 @@ export interface DiffLogCardProps {
     showEtfBadge?: boolean;
 }
 
+const STATUS_CONFIG: Record<string, {
+    icon: LucideIcon;
+    bg: string;
+    iconBg: string;
+    badge: string;
+    label: string;
+    color: string;
+}> = {
+    IN: {
+        icon: RocketIcon,
+        bg: 'bg-rose-50 dark:bg-rose-950/40',
+        iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
+        badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+        label: '新增持股',
+        color: 'text-rose-600',
+    },
+    OUT: {
+        icon: TrashIcon,
+        bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+        iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
+        badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        label: '剔除持股',
+        color: 'text-emerald-600',
+    },
+    BUY: {
+        icon: TrendingUpIcon,
+        bg: 'bg-rose-50 dark:bg-rose-950/40',
+        iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
+        badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+        label: '加碼',
+        color: 'text-rose-600',
+    },
+    SELL: {
+        icon: TrendingDownIcon,
+        bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+        iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
+        badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        label: '減碼',
+        color: 'text-emerald-600',
+    },
+    CLOSE: {
+        icon: MinusCircleIcon,
+        bg: 'bg-amber-50 dark:bg-amber-950/40',
+        iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-800/50 dark:text-amber-300',
+        badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        label: '大幅縮減',
+        color: 'text-amber-600',
+    },
+};
+
+const DEFAULT_STATUS_CONFIG = {
+    icon: ClockIcon,
+    bg: 'bg-slate-50',
+    iconBg: 'bg-slate-100 text-slate-600',
+    badge: 'bg-slate-500/10 text-slate-600',
+    label: '未知',
+    color: 'text-slate-600',
+};
+
 export function DiffLogCard({ logs, index, dateIndex, getBehaviorTags, showEtfBadge }: DiffLogCardProps) {
     const router = useRouter();
     const log = logs[0];
 
-    const getStatusConfig = (type: string) => {
-        switch (type) {
-            case 'IN':
-                return {
-                    icon: RocketIcon,
-                    bg: 'bg-rose-50 dark:bg-rose-950/40',
-                    iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
-                    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-                    label: '新增持股',
-                    color: 'text-rose-600'
-                };
-            case 'OUT':
-                return {
-                    icon: TrashIcon,
-                    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-                    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
-                    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                    label: '剔除持股',
-                    color: 'text-emerald-600'
-                };
-            case 'BUY':
-                return {
-                    icon: TrendingUpIcon,
-                    bg: 'bg-rose-50 dark:bg-rose-950/40',
-                    iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300',
-                    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-                    label: '加碼',
-                    color: 'text-rose-600'
-                };
-            case 'SELL':
-                return {
-                    icon: TrendingDownIcon,
-                    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-                    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300',
-                    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                    label: '減碼',
-                    color: 'text-emerald-600'
-                };
-            case 'CLOSE':
-                return {
-                    icon: MinusCircleIcon,
-                    bg: 'bg-amber-50 dark:bg-amber-950/40',
-                    iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-800/50 dark:text-amber-300',
-                    badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-                    label: '大幅縮減',
-                    color: 'text-amber-600'
-                };
-            default:
-                return {
-                    icon: ClockIcon,
-                    bg: 'bg-slate-50',
-                    iconBg: 'bg-slate-100 text-slate-600',
-                    badge: 'bg-slate-500/10 text-slate-600',
-                    label: '未知',
-                    color: 'text-slate-600'
-                };
-        }
-    };
-
-    const config = getStatusConfig(log.change_type);
+    const config = STATUS_CONFIG[log.change_type] ?? DEFAULT_STATUS_CONFIG;
     const StatusIcon = config.icon;
 
     return (
@@ -143,7 +143,10 @@ export function DiffLogCard({ logs, index, dateIndex, getBehaviorTags, showEtfBa
                                     {log.stock_code}
                                 </span>
                                 {log.industry && (
-                                    <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[10px] font-bold border border-indigo-100 dark:border-indigo-800/50">
+                                    <span
+                                        title={log.industry}
+                                        className="max-w-[150px] truncate px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[10px] font-bold border border-indigo-100 dark:border-indigo-800/50"
+                                    >
                                         {log.industry}
                                     </span>
                                 )}

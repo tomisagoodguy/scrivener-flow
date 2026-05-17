@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ConsensusPanel, type ConsensusRow } from '@/components/features/investment/ConsensusPanel';
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
 import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
+import { fetchSectorCategoryMap } from '@/lib/investment/sectorUtils';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
 import { PipelineMonitor } from '@/components/features/investment/PipelineMonitor';
 import { DailyFlowPanel } from '@/components/features/investment/DailyFlowPanel';
@@ -79,7 +80,6 @@ async function getAllDiffLogs(): Promise<DiffLog[]> {
 
     if (!logsData || logsData.length === 0) return [];
 
-    // 去除 pipeline 重複執行產生的重複紀錄，保留最新一筆（query 已按 created_at DESC 排序）
     const seen = new Set<string>();
     const uniqueLogs = logsData.filter(log => {
         const key = `${log.etf_code}|${log.data_date}|${log.stock_code}|${log.change_type}`;
@@ -88,13 +88,7 @@ async function getAllDiffLogs(): Promise<DiffLog[]> {
         return true;
     });
 
-    const { data: industryData } = await supabase
-        .from('stock_basic_info')
-        .select('stock_code, industry')
-        .in('stock_code', uniqueLogs.map(l => l.stock_code));
-
-    const industryMap: Record<string, string> = {};
-    industryData?.forEach(i => { industryMap[i.stock_code] = i.industry; });
+    const industryMap = await fetchSectorCategoryMap([...new Set(uniqueLogs.map(l => l.stock_code))]);
 
     return uniqueLogs.map(l => ({
         ...l,
@@ -221,13 +215,14 @@ export default async function InvestmentPoolPage() {
     const unionHoldings = buildUnionHoldings(byEtf);
     const allCodes = unionHoldings.map(h => h.stock_code);
 
-    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals] = await Promise.all([
+    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals, industryMap] = await Promise.all([
         fetchQuantFiltersBatched(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
         getCompareData(),
         fetchConsensusData(),
         fetchLatestSignals(),
+        fetchSectorCategoryMap(allCodes),
     ]);
 
     const unionWithFilters = unionHoldings.map(h => ({
@@ -253,6 +248,7 @@ export default async function InvestmentPoolPage() {
             is_high_20d: h.is_high_20d ?? null,
             is_high_200d: h.is_high_200d ?? null,
             volatility: h.volatility ?? null,
+            industry: industryMap[h.stock_code] ?? null,
         })),
     }));
 

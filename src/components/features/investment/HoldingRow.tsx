@@ -10,32 +10,33 @@ interface HoldingRowProps {
     onClick: (stock: Holding) => void;
 }
 
+function formatNumber(num: number | null | undefined, decimals = 2): string {
+    if (num === null || num === undefined) return '-';
+    return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function getNewHighBadge(item: Holding) {
+    if (item.is_high_200d) {
+        return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">200H</span>;
+    }
+    if (item.is_high_20d) {
+        return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shadow-sm">20H</span>;
+    }
+    if (item.is_high_5d) {
+        return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">5H</span>;
+    }
+    return null;
+}
+
+function getMomentumColor(rank: number): string {
+    if (rank >= 0.8) return 'from-indigo-500 to-purple-600';
+    if (rank >= 0.6) return 'from-blue-400 to-indigo-500';
+    if (rank >= 0.4) return 'from-teal-400 to-blue-400';
+    if (rank >= 0.2) return 'from-yellow-400 to-orange-400';
+    return 'from-slate-300 to-slate-400';
+}
+
 export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
-
-    const formatNumber = (num: number | null | undefined, decimals = 2) => {
-        if (num === null || num === undefined) return '-';
-        return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    };
-
-    const getNewHighBadge = (item: Holding) => {
-        const badges = [];
-        if (item.is_high_200d) {
-             badges.push(<span key="200" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">200H</span>);
-        } else if (item.is_high_20d) {
-             badges.push(<span key="20" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shadow-sm">20H</span>);
-        } else if (item.is_high_5d) {
-             badges.push(<span key="5" className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">5H</span>);
-        }
-        return badges;
-    };
-
-    const getMomentumColor = (rank: number) => {
-        if (rank >= 0.8) return 'from-indigo-500 to-purple-600';
-        if (rank >= 0.6) return 'from-blue-400 to-indigo-500';
-        if (rank >= 0.4) return 'from-teal-400 to-blue-400';
-        if (rank >= 0.2) return 'from-yellow-400 to-orange-400';
-        return 'from-slate-300 to-slate-400';
-    };
 
     return (
         <motion.tr 
@@ -66,15 +67,16 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] text-slate-400 font-mono font-medium">{item.stock_code}</span>
                             {item.industry && (
-                                <span className="text-[9px] px-1.5 py-0.25 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50">
+                                <span
+                                    title={item.industry}
+                                    className="max-w-[140px] truncate text-[9px] px-1.5 py-0.25 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50"
+                                >
                                     {item.industry}
                                 </span>
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-col justify-center gap-1">
-                        {getNewHighBadge(item)}
-                    </div>
+                    {getNewHighBadge(item)}
                 </div>
             </td>
 

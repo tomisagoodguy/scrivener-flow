@@ -131,7 +131,13 @@
       "Bash(spectra task *)",
       "Skill(git-pushing)",
       "Skill(git-pushing:*)",
-      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf: 批次 DB upsert 並移除冗餘欄位檢查\")"
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf: 批次 DB upsert 並移除冗餘欄位檢查\")",
+      "Skill(finlab)",
+      "Skill(finlab:*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "PowerShell(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "PowerShell(python -c \"import ast; ast.parse\\(open\\('ETF/pipeline/steps/sector_strength_step.py', encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"refactor: 程式碼品質改善 — 修正 memo bug、移除 eval、常數化設定物件\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

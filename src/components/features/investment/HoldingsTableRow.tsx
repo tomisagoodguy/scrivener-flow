@@ -49,7 +49,7 @@ export function HoldingsTableRow({
     return (
         <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
             <td className="py-2 px-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <Link
                         href={toStockLink(h.stock_code, sortField, sortOrder)}
                         className="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
@@ -63,6 +63,11 @@ export function HoldingsTableRow({
                     >
                         {h.stock_name}
                     </button>
+                    {h.industry && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 font-normal whitespace-nowrap">
+                            {h.industry}
+                        </span>
+                    )}
                     {isTriple && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700 font-medium">
                             3共

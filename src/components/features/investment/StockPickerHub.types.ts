@@ -11,6 +11,7 @@ export interface HoldingItem {
     is_high_20d?: boolean | null;
     is_high_200d?: boolean | null;
     volatility?: number | null;
+    industry?: string | null;
 }
 
 export interface EtfData {
@@ -64,6 +65,7 @@ export interface UnifiedHolding {
     is_high_20d: boolean;
     is_high_200d: boolean;
     volatility: number | null;
+    industry: string | null;
     weightRank?: number;
     amountRank?: number;
     marginRankHigh?: number;

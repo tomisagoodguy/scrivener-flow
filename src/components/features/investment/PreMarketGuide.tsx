@@ -1,5 +1,6 @@
 import { getServiceClient } from '@/lib/supabase/service';
 import { PreMarketGuideCard, type GuideData } from './PreMarketGuideCard';
+import { fetchSectorCategoryMap } from '@/lib/investment/sectorUtils';
 
 // ── 型別 ──────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,9 @@ export async function PreMarketGuide() {
 
     const { data_date, etfs_covered, totals, inflow, outflow, by_etf } = data;
 
+    const allCodes = [...new Set([...inflow, ...outflow].map(s => s.stock_code))];
+    const sectorMap = await fetchSectorCategoryMap(allCodes);
+
     const consensusBuys = inflow
         .filter(s => s.etf_count >= CONSENSUS_BUY_MIN)
         .map(s => ({
@@ -73,6 +77,7 @@ export async function PreMarketGuide() {
             total_nt: s.total_nt,
             etf_count: s.etf_count,
             etf_codes: s.by_etf.filter(b => b.nt > 0).map(b => b.etf_code),
+            sector: sectorMap[s.stock_code],
         }));
 
     const singleBets = inflow
@@ -84,6 +89,7 @@ export async function PreMarketGuide() {
             total_nt: s.total_nt,
             etf_count: s.etf_count,
             etf_codes: s.by_etf.filter(b => b.nt > 0).map(b => b.etf_code),
+            sector: sectorMap[s.stock_code],
         }));
 
     const consensusSells = outflow
@@ -94,6 +100,7 @@ export async function PreMarketGuide() {
             total_nt: s.total_nt,
             etf_count: s.etf_count,
             etf_codes: s.by_etf.filter(b => b.nt < 0).map(b => b.etf_code),
+            sector: sectorMap[s.stock_code],
         }));
 
     const byEtfEntries = Object.entries(by_etf).sort((a, b) => b[1].net_flow - a[1].net_flow);
