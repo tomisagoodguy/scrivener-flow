@@ -43,7 +43,6 @@ class SectorStrengthStep(BaseStep):
     def _run(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         target_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
 
-        import finlab
         import finlab.data as fd
         import pandas as pd
 
@@ -85,14 +84,31 @@ class SectorStrengthStep(BaseStep):
         ret_20d = close.pct_change(20).iloc[-1]
 
         # 當日成交金額（元）+ 5 日均量
+        # FinLab 欄位名稱因版本而異，依序嘗試；最終備援用股數×收盤價估算
+        last_amount = None
+        avg_5d_by_stock = None
         try:
-            amount = fd.get("price:成交金額")
-            last_amount = amount.iloc[-1] if amount is not None and not amount.empty else None
-            avg_5d_by_stock = amount.iloc[-6:-1].mean() if amount is not None and not amount.empty else None
+            amount = None
+            for _col in ("price:成交金額", "price:成交金額(元)"):
+                try:
+                    _df = fd.get(_col)
+                    if _df is not None and not _df.empty:
+                        amount = _df
+                        self.logger.info(f"Fetched trading amount via '{_col}'")
+                        break
+                except Exception:
+                    continue
+            if amount is None or amount.empty:
+                # 備援：成交股數 × 收盤價（近似值）
+                vol = fd.get("price:成交股數")
+                if vol is not None and not vol.empty:
+                    amount = vol.multiply(close)
+                    self.logger.info("Trading amount estimated from shares × close (fallback)")
+            if amount is not None and not amount.empty:
+                last_amount = amount.iloc[-1]
+                avg_5d_by_stock = amount.iloc[-6:-1].mean()
         except Exception as e:
             self.logger.warning(f"Failed to fetch 成交金額: {e}")
-            last_amount = None
-            avg_5d_by_stock = None
 
         # 策略動能分數：5 日滾動均漲幅
         momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
@@ -147,16 +163,22 @@ class SectorStrengthStep(BaseStep):
         sector_df["date"] = target_date
 
         # 計算族群總成交金額
-        if "amount" in valid_df.columns and valid_df["amount"].notna().any():
+        if valid_df["amount"].notna().any():
             total_amount_by_cat = valid_df.groupby("category")["amount"].sum()
             sector_df["total_amount"] = sector_df["category"].map(total_amount_by_cat)
         else:
             sector_df["total_amount"] = None
 
-        breadth_by_cat = valid_df.groupby("category")["ret_1d"].agg(lambda x: (x > 0).sum() / len(x))
-        sector_df["breadth"] = sector_df["category"].map(breadth_by_cat)
+        def _breadth(x):
+            valid = x.dropna()
+            return float((valid > 0).sum()) / len(valid) if len(valid) > 0 else None
 
-        if "avg_5d" in valid_df.columns and valid_df["avg_5d"].notna().any():
+        breadth_by_cat = valid_df.groupby("category")["ret_1d"].apply(_breadth)
+        sector_df = sector_df.merge(
+            breadth_by_cat.rename("breadth").reset_index(), on="category", how="left"
+        )
+
+        if valid_df["avg_5d"].notna().any():
             avg_amount_5d_by_cat = valid_df.groupby("category")["avg_5d"].sum(min_count=1)
             sector_df["avg_amount_5d"] = sector_df["category"].map(avg_amount_5d_by_cat)
         else:
@@ -169,7 +191,7 @@ class SectorStrengthStep(BaseStep):
         # 5. Upsert 族群資料 + 成分股資料
         with services.sql_storage.engine.connect() as conn:
             self._upsert_sectors(conn, sector_df, target_date)
-            self._upsert_stocks(conn, df[df["category"].isin(valid_cats)], target_date)
+            self._upsert_stocks(conn, valid_df, target_date)
             conn.commit()
 
         self.logger.info(
@@ -199,10 +221,11 @@ class SectorStrengthStep(BaseStep):
                 created_at     = now()
         """)
 
+        params = []
         for _, row in sector_df.iterrows():
             amt = self._f(row.get("total_amount"))
             avg5 = self._f(row.get("avg_amount_5d"))
-            conn.execute(upsert_sql, {
+            params.append({
                 "date":           target_date,
                 "category":       row["category"],
                 "ret_1d":         self._f(row["ret_1d"]),
@@ -214,6 +237,7 @@ class SectorStrengthStep(BaseStep):
                 "avg_amount_5d":  int(avg5) if avg5 is not None else None,
                 "strength_score": self._f(row.get("strength_score")),
             })
+        conn.execute(upsert_sql, params)
 
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
         upsert_sql = text("""
@@ -235,8 +259,8 @@ class SectorStrengthStep(BaseStep):
 
         name_col = "name" if "name" in df.columns else None
 
-        for _, row in df.iterrows():
-            conn.execute(upsert_sql, {
+        params = [
+            {
                 "date":            target_date,
                 "category":        row["category"],
                 "stock_id":        row["stock_id"],
@@ -246,4 +270,7 @@ class SectorStrengthStep(BaseStep):
                 "ret_20d":         self._f(row.get("ret_20d")),
                 "is_strategy_hit": bool(row.get("is_strategy_hit", False)),
                 "momentum_score":  self._f(row.get("momentum_score")),
-            })
+            }
+            for _, row in df.iterrows()
+        ]
+        conn.execute(upsert_sql, params)

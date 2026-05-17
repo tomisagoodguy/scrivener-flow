@@ -128,7 +128,10 @@
       "PowerShell(openspec task done --change \"pre-market-guide-line-notify\" 4 2>&1)",
       "Bash(spectra unpark *)",
       "Bash(spectra in-progress *)",
-      "Bash(spectra task *)"
+      "Bash(spectra task *)",
+      "Skill(git-pushing)",
+      "Skill(git-pushing:*)",
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"perf: 批次 DB upsert 並移除冗餘欄位檢查\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

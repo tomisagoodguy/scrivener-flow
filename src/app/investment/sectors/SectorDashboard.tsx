@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getSectorStocks } from '@/app/actions/getSectorStrength';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { pctClass, fmtPct, fmtAmount } from '@/lib/investment/formatUtils';
+import SectorHeatmap, { type HeatmapPeriod } from './SectorHeatmap';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength';
 
@@ -123,6 +124,7 @@ function isStrengthSector(s: SectorRow): boolean {
 export default function SectorDashboard({ data }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
+    const [viewMode, setViewMode] = useState<'list' | 'heatmap'>('list');
 
     const isStrengthMode = sortKey === 'strength';
 
@@ -163,19 +165,23 @@ export default function SectorDashboard({ data }: Props) {
 
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                    {tabs.map((t) => (
-                        <button
-                            key={t.key}
-                            onClick={() => setSortKey(t.key)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                sortKey === t.key
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white/50 text-gray-600 hover:bg-white/70'
-                            }`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
+                    {tabs.map((t) => {
+                        const hidden = viewMode === 'heatmap' && (t.key === 'amount' || t.key === 'strength');
+                        if (hidden) return null;
+                        return (
+                            <button
+                                key={t.key}
+                                onClick={() => setSortKey(t.key)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                    sortKey === t.key
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white/50 text-gray-600 hover:bg-white/70'
+                                }`}
+                            >
+                                {t.label}
+                            </button>
+                        );
+                    })}
                 </div>
                 <div className="flex items-center gap-3">
                     {isStrengthMode ? (
@@ -198,10 +204,26 @@ export default function SectorDashboard({ data }: Props) {
                     {data.date && (
                         <span className="text-xs text-gray-400">資料日期：{data.date}</span>
                     )}
+                    <button
+                        onClick={() => {
+                            setViewMode((v) => v === 'list' ? 'heatmap' : 'list');
+                            if (sortKey === 'amount' || sortKey === 'strength') setSortKey('1d');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-white/50 text-gray-600 hover:bg-white/70 transition-colors"
+                        title={viewMode === 'list' ? '切換熱力圖' : '切換列表'}
+                    >
+                        {viewMode === 'list' ? '▦ 熱力圖' : '≡ 列表'}
+                    </button>
                 </div>
             </div>
 
-            {sorted.length === 0 ? (
+            {viewMode === 'heatmap' ? (
+                <SectorHeatmap
+                    sectors={data.sectors}
+                    date={data.date}
+                    period={(sortKey as HeatmapPeriod) in { '1d': 1, '5d': 1, '20d': 1 } ? (sortKey as HeatmapPeriod) : '1d'}
+                />
+            ) : sorted.length === 0 ? (
                 <p className="text-gray-400 text-center py-12">
                     {isStrengthMode ? '今日無強勢族群' : (positiveOnly ? '今日無正報酬族群' : '尚無族群資料，請等待 Pipeline 執行後重整。')}
                 </p>
