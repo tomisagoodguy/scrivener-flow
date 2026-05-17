@@ -140,12 +140,12 @@ class AIReporter:
         prompt = build_report_prompt(holdings_df, stats, technical_map, top_holdings, etf_code=self.etf_code, news_context=news_context)
 
         # 7. 呼叫 Gemini
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=api_key)  # pyright: ignore[reportPrivateImportUsage]
         logger.info("Calling Gemini...")
         for model_name in self.models_to_try:
             try:
                 logger.info(f"Using model: {model_name}")
-                model = genai.GenerativeModel(model_name)
+                model = genai.GenerativeModel(model_name)  # pyright: ignore[reportPrivateImportUsage]
                 response = model.generate_content(prompt)
 
                 if response and response.text:

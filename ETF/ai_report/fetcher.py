@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.sql.elements import TextClause
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class ETFDataFetcher:
 
     def _query_by_codes(
         self,
-        query: text,
+        query: TextClause,
         codes: list[str],
         extra_params: dict | None = None,
     ) -> pd.DataFrame:
@@ -43,7 +44,7 @@ class ETFDataFetcher:
         rendered_sql = str(query).replace("{placeholders}", placeholders)
         with self.engine.connect() as conn:
             result = conn.execute(text(rendered_sql), params)
-            return pd.DataFrame(result.fetchall(), columns=result.keys())
+            return pd.DataFrame(result.fetchall(), columns=list(result.keys()))
 
     def fetch_holdings(self, etf_code: str | None = None) -> pd.DataFrame:
         """取得 ETF 最新持股快照，含最新月營收 YoY/MoM。
@@ -76,7 +77,7 @@ class ETFDataFetcher:
         """)
         with self.engine.connect() as conn:
             result = conn.execute(query, {"etf_code": target_etf})
-            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            df = pd.DataFrame(result.fetchall(), columns=list(result.keys()))
 
         # 移除重複欄位
         df = df.loc[:, ~df.columns.duplicated()]
