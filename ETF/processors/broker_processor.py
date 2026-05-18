@@ -52,13 +52,13 @@ class BrokerProcessor:
         force = net_volume.rolling(60).mean() / net_volume.rolling(60).std()
         
         # Transform to Records
-        buy_s = buy_vol.stack()
+        buy_s: pd.Series = buy_vol.stack()  # type: ignore[assignment]
         buy_s.name = 'buy_amount'
-        sell_s = sell_vol.stack()
+        sell_s: pd.Series = sell_vol.stack()  # type: ignore[assignment]
         sell_s.name = 'sell_amount'
-        net_vol_s = net_volume.stack()
+        net_vol_s: pd.Series = net_volume.stack()  # type: ignore[assignment]
         net_vol_s.name = 'net_volume'
-        force_s = force.stack()
+        force_s: pd.Series = force.stack()  # type: ignore[assignment]
         force_s.name = 'force_metric'
         
         merged = pd.concat([buy_s, sell_s, net_vol_s, force_s], axis=1)

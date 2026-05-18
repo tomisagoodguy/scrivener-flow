@@ -10,6 +10,8 @@ import logging
 from pathlib import Path
 from datetime import date, timedelta
 
+import pandas as pd
+
 # 確保 project root 在 Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -83,22 +85,26 @@ def run(days: int = 5) -> None:
         # 只取最近 days 個交易日
         recent = positions.tail(days)
 
-        for dt, row in recent.iterrows():
-            date_str = dt.date() if hasattr(dt, "date") else dt
-            if date_str < cutoff:
-                continue
-            for stock_id, value in row.items():
-                if value is None:
+        try:
+            for dt, row in recent.iterrows():
+                date_str: date = pd.Timestamp(str(dt)).date()
+                if date_str < cutoff:
                     continue
-                is_selected = bool(value) if isinstance(value, bool) else float(value) > 0
-                score = float(value) if not isinstance(value, bool) else (1.0 if value else 0.0)
-                all_records.append({
-                    "strategy_id": strategy.strategy_id,
-                    "date": str(date_str),
-                    "stock_id": str(stock_id),
-                    "score": score,
-                    "is_selected": is_selected,
-                })
+                for stock_id, value in row.items():
+                    if value is None:
+                        continue
+                    is_selected = bool(value) if isinstance(value, bool) else float(value) > 0
+                    score = float(value) if not isinstance(value, bool) else (1.0 if value else 0.0)
+                    all_records.append({
+                        "strategy_id": strategy.strategy_id,
+                        "date": str(date_str),
+                        "stock_id": str(stock_id),
+                        "score": score,
+                        "is_selected": is_selected,
+                    })
+        except Exception as e:
+            logger.error(f"策略 {strategy.strategy_id} 結果處理失敗：{e}")
+            continue
 
         selected_count = recent.iloc[-1].sum() if not recent.empty else 0
         logger.info(f"  → 最新日期選出 {int(selected_count)} 支股票")

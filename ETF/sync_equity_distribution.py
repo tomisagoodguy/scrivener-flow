@@ -271,17 +271,14 @@ def _upsert(records: list[dict], storage: SQLStorage) -> None:
     logger.info(f"✅ upsert 完成：{len(records)} 筆")
 
 
-def _already_synced(snapshot_date: str, storage: SQLStorage) -> bool:
-    """檢查本期資料是否已寫入（冪等保護）。"""
+def _get_synced_codes(snapshot_date: str, storage: SQLStorage) -> set[str]:
+    """取得本期已寫入的 stock_code 集合。"""
     with storage.engine.connect() as conn:
-        count = conn.execute(
-            text(
-                "SELECT COUNT(*) FROM equity_distribution_stats "
-                "WHERE snapshot_date = :d"
-            ),
+        rows = conn.execute(
+            text("SELECT stock_code FROM equity_distribution_stats WHERE snapshot_date = :d"),
             {"d": snapshot_date},
-        ).scalar()
-    return (count or 0) > 0
+        ).fetchall()
+    return {r[0] for r in rows}
 
 
 def _get_existing_dates(storage: SQLStorage) -> set[str]:
@@ -436,7 +433,21 @@ def main() -> None:
         return
     logger.info(f"成分股池：{len(stock_list)} 支")
 
-    # 2. FinLab 登入
+    # 2. 快速預檢：純 DB 查詢，確認是否有新成分股需要補入（不呼叫 FinLab，節省配額）
+    if not args.force:
+        with storage.engine.connect() as conn:
+            latest_row = conn.execute(
+                text("SELECT snapshot_date FROM equity_distribution_stats ORDER BY snapshot_date DESC LIMIT 1")
+            ).fetchone()
+        if latest_row:
+            synced_codes = _get_synced_codes(str(latest_row[0]), storage)
+            missing = set(stock_list) - synced_codes
+            if not missing:
+                logger.info(f"目標股票已全數同步 ({latest_row[0]})，無需 FinLab 請求，略過")
+                return
+            logger.info(f"發現 {len(missing)} 支新成分股待補充，繼續同步...")
+
+    # 3. FinLab 登入
     if not _login_finlab():
         return
 
@@ -452,11 +463,15 @@ def main() -> None:
     if not records:
         return
 
-    # 5. 本週無新公告保護（同一 snapshot_date 已存在則略過）
+    # 5. 只補缺的股票（冪等保護：新成分股出現時也能即時補入）
     snapshot_date = records[0]["snapshot_date"]
-    if not args.force and _already_synced(snapshot_date, storage):
-        logger.info(f"本期資料 ({snapshot_date}) 已存在，略過寫入（使用 --force 可強制覆蓋）")
-        return
+    if not args.force:
+        synced_codes = _get_synced_codes(snapshot_date, storage)
+        records = [r for r in records if r["stock_code"] not in synced_codes]
+        if not records:
+            logger.info(f"本期資料 ({snapshot_date}) 所有目標股票已同步，略過寫入")
+            return
+        logger.info(f"本期新增待補充：{len(records)} 支（已有 {len(synced_codes)} 支）")
 
     # 6. 補充股票名稱
     records = _enrich_stock_names(records, storage)

@@ -235,6 +235,13 @@ class SectorStrengthStep(BaseStep):
             f"today_hit={today_hit}, tracked_30d={len(tracked_codes)} stocks added to secondary_stock_codes"
         )
 
+        # 7. 補充策略命中股票的集保籌碼資料（若在 equity_distribution_stats 中缺失）
+        hit_codes = valid_df[valid_df["is_strategy_hit"]]["stock_id"].unique().tolist()
+        try:
+            self._backfill_missing_chips(hit_codes, services)
+        except Exception as e:
+            self.logger.error(f"補充集保資料失敗（不影響主流程）：{e}")
+
     @staticmethod
     def _f(v) -> float | None:
         """NaN-safe float conversion."""
@@ -317,3 +324,155 @@ class SectorStrengthStep(BaseStep):
             for _, row in df.iterrows()
         ]
         conn.execute(upsert_sql, params)
+
+    def _backfill_missing_chips(self, hit_codes: list[str], services: "PipelineServices") -> None:
+        """
+        補充策略命中股票在 equity_distribution_stats 中缺失的集保籌碼資料。
+        只補缺失的股票，避免重複拉取 FinLab 配額。
+        TDCC 集保資料本身是週更，但新進強勢股可能不在 ETF 成分股池，需即時補入。
+        """
+        import finlab.data as fd
+        import pandas as pd
+
+        if not hit_codes:
+            return
+
+        # 1. 找最新 snapshot_date，確認哪些股票缺失
+        with services.sql_storage.engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT snapshot_date FROM equity_distribution_stats "
+                "ORDER BY snapshot_date DESC LIMIT 1"
+            )).fetchone()
+            if not row:
+                self.logger.info("equity_distribution_stats 無資料，跳過補充")
+                return
+            latest_snapshot = str(row[0])
+
+            existing_rows = conn.execute(text(
+                "SELECT stock_code FROM equity_distribution_stats "
+                "WHERE snapshot_date = :d AND stock_code = ANY(:codes)"
+            ), {"d": latest_snapshot, "codes": hit_codes}).fetchall()
+
+        existing_codes = {r[0] for r in existing_rows}
+        missing_codes = [c for c in hit_codes if c not in existing_codes]
+
+        if not missing_codes:
+            self.logger.info("所有策略命中股票已有集保資料，無需補充")
+            return
+
+        self.logger.info(
+            f"發現 {len(missing_codes)} 支策略命中股票缺少集保資料，呼叫 FinLab inventory..."
+        )
+
+        # 2. 從 FinLab 取 inventory（TDCC 集保資料）
+        # fd.get() 每次下載全市場，quota 已扣，所以直接寫入全部 hit_codes（不只 missing）
+        inv = fd.get("inventory")
+        if inv is None or inv.empty:
+            self.logger.warning("FinLab inventory 為空，無法補充集保資料")
+            return
+
+        # 欄位依位置重命名（FinLab 欄位名稱在不同環境可能有亂碼）
+        cols = list(inv.columns)
+        inv = inv.rename(columns={
+            cols[2]: "tier",
+            cols[3]: "holder_count",
+            cols[4]: "shares_held",
+            cols[5]: "custody_ratio",
+        })
+        inv = inv[inv["stock_id"].isin(hit_codes)].copy()  # 寫入全部命中股票
+        if inv.empty:
+            self.logger.warning("FinLab inventory 中找不到缺失股票的資料")
+            return
+
+        inv["date"] = pd.to_datetime(inv["date"])
+        all_dates = sorted(inv["date"].unique())
+        if len(all_dates) < 2:
+            self.logger.warning("inventory 資料不足兩期，無法計算差值")
+            return
+
+        latest_date = all_dates[-1]
+        prev_date = all_dates[-2]
+
+        AGGREGATE_TIER = "17"
+
+        def _tier_pct(period_df: pd.DataFrame, min_tier: int) -> pd.Series:
+            rows = period_df[period_df["tier"].astype(str).astype(int) >= min_tier]
+            rows = rows[rows["tier"] != AGGREGATE_TIER]
+            return rows.groupby("stock_id")["custody_ratio"].sum()
+
+        def _summarise(period_df: pd.DataFrame) -> pd.DataFrame:
+            agg = period_df[period_df["tier"] == AGGREGATE_TIER]
+            total_sh = agg.groupby("stock_id")["holder_count"].first().rename("total_shareholders")
+            return pd.concat([
+                total_sh,
+                _tier_pct(period_df, 11).rename("mid_holder_pct"),
+                _tier_pct(period_df, 12).rename("big_holder_pct"),
+                _tier_pct(period_df, 15).rename("whale_holder_pct"),
+            ], axis=1)
+
+        latest_s = _summarise(inv[inv["date"] == latest_date])
+        prev_s = _summarise(inv[inv["date"] == prev_date])
+        merged = latest_s.join(prev_s, rsuffix="_prev", how="inner")
+
+        merged["big_holder_pct_change"] = (
+            merged["big_holder_pct"] - merged["big_holder_pct_prev"]
+        ).round(3)
+        merged["mid_holder_pct_change"] = (
+            merged["mid_holder_pct"].fillna(0.0) - merged["mid_holder_pct_prev"].fillna(0.0)
+        ).round(3)
+        merged["whale_holder_pct_change"] = (
+            merged["whale_holder_pct"].fillna(0.0) - merged["whale_holder_pct_prev"].fillna(0.0)
+        ).round(3)
+        merged["shareholders_change_rate"] = (
+            (merged["total_shareholders"] - merged["total_shareholders_prev"])
+            / merged["total_shareholders_prev"] * 100
+        ).round(4)
+
+        snapshot_date = latest_date.strftime("%Y-%m-%d")
+        records = []
+        for stock_code, r in merged.iterrows():
+            records.append({
+                "stock_code":              str(stock_code),
+                "snapshot_date":           snapshot_date,
+                "total_shareholders":      int(r["total_shareholders"]) if pd.notna(r.get("total_shareholders")) else None,
+                "big_holder_pct":          self._f(r.get("big_holder_pct")),
+                "big_holder_pct_change":   self._f(r.get("big_holder_pct_change")),
+                "mid_holder_pct":          self._f(r.get("mid_holder_pct")),
+                "mid_holder_pct_change":   self._f(r.get("mid_holder_pct_change")),
+                "whale_holder_pct":        self._f(r.get("whale_holder_pct")),
+                "whale_holder_pct_change": self._f(r.get("whale_holder_pct_change")),
+                "shareholders_change_rate": round(float(r["shareholders_change_rate"]), 4) if pd.notna(r.get("shareholders_change_rate")) else None,
+                "stock_name":              None,
+            })
+
+        if not records:
+            return
+
+        upsert_sql = text("""
+            INSERT INTO equity_distribution_stats
+                (stock_code, snapshot_date, total_shareholders, big_holder_pct,
+                 shareholders_change_rate, big_holder_pct_change,
+                 mid_holder_pct, mid_holder_pct_change,
+                 whale_holder_pct, whale_holder_pct_change, updated_at)
+            VALUES
+                (:stock_code, :snapshot_date, :total_shareholders, :big_holder_pct,
+                 :shareholders_change_rate, :big_holder_pct_change,
+                 :mid_holder_pct, :mid_holder_pct_change,
+                 :whale_holder_pct, :whale_holder_pct_change, NOW())
+            ON CONFLICT (stock_code, snapshot_date) DO UPDATE SET
+                total_shareholders       = EXCLUDED.total_shareholders,
+                big_holder_pct           = EXCLUDED.big_holder_pct,
+                shareholders_change_rate = EXCLUDED.shareholders_change_rate,
+                big_holder_pct_change    = EXCLUDED.big_holder_pct_change,
+                mid_holder_pct           = EXCLUDED.mid_holder_pct,
+                mid_holder_pct_change    = EXCLUDED.mid_holder_pct_change,
+                whale_holder_pct         = EXCLUDED.whale_holder_pct,
+                whale_holder_pct_change  = EXCLUDED.whale_holder_pct_change,
+                updated_at               = NOW()
+        """)
+
+        with services.sql_storage.engine.connect() as conn:
+            conn.execute(upsert_sql, records)
+            conn.commit()
+
+        self.logger.info(f"✅ 補充完成：{len(records)} 支策略命中股票的集保資料已寫入")

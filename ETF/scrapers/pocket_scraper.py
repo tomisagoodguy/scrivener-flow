@@ -15,7 +15,7 @@ from io import StringIO
 from typing import Optional
 
 import pandas as pd
-from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.webdriver import WebDriver as Chrome
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By

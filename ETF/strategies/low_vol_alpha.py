@@ -33,7 +33,8 @@ def _build_position():
         close = data.get('price:收盤價')
         amt = data.get('price:成交金額')
         rev = data.get('monthly_revenue:當月營收')
-        (natr,) = data.indicator('NATR', timeperiod=120)
+        _natr = data.indicator('NATR', timeperiod=120)
+        natr = _natr[0] if isinstance(_natr, tuple) else _natr
         rev_yoy_growth = data.get('monthly_revenue:去年同月增減(%)')
 
     # 技術指標
@@ -81,7 +82,7 @@ def _build_position():
     ]
 
     position = rev_yoy_growth[position_condition].is_largest(10)
-    positionC = position.reindex(rev.index)
+    positionC = position.reindex(rev.index_str_to_date().index)
     positionC[stocks_to_exclude] = False
 
     return positionC

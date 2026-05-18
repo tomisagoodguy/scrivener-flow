@@ -66,7 +66,7 @@ export function HoldingsTableRow({
                     >
                         {h.stock_name}
                     </button>
-                    {holdingEtfs.map(code => {
+                    {holdingEtfs.slice(0, 2).map(code => {
                         const color = etfColorMap[code] ?? '#888';
                         return (
                             <span
@@ -78,6 +78,11 @@ export function HoldingsTableRow({
                             </span>
                         );
                     })}
+                    {holdingEtfs.length > 2 && (
+                        <span className="text-[10px] px-1 py-0.5 rounded font-mono whitespace-nowrap bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                            +{holdingEtfs.length - 2}
+                        </span>
+                    )}
                     {h.industry && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 font-normal whitespace-nowrap">
                             {h.industry}

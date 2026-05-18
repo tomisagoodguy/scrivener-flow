@@ -6,7 +6,7 @@ import { getSectorStocks, getAllStrategyHitStocks, getAllSectorStocks } from '@/
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
 import type { EtfSectorActivityMap } from '@/app/actions/getEtfSectorActivity';
-import { pctClass, fmtPct, fmtAmount } from '@/lib/investment/formatUtils';
+import { pctClass, fmtPct, fmtAmount, fmtPpChange, ppChangeClass, fmtItBuySell } from '@/lib/investment/formatUtils';
 import SectorHeatmap, { type HeatmapPeriod } from './SectorHeatmap';
 import GroupedSectorView from './GroupedSectorView';
 import FactorICPanel from '@/components/features/FactorICPanel';
@@ -102,8 +102,11 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                         )}
                                     </th>
                                     <th className="text-right py-1">日漲幅</th>
-                                    <th className="text-right py-1 hidden sm:table-cell">週漲幅</th>
-                                    <th className="text-right py-1 hidden sm:table-cell">月漲幅</th>
+                                    <th className="text-right py-1 hidden sm:table-cell" title="400張以上大戶持股比例週變化（週更）">400張+</th>
+                                    <th className="text-right py-1 hidden md:table-cell" title="200張以上持股比例週變化（週更）">200張+</th>
+                                    <th className="text-right py-1 hidden lg:table-cell" title="1000張以上鯨魚持股比例週變化（週更）">1000張+</th>
+                                    <th className="text-right py-1 hidden sm:table-cell" title="投信近5日買賣超">投信5日</th>
+                                    <th className="text-right py-1 hidden md:table-cell">成交額</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -122,8 +125,21 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                             ))}
                                         </td>
                                         <td className={`text-right py-1.5 ${pctClass(s.ret_1d)}`}>{fmtPct(s.ret_1d)}</td>
-                                        <td className={`text-right py-1.5 hidden sm:table-cell ${pctClass(s.ret_5d)}`}>{fmtPct(s.ret_5d)}</td>
-                                        <td className={`text-right py-1.5 hidden sm:table-cell ${pctClass(s.ret_20d)}`}>{fmtPct(s.ret_20d)}</td>
+                                        <td className={`text-right py-1.5 hidden sm:table-cell text-xs font-medium ${ppChangeClass(s.big_holder_pct_change)}`}>
+                                            {fmtPpChange(s.big_holder_pct_change)}
+                                        </td>
+                                        <td className={`text-right py-1.5 hidden md:table-cell text-xs font-medium ${ppChangeClass(s.mid_holder_pct_change)}`}>
+                                            {fmtPpChange(s.mid_holder_pct_change)}
+                                        </td>
+                                        <td className={`text-right py-1.5 hidden lg:table-cell text-xs font-medium ${ppChangeClass(s.whale_holder_pct_change)}`}>
+                                            {fmtPpChange(s.whale_holder_pct_change)}
+                                        </td>
+                                        <td className={`text-right py-1.5 hidden sm:table-cell text-xs font-medium ${ppChangeClass(s.it_buy_5d)}`}>
+                                            {fmtItBuySell(s.it_buy_5d)}
+                                        </td>
+                                        <td className="text-right py-1.5 hidden md:table-cell text-xs text-gray-500">
+                                            {fmtAmount(s.amount)}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

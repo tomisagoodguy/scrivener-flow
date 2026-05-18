@@ -60,7 +60,7 @@ class DiffMessageBuilder(FlexMessageBuilder):
         date_str: str,
         diff_logs: List[Dict[str, Any]],
         shareholder_signals: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+    ) -> Optional[Dict[str, Any]]:
         if not diff_logs:
             return None
 

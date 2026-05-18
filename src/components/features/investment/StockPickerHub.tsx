@@ -1,6 +1,7 @@
 'use client';
 
-import { SearchIcon, XIcon } from 'lucide-react';
+import { useState } from 'react';
+import { SearchIcon, XIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { StockDetailPanel } from './StockDetailPanel';
 import { FactorFilterChips } from './FactorFilterChips';
 import { StockPickerTable } from './StockPickerTable';
@@ -8,6 +9,7 @@ import { useStockPickerHub } from '@/hooks/investment/useStockPickerHub';
 import type { StockPickerHubProps } from './StockPickerHub.types';
 
 export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPickerHubProps) {
+    const [etfExpanded, setEtfExpanded] = useState(false);
     const {
         panelStock,
         searchQuery,
@@ -55,33 +57,66 @@ export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPicker
                     )}
                 </div>
 
-                {/* ETF 篩選勾選框 */}
-                <div className="flex items-center gap-4 flex-wrap">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">篩選 ETF：</span>
-                    {etfs.map(etf => (
-                        <label key={etf.etf_code} className="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={selectedEtfs.has(etf.etf_code)}
-                                onChange={() => toggleEtf(etf.etf_code)}
-                                className="w-4 h-4 rounded"
-                                style={{ accentColor: etf.color }}
-                            />
-                            <span
-                                className="text-sm font-medium px-2 py-0.5 rounded-full"
-                                style={{
-                                    backgroundColor: etf.color + '20',
-                                    color: etf.color,
-                                    border: `1px solid ${etf.color}60`,
-                                }}
-                            >
-                                {etf.etf_code}
-                            </span>
-                        </label>
-                    ))}
-                    <span className="text-xs text-slate-400 ml-auto">
-                        共 {sortedHoldings.length} 支個股
-                    </span>
+                {/* ETF 篩選勾選框（可折疊） */}
+                <div>
+                    <button
+                        onClick={() => setEtfExpanded(v => !v)}
+                        className="flex items-center gap-2 w-full text-left group"
+                    >
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">篩選 ETF：</span>
+                        <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                            {!etfExpanded && etfs.map(etf => (
+                                <span
+                                    key={etf.etf_code}
+                                    className="text-xs font-medium px-1.5 py-0.5 rounded-full"
+                                    style={{
+                                        backgroundColor: selectedEtfs.has(etf.etf_code) ? etf.color + '20' : 'transparent',
+                                        color: selectedEtfs.has(etf.etf_code) ? etf.color : '#94a3b8',
+                                        border: `1px solid ${selectedEtfs.has(etf.etf_code) ? etf.color + '60' : '#cbd5e1'}`,
+                                        opacity: selectedEtfs.has(etf.etf_code) ? 1 : 0.5,
+                                    }}
+                                >
+                                    {etf.etf_code}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">
+                            {selectedEtfs.size}/{etfs.length} 已選
+                        </span>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">
+                            共 {sortedHoldings.length} 支
+                        </span>
+                        {etfExpanded
+                            ? <ChevronUpIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            : <ChevronDownIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        }
+                    </button>
+
+                    {etfExpanded && (
+                        <div className="mt-2 flex items-center gap-3 flex-wrap pl-0.5">
+                            {etfs.map(etf => (
+                                <label key={etf.etf_code} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedEtfs.has(etf.etf_code)}
+                                        onChange={() => toggleEtf(etf.etf_code)}
+                                        className="w-4 h-4 rounded"
+                                        style={{ accentColor: etf.color }}
+                                    />
+                                    <span
+                                        className="text-sm font-medium px-2 py-0.5 rounded-full"
+                                        style={{
+                                            backgroundColor: etf.color + '20',
+                                            color: etf.color,
+                                            border: `1px solid ${etf.color}60`,
+                                        }}
+                                    >
+                                        {etf.etf_code}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* 因子篩選 */}
