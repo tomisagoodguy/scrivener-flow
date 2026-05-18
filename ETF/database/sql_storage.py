@@ -204,8 +204,8 @@ class SQLStorage:
         logger.info("✅ 券商交易數據寫入完成")
     
     def cleanup_old_data(self):
-        """清除過舊資料以節省 Supabase 空間 (只保留約 260 天)"""
-        logger.info("開始執行數據庫容量自動優化 (Retention: ~260 days)...")
+        """清除過舊資料以節省 Supabase 空間"""
+        logger.info("開始執行數據庫容量自動優化...")
         try:
             with self.engine.connect() as conn:
                 # 1. 每日股價 (佔最大空間)
@@ -215,31 +215,60 @@ class SQLStorage:
                 # 2. 持股快照
                 sql_snapshot = text("DELETE FROM etf_holdings_snapshot WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
                 res_snapshot = conn.execute(sql_snapshot)
-                
+
                 # 3. 券商分點
                 sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
                 res_broker = conn.execute(sql_broker)
-                
-                # 4. 集保數據 (週資料，可保留稍長一點，但統一策略也好)
+
+                # 4. 集保數據 (週資料)
                 sql_chips = text("DELETE FROM stock_shareholder_weekly WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
                 res_chips = conn.execute(sql_chips)
 
-                # 5. 營收數據 (月資料)
-                sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'") # 營收年增率需要比較久，保留2年
+                # 5. 營收數據 (月資料，年增率需比較基準，保留 2 年)
+                sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'")
                 res_revenue = conn.execute(sql_revenue)
 
                 # 6. ETF 新聞（只保留 5 天）
                 sql_news = text("DELETE FROM etf_news WHERE pub_date < CURRENT_DATE - INTERVAL '5 days'")
                 res_news = conn.execute(sql_news)
 
+                # 7. 策略選股訊號（保留 30 天）
+                sql_strategy = text("DELETE FROM strategy_signals WHERE date < CURRENT_DATE - INTERVAL '30 days'")
+                res_strategy = conn.execute(sql_strategy)
+
+                # 8. 族群強勢分析（保留 30 天）
+                sql_sector = text("DELETE FROM sector_strength WHERE date < CURRENT_DATE - INTERVAL '30 days'")
+                res_sector = conn.execute(sql_sector)
+
+                sql_sector_stocks = text("DELETE FROM sector_strength_stocks WHERE date < CURRENT_DATE - INTERVAL '30 days'")
+                res_sector_stocks = conn.execute(sql_sector_stocks)
+
+                # 9. ETF 持股異動記錄（保留 180 天）
+                sql_diff_logs = text("DELETE FROM etf_diff_logs WHERE data_date < CURRENT_DATE - INTERVAL '180 days'")
+                res_diff_logs = conn.execute(sql_diff_logs)
+
+                # 10. ETF 買進模式（保留 180 天，前瞻報酬最長 30 天，180 天已足夠回溯）
+                sql_buying = text("DELETE FROM etf_buying_patterns WHERE event_date < CURRENT_DATE - INTERVAL '180 days'")
+                res_buying = conn.execute(sql_buying)
+
+                # 11. 跨 ETF 共識持股（保留 180 天）
+                sql_overlap = text("DELETE FROM etf_stock_overlap WHERE data_date < CURRENT_DATE - INTERVAL '180 days'")
+                res_overlap = conn.execute(sql_overlap)
+
                 conn.commit()
-                logger.info(f"✅ 自動優化完成！")
+                logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
                 logger.info(f"   - 持股快照已清理: {res_snapshot.rowcount} 筆")
                 logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
                 logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
                 logger.info(f"   - 營收數據已清理: {res_revenue.rowcount} 筆")
                 logger.info(f"   - ETF 新聞已清理: {res_news.rowcount} 筆")
+                logger.info(f"   - 策略選股訊號已清理: {res_strategy.rowcount} 筆")
+                logger.info(f"   - 族群強勢已清理: {res_sector.rowcount} 筆")
+                logger.info(f"   - 族群強勢個股已清理: {res_sector_stocks.rowcount} 筆")
+                logger.info(f"   - ETF 持股異動已清理: {res_diff_logs.rowcount} 筆")
+                logger.info(f"   - ETF 買進模式已清理: {res_buying.rowcount} 筆")
+                logger.info(f"   - ETF 共識持股已清理: {res_overlap.rowcount} 筆")
 
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")
