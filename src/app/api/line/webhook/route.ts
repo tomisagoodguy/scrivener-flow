@@ -86,6 +86,9 @@ async function handleEvent(event: LineEvent, adminUserId: string): Promise<void>
 
         const isAdmin = senderId === adminUserId;
 
+        // DEBUG: 暫時回傳 sender ID，確認後刪除
+        await sendLineMessageToUser(senderId, `你的 LINE User ID：${senderId}\nadminUserId：${adminUserId}`, token);
+
         if (isAdmin) {
             await handleAdminMessage(msg, adminUserId, token);
         } else {
