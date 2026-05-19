@@ -91,7 +91,11 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                 <div className="border-t border-white/30 px-4 py-2">
                     {isPending && <p className="text-gray-400 text-sm py-2">載入中...</p>}
                     {!isPending && stocks.length === 0 && <p className="text-gray-400 text-sm py-2">無資料</p>}
-                    {!isPending && stocks.length > 0 && (
+                    {!isPending && stocks.length > 0 && (() => {
+                        const sectorList = stocks.map((s) => s.stock_id).join(',');
+                        const sectorFrom = encodeURIComponent(sector.category);
+                        const sectorListEnc = encodeURIComponent(sectorList);
+                        return (
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-gray-400 text-xs border-b border-white/20">
@@ -110,11 +114,16 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                 </tr>
                             </thead>
                             <tbody>
-                                {stocks.map((s) => (
+                                {stocks.map((s, idx) => (
                                     <tr key={s.stock_id} className="border-b border-white/10 last:border-0">
                                         <td className="py-1.5 font-medium">
-                                            {s.stock_name ?? s.stock_id}
-                                            <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                            <Link
+                                                href={`/investment/stock/${s.stock_id}?from=${sectorFrom}&rank=${idx + 1}&list=${sectorListEnc}`}
+                                                className="hover:text-blue-600 transition-colors"
+                                            >
+                                                {s.stock_name ?? s.stock_id}
+                                                <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                            </Link>
                                             {s.is_strategy_hit && (
                                                 <span className="ml-1.5 text-yellow-400 text-xs" title="均線多頭＋月營收成長">⚡</span>
                                             )}
@@ -144,7 +153,8 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
         </div>

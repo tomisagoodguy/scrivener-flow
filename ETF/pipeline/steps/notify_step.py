@@ -27,6 +27,7 @@ class NotifyStep(BaseStep):
         from ETF.config.etf_registry import ETF_META
 
         notifier = services.notifier
+        engine = services.sql_storage.engine
 
         # 1. 整合 00981A 摘要（主流程）
         entry = ETF_META.get(ctx.etf_code)
@@ -46,14 +47,17 @@ class NotifyStep(BaseStep):
         market_signals = self._extract_market_signals(ctx.df) if ctx.df is not None else {}
 
         # 4. 發送合併 Carousel（一則），帶入大戶籌碼訊號
-        notifier.notify_merged_carousel(
-            all_summaries, market_signals,
-            shareholder_signals=ctx.shareholder_signals or {},
-        )
-        self.logger.info(
-            f"Merged carousel sent: {len(all_summaries)} ETFs, "
-            f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."
-        )
+        if self._claim_notification(engine, ctx.date_str, "carousel"):
+            notifier.notify_merged_carousel(
+                all_summaries, market_signals,
+                shareholder_signals=ctx.shareholder_signals or {},
+            )
+            self.logger.info(
+                f"Merged carousel sent: {len(all_summaries)} ETFs, "
+                f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."
+            )
+        else:
+            self.logger.info("Carousel already sent for %s, skipping.", ctx.date_str)
 
         # 盤前指引 bubble（全市場共識，輔助，失敗不中斷）
         try:
@@ -61,8 +65,8 @@ class NotifyStep(BaseStep):
                 fetch_latest_flow_row, build_pre_market_bubble,
                 fetch_981a_diff_row, build_981a_guide_bubble,
             )
-            row = fetch_latest_flow_row(services.sql_storage.engine)
-            row_981a = fetch_981a_diff_row(services.sql_storage.engine)
+            row = fetch_latest_flow_row(engine)
+            row_981a = fetch_981a_diff_row(engine)
 
             bubbles = []
             if row is not None:
@@ -70,29 +74,52 @@ class NotifyStep(BaseStep):
             if row_981a is not None:
                 bubbles.append(build_981a_guide_bubble(row_981a))
 
-            if len(bubbles) == 1:
-                date_label = (row or row_981a or {}).get("data_date", ctx.date_str)
-                notifier.broadcast_flex_message(f"盤前指引 · {date_label}", bubbles[0])
-            elif len(bubbles) == 2:
-                date_label = (row or {}).get("data_date", ctx.date_str)
-                notifier.broadcast_flex_message(
-                    f"盤前指引 · {date_label}",
-                    {"type": "carousel", "contents": bubbles},
-                )
-                self.logger.info("Pre-market carousel (market + 00981A) sent for %s", date_label)
+            if bubbles and self._claim_notification(engine, ctx.date_str, "pre_market"):
+                if len(bubbles) == 1:
+                    date_label = (row or row_981a or {}).get("data_date", ctx.date_str)
+                    notifier.broadcast_flex_message(f"盤前指引 · {date_label}", bubbles[0])
+                else:
+                    date_label = (row or {}).get("data_date", ctx.date_str)
+                    notifier.broadcast_flex_message(
+                        f"盤前指引 · {date_label}",
+                        {"type": "carousel", "contents": bubbles},
+                    )
+                    self.logger.info("Pre-market carousel (market + 00981A) sent for %s", date_label)
+            elif bubbles:
+                self.logger.info("Pre-market already sent for %s, skipping.", ctx.date_str)
         except Exception as e:
             self.logger.error("Pre-market LINE notify failed: %s", e)
 
         # 族群強弱摘要（輔助，失敗不中斷）
         try:
-            summary = build_sector_summary(services.sql_storage.engine, ctx.date_str)
-            if summary:
-                notifier.send_text(summary)
-                self.logger.info("Sector strength summary sent to LINE.")
+            if self._claim_notification(engine, ctx.date_str, "sector_summary"):
+                summary = build_sector_summary(engine, ctx.date_str)
+                if summary:
+                    notifier.send_text(summary)
+                    self.logger.info("Sector strength summary sent to LINE.")
+            else:
+                self.logger.info("Sector summary already sent for %s, skipping.", ctx.date_str)
         except Exception as e:
             self.logger.error("Sector summary LINE notify failed: %s", e)
 
         return ctx
+
+    # ------------------------------------------------------------------ idempotency
+
+    def _claim_notification(self, engine, date_str: str, ntype: str) -> bool:
+        """嘗試寫入通知記錄；若當天已送出則回傳 False（跳過）。"""
+        from sqlalchemy import text
+        try:
+            with engine.connect() as conn:
+                row = conn.execute(text(
+                    "INSERT INTO etf_notification_log (date, type) VALUES (:d, :t) "
+                    "ON CONFLICT DO NOTHING RETURNING date"
+                ), {"d": date_str, "t": ntype}).fetchone()
+                conn.commit()
+            return row is not None  # None = CONFLICT = 已送過
+        except Exception as e:
+            self.logger.warning("notification log unavailable (%s), sending anyway.", e)
+            return True  # 表格不存在時不阻擋發送
 
     # ------------------------------------------------------------------ helpers
 

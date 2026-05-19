@@ -7,6 +7,10 @@ on:
     - cron: '0 14 * * *'
   workflow_dispatch: # 允許手動觸發
 
+concurrency:
+  group: etf-daily
+  cancel-in-progress: false  # 若已在跑，新觸發排隊等待而非同時執行
+
 jobs:
   validate-registry:
     runs-on: ubuntu-latest

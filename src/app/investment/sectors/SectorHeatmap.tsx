@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useTransition, useCallback } from 'react';
+import Link from 'next/link';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { getSectorStocks } from '@/app/actions/getSectorStrength';
 import { fmtPct, pctClass, fmtAmount } from '@/lib/investment/formatUtils';
@@ -244,7 +245,11 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                     </div>
                     {isPending && <p className="text-gray-400 text-sm py-4 text-center">載入中…</p>}
                     {!isPending && stocks.length === 0 && <p className="text-gray-400 text-sm py-4 text-center">無資料</p>}
-                    {!isPending && stocks.length > 0 && (
+                    {!isPending && stocks.length > 0 && (() => {
+                        const sectorList = stocks.map((s) => s.stock_id).join(',');
+                        const sectorFrom = encodeURIComponent(selected ?? '');
+                        const sectorListEnc = encodeURIComponent(sectorList);
+                        return (
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-gray-400 text-xs border-b border-white/20">
@@ -256,11 +261,16 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {stocks.map((s) => (
+                                {stocks.map((s, idx) => (
                                     <tr key={s.stock_id} className="border-b border-white/10 last:border-0">
                                         <td className="py-1.5 font-medium">
-                                            {s.stock_name ?? s.stock_id}
-                                            <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                            <Link
+                                                href={`/investment/stock/${s.stock_id}?from=${sectorFrom}&rank=${idx + 1}&list=${sectorListEnc}`}
+                                                className="hover:text-blue-600 transition-colors"
+                                            >
+                                                {s.stock_name ?? s.stock_id}
+                                                <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
+                                            </Link>
                                             {s.is_strategy_hit && (
                                                 <span className="ml-1.5 text-yellow-400 text-xs" title="策略命中">⚡</span>
                                             )}
@@ -273,7 +283,8 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
         </div>

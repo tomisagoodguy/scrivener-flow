@@ -18,13 +18,13 @@ function etfBorderClass(count: number): string {
     return 'border-white/50 dark:border-white/20';
 }
 
-function StockChip({ stock, etfCodes }: { stock: SectorStock; etfCodes?: string[] }) {
+function StockChip({ stock, etfCodes, href }: { stock: SectorStock; etfCodes?: string[]; href: string }) {
     const hasEtf = etfCodes && etfCodes.length > 0;
     const tooltipText = hasEtf ? `ETF買進：${etfCodes.join(' / ')}` : undefined;
 
     return (
         <Link
-            href={`/investment/dashboard/${stock.stock_id}`}
+            href={href}
             title={tooltipText}
             className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-white/60 hover:bg-white/90 dark:bg-white/10 dark:hover:bg-white/20 transition-colors border ${hasEtf ? etfBorderClass(etfCodes.length) : 'border-white/50 dark:border-white/20'}`}
         >
@@ -84,17 +84,22 @@ function SectorCard({ sector, stocks, hasLoaded, rank, stockEtfMap }: { sector: 
                     </div>
                 ) : stocks.length === 0 ? (
                     <span className="text-gray-400 text-xs">無成分股資料</span>
-                ) : (
+                ) : (() => {
+                    const sectorFrom = encodeURIComponent(sector.category);
+                    const sectorListEnc = encodeURIComponent(stocks.map((s) => s.stock_id).join(','));
+                    return (
                     <div className="flex flex-wrap gap-1.5">
-                        {stocks.map((s) => (
+                        {stocks.map((s, idx) => (
                             <StockChip
                                 key={s.stock_id}
                                 stock={s}
                                 etfCodes={stockEtfMap?.[s.stock_id]}
+                                href={`/investment/stock/${s.stock_id}?from=${sectorFrom}&rank=${idx + 1}&list=${sectorListEnc}`}
                             />
                         ))}
                     </div>
-                )}
+                    );
+                })()}
             </div>
         </div>
     );
@@ -108,7 +113,7 @@ interface Props {
     etfActivity?: EtfSectorActivityMap;
 }
 
-export default function GroupedSectorView({ sectors, stocksByCategory, hasLoaded, sortKey, etfActivity }: Props) {
+export default function GroupedSectorView({ sectors, stocksByCategory, hasLoaded, sortKey: _sortKey, etfActivity }: Props) {
     if (!hasLoaded) {
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">

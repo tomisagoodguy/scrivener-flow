@@ -31,8 +31,9 @@ const FACTOR_LABELS: Record<string, string> = {
 };
 
 function EtfHolderBadges({ holders }: { holders: string[] }) {
-    const visible = holders.slice(0, 3);
-    const rest = holders.length - visible.length;
+    const unique = [...new Set(holders)];
+    const visible = unique.slice(0, 3);
+    const rest = unique.length - visible.length;
     return (
         <>
             {visible.map((etfCode) => {
@@ -52,7 +53,7 @@ function EtfHolderBadges({ holders }: { holders: string[] }) {
             {rest > 0 && (
                 <span
                     className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-300/70 text-gray-600 dark:bg-gray-600/70 dark:text-gray-300"
-                    title={holders.slice(3).map((c) => getEtfMeta(c)?.shortCode ?? c).join(', ')}
+                    title={unique.slice(3).map((c) => getEtfMeta(c)?.shortCode ?? c).join(', ')}
                 >
                     +{rest}
                 </span>
