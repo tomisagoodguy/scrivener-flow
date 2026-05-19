@@ -4,8 +4,9 @@
  * 使用 anon key（公開資料表不需要 service role key）
  */
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let _client: ReturnType<typeof createClient> | null = null;
+let _client: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getServiceClient() {
   if (!_client) {
