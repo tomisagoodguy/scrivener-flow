@@ -6,18 +6,15 @@ interface LineMessageResponse {
 }
 
 export async function sendLineMessage(text: string): Promise<LineMessageResponse> {
-    let CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN?.replace(/^["']|["']$/g, '');
-    let USER_ID = process.env.LINE_USER_ID?.replace(/^["']|["']$/g, '');
+    const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN?.replace(/^["']|["']$/g, '');
+    const USER_ID = process.env.LINE_USER_ID?.replace(/^["']|["']$/g, '');
 
     if (!CHANNEL_ACCESS_TOKEN || !USER_ID) {
-        console.error('LINE Configuration missing: TOKEN exists?', !!CHANNEL_ACCESS_TOKEN, 'USER_ID exists?', !!USER_ID);
         return {
             success: false,
             error: 'Server configuration missing: LINE_CHANNEL_ACCESS_TOKEN or LINE_USER_ID'
         };
     }
-
-    console.log('Sending LINE message to:', USER_ID.substring(0, 6) + '...');
 
     try {
         const response = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -38,22 +35,18 @@ export async function sendLineMessage(text: string): Promise<LineMessageResponse
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Line API Error Detail:', JSON.stringify(errorData));
+            const errorData = await response.json() as { message?: string };
             return {
                 success: false,
-                error: `Line API Error (${response.status}): ${errorData.message || response.statusText}`
+                error: `Line API Error (${response.status}): ${errorData.message ?? response.statusText}`
             };
         }
 
-        console.log('LINE Message sent successfully');
-
         return { success: true };
-    } catch (error: any) {
-        console.error('Send Line Message Error:', error);
+    } catch (error: unknown) {
         return {
             success: false,
-            error: error.message || 'Unknown error occurred'
+            error: error instanceof Error ? error.message : 'Unknown error occurred'
         };
     }
 }
