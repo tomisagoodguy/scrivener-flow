@@ -1,6 +1,6 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import {
-    verifyLineSignature,
     sendLineMessageToUser,
     getLineUserProfile,
 } from '@/lib/lineService';
@@ -40,14 +40,19 @@ interface LineWebhookBody {
 const BOT_TOKEN = () => process.env.STOCK_LINE_CHANNEL_ACCESS_TOKEN ?? '';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-    if (!process.env.LINE_CHANNEL_SECRET) {
-        return NextResponse.json({ error: 'LINE_CHANNEL_SECRET 未設定' }, { status: 500 });
+    const channelSecret = process.env.STOCK_LINE_CHANNEL_SECRET;
+    if (!channelSecret) {
+        return NextResponse.json({ error: 'STOCK_LINE_CHANNEL_SECRET 未設定' }, { status: 500 });
     }
 
     const rawBody = await request.text();
     const signature = request.headers.get('x-line-signature') ?? '';
 
-    if (!verifyLineSignature(rawBody, signature)) {
+    const digest = crypto
+        .createHmac('sha256', channelSecret)
+        .update(rawBody)
+        .digest('base64');
+    if (digest !== signature) {
         return NextResponse.json({ error: '無效簽章' }, { status: 400 });
     }
 
