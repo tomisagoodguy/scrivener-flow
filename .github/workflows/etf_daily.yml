@@ -9,7 +9,7 @@ on:
 
 jobs:
   validate-registry:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -30,7 +30,7 @@ jobs:
 
   run-tracker:
     needs: validate-registry
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
