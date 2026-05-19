@@ -10,7 +10,7 @@ let _client: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getServiceClient() {
   if (!_client) {
-    _client = createClient(
+    _client = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -21,12 +21,12 @@ export function getServiceClient() {
   return _client;
 }
 
-let _adminClient: ReturnType<typeof createClient> | null = null;
+let _adminClient: ReturnType<typeof createClient<Database>> | null = null;
 
 // bypass RLS，僅限 Server 端使用
 export function getAdminClient() {
   if (!_adminClient) {
-    _adminClient = createClient(
+    _adminClient = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
