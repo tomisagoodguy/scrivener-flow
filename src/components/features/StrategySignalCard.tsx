@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { StrategyEntry, MovementLabel } from '@/lib/investment/strategyUtils';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
+import { getEtfMeta } from '@/lib/investment/etfRegistry';
 import FactorICSparkline from './FactorICSparkline';
 
 interface Props {
@@ -28,6 +29,37 @@ const FACTOR_LABELS: Record<string, string> = {
     smallcap_pct:      '小市值',
     price_to_high_240: '近高點',
 };
+
+function EtfHolderBadges({ holders }: { holders: string[] }) {
+    const visible = holders.slice(0, 3);
+    const rest = holders.length - visible.length;
+    return (
+        <>
+            {visible.map((etfCode) => {
+                const meta = getEtfMeta(etfCode);
+                if (!meta) return null;
+                return (
+                    <span
+                        key={etfCode}
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white"
+                        style={{ backgroundColor: meta.color }}
+                        title={meta.name}
+                    >
+                        {meta.shortCode}
+                    </span>
+                );
+            })}
+            {rest > 0 && (
+                <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-300/70 text-gray-600 dark:bg-gray-600/70 dark:text-gray-300"
+                    title={holders.slice(3).map((c) => getEtfMeta(c)?.shortCode ?? c).join(', ')}
+                >
+                    +{rest}
+                </span>
+            )}
+        </>
+    );
+}
 
 function icBadgeClass(ic: number | null): string {
     if (ic === null) return 'bg-gray-100/60 text-gray-400';
@@ -91,13 +123,19 @@ export default function StrategySignalCard({ strategy, factorIC }: Props) {
                                         isConsensus ? 'bg-rose-500/10 dark:bg-rose-500/10' : ''
                                     }`}
                                 >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                         {isConsensus && (
                                             <span className="text-rose-500 text-xs leading-none">▶</span>
                                         )}
                                         <span className={`font-mono text-sm ${isConsensus ? 'text-rose-700 dark:text-rose-300 font-semibold' : 'text-gray-700 dark:text-gray-200'}`}>
-                                            {stock.stock_id}
+                                            {stock.stock_id}{stock.name ? ` ${stock.name}` : ''}
                                         </span>
+                                        {stock.industry && (
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                                                {stock.industry}
+                                            </span>
+                                        )}
+                                        <EtfHolderBadges holders={stock.etfHolders ?? []} />
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {stock.score !== null && (

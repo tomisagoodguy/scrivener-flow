@@ -36,7 +36,7 @@ export default async function StrategyPage() {
     }
 
     return (
-        <main className="max-w-4xl mx-auto px-4 py-8 space-y-6 animate-fade-in">
+        <main className="max-w-[1400px] mx-auto px-4 py-6 space-y-4 animate-fade-in">
             <div className="flex items-baseline gap-3">
                 <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">
                     策略選股中心
@@ -47,7 +47,7 @@ export default async function StrategyPage() {
             {result.strategies.length === 0 ? (
                 <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>
             ) : (
-                <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
                     {result.strategies.map((strategy) => (
                         <StrategySignalCard
                             key={strategy.id}
@@ -58,7 +58,7 @@ export default async function StrategyPage() {
                 </div>
             )}
 
-            <p className="text-xs text-gray-400 border-t border-gray-100/50 pt-4">
+            <p className="text-xs text-gray-400 border-t border-gray-100/50 pt-3">
                 營收條件以最新公告月份為準，月中換股前後數日可能存在滯後
             </p>
         </main>

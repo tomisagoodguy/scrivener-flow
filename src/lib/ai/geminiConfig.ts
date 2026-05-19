@@ -3,8 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 export const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
-// The allowed email for AI features
-export const ALLOWED_EMAIL = 'tom890108159@gmail.com';
+export const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL ?? '';
 
 // Models to try in order of preference
 export const MODELS_TO_TRY = [

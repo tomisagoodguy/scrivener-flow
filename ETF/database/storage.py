@@ -2,6 +2,7 @@ import logging
 import pandas as pd
 import requests
 import os
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -226,9 +227,9 @@ class ETFStorage:
                 resp.raise_for_status()
             except Exception as e:
                 logger.error(f"Failed to save price batch: {e}")
-                # Log response text if available for clearer error
-                if hasattr(e, 'response') and e.response:
-                    logger.error(f"Response: {e.response.text}")
+                resp_obj = getattr(e, 'response', None)
+                if resp_obj is not None:
+                    logger.error(f"Response: {resp_obj.text}")
         
         logger.info(f"Successfully synced {len(records)} price records.")
 
@@ -328,15 +329,18 @@ class ETFStorage:
         headers = self.headers.copy()
         headers["Prefer"] = "resolution=merge-duplicates"
 
+        has_industry = "industry" in df_info.columns
         records = []
         for _, row in df_info.iterrows():
-            records.append({
+            record: dict = {
                 "stock_code": str(row['stock_code']),
                 "name_short": row['name_short'],
                 "name_full": row['name_full'],
-                "industry": row['industry'],
-                "updated_at": datetime.now().isoformat()
-            })
+                "updated_at": datetime.now().isoformat(),
+            }
+            if has_industry:
+                record["industry"] = row['industry']
+            records.append(record)
 
         try:
             resp = requests.post(url, headers=headers, json=records)
@@ -344,7 +348,6 @@ class ETFStorage:
             logger.info(f"Successfully synced {len(records)} company info records.")
         except Exception as e:
             logger.error(f"Failed to save company info: {e}")
-            if hasattr(e, 'response') and e.response:
-                logger.error(f"Response: {e.response.text}")
-
-from datetime import datetime
+            resp_obj = getattr(e, 'response', None)
+            if resp_obj is not None:
+                logger.error(f"Response: {resp_obj.text}")

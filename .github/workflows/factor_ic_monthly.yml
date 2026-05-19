@@ -13,8 +13,11 @@ on:
 
 jobs:
   compute-ic:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout

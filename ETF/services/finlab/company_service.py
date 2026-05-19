@@ -45,17 +45,24 @@ class CompanyInfoService:
             if df.empty:
                 return pd.DataFrame()
             
-            # 篩選欄位
-            target_cols = ["stock_id", "公司簡稱", "公司名稱", "產業類別"]
+            # 篩選欄位（industry 為選填，缺失時不寫入以保留現有值）
+            has_industry = "產業類別" in df.columns
+            if not has_industry:
+                logger.warning("FinLab company_basic_info: '產業類別' column not found, skipping industry field")
+
+            base_cols = ["stock_id", "公司簡稱", "公司名稱"]
+            target_cols = base_cols + (["產業類別"] if has_industry else [])
             df = df[target_cols]
-            
+
             # 重新命名
-            df = df.rename(columns={
+            rename_map = {
                 "stock_id": "stock_code",
                 "公司簡稱": "name_short",
                 "公司名稱": "name_full",
-                "產業類別": "industry"
-            })
+            }
+            if has_industry:
+                rename_map["產業類別"] = "industry"
+            df = df.rename(columns=rename_map)
             
             # 篩選股票清單
             df['stock_code'] = df['stock_code'].astype(str).str.strip()

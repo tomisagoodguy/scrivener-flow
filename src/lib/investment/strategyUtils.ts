@@ -4,6 +4,9 @@ export interface StrategyStock {
     stock_id: string;
     score: number | null;
     movement: MovementLabel;
+    name?: string | null;
+    industry?: string | null;
+    etfHolders?: string[];
 }
 
 export interface StrategyEntry {
