@@ -46,18 +46,8 @@ class NotifyStep(BaseStep):
         # 3. 市場訊號：只取 00981A 的資料
         market_signals = self._extract_market_signals(ctx.df) if ctx.df is not None else {}
 
-        # 4. 發送合併 Carousel（一則），帶入大戶籌碼訊號
-        if self._claim_notification(engine, ctx.date_str, "carousel"):
-            notifier.notify_merged_carousel(
-                all_summaries, market_signals,
-                shareholder_signals=ctx.shareholder_signals or {},
-            )
-            self.logger.info(
-                f"Merged carousel sent: {len(all_summaries)} ETFs, "
-                f"{sum(len(s['diff_logs']) for s in all_summaries)} total diff events."
-            )
-        else:
-            self.logger.info("Carousel already sent for %s, skipping.", ctx.date_str)
+        # 4. 合併 Carousel 已停用（節省 LINE 免費推送額度）
+        self.logger.info("Carousel skipped (disabled).")
 
         # 盤前指引 bubble（全市場共識，輔助，失敗不中斷）
         try:
