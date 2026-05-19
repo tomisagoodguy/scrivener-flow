@@ -8,6 +8,7 @@ import {
     upsertFollower,
     deactivateFollower,
     findFollowerByDisplayName,
+    listActiveFollowers,
 } from '@/lib/lineFollowerService';
 
 interface LineTextMessage {
@@ -96,6 +97,17 @@ async function handleEvent(event: LineEvent, adminUserId: string): Promise<void>
 async function handleAdminMessage(msg: LineMessage, adminUserId: string, token: string): Promise<void> {
     if (msg.type !== 'text' || !msg.text) return;
     const text = msg.text.trim();
+
+    if (text === '/list') {
+        const followers = await listActiveFollowers();
+        if (followers.length === 0) {
+            await sendLineMessageToUser(adminUserId, '目前沒有好友', token);
+        } else {
+            const lines = followers.map((f, i) => `${i + 1}. ${f.display_name ?? '（無名稱）'}`);
+            await sendLineMessageToUser(adminUserId, `好友清單（${followers.length} 人）\n${lines.join('\n')}`, token);
+        }
+        return;
+    }
 
     if (!text.startsWith('@')) return;
 
