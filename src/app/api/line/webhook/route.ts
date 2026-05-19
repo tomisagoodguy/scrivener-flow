@@ -149,9 +149,11 @@ async function handleFriendMessage(
     }
 
     const profile = await getLineUserProfile(senderId, token);
-    const displayName = profile?.displayName ?? senderId;
+    const displayName = profile?.displayName ?? null;
+    await upsertFollower(senderId, displayName);
     const text = (msg as LineTextMessage).text;
+    const name = displayName ?? senderId;
 
-    const forwarded = `[好友 ${displayName}] ${text}\n\n↩ 回覆：@${displayName} 你的訊息`;
+    const forwarded = `[好友 ${name}] ${text}\n\n↩ 回覆：@${name} 你的訊息`;
     await sendLineMessageToUser(adminUserId, forwarded, token);
 }
