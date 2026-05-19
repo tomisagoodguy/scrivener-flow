@@ -48,6 +48,7 @@ export default async function proxy(request: NextRequest) {
         pathname.startsWith('/_next') ||
         pathname.startsWith('/api/auth') ||
         pathname.startsWith('/api/weather') || // 加入天氣 API
+        pathname.startsWith('/api/line') || // LINE Webhook — 無 session，需公開
         pathname.startsWith('/auth') ||
         pathname.startsWith('/static') ||
         pathname === '/favicon.ico'
