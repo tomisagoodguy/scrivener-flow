@@ -58,7 +58,7 @@ export function RankingTable({
                                         <Link href={`/investment/stock/${row.stock_code}?source=${source}`} className="font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 transition-colors text-xs">
                                             {row.stock_name || row.stock_code}
                                         </Link>
-                                        <span className="text-[10px] text-gray-400">{row.stock_code}</span>
+                                        {row.stock_name && <span className="text-[10px] text-gray-400">{row.stock_code}</span>}
                                         {pi && <HighBadge is200d={pi.is_200d_high} is20d={pi.is_20d_high} />}
                                         {(etfMap[row.stock_code] ?? []).map(code => (
                                             <EtfBadge key={code} etfCode={code} />

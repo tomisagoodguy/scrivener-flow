@@ -260,8 +260,8 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         tier === '1000' ? 'whale_holder_pct_change' :
         'big_holder_pct_change';
 
-    const CURRENT_SELECT = 'stock_code, stock_name, total_shareholders, shareholders_change_rate, big_holder_pct, mid_holder_pct, whale_holder_pct';
-    const OLD_SELECT = 'stock_code, big_holder_pct, mid_holder_pct, whale_holder_pct';
+    const CURRENT_SELECT = 'stock_code, stock_name, total_shareholders, big_holder_pct, mid_holder_pct, whale_holder_pct';
+    const OLD_SELECT = 'stock_code, total_shareholders, big_holder_pct, mid_holder_pct, whale_holder_pct';
 
     const [{ data: currentRows }, { data: oldRows }] = await Promise.all([
         supabase.from('equity_distribution_stats').select(CURRENT_SELECT).eq('snapshot_date', snapshotDate),
@@ -269,9 +269,10 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
     ]);
 
     // Build old pct lookup map
-    const oldPctMap = new Map<string, { big: number | null; mid: number | null; whale: number | null }>();
+    const oldPctMap = new Map<string, { total: number | null; big: number | null; mid: number | null; whale: number | null }>();
     for (const row of oldRows ?? []) {
         oldPctMap.set(row.stock_code, {
+            total: row.total_shareholders != null ? Number(row.total_shareholders) : null,
             big: row.big_holder_pct != null ? Number(row.big_holder_pct) : null,
             mid: row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null,
             whale: row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null,
@@ -288,7 +289,9 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
             stock_code: row.stock_code as string,
             stock_name: row.stock_name as string | null,
             total_shareholders: row.total_shareholders as number | null,
-            shareholders_change_rate: row.shareholders_change_rate as number | null,
+            shareholders_change_rate: (row.total_shareholders != null && old?.total != null && old.total > 0)
+                ? Math.round((row.total_shareholders - old.total) / old.total * 10000) / 100
+                : null,
             big_holder_pct_change: (curBig != null && old?.big != null) ? curBig - old.big : null,
             mid_holder_pct_change: (curMid != null && old?.mid != null) ? curMid - old.mid : null,
             whale_holder_pct_change: (curWhale != null && old?.whale != null) ? curWhale - old.whale : null,
