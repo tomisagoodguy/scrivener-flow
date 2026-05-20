@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { getSectorStocks, getAllStrategyHitStocks, getAllSectorStocks } from '@/app/actions/getSectorStrength';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
@@ -11,10 +11,12 @@ import SectorHeatmap, { type HeatmapPeriod } from './SectorHeatmap';
 import GroupedSectorView from './GroupedSectorView';
 import SectorTreemap from './components/SectorTreemap';
 import FactorICPanel from '@/components/features/FactorICPanel';
+import AdlChart from '@/app/investment/breadth/components/AdlChart';
 import type { TreemapData } from '@/app/actions/getTreemapData';
+import type { AdlData } from '@/app/actions/getAdlData';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
-type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap';
+type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -168,6 +170,7 @@ interface Props {
     icData?: FactorICRow[];
     etfActivity?: EtfSectorActivityMap;
     treemapData?: TreemapData;
+    adlData?: AdlData;
 }
 
 const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
@@ -190,7 +193,12 @@ function isStrengthSector(s: SectorRow): boolean {
     return true;
 }
 
-export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData }: Props) {
+const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
+    golden: { label: '多頭廣度擴張', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    death: { label: '廣度收縮警訊', cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
+};
+
+export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
@@ -214,6 +222,20 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
         }
         return Array.from(map.values());
     }, [hitStocks]);
+
+    const hitListEnc = useMemo(
+        () => encodeURIComponent(dedupedHitStocks.map((x) => x.stock_id).join(',')),
+        [dedupedHitStocks],
+    );
+
+    const saveHitContext = useCallback(() => {
+        try {
+            sessionStorage.setItem('hit-zone-context', JSON.stringify({
+                names: dedupedHitStocks.map((x) => x.stock_name ?? x.stock_id),
+                cats: dedupedHitStocks.map((x) => x.categories[0] ?? ''),
+            }));
+        } catch {}
+    }, [dedupedHitStocks]);
 
     const handleTabClick = (key: SortKey) => {
         setSortKey(key);
@@ -284,7 +306,7 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
                     {tabs.map((t) => {
-                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped' || viewMode === 'treemap') && (t.key === 'hit' || t.key === 'etf');
+                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped' || viewMode === 'treemap' || viewMode === 'breadth') && (t.key === 'hit' || t.key === 'etf');
                         if (hidden) return null;
                         return (
                             <button
@@ -360,11 +382,48 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                         >
                             🗺
                         </button>
+                        <button
+                            onClick={() => {
+                                setViewMode('breadth');
+                                if (sortKey === 'amount' || sortKey === 'strength' || sortKey === 'hit' || sortKey === 'etf') setSortKey('1d');
+                            }}
+                            className={`px-3 py-1.5 transition-colors ${viewMode === 'breadth' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white/60'}`}
+                            title="大盤廣度 ADL"
+                        >
+                            📈
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {viewMode === 'treemap' ? (
+            {viewMode === 'breadth' ? (
+                <div>
+                    {adlData && adlData.records.length > 0 ? (
+                        <>
+                            <div className="flex flex-wrap items-center gap-2 mb-4">
+                                <p className="text-sm text-gray-500">
+                                    騰落指標（ADL）· 全市場上市櫃
+                                    {adlData.latestDate && (
+                                        <span className="ml-2">
+                                            {adlData.latestDate} &nbsp;ADL {adlData.latestAdl !== null ? Math.round(adlData.latestAdl).toLocaleString() : '—'}
+                                        </span>
+                                    )}
+                                </p>
+                                {adlData.crossStatus !== 'none' && CROSS_BADGE[adlData.crossStatus] && (
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${CROSS_BADGE[adlData.crossStatus].cls}`}>
+                                        {CROSS_BADGE[adlData.crossStatus].label}
+                                    </span>
+                                )}
+                            </div>
+                            <AdlChart records={adlData.records} />
+                        </>
+                    ) : (
+                        <div className="glass-card flex items-center justify-center h-64 text-gray-400">
+                            資料尚未更新，請等待 Pipeline 執行後重整。
+                        </div>
+                    )}
+                </div>
+            ) : viewMode === 'treemap' ? (
                 <SectorTreemap
                     stocks={treemapData?.stocks ?? []}
                     date={treemapData?.date ?? ''}
@@ -396,10 +455,10 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {dedupedHitStocks.map((s) => (
+                                    {dedupedHitStocks.map((s, idx) => (
                                         <tr key={s.stock_id} className="border-b border-white/10 last:border-0 hover:bg-white/20 transition-colors">
                                             <td className="px-4 py-2 font-medium">
-                                                <Link href={`/investment/dashboard/${s.stock_id}`} className="hover:text-blue-600 transition-colors">
+                                                <Link href={`/investment/stock/${s.stock_id}?from=${encodeURIComponent('⚡命中區')}&rank=${idx + 1}&list=${hitListEnc}`} onClick={saveHitContext} className="hover:text-blue-600 transition-colors">
                                                     {s.stock_name ?? s.stock_id}
                                                     <span className="text-gray-400 ml-1 text-xs">{s.stock_id}</span>
                                                 </Link>

@@ -69,4 +69,9 @@ class StrategySignalStep(BaseStep):
         if all_rows:
             services.sql_storage.upsert_strategy_signals(all_rows)
 
+            new_codes = list({row["stock_id"] for row in all_rows} - set(ctx.secondary_stock_codes))
+            if new_codes:
+                ctx.secondary_stock_codes = ctx.secondary_stock_codes + new_codes
+                logger.info(f"[StrategySignalStep] 新增 {len(new_codes)} 支策略股至 secondary_stock_codes")
+
         return ctx

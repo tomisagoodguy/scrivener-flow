@@ -226,13 +226,14 @@ class SectorStrengthStep(BaseStep):
             self._upsert_stocks(conn, valid_df, target_date)
             conn.commit()
 
-        # 6. 把最近 30 天曾命中的股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
+        # 6. 把全市場族群個股 + 最近 30 天曾命中的股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
         tracked_codes = services.sql_storage.get_strategy_hit_stocks()
-        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + tracked_codes))
+        all_sector_codes = valid_df["stock_id"].unique().tolist()
+        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + tracked_codes + all_sector_codes))
         today_hit = int(valid_df["is_strategy_hit"].sum())
         self.logger.info(
             f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}, "
-            f"today_hit={today_hit}, tracked_30d={len(tracked_codes)} stocks added to secondary_stock_codes"
+            f"today_hit={today_hit}, tracked_30d={len(tracked_codes)}, all_sector={len(all_sector_codes)} stocks added to secondary_stock_codes"
         )
 
         # 7. 補充策略命中股票的集保籌碼資料（若在 equity_distribution_stats 中缺失）

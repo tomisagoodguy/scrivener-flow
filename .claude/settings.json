@@ -61,7 +61,11 @@
       "Bash(findstr /i \"state all_done\")",
       "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\investment\\\\matched-pairs\")",
       "Bash(Remove-Item -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\src\\\\app\\\\actions\\\\getEtfMatchedPairs.ts\")",
-      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 籌碼排行榜多週日期範圍顯示錯誤（prevDates.at\\(-1\\) 取代固定索引）\")"
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 籌碼排行榜多週日期範圍顯示錯誤（prevDates.at\\(-1\\) 取代固定索引）\")",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "Bash(git diff *)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"fix: 移除 useEffect 中的 setState，改用 lazy initializer 讀取 sessionStorage\")",
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"fix: 移除 useEffect 中的 setState，改用 lazy initializer 讀取 sessionStorage\")"
     ]
   },
   "enabledMcpjsonServers": [

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -87,19 +87,31 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }
     '雙重信號':  { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-700' },
 };
 
-function SourceNav({ from, rank, list }: { from: string | null; rank: string | null; list: string | null }) {
+function SourceNav({ from, rank, list, names, cats }: {
+    from: string | null; rank: string | null; list: string | null;
+    names: string | null; cats: string | null;
+}) {
     if (!from || !list) return null;
     const codes = list.split(',').filter(Boolean);
+    const nameArr = names ? names.split(',') : [];
+    const catArr = cats ? cats.split(',') : [];
     const rankNum = rank ? parseInt(rank, 10) : NaN;
     if (codes.length === 0 || isNaN(rankNum)) return null;
 
     const colors = SOURCE_COLORS[from] ?? { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-700' };
 
     const prevCode = rankNum > 1 ? codes[rankNum - 2] : null;
+    const prevName = rankNum > 1 ? (nameArr[rankNum - 2] ?? null) : null;
     const nextCode = rankNum < codes.length ? codes[rankNum] : null;
+    const nextName = rankNum < codes.length ? (nameArr[rankNum] ?? null) : null;
+    const currentCat = catArr[rankNum - 1] ?? null;
 
-    const makeHref = (code: string, r: number) =>
-        `/investment/stock/${code}?from=${encodeURIComponent(from)}&rank=${r}&list=${encodeURIComponent(list)}`;
+    const makeHref = (code: string, r: number) => {
+        let href = `/investment/stock/${code}?from=${encodeURIComponent(from)}&rank=${r}&list=${encodeURIComponent(list)}`;
+        if (names) href += `&names=${encodeURIComponent(names)}`;
+        if (cats) href += `&cats=${encodeURIComponent(cats)}`;
+        return href;
+    };
 
     return (
         <div className={`inline-flex items-center gap-1 rounded-full border text-xs font-semibold overflow-hidden ${colors.border}`}>
@@ -109,8 +121,8 @@ function SourceNav({ from, rank, list }: { from: string | null; rank: string | n
                     className={`flex items-center gap-1 px-2.5 py-1 ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity`}
                 >
                     <ArrowLeft className="w-3 h-3" />
-                    <span className="font-mono">{prevCode}</span>
-                    <span className="opacity-50">#{rankNum - 1}</span>
+                    {prevName && <span>{prevName}</span>}
+                    <span className="font-mono opacity-60">{prevCode}</span>
                 </Link>
             ) : (
                 <span className={`px-2.5 py-1 opacity-30 ${colors.bg} ${colors.text}`}>
@@ -118,9 +130,12 @@ function SourceNav({ from, rank, list }: { from: string | null; rank: string | n
                 </span>
             )}
 
-            <span className={`px-3 py-1 ${colors.bg} ${colors.text} border-x ${colors.border}`}>
+            <span className={`px-3 py-1 ${colors.bg} ${colors.text} border-x ${colors.border} flex items-center gap-1.5`}>
                 {from} <span className="opacity-60">#{rankNum}</span>
-                <span className="opacity-40 ml-1">/ {codes.length}</span>
+                <span className="opacity-40">/ {codes.length}</span>
+                {currentCat && (
+                    <span className="opacity-75 bg-white/40 px-1.5 py-0.5 rounded-full text-[10px]">{currentCat}</span>
+                )}
             </span>
 
             {nextCode ? (
@@ -128,8 +143,8 @@ function SourceNav({ from, rank, list }: { from: string | null; rank: string | n
                     href={makeHref(nextCode, rankNum + 1)}
                     className={`flex items-center gap-1 px-2.5 py-1 ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity`}
                 >
-                    <span className="opacity-50">#{rankNum + 1}</span>
-                    <span className="font-mono">{nextCode}</span>
+                    <span className="font-mono opacity-60">{nextCode}</span>
+                    {nextName && <span>{nextName}</span>}
                     <ArrowRight className="w-3 h-3" />
                 </Link>
             ) : (
@@ -148,6 +163,15 @@ export default function StockPage() {
     const sourceFrom = searchParams.get('from');
     const sourceRank = searchParams.get('rank');
     const sourceList = searchParams.get('list');
+    const [hitContext] = useState<{ names: string[]; cats: string[] } | null>(() => {
+        if (sourceFrom !== '⚡命中區') return null;
+        try {
+            const stored = sessionStorage.getItem('hit-zone-context');
+            return stored ? (JSON.parse(stored) as { names: string[]; cats: string[] }) : null;
+        } catch {
+            return null;
+        }
+    });
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
     const {
@@ -187,7 +211,13 @@ export default function StockPage() {
             />
 
             <div className="mt-3 mb-1 px-1">
-                <SourceNav from={sourceFrom} rank={sourceRank} list={sourceList} />
+                <SourceNav
+                    from={sourceFrom}
+                    rank={sourceRank}
+                    list={sourceList}
+                    names={hitContext ? hitContext.names.join(',') : null}
+                    cats={hitContext ? hitContext.cats.join(',') : null}
+                />
             </div>
 
             {!etfWeightHistoryLoading && priceData.length > 0 && (

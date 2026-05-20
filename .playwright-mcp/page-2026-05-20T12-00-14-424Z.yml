@@ -1,0 +1,69 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - generic [ref=e10]: S
+              - generic [ref=e11]: 投資監控
+            - navigation [ref=e12]:
+              - link "選股池" [ref=e13] [cursor=pointer]:
+                - /url: /investment
+              - link "籌碼排行" [ref=e14] [cursor=pointer]:
+                - /url: /investment/equity
+              - link "策略選股" [ref=e15] [cursor=pointer]:
+                - /url: /investment/strategy
+              - link "族群強弱" [ref=e16] [cursor=pointer]:
+                - /url: /investment/sectors
+              - button "更多" [ref=e18]:
+                - text: 更多
+                - img [ref=e19]
+              - button "觀察清單" [ref=e22]:
+                - text: 觀察清單
+                - img [ref=e23]
+          - generic [ref=e25]:
+            - button "Toggle theme" [ref=e86]:
+              - img [ref=e87]
+            - link "代書系統" [ref=e27] [cursor=pointer]:
+              - /url: /cases
+              - img [ref=e28]
+              - text: 代書系統
+        - main [ref=e30]:
+          - generic [ref=e31]:
+            - heading "族群強弱" [level=1] [ref=e32]
+            - paragraph [ref=e33]: 全市場資金流向，點擊族群展開成分股
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - link "選股池" [ref=e36] [cursor=pointer]:
+                  - /url: /investment
+                - generic [ref=e37]: ›
+                - generic [ref=e38]: 族群強弱
+              - generic [ref=e39]:
+                - generic [ref=e40]:
+                  - button "今日" [ref=e41]
+                  - button "本週" [ref=e42]
+                  - button "本月" [ref=e43]
+                  - button "成交金額" [ref=e44]
+                  - button "強勢" [ref=e45]
+                - generic [ref=e46]:
+                  - button "▲ 正報酬 84/371" [ref=e47]:
+                    - generic [ref=e48]: ▲
+                    - generic [ref=e49]: 正報酬 84/371
+                  - generic [ref=e50]: 資料日期：2026-05-19
+                  - generic [ref=e51]:
+                    - button "▦" [ref=e52]
+                    - button "≡" [ref=e53]
+                    - button "⊞" [ref=e54]
+                    - button "🗺" [ref=e55]
+                    - button "📈" [active] [ref=e56]
+              - generic [ref=e94]: 資料尚未更新，請等待 Pipeline 執行後重整。
+      - link "返回儀表板" [ref=e72] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e73]:
+          - img [ref=e74]
+          - generic: 返回儀表板
+  - button "Open Next.js Dev Tools" [ref=e82] [cursor=pointer]:
+    - img [ref=e83]
+  - alert [ref=e95]

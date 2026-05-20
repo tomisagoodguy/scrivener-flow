@@ -1,0 +1,144 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - generic [ref=e10]: S
+              - generic [ref=e11]: 投資監控
+            - navigation [ref=e12]:
+              - link "選股池" [ref=e13] [cursor=pointer]:
+                - /url: /investment
+              - link "籌碼排行" [ref=e14] [cursor=pointer]:
+                - /url: /investment/equity
+              - link "策略選股" [ref=e15] [cursor=pointer]:
+                - /url: /investment/strategy
+              - link "族群強弱" [ref=e16] [cursor=pointer]:
+                - /url: /investment/sectors
+              - button "更多" [ref=e18]:
+                - text: 更多
+                - img [ref=e19]
+              - button "觀察清單" [ref=e22]:
+                - text: 觀察清單
+                - img [ref=e23]
+          - generic [ref=e25]:
+            - button "Toggle theme" [ref=e87]:
+              - img [ref=e88]
+            - link "代書系統" [ref=e27] [cursor=pointer]:
+              - /url: /cases
+              - img [ref=e28]
+              - text: 代書系統
+        - main [ref=e30]:
+          - generic [ref=e31]:
+            - heading "族群強弱" [level=1] [ref=e32]
+            - paragraph [ref=e33]: 全市場資金流向，點擊族群展開成分股
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - link "選股池" [ref=e36] [cursor=pointer]:
+                  - /url: /investment
+                - generic [ref=e37]: ›
+                - generic [ref=e38]: 族群強弱
+              - generic [ref=e39]:
+                - generic [ref=e40]:
+                  - button "今日" [ref=e41]
+                  - button "本週" [ref=e42]
+                  - button "本月" [ref=e43]
+                  - button "成交金額" [ref=e44]
+                  - button "強勢" [ref=e45]
+                - generic [ref=e46]:
+                  - button "▲ 正報酬 84/371" [ref=e47]:
+                    - generic [ref=e48]: ▲
+                    - generic [ref=e49]: 正報酬 84/371
+                  - generic [ref=e50]: 資料日期：2026-05-19
+                  - generic [ref=e51]:
+                    - button "▦" [ref=e52]
+                    - button "≡" [ref=e53]
+                    - button "⊞" [ref=e54]
+                    - button "🗺" [ref=e55]
+                    - button "📈" [active] [ref=e56]
+              - generic [ref=e94]:
+                - paragraph [ref=e96]:
+                  - text: 騰落指標（ADL）· 全市場上市櫃
+                  - generic [ref=e97]: 2026-05-20 ADL 6,193
+                - generic [ref=e98]:
+                  - generic [ref=e99]:
+                    - paragraph [ref=e100]: 騰落指標線（ADL）
+                    - generic [ref=e102]:
+                      - list [ref=e104]:
+                        - listitem [ref=e105]:
+                          - img "ADL legend icon" [ref=e106]
+                          - text: ADL
+                        - listitem [ref=e108]:
+                          - img "ADL MA5 legend icon" [ref=e109]
+                          - text: ADL MA5
+                        - listitem [ref=e111]:
+                          - img "ADL MA60 legend icon" [ref=e112]
+                          - text: ADL MA60
+                      - application [ref=e114]:
+                        - generic [ref=e126]:
+                          - generic [ref=e127]:
+                            - generic [ref=e129]: 02-20
+                            - generic [ref=e131]: 02-27
+                            - generic [ref=e133]: 03-06
+                            - generic [ref=e135]: 03-13
+                            - generic [ref=e137]: 03-20
+                            - generic [ref=e139]: 03-27
+                            - generic [ref=e141]: 04-03
+                            - generic [ref=e143]: 04-10
+                            - generic [ref=e145]: 04-17
+                            - generic [ref=e147]: 04-24
+                            - generic [ref=e149]: 05-01
+                            - generic [ref=e151]: 05-08
+                            - generic [ref=e153]: 05-15
+                          - generic [ref=e154]:
+                            - generic [ref=e156]: "-2500"
+                            - generic [ref=e158]: "0"
+                            - generic [ref=e160]: "2500"
+                            - generic [ref=e162]: "5000"
+                            - generic [ref=e164]: "7500"
+                  - generic [ref=e165]:
+                    - paragraph [ref=e166]: 騰落比率（ADR %）
+                    - generic [ref=e168]:
+                      - list [ref=e170]:
+                        - listitem [ref=e171]:
+                          - img "ADR legend icon" [ref=e172]
+                          - text: ADR
+                        - listitem [ref=e174]:
+                          - img "ADR MA5 legend icon" [ref=e175]
+                          - text: ADR MA5
+                        - listitem [ref=e177]:
+                          - img "ADR MA60 legend icon" [ref=e178]
+                          - text: ADR MA60
+                      - application [ref=e180]:
+                        - generic [ref=e192]:
+                          - generic [ref=e193]:
+                            - generic [ref=e195]: 02-20
+                            - generic [ref=e197]: 02-27
+                            - generic [ref=e199]: 03-06
+                            - generic [ref=e201]: 03-13
+                            - generic [ref=e203]: 03-20
+                            - generic [ref=e205]: 03-27
+                            - generic [ref=e207]: 04-03
+                            - generic [ref=e209]: 04-10
+                            - generic [ref=e211]: 04-17
+                            - generic [ref=e213]: 04-24
+                            - generic [ref=e215]: 05-01
+                            - generic [ref=e217]: 05-08
+                            - generic [ref=e219]: 05-15
+                          - generic [ref=e220]:
+                            - generic [ref=e222]: 0%
+                            - generic [ref=e224]: 20%
+                            - generic [ref=e226]: 40%
+                            - generic [ref=e228]: 60%
+                            - generic [ref=e230]: 80%
+      - link "返回儀表板" [ref=e72] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e73]:
+          - img [ref=e74]
+          - generic: 返回儀表板
+  - button "Open Next.js Dev Tools" [ref=e82] [cursor=pointer]:
+    - img [ref=e83]
+  - alert [ref=e86]
+  - generic [ref=e231]: 0%
