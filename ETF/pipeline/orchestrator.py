@@ -28,6 +28,8 @@ from ETF.pipeline.steps import (
     SyncBareKStep,
     ShareholderSignalStep,
     NewsContextStep,
+    SyncTreemapStep,
+    SyncAdlStep,
     NotifyStep,
     CleanupStep,
     FrontrunningStep,
@@ -74,6 +76,8 @@ class PipelineOrchestrator:
         StrategySignalStep,     # [輔助] 執行量化策略，upsert 訊號 → strategy_signals
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
+        SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
+        SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
         NotifyStep,
         CleanupStep,
     ]

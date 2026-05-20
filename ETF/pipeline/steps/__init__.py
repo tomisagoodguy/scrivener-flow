@@ -29,6 +29,8 @@ from ETF.pipeline.steps.active_share_step import ActiveShareStep
 from ETF.pipeline.steps.cumulative_drag_step import CumulativeDragStep
 from ETF.pipeline.steps.matched_pairs_step import MatchedPairsStep
 from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
+from ETF.pipeline.steps.sync_treemap_step import SyncTreemapStep
+from ETF.pipeline.steps.sync_adl_step import SyncAdlStep
 
 __all__ = [
     "BaseStep",
@@ -54,6 +56,8 @@ __all__ = [
     "CumulativeDragStep",
     "MatchedPairsStep",
     "SectorStrengthStep",
+    "SyncTreemapStep",
+    "SyncAdlStep",
     "NotifyStep",
     "CleanupStep",
 ]

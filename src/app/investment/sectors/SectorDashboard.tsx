@@ -9,10 +9,12 @@ import type { EtfSectorActivityMap } from '@/app/actions/getEtfSectorActivity';
 import { pctClass, fmtPct, fmtAmount, fmtPpChange, ppChangeClass, fmtItBuySell } from '@/lib/investment/formatUtils';
 import SectorHeatmap, { type HeatmapPeriod } from './SectorHeatmap';
 import GroupedSectorView from './GroupedSectorView';
+import SectorTreemap from './components/SectorTreemap';
 import FactorICPanel from '@/components/features/FactorICPanel';
+import type { TreemapData } from '@/app/actions/getTreemapData';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
-type ViewMode = 'list' | 'heatmap' | 'grouped';
+type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -165,6 +167,7 @@ interface Props {
     data: { date: string; sectors: SectorRow[] };
     icData?: FactorICRow[];
     etfActivity?: EtfSectorActivityMap;
+    treemapData?: TreemapData;
 }
 
 const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
@@ -187,7 +190,7 @@ function isStrengthSector(s: SectorRow): boolean {
     return true;
 }
 
-export default function SectorDashboard({ data, icData = [], etfActivity = {} }: Props) {
+export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
@@ -281,7 +284,7 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {} }:
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
                     {tabs.map((t) => {
-                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped') && (t.key === 'hit' || t.key === 'etf');
+                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped' || viewMode === 'treemap') && (t.key === 'hit' || t.key === 'etf');
                         if (hidden) return null;
                         return (
                             <button
@@ -347,11 +350,26 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {} }:
                         >
                             ⊞
                         </button>
+                        <button
+                            onClick={() => {
+                                setViewMode('treemap');
+                                if (sortKey === 'amount' || sortKey === 'strength' || sortKey === 'hit' || sortKey === 'etf') setSortKey('1d');
+                            }}
+                            className={`px-3 py-1.5 transition-colors ${viewMode === 'treemap' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white/60'}`}
+                            title="全市場熱力圖"
+                        >
+                            🗺
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {isGroupedMode ? (
+            {viewMode === 'treemap' ? (
+                <SectorTreemap
+                    stocks={treemapData?.stocks ?? []}
+                    date={treemapData?.date ?? ''}
+                />
+            ) : isGroupedMode ? (
                 <GroupedSectorView
                     sectors={sorted}
                     stocksByCategory={groupedStocks ?? {}}
