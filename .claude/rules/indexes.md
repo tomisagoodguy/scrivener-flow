@@ -10,11 +10,22 @@
 | :--- | :--- |
 | `/cases` | 案件列表（里程碑排序）+ `/cases/[id]` 案件詳情 |
 | `/investment` | 投資儀表板入口 |
+| `/investment/[etf]` | ETF 持股監控（動態路由，支援 00980A / 00981A / 00991A 等） |
+| `/investment/stock/[code]` | 個股詳情頁（動態路由，整合法人 + 基本面 + 籌碼） |
+| `/investment/dashboard/[code]` | 個股儀表板（動態路由，整合法人 + 基本面 + K 線） |
+| `/investment/bare-k` | 裸K看盤清單（自選股管理，支援公開唯讀瀏覽） |
+| `/investment/bare-k/[code]` | 個股裸K動態路由（單股深度看盤） |
+| `/investment/watch-list` | 觀察清單（多標的追蹤） |
 | `/investment/buying-patterns` | ETF 買進模式前瞻報酬分析（折線圖 / 熱力圖 / 勝率圖） |
 | `/investment/strategy` | 策略選股中心（`strategy_signals` 資料表，5 種量化策略訊號） |
 | `/investment/frontrunning` | ETF 持股公告前後成交量異常偵測 |
-| `/investment/sectors` | 族群強弱分析（全市場資金流向，含成分股展開） |
-| `/investment/dashboard/[code]` | 個股儀表板（動態路由，整合法人 + 基本面 + K 線） |
+| `/investment/sectors` | 族群強弱分析（全市場資金流向，含成分股展開、品質指標） |
+| `/investment/breadth` | 市場廣度分析（ADL / ADR 走勢圖，`market_breadth_daily` 資料表） |
+| `/investment/consensus` | 籌碼共識頁（多 ETF 同時買進的共同持股排行） |
+| `/investment/compare` | ETF 持股重疊比較 |
+| `/investment/equity` | 股東結構分析（大戶 / 中實戶 / 散戶變化） |
+| `/investment/revenue-lab` | 月營收實驗室（營收趨勢 + 年增率分析） |
+| `/investment/history` | 持股歷史紀錄查詢 |
 | `/banks` | 代償銀行管理 |
 | `/calculator` | 稅費試算工具 |
 | `/clauses` | 契約條款範本管理 |

@@ -72,7 +72,7 @@ scrivener-flow/
 │   │   ├── actions/            # Server Actions（AI、資料同步）
 │   │   ├── api/                # API Routes（Webhooks、第三方整合）
 │   │   ├── cases/              # 案件詳情頁（含 [id] 動態路由）
-│   │   ├── investment/         # 投資儀表板（[etf]、stock/[code]、bare-k、watch-list、compare、consensus、equity、revenue-lab、history、buying-patterns）
+│   │   ├── investment/         # 投資儀表板（[etf]、stock/[code]、bare-k、watch-list、compare、consensus、equity、revenue-lab、history、buying-patterns、sectors、frontrunning、strategy、breadth）
 │   │   └── login/components/   # 拆解的登入子元件
 │   ├── components/             # React 元件
 │   │   ├── features/           # 功能型元件
@@ -284,6 +284,31 @@ yarn test -- --coverage                          # 產生覆蓋率報告
 - Setup 檔：`src/__tests__/setup.ts`（全域 mock 設定）
 - 路徑別名 `@/` 在 Jest 中已對應 `src/`（`moduleNameMapper` 設定）
 - 目前測試集中在投資 hooks（`useHoldingsFilter`、`useStockWeightAnalysis`）
+
+---
+
+## LINE Bot 架構
+
+LINE Bot 提供雙向互動能力，架構分三層：
+
+| 層 | 檔案 | 職責 |
+| :--- | :--- | :--- |
+| **公開 Webhook** | `src/app/api/line/webhook/route.ts` | 接收 LINE 平台事件，HMAC-SHA256 簽章驗證後分派 |
+| **安全推播** | `src/app/api/line/secure/route.ts` | 管理員呼叫的推播端點（需驗證 session） |
+| **Follower 管理** | `src/lib/lineFollowerService.ts` | `upsertFollower` / `deactivateFollower` / `listActiveFollowers`（`line_followers` 資料表） |
+
+**Webhook 支援的使用者指令：**
+
+- `/list` — 回覆目前 Bot 好友清單
+- 一般文字訊息 — Bot 依設定回應
+
+**ETF 通知去重機制：** `etf_notification_log` 資料表記錄每日已發送的 Carousel，防止同一天重複推播。
+
+**注意事項：**
+
+- `LINE_CHANNEL_SECRET` 用於 HMAC-SHA256 簽章驗證，若未設定會導致所有 Webhook 請求被拒
+- `LINE_USER_ID` 是管理員推播目標，不是 Bot 的 Channel ID
+- `/api/line/webhook` 為公開路由（不需 session），勿加 Auth middleware
 
 ---
 

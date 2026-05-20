@@ -38,21 +38,58 @@
 Pipeline 步驟分兩級，錯誤處理策略不同：
 
 ### 關鍵步驟（失敗應中斷 pipeline）
-| 步驟 | 原因 |
-|------|------|
-| `ScrapeStep` | 無資料就沒有後續一切 |
-| `DiffComputeStep` | 異動計算是核心邏輯 |
-| `SaveSnapshotStep` | 持久化失敗等於本次白跑 |
+| 步驟檔案 | 說明 |
+|---------|------|
+| `scrape_step.py` | 無資料就沒有後續一切 |
+| `diff_compute_step.py` | 異動計算是核心邏輯 |
+| `save_snapshot_step.py` | 持久化失敗等於本次白跑 |
 
 這些步驟可以讓例外自然傳播（`raise`）。
 
 ### 輔助步驟（失敗應繼續，不中斷）
-| 步驟 | 原因 |
-|------|------|
-| `SyncBareKStep` | 裸K快照是看盤輔助功能 |
-| `NotifyStep` | 通知失敗不影響資料完整性 |
-| `MultiEtfStep` 內各 ETF | 單支 ETF 爬取失敗不影響其他 |
-| `SyncOHLCVStep` | 股價同步失敗不影響快照 |
+
+**ETF 主流程輔助**
+| 步驟檔案 | 說明 |
+|---------|------|
+| `multi_etf_step.py` | 多支 ETF 爬取，單支失敗不影響其他 |
+| `price_attach_step.py` | 附加當日股價（`stock_prices_daily`） |
+| `weight_history_step.py` | 持股比重歷史同步（`etf_weight_history`） |
+| `flow_compute_step.py` | 資金流向計算 |
+| `buying_pattern_step.py` | 7 種買進模式分類 + 前瞻報酬補齊 → `etf_buying_patterns` |
+| `frontrunning_step.py` | 持股公告前後成交量異常偵測 → `etf_frontrunning_events` |
+| `overlap_compute_step.py` | ETF 持股重疊矩陣計算 |
+
+**市場廣度 & 族群**
+| 步驟檔案 | 說明 |
+|---------|------|
+| `sync_adl_step.py` | 全市場 ADL/ADR/MA → `market_breadth_daily`（輔助步驟） |
+| `sync_treemap_step.py` | 族群 Treemap 資料同步 |
+| `sector_strength_step.py` | 族群強弱品質指標計算 |
+| `signal_detect_step.py` | 族群策略命中信號偵測 |
+
+**量化策略**
+| 步驟檔案 | 說明 |
+|---------|------|
+| `strategy_signal_step.py` | 5 種 FinLab 量化策略選股信號 → `strategy_signals` |
+| `shareholder_signal_step.py` | 股東結構變化信號（大戶增減）|
+
+**股東結構 & 公司基本面**
+| 步驟檔案 | 說明 |
+|---------|------|
+| `position_summary_step.py` | ETF 部位成本摘要計算 |
+| `matched_pairs_step.py` | 持股配對比較 |
+| `active_share_step.py` | 主動型 ETF Active Share 計算 |
+| `aum_sync_step.py` | ETF AUM（規模）同步 |
+| `sync_ohlcv_step.py` | 個股 OHLCV 股價同步 |
+| `sync_company_step.py` | 公司基本資料同步 |
+| `cumulative_drag_step.py` | 累積費用拖累計算（`cumulative_drag`） |
+
+**通知 & 維護**
+| 步驟檔案 | 說明 |
+|---------|------|
+| `notify_step.py` | LINE Carousel 推播（`etf_notification_log` 防重複）|
+| `news_context_step.py` | 新聞情境資料擷取 |
+| `cleanup_step.py` | 清理過期舊資料（多資料表）|
 
 **這些步驟的 `except` 區塊禁止 `raise`，只能 log error 後繼續。**
 
