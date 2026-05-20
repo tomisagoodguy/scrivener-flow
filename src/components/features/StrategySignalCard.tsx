@@ -16,7 +16,7 @@ const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }
     adding:   { label: '加碼中', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
     reducing: { label: '減碼中', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
     holding:  { label: '持倉中', className: 'bg-gray-200/60 text-gray-600 dark:text-gray-400' },
-    none:     { label: '未持有', className: 'bg-slate-100/60 text-slate-500 dark:text-slate-400' },
+    none:     { label: '未持有', className: 'movement-none-badge bg-slate-100/60 text-slate-500 dark:text-slate-400' },
 };
 
 const FACTOR_LABELS: Record<string, string> = {

@@ -41,7 +41,7 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
     const [{ data: holdingRows }, { data: diffRows }, { data: stockInfoRows }] = await Promise.all([
         supabase
             .from('etf_holdings_snapshot')
-            .select('stock_code, etf_code')
+            .select('stock_code, etf_code, stock_name')
             .in('etf_code', ETF_CODES)
             .in('stock_code', allStockIds),
         supabase
@@ -81,6 +81,22 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
             name: (row.name_short as string | null) ?? null,
             industry: (row.industry as string | null) ?? null,
         });
+    }
+
+    // 從 etf_holdings_snapshot 補充 stock_basic_info 查不到的名稱
+    const snapshotNameMap = new Map<string, string>();
+    for (const row of holdingRows ?? []) {
+        const code = row.stock_code as string;
+        const snapshotName = (row as { stock_code: string; etf_code: string; stock_name?: string }).stock_name;
+        if (snapshotName && !snapshotNameMap.has(code)) {
+            snapshotNameMap.set(code, snapshotName);
+        }
+    }
+    for (const [code, snapshotName] of snapshotNameMap) {
+        const existing = stockInfoMap.get(code);
+        if (!existing?.name) {
+            stockInfoMap.set(code, { name: snapshotName, industry: existing?.industry ?? null });
+        }
     }
 
     const strategyMap = new Map<string, StrategyStock[]>();

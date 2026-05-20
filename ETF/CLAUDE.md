@@ -138,7 +138,7 @@ uv run ruff check --fix && uv run ruff format
 | `sync_stock_financials.py --skip-shareholder` | ~8 min | broker chunk_size=500 |
 | `daily_ai_report.py`（11 ETF） | ~15 min | Gemini rate limit |
 | **日排程合計** | **~33 min** | 22 交易日/月 ≈ 730 min |
-| `equity_weekly.yml`（集保 + 週排程） | ~30 min | 僅每週一執行 |
+| `equity_weekly.yml`（集保 + 週排程） | ~20 min | `--skip-broker` 跳過券商資料，timeout-minutes: 60 |
 
 > **注意**：日排程若超過 60 分鐘請先確認：
 >
@@ -347,6 +347,7 @@ else:              signal = "持平"
 | 新聞用 Cloudflare D1 查詢 | 直接打 MOPS HTTP API（`services/news/mops_client.py`），無需額外環境變數 |
 | 投信持股統計窗口用 10 日 | 台股投信持股統計窗口是 **5 日**，不是 10 日 |
 | `sync_stock_financials.py` 不加 `--skip-shareholder` 直接跑 daily | TDCC 集保資料每週才更新，加上舊的 `chunk_size=50` 會讓 daily 跑 ~2 小時；**daily 必須帶 `--skip-shareholder`** |
+| 週排程 `equity_weekly.yml` 不加 `--skip-broker` | `etl:broker_transactions` 是全市場巨型資料集，FinLab cache 7 天後被驅逐，每週從零下載會撞 6 小時 GitHub Actions timeout；**週排程必須帶 `--skip-broker`**（broker 已由日排程同步） |
 | 把 `upsert_broker_transactions` 的 `chunk_size` 改回 50 | `chunk_size=50` 會讓 12,600 筆跑 ~34 分鐘；正確值是 **500** |
 | 查詢 `etf_diff_logs` 用 `weight_after` | 此欄不存在；正確欄位是 `curr_weight`（當日持倉比重） |
 | SQLAlchemy 讀回 `NUMERIC` 欄位直接做 `/` 運算 | PostgreSQL `NUMERIC` 對應 Python `decimal.Decimal`，不能直接和 `float` 相除；必須先 `float()` 轉型，例如 `float(diff_shares) * float(price) / 1e8` |

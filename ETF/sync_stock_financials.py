@@ -37,10 +37,10 @@ class FinancialsSync:
         self.finlab = FinlabService()
         self.storage = SQLStorage()
     
-    def run(self, days=300, skip_shareholder=False):
+    def run(self, days=300, skip_shareholder=False, skip_broker=False):
         """執行完整同步流程"""
         logger.info("=" * 60)
-        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder})")
+        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder}, skip_broker={skip_broker})")
         logger.info("=" * 60)
 
         try:
@@ -63,11 +63,14 @@ class FinancialsSync:
                 logger.error("無目標股票，中止同步")
                 return
 
-            # 2. 同步券商數據 (Priority)
-            logger.info("--- 同步券商交易數據 ---")
-            raw_buy, raw_sell, raw_close = self.finlab.get_broker_data()
-            broker_records = BrokerProcessor.process(raw_buy, raw_sell, raw_close, stock_list, days=days)
-            self.storage.upsert_broker_transactions(broker_records)
+            # 2. 同步券商數據（日排程已含，週排程用 --skip-broker 跳過避免重複下載巨型資料集）
+            if not skip_broker:
+                logger.info("--- 同步券商交易數據 ---")
+                raw_buy, raw_sell, raw_close = self.finlab.get_broker_data()
+                broker_records = BrokerProcessor.process(raw_buy, raw_sell, raw_close, stock_list, days=days)
+                self.storage.upsert_broker_transactions(broker_records)
+            else:
+                logger.info("--- 跳過券商交易數據（skip_broker=True，日排程已同步）---")
 
             # 3. 同步營收
             logger.info("--- 同步月營收數據 ---")
@@ -101,7 +104,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Financials Sync Process")
     parser.add_argument("--days", type=int, default=300, help="Number of days for broker data sync (default: 300)")
     parser.add_argument("--skip-shareholder", action="store_true", help="Skip raw shareholder sync (TDCC weekly data, handled by equity_weekly.yml)")
+    parser.add_argument("--skip-broker", action="store_true", help="Skip broker transaction sync (large dataset, already synced by daily workflow)")
     args = parser.parse_args()
 
     sync = FinancialsSync()
-    sync.run(days=args.days, skip_shareholder=args.skip_shareholder)
+    sync.run(days=args.days, skip_shareholder=args.skip_shareholder, skip_broker=args.skip_broker)

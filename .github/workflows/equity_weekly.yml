@@ -22,6 +22,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
@@ -71,5 +72,5 @@ jobs:
       - name: Sync raw shareholder weekly data
         run: |
           # 週排程同步 stock_shareholder_weekly（原始集保分層數據），不跳過 shareholder
-          # daily 排程因 --skip-shareholder 不跑此步驟，這裡補齊
-          uv run python ETF/sync_stock_financials.py --days 14
+          # --skip-broker：broker 資料日排程已同步，週排程跳過避免重複下載巨型資料集（曾導致 6 小時 timeout）
+          uv run python ETF/sync_stock_financials.py --days 14 --skip-broker

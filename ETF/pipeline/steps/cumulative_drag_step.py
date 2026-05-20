@@ -116,7 +116,7 @@ class CumulativeDragStep(BaseStep):
             SELECT stock_code, volume
             FROM stock_prices_daily
             WHERE volume > 0
-              AND date >= CURRENT_DATE - INTERVAL '30 days'
+              AND data_date >= CURRENT_DATE - INTERVAL '30 days'
         """)
         from collections import defaultdict
         vols: dict[str, list[float]] = defaultdict(list)
