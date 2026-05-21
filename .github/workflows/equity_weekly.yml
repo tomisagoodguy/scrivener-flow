@@ -33,6 +33,8 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
       TZ: 'Asia/Taipei'
 
     steps:
@@ -74,3 +76,11 @@ jobs:
           # 週排程同步 stock_shareholder_weekly（原始集保分層數據），不跳過 shareholder
           # --skip-broker：broker 資料日排程已同步，週排程跳過避免重複下載巨型資料集（曾導致 6 小時 timeout）
           uv run python ETF/sync_stock_financials.py --days 14 --skip-broker
+
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync (equity_weekly)\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"

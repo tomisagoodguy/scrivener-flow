@@ -70,7 +70,10 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['progress']\\)\")",
       "Bash(bash C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh \"fix: 人數增減動態計算，支援多週觀察區間\")",
       "Bash(bash /c/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"fix: 人數增減動態計算，支援多週觀察區間\")",
-      "PowerShell(Remove-Item \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\ETF\\\\pipeline\\\\steps\\\\notify_step.py.bak\" -Confirm:$false)"
+      "PowerShell(Remove-Item \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\ETF\\\\pipeline\\\\steps\\\\notify_step.py.bak\" -Confirm:$false)",
+      "Bash(python3 -c ' *)",
+      "PowerShell(cd \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\"; $env:PYTHONPATH=\".\"; uv run python ETF/backfill_flow_daily.py --dates 2026-05-19 2026-05-20 --dry-run 2>&1)",
+      "PowerShell(cd \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\"; $env:PYTHONPATH=\".\"; uv run python ETF/backfill_flow_daily.py --dates 2026-05-19 2026-05-20 2>&1)"
     ]
   },
   "enabledMcpjsonServers": [

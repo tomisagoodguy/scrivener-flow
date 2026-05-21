@@ -33,31 +33,26 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Compute but don't write to DB")
     args = parser.parse_args()
 
+    import pathlib
     from ETF.database.sql_storage import SQLStorage
     from ETF.pipeline.steps.flow_compute_step import FlowComputeStep
     from ETF.pipeline.context import PipelineContext
+    from ETF.pipeline.services import PipelineServices
 
     sql_storage = SQLStorage()
-
-    class _FakeCtx:
-        """Minimal context for FlowComputeStep"""
-        is_dry_run: bool
-        date_str: str
-
-    class _FakeServices:
-        def __init__(self, storage):
-            self.sql_storage = storage
-
-    services = _FakeServices(sql_storage)
+    services = PipelineServices(storage=None, notifier=None, finlab_srv=None, sql_storage=sql_storage)
 
     step = FlowComputeStep()
 
     for date_str in args.dates:
         logger.info(f"Backfilling etf_flow_daily for {date_str} ...")
 
-        ctx = _FakeCtx()
-        ctx.date_str = date_str
-        ctx.is_dry_run = args.dry_run
+        ctx = PipelineContext(
+            args=argparse.Namespace(dry_run=args.dry_run),
+            output_dir=pathlib.Path("."),
+            date_str=date_str,
+            is_dry_run=args.dry_run,
+        )
 
         try:
             step._run(ctx, services)

@@ -6,6 +6,13 @@ on:
     # 台灣時間 22:00 (UTC 14:00): 每日一次收盤後更新
     - cron: '0 14 * * *'
   workflow_dispatch: # 允許手動觸發
+    inputs:
+      runner:
+        description: '執行環境'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options: ['ubuntu-latest', 'self-hosted']
 
 concurrency:
   group: etf-daily
@@ -13,10 +20,14 @@ concurrency:
 
 jobs:
   validate-registry:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash
+    env:
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -32,9 +43,18 @@ jobs:
       - name: Validate registry sync
         run: uv run python ETF/scripts/validate_registry_sync.py
 
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: validate-registry\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+
   run-tracker:
     needs: validate-registry
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 90
     defaults:
       run:
         shell: bash
@@ -114,3 +134,11 @@ jobs:
           name: etf-history-csv
           path: ETF/history/*.csv
           retention-days: 7
+
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: run-tracker\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"

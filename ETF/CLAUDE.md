@@ -329,6 +329,36 @@ else:              signal = "持平"
 
 ---
 
+## CI/CD 已知陷阱
+
+### Self-hosted Runner 切換指南（月配額不足時）
+
+**切換時機：** GitHub Actions 月度配額超過 80%（1600/2000 分鐘）。每週日的 `quota_monitor.yml` 會自動警告；或直接查看 GitHub → Settings → Billing → Actions。
+
+**確認 PCFIX8749 runner 在線：**
+
+1. GitHub → repo → Settings → Actions → Runners
+2. 確認 `PCFIX8749` 狀態為 **Idle**（綠燈）
+3. 若顯示 **Offline**：在本機以系統管理員開啟 PowerShell → `cd C:\Users\user\actions-runner` → `.\run.cmd`
+
+**切換方式（不需修改 YAML）：**
+
+1. GitHub → repo → Actions → Daily ETF Tracker
+2. 右上角「Run workflow」
+3. 下拉 `runner`，選 `self-hosted`
+4. 點「Run workflow」送出
+
+> Schedule 觸發時仍自動用 `ubuntu-latest`，只有手動觸發可選 self-hosted。
+
+**Windows 環境注意事項：**
+
+- **Shell**：self-hosted runner 在 Windows 上預設使用 bash（Git Bash），`shell: bash` 已在 workflow 中設定，行為與 ubuntu-latest 一致
+- **FinLab cache 路徑**：`~/.finlab` 在 Windows Git Bash 環境等效 `C:\Users\user\.finlab`；`mkdir -p ~/.finlab` 正常運作
+- **`actions/cache`**：self-hosted 環境可能無法命中 `ubuntu-latest` 留下的 cache（OS 不同），FinLab 會重新下載資料；pipeline 不報錯，僅速度稍慢（首次約多 10 分鐘）
+- **Python 版本確認**：`uv run` 會自動抓 `pyproject.toml` 指定的 Python 3.13，不依賴系統 Python
+
+---
+
 ## 常見錯誤
 
 | ❌ 錯誤 | ✅ 正確 |
