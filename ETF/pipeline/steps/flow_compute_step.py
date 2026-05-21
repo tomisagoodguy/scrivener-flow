@@ -12,6 +12,7 @@ Flow Compute Step
 
 import json
 import logging
+import traceback
 from collections import defaultdict
 from datetime import date
 
@@ -50,7 +51,7 @@ class FlowComputeStep(BaseStep):
         try:
             self._run(ctx, services)
         except Exception as e:
-            self.logger.error(f"FlowComputeStep failed: {e}")
+            self.logger.error(f"FlowComputeStep failed: {e}\n{traceback.format_exc()}")
         return ctx
 
     # ------------------------------------------------------------------ private
@@ -100,7 +101,7 @@ class FlowComputeStep(BaseStep):
             FROM stock_prices_daily
             WHERE data_date = :d
         """), {"d": target_date})
-        return {r.stock_code: float(r.close) for r in rows}
+        return {r.stock_code: float(r.close) for r in rows if r.close is not None}
 
     @staticmethod
     def _fetch_prev_shares(conn, etf_codes: list[str], target_date: str) -> dict[tuple, float]:
