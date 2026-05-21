@@ -39,6 +39,7 @@ from ETF.pipeline.steps import (
 )
 from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
 from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
+from ETF.pipeline.steps.data_validation_step import DataValidationStep
 
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class PipelineOrchestrator:
     DEFAULT_STEPS: List[Type[BaseStep]] = [
         ScrapeStep,
         PriceAttachStep,
+        DataValidationStep,
         DiffComputeStep,
         SaveSnapshotStep,
         ShareholderSignalStep,  # 讀 stock-data-main JSON，計算大戶積累訊號

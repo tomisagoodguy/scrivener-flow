@@ -59,6 +59,15 @@ class NotifyStep(BaseStep):
         else:
             self.logger.info("Carousel already sent for %s, skipping.", ctx.date_str)
 
+        # 5. 驗證警告摘要（若有則附加到 LINE）
+        if ctx.validation_warnings:
+            warning_lines = "\n".join(f"⚠️ {w}" for w in ctx.validation_warnings)
+            try:
+                notifier.send_text(f"資料驗證警告：\n{warning_lines}")
+                self.logger.info("Validation warnings sent: %d item(s)", len(ctx.validation_warnings))
+            except Exception as e:
+                self.logger.error("Failed to send validation warnings: %s", e)
+
         # 盤前指引 bubble（全市場共識，輔助，失敗不中斷）
         try:
             from ETF.notifiers.pre_market_notify import (

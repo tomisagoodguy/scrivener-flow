@@ -34,6 +34,9 @@ class PipelineContext:
     shareholder_signals: Dict[str, str] = field(default_factory=dict)
     news_context: List[Dict[str, Any]] = field(default_factory=list)
 
+    # 驗證警告（DataValidationStep 寫入，NotifyStep 讀取）
+    validation_warnings: List[str] = field(default_factory=list)
+
     # 執行標誌
     is_dry_run: bool = False
     is_ci: bool = False
