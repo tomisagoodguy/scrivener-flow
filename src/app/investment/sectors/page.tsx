@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { getSectorStrength } from '@/app/actions/getSectorStrength';
 import { getFactorIC } from '@/app/actions/getFactorIC';
 import { getEtfSectorActivity, type EtfSectorActivityMap } from '@/app/actions/getEtfSectorActivity';

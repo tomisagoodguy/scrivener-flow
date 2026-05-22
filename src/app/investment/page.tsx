@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+
+export const revalidate = 3600;
 import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs';
 import { StockPickerHub } from '@/components/features/investment/StockPickerHub';
 import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';

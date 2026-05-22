@@ -76,7 +76,15 @@
       "PowerShell(cd \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\"; $env:PYTHONPATH=\".\"; uv run python ETF/backfill_flow_daily.py --dates 2026-05-19 2026-05-20 2>&1)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('State:', d['state']\\); print\\('Progress:', d['progress']\\)\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf-pipeline\\): add DataValidationStep and FinLab quota guard\")",
-      "Bash(bash /c/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf-pipeline\\): add DataValidationStep and FinLab quota guard\")"
+      "Bash(bash /c/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat\\(etf-pipeline\\): add DataValidationStep and FinLab quota guard\")",
+      "Bash(Get-ChildItem -Path \"src/app/investment\" -Recurse -Filter \"page.tsx\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(head -60)",
+      "Bash(Remove-Item -Recurse -Force .next/cache)",
+      "PowerShell(Stop-Process -Id 3208 -Force)",
+      "Bash(ls /mnt/c/Users/user/Documents/GitHub/scrivener-flow/openspec/specs/ 2>/dev/null || echo \"Directory not found or empty\")",
+      "Read(//mnt/c/Users/user/Documents/GitHub/scrivener-flow/openspec/**)",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\openspec\\\\specs\\\\investment-server-cache\")"
     ]
   },
   "enabledMcpjsonServers": [

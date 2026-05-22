@@ -92,11 +92,11 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
 
     # 選股條件
     c1 = amt > 1.5 * 10**7
-    c2 = (rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8
+    c2 = (rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8  # type: ignore[operator]
     c3 = force.rank(pct=True, axis=1) > 0.8
     c4 = (rsv(200) > 0.85) & (rs(150) > 0.65)
     c5 = (
-        close.rolling(5).mean().rise() &
+        close.rolling(5).mean().rise() &  # type: ignore[operator]
         (close > close.rolling(5).mean()) &
         (close.rolling(5).mean() / close.rolling(20).mean() > 1)
     )
@@ -112,6 +112,6 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
     positionG = (c1 & c2 & c3 & c4 & c5 & c6 & c7 & disposal_stocks) * cap
     positionG = positionG[positionG > 0].is_smallest(10)
     positionG[stocks_to_exclude] = False
-    positionG = positionG.reindex(rev.index_str_to_date().index)
+    positionG = positionG.reindex(rev.index_str_to_date().index)  # type: ignore[operator]
 
     return positionG

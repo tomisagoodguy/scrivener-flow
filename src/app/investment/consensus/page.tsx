@@ -1,4 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
+export const revalidate = 3600;
+
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ConsensusFilter } from './ConsensusFilter';
@@ -21,54 +24,61 @@ interface OverlapRow {
 }
 
 async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]; date: string }> {
-    const supabase = await createClient();
+    const cached = unstable_cache(
+        async () => {
+            const supabase = getPublicClient();
 
-    // 取最新有資料日期
-    const { data: latest } = await supabase
-        .from('etf_stock_overlap')
-        .select('data_date')
-        .order('data_date', { ascending: false })
-        .limit(1);
+            const { data: latest } = await supabase
+                .from('etf_stock_overlap')
+                .select('data_date')
+                .order('data_date', { ascending: false })
+                .limit(1);
 
-    if (!latest || latest.length === 0) return { data: [], date: '' };
-    const queryDate: string = latest[0].data_date;
+            if (!latest || latest.length === 0) return { data: [], date: '' };
+            const queryDate: string = (latest as { data_date: string }[])[0].data_date;
 
-    const { data: overlapData, error } = await supabase
-        .from('etf_stock_overlap')
-        .select('stock_code, data_date, etf_count, total_weight, etf_list, consensus_buy_count, consensus_sell_count')
-        .eq('data_date', queryDate)
-        .gte('etf_count', minEtfCount)
-        .order('etf_count', { ascending: false })
-        .order('total_weight', { ascending: false })
-        .limit(100);
+            const { data: overlapData, error } = await supabase
+                .from('etf_stock_overlap')
+                .select('stock_code, data_date, etf_count, total_weight, etf_list, consensus_buy_count, consensus_sell_count')
+                .eq('data_date', queryDate)
+                .gte('etf_count', minEtfCount)
+                .order('etf_count', { ascending: false })
+                .order('total_weight', { ascending: false })
+                .limit(100);
 
-    if (error || !overlapData) return { data: [], date: queryDate };
+            if (error || !overlapData) return { data: [], date: queryDate };
 
-    // 補充股票名稱
-    const stockCodes = overlapData.map((r) => r.stock_code);
-    const { data: nameData } = await supabase
-        .from('etf_holdings_snapshot')
-        .select('stock_code, stock_name')
-        .in('stock_code', stockCodes)
-        .eq('data_date', queryDate);
+            type OverlapRaw = { stock_code: string; data_date: string; etf_count: number; total_weight: unknown; etf_list: unknown; consensus_buy_count: number | null; consensus_sell_count: number | null };
+            const overlapRows = overlapData as OverlapRaw[];
+            const stockCodes = overlapRows.map((r) => r.stock_code);
+            const { data: nameData } = await supabase
+                .from('etf_holdings_snapshot')
+                .select('stock_code, stock_name')
+                .in('stock_code', stockCodes)
+                .eq('data_date', queryDate);
 
-    const nameMap: Record<string, string> = {};
-    for (const row of nameData ?? []) {
-        nameMap[row.stock_code] = row.stock_name;
-    }
+            const nameMap: Record<string, string> = {};
+            for (const row of (nameData ?? []) as { stock_code: string; stock_name: string }[]) {
+                nameMap[row.stock_code] = row.stock_name;
+            }
 
-    const enriched: OverlapRow[] = overlapData.map((row) => ({
-        stock_code: row.stock_code,
-        stock_name: nameMap[row.stock_code] ?? '',
-        data_date: row.data_date,
-        etf_count: row.etf_count,
-        total_weight: Number(row.total_weight),
-        etf_list: (row.etf_list as EtfEntry[]) ?? [],
-        consensus_buy_count: row.consensus_buy_count ?? 0,
-        consensus_sell_count: row.consensus_sell_count ?? 0,
-    }));
+            const enriched: OverlapRow[] = overlapRows.map((row) => ({
+                stock_code: row.stock_code,
+                stock_name: nameMap[row.stock_code] ?? '',
+                data_date: row.data_date,
+                etf_count: row.etf_count,
+                total_weight: Number(row.total_weight),
+                etf_list: (row.etf_list as EtfEntry[]) ?? [],
+                consensus_buy_count: row.consensus_buy_count ?? 0,
+                consensus_sell_count: row.consensus_sell_count ?? 0,
+            }));
 
-    return { data: enriched, date: queryDate };
+            return { data: enriched, date: queryDate };
+        },
+        ['consensus', String(minEtfCount)],
+        { revalidate: 3600 },
+    );
+    return cached();
 }
 
 function EtfBadge({ etfCode }: { etfCode: string }) {

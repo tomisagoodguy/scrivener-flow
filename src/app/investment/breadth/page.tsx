@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { getAdlData } from '@/app/actions/getAdlData';
 import AdlChart from './components/AdlChart';
 

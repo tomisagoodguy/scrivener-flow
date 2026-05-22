@@ -71,6 +71,11 @@ class SectorStrengthStep(BaseStep):
             return
 
         themes = themes.copy()
+        # FinLab v2.0+ 將 stock code 移至 index；確保 stock_id 作為欄位存在
+        if "stock_id" not in themes.columns:
+            themes = themes.reset_index().rename(
+                columns={themes.index.name or "index": "stock_id"}
+            )
         themes["category"] = themes["category"].apply(_safe_eval_list)
         exploded = themes.explode("category").dropna(subset=["category"])
         exploded = exploded[exploded["category"].str.strip() != ""]
@@ -117,11 +122,12 @@ class SectorStrengthStep(BaseStep):
         momentum_score = (close / close.shift() - 1).rolling(5).mean().iloc[-1]
 
         # 均線多頭排列：股價 > MA5 > MA20 > MA60，且 MA20 近 5 日向上
-        ma5  = close.average(5).iloc[-1]
-        ma20 = close.average(20).iloc[-1]
-        ma60 = close.average(60).iloc[-1]
+        _ma20_df = close.rolling(20).mean()
+        ma5  = close.rolling(5).mean().iloc[-1]
+        ma20 = _ma20_df.iloc[-1]
+        ma60 = close.rolling(60).mean().iloc[-1]
         last_close = close.iloc[-1]
-        ma20_rising = close.average(20).rise(5).iloc[-1]
+        ma20_rising = (_ma20_df > _ma20_df.shift(5)).iloc[-1]
         above_ma = (
             (last_close > ma5)
             & (ma5 > ma20)
@@ -133,7 +139,7 @@ class SectorStrengthStep(BaseStep):
         self.logger.info("Fetching monthly revenue data...")
         try:
             rev = fd.get("monthly_revenue:當月營收")
-            rev_cond = rev.average(3).iloc[-1] > rev.average(12).iloc[-1]
+            rev_cond = rev.rolling(3).mean().iloc[-1] > rev.rolling(12).mean().iloc[-1]
         except Exception as e:
             self.logger.warning(f"Failed to fetch monthly revenue, strategy hit will be False: {e}")
             rev_cond = pd.Series(False, index=last_close.index)

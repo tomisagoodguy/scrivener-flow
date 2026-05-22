@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 
 export interface AdlRecord {
     date: string;
@@ -24,45 +25,53 @@ export interface AdlData {
     latestAdl: number | null;
 }
 
-export async function getAdlData(): Promise<AdlData> {
-    const supabase = await createClient();
+const _getAdlData = unstable_cache(
+    async (): Promise<AdlData> => {
+        const supabase = getPublicClient();
 
-    const since = new Date();
-    since.setDate(since.getDate() - 180);
-    const sinceStr = since.toISOString().slice(0, 10);
+        const since = new Date();
+        since.setDate(since.getDate() - 240);
+        const sinceStr = since.toISOString().slice(0, 10);
 
-    const { data } = await supabase
-        .from('market_breadth_daily')
-        .select('*')
-        .gte('date', sinceStr)
-        .order('date', { ascending: true });
+        const { data } = await supabase
+            .from('market_breadth_daily')
+            .select('*')
+            .gte('date', sinceStr)
+            .order('date', { ascending: true });
 
-    const records = (data ?? []) as AdlRecord[];
+        const records = (data ?? []) as AdlRecord[];
 
-    if (records.length === 0) {
-        return { records: [], crossStatus: 'none', latestDate: '', latestAdl: null };
-    }
-
-    const latest = records[records.length - 1];
-    const prev = records.length >= 2 ? records[records.length - 2] : null;
-
-    let crossStatus: CrossStatus = 'none';
-    if (latest.adl_ma5 !== null && latest.adl_ma60 !== null) {
-        const ma5Now = latest.adl_ma5;
-        const ma60Now = latest.adl_ma60;
-        const ma5Prev = prev?.adl_ma5 ?? null;
-        const ma60Prev = prev?.adl_ma60 ?? null;
-
-        if (ma5Prev !== null && ma60Prev !== null) {
-            if (ma5Now >= ma60Now && ma5Prev < ma60Prev) crossStatus = 'golden';
-            else if (ma5Now < ma60Now && ma5Prev >= ma60Prev) crossStatus = 'death';
+        if (records.length === 0) {
+            return { records: [], crossStatus: 'none', latestDate: '', latestAdl: null };
         }
-    }
 
-    return {
-        records,
-        crossStatus,
-        latestDate: latest.date,
-        latestAdl: latest.adl,
-    };
+        const latest = records[records.length - 1];
+        const prev = records.length >= 2 ? records[records.length - 2] : null;
+
+        let crossStatus: CrossStatus = 'none';
+        if (latest.adl_ma5 !== null && latest.adl_ma60 !== null) {
+            const ma5Now = latest.adl_ma5;
+            const ma60Now = latest.adl_ma60;
+            const ma5Prev = prev?.adl_ma5 ?? null;
+            const ma60Prev = prev?.adl_ma60 ?? null;
+
+            if (ma5Prev !== null && ma60Prev !== null) {
+                if (ma5Now >= ma60Now && ma5Prev < ma60Prev) crossStatus = 'golden';
+                else if (ma5Now < ma60Now && ma5Prev >= ma60Prev) crossStatus = 'death';
+            }
+        }
+
+        return {
+            records,
+            crossStatus,
+            latestDate: latest.date,
+            latestAdl: latest.adl,
+        };
+    },
+    ['adl-data'],
+    { revalidate: 3600 },
+);
+
+export async function getAdlData(): Promise<AdlData> {
+    return _getAdlData();
 }

@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { getBuyingPatternStats } from '@/app/actions/getBuyingPatternStats';
 import BuyingPatternCharts from './BuyingPatternCharts';
 

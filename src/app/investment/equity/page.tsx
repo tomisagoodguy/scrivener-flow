@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { fetchRankingData } from '@/lib/investment/equityPageData';

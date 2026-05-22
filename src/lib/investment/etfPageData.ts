@@ -1,5 +1,7 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { getServiceClient } from '@/lib/supabase/service';
 import type { Holding, DiffLog } from '@/types/investment';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
@@ -29,13 +31,13 @@ export interface EtfNewsRow {
 
 export type DiffLogWithMeta = DiffLog;
 
-export async function getHoldings(etfCode: string): Promise<{
+async function _getHoldings(etfCode: string): Promise<{
     holdings: Holding[];
     updatedAt: string | null;
     dataDate: string | null;
     meta: EtfFreshnessMeta | null;
 }> {
-    const supabase = await createClient();
+    const supabase = getServiceClient();
 
     const { data: dateCandidates } = await supabase
         .from('etf_holdings_snapshot')
@@ -83,12 +85,12 @@ export async function getHoldings(etfCode: string): Promise<{
     ]);
 
     const industryMap: Record<string, string> = {};
-    industryData?.forEach(i => { industryMap[i.stock_code] = i.industry; });
+    industryData?.forEach(i => { industryMap[i.stock_code] = i.industry ?? '未知'; });
 
     const revMap: Record<string, { date: string; yoy: number; mom: number }> = {};
     revData?.forEach(r => {
         if (!revMap[r.stock_code]) {
-            revMap[r.stock_code] = { date: r.data_date.substring(0, 7), yoy: r.revenue_yoy, mom: r.revenue_mom };
+            revMap[r.stock_code] = { date: r.data_date.substring(0, 7), yoy: r.revenue_yoy ?? 0, mom: r.revenue_mom ?? 0 };
         }
     });
 
@@ -129,6 +131,7 @@ export async function getHoldings(etfCode: string): Promise<{
         const pi = priceMap[h.stock_code];
         return {
             ...h,
+            stock_id: h.stock_code,
             price: h.price ?? pi?.price ?? null,
             change_percent: h.change_percent ?? pi?.change_percent ?? null,
             amount: h.amount ?? pi?.amount ?? null,
@@ -149,6 +152,15 @@ export async function getHoldings(etfCode: string): Promise<{
         : null;
 
     return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate, meta };
+}
+
+export async function getHoldings(etfCode: string) {
+    const cached = unstable_cache(
+        () => _getHoldings(etfCode),
+        ['etf-holdings', etfCode],
+        { revalidate: 3600 },
+    );
+    return cached();
 }
 
 export async function getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {
@@ -209,8 +221,8 @@ export async function getEtfNews(etfCode: string): Promise<EtfNewsRow[]> {
         .map(r => ({ ...r, title: r.title!, source: r.source! })) as EtfNewsRow[];
 }
 
-export async function getDiffLogs(etfCode: string): Promise<DiffLogWithMeta[]> {
-    const supabase = await createClient();
+async function _getDiffLogs(etfCode: string): Promise<DiffLogWithMeta[]> {
+    const supabase = getServiceClient();
 
     const { data: logsData } = await supabase
         .from('etf_diff_logs')
@@ -244,7 +256,7 @@ export async function getDiffLogs(etfCode: string): Promise<DiffLogWithMeta[]> {
         .in('stock_code', logsData.map(l => l.stock_code));
 
     const industryMap: Record<string, string> = {};
-    industryData?.forEach(i => { industryMap[i.stock_code] = i.industry; });
+    industryData?.forEach(i => { industryMap[i.stock_code] = i.industry ?? '未知'; });
 
     return logsData.map(l => ({
         ...l,
@@ -255,6 +267,15 @@ export async function getDiffLogs(etfCode: string): Promise<DiffLogWithMeta[]> {
         industry: industryMap[l.stock_code] || undefined,
         rank: dateRankMap[l.data_date]?.[l.stock_code] || null,
     })) as DiffLogWithMeta[];
+}
+
+export async function getDiffLogs(etfCode: string): Promise<DiffLogWithMeta[]> {
+    const cached = unstable_cache(
+        () => _getDiffLogs(etfCode),
+        ['etf-diff-logs', etfCode],
+        { revalidate: 3600 },
+    );
+    return cached();
 }
 
 export interface PnlSeriesPoint {

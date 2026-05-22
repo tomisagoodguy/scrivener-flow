@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 import { computeMovement } from '@/lib/investment/strategyUtils';
 import { ETF_CODES } from '@/lib/investment/etfRegistry';
 import { getStrategyDescriptions } from './strategyRegistry';
@@ -8,8 +9,8 @@ import type { DiffEvent, StrategyStock, StrategyEntry, StrategySignalsResult } f
 
 const PORTFOLIO_ETF = '00981A';
 
-export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
-    const supabase = await createClient();
+async function _getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
+    const supabase = getPublicClient();
 
     let targetDate = date;
     if (!targetDate) {
@@ -21,7 +22,7 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
             .single();
 
         if (dateErr || !latestRow) return null;
-        targetDate = latestRow.date as string;
+        targetDate = (latestRow as unknown as { date: string }).date;
     }
 
     const { data: signals, error: sigErr } = await supabase
@@ -32,7 +33,13 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
 
     if (sigErr || !signals || signals.length === 0) return null;
 
-    const allStockIds = [...new Set(signals.map((s) => s.stock_id as string))];
+    interface SignalRow { strategy_id: string; stock_id: string; score: number | null }
+    interface HoldingRow { stock_code: string; etf_code: string; stock_name?: string | null }
+    interface DiffRow { stock_code: string; change_type: string; diff_weight: number | null }
+    interface StockInfoRow { stock_code: string; name_short: string | null; industry: string | null }
+
+    const typedSignals = signals as SignalRow[];
+    const allStockIds = [...new Set(typedSignals.map((s) => s.stock_id))];
 
     const sevenDaysAgo = new Date(targetDate);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -57,39 +64,42 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
             .in('stock_code', allStockIds),
     ]);
 
+    const typedHoldings = (holdingRows ?? []) as HoldingRow[];
+    const typedDiffRows = (diffRows ?? []) as DiffRow[];
+    const typedStockInfoRows = (stockInfoRows ?? []) as StockInfoRow[];
+
     const holdingsSet = new Set<string>(
-        (holdingRows ?? []).filter((h) => h.etf_code === PORTFOLIO_ETF).map((h) => h.stock_code as string),
+        typedHoldings.filter((h) => h.etf_code === PORTFOLIO_ETF).map((h) => h.stock_code),
     );
 
     const etfHoldersMap = new Map<string, string[]>();
-    for (const row of holdingRows ?? []) {
-        const code = row.stock_code as string;
-        const etfCode = row.etf_code as string;
+    for (const row of typedHoldings) {
+        const code = row.stock_code;
+        const etfCode = row.etf_code;
         if (!etfHoldersMap.has(code)) etfHoldersMap.set(code, []);
         etfHoldersMap.get(code)!.push(etfCode);
     }
 
-    const diffEvents: DiffEvent[] = (diffRows ?? []).map((r) => ({
-        stock_id: r.stock_code as string,
-        change_type: r.change_type as string,
-        diff_weight: (r.diff_weight as number) ?? 0,
+    const diffEvents: DiffEvent[] = typedDiffRows.map((r) => ({
+        stock_id: r.stock_code,
+        change_type: r.change_type,
+        diff_weight: r.diff_weight ?? 0,
     }));
 
     const stockInfoMap = new Map<string, { name: string | null; industry: string | null }>();
-    for (const row of stockInfoRows ?? []) {
-        stockInfoMap.set(row.stock_code as string, {
-            name: (row.name_short as string | null) ?? null,
-            industry: (row.industry as string | null) ?? null,
+    for (const row of typedStockInfoRows) {
+        stockInfoMap.set(row.stock_code, {
+            name: row.name_short ?? null,
+            industry: row.industry ?? null,
         });
     }
 
     // 從 etf_holdings_snapshot 補充 stock_basic_info 查不到的名稱
     const snapshotNameMap = new Map<string, string>();
-    for (const row of holdingRows ?? []) {
-        const code = row.stock_code as string;
-        const snapshotName = (row as { stock_code: string; etf_code: string; stock_name?: string }).stock_name;
-        if (snapshotName && !snapshotNameMap.has(code)) {
-            snapshotNameMap.set(code, snapshotName);
+    for (const row of typedHoldings) {
+        const code = row.stock_code;
+        if (row.stock_name && !snapshotNameMap.has(code)) {
+            snapshotNameMap.set(code, row.stock_name);
         }
     }
     for (const [code, snapshotName] of snapshotNameMap) {
@@ -100,14 +110,14 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
     }
 
     const strategyMap = new Map<string, StrategyStock[]>();
-    for (const sig of signals) {
-        const strategyId = sig.strategy_id as string;
-        const stockId = sig.stock_id as string;
+    for (const sig of typedSignals) {
+        const strategyId = sig.strategy_id;
+        const stockId = sig.stock_id;
         const info = stockInfoMap.get(stockId) ?? { name: null, industry: null };
         if (!strategyMap.has(strategyId)) strategyMap.set(strategyId, []);
         strategyMap.get(strategyId)!.push({
             stock_id: stockId,
-            score: sig.score as number | null,
+            score: sig.score,
             movement: computeMovement(stockId, holdingsSet, diffEvents),
             name: info.name,
             industry: info.industry,
@@ -124,4 +134,13 @@ export async function getStrategySignals(date?: string): Promise<StrategySignals
     }));
 
     return { date: targetDate, strategies };
+}
+
+export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
+    const cached = unstable_cache(
+        () => _getStrategySignals(date),
+        ['strategy-signals', date ?? 'latest'],
+        { revalidate: 3600 },
+    );
+    return cached();
 }

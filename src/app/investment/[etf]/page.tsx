@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { ClockIcon } from 'lucide-react';
 import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';

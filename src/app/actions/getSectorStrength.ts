@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 
 export interface SectorRow {
     category: string;
@@ -36,101 +37,123 @@ export interface SectorData {
     sectors: SectorRow[];
 }
 
+const _getSectorStrength = unstable_cache(
+    async (): Promise<SectorData> => {
+        const supabase = getPublicClient();
+
+        const { data: latest } = await supabase
+            .from('sector_strength')
+            .select('date')
+            .order('date', { ascending: false })
+            .limit(1);
+
+        if (!latest || latest.length === 0) return { date: '', sectors: [] };
+        const queryDate: string = (latest as { date: string }[])[0].date;
+
+        const { data, error } = await supabase
+            .from('sector_strength')
+            .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount, breadth, avg_amount_5d, strength_score')
+            .eq('date', queryDate)
+            .order('ret_1d', { ascending: false });
+
+        if (error) {
+            console.error('[getSectorStrength]', error.message);
+            return { date: queryDate, sectors: [] };
+        }
+
+        const seen = new Set<string>();
+        const deduped = (data as SectorRow[] ?? []).filter((row) => {
+            if (seen.has(row.category)) return false;
+            seen.add(row.category);
+            return true;
+        });
+
+        return { date: queryDate, sectors: deduped as SectorRow[] };
+    },
+    ['sector-strength'],
+    { revalidate: 3600 },
+);
+
 export async function getSectorStrength(): Promise<SectorData> {
-    const supabase = await createClient();
-
-    const { data: latest } = await supabase
-        .from('sector_strength')
-        .select('date')
-        .order('date', { ascending: false })
-        .limit(1);
-
-    if (!latest || latest.length === 0) return { date: '', sectors: [] };
-    const queryDate: string = latest[0].date;
-
-    const { data, error } = await supabase
-        .from('sector_strength')
-        .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount, breadth, avg_amount_5d, strength_score')
-        .eq('date', queryDate)
-        .order('ret_1d', { ascending: false });
-
-    if (error) {
-        console.error('[getSectorStrength]', error.message);
-        return { date: queryDate, sectors: [] };
-    }
-
-    const seen = new Set<string>();
-    const deduped = (data ?? []).filter((row) => {
-        if (seen.has(row.category)) return false;
-        seen.add(row.category);
-        return true;
-    });
-
-    return { date: queryDate, sectors: deduped as SectorRow[] };
+    return _getSectorStrength();
 }
 
 export async function getAllStrategyHitStocks(date: string): Promise<SectorStock[]> {
-    const supabase = await createClient();
+    const cached = unstable_cache(
+        async () => {
+            const supabase = getPublicClient();
 
-    const { data, error } = await supabase
-        .from('sector_strength_stocks')
-        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
-        .eq('date', date)
-        .eq('is_strategy_hit', true)
-        .order('momentum_score', { ascending: false, nullsFirst: false });
+            const { data, error } = await supabase
+                .from('sector_strength_stocks')
+                .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
+                .eq('date', date)
+                .eq('is_strategy_hit', true)
+                .order('momentum_score', { ascending: false, nullsFirst: false });
 
-    if (error) {
-        console.error('[getAllStrategyHitStocks]', error.message);
-        return [];
-    }
+            if (error) {
+                console.error('[getAllStrategyHitStocks]', error.message);
+                return [];
+            }
 
-    return (data ?? []) as SectorStock[];
+            return (data ?? []) as SectorStock[];
+        },
+        ['all-strategy-hit-stocks', date],
+        { revalidate: 3600 },
+    );
+    return cached();
 }
 
 export async function getAllSectorStocks(date: string): Promise<Record<string, SectorStock[]>> {
-    const supabase = await createClient();
-    const PAGE_SIZE = 1000;
-    const allStocks: SectorStock[] = [];
-    let offset = 0;
+    const cached = unstable_cache(
+        async () => {
+            const supabase = getPublicClient();
+            const PAGE_SIZE = 1000;
+            const allStocks: SectorStock[] = [];
+            let offset = 0;
 
-    while (true) {
-        const { data, error } = await supabase
-            .from('sector_strength_stocks')
-            .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
-            .eq('date', date)
-            .order('amount', { ascending: false, nullsFirst: false })
-            .range(offset, offset + PAGE_SIZE - 1);
+            while (true) {
+                const { data, error } = await supabase
+                    .from('sector_strength_stocks')
+                    .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
+                    .eq('date', date)
+                    .order('amount', { ascending: false, nullsFirst: false })
+                    .range(offset, offset + PAGE_SIZE - 1);
 
-        if (error) {
-            console.error('[getAllSectorStocks]', error.message);
-            break;
-        }
+                if (error) {
+                    console.error('[getAllSectorStocks]', error.message);
+                    break;
+                }
 
-        if (!data || data.length === 0) break;
-        allStocks.push(...(data as SectorStock[]));
-        if (data.length < PAGE_SIZE) break;
-        offset += PAGE_SIZE;
-    }
+                if (!data || data.length === 0) break;
+                allStocks.push(...(data as SectorStock[]));
+                if (data.length < PAGE_SIZE) break;
+                offset += PAGE_SIZE;
+            }
 
-    const groupedMap: Record<string, Map<string, SectorStock>> = {};
-    for (const stock of allStocks) {
-        const cat = stock.category ?? '';
-        if (!groupedMap[cat]) groupedMap[cat] = new Map();
-        if (!groupedMap[cat].has(stock.stock_id)) {
-            groupedMap[cat].set(stock.stock_id, stock);
-        }
-    }
-    return Object.fromEntries(
-        Object.entries(groupedMap).map(([cat, map]) => [cat, Array.from(map.values())])
+            const groupedMap: Record<string, Map<string, SectorStock>> = {};
+            for (const stock of allStocks) {
+                const cat = stock.category ?? '';
+                if (!groupedMap[cat]) groupedMap[cat] = new Map();
+                if (!groupedMap[cat].has(stock.stock_id)) {
+                    groupedMap[cat].set(stock.stock_id, stock);
+                }
+            }
+            return Object.fromEntries(
+                Object.entries(groupedMap).map(([cat, map]) => [cat, Array.from(map.values())])
+            );
+        },
+        ['all-sector-stocks', date],
+        { revalidate: 3600 },
     );
+    return cached();
 }
 
-type EquityPctRow = { stock_code: string; big_holder_pct: number | string | null; mid_holder_pct: number | string | null; whale_holder_pct: number | string | null };
-type PriceItBuyRow = { stock_code: string; it_buy: number | string | null };
+interface EquityPctRow { stock_code: string; big_holder_pct: number | string | null; mid_holder_pct: number | string | null; whale_holder_pct: number | string | null }
+interface PriceItBuyRow { stock_code: string; it_buy: number | string | null }
 
 async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<SectorStock, 'big_holder_pct_change' | 'mid_holder_pct_change' | 'whale_holder_pct_change' | 'it_buy_5d'>>> {
     if (stockCodes.length === 0) return {};
-    const supabase = await createClient();
+    const supabase = getPublicClient();
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 14);
@@ -150,8 +173,8 @@ async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<
 
     const distinctDates: string[] = [];
     const seenDates = new Set<string>();
-    for (const row of dateRows ?? []) {
-        const d = row.snapshot_date as string;
+    for (const row of (dateRows ?? []) as { snapshot_date: string }[]) {
+        const d = row.snapshot_date;
         if (!seenDates.has(d)) { seenDates.add(d); distinctDates.push(d); }
         if (distinctDates.length >= 2) break;
     }
@@ -216,21 +239,28 @@ async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<
 }
 
 export async function getSectorStocks(category: string, date: string): Promise<SectorStock[]> {
-    const supabase = await createClient();
+    const cached = unstable_cache(
+        async () => {
+            const supabase = getPublicClient();
 
-    const { data, error } = await supabase
-        .from('sector_strength_stocks')
-        .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
-        .eq('date', date)
-        .eq('category', category)
-        .order('amount', { ascending: false, nullsFirst: false });
+            const { data, error } = await supabase
+                .from('sector_strength_stocks')
+                .select('stock_id, stock_name, ret_1d, ret_5d, ret_20d, is_strategy_hit, momentum_score, amount, category')
+                .eq('date', date)
+                .eq('category', category)
+                .order('amount', { ascending: false, nullsFirst: false });
 
-    if (error) {
-        console.error('[getSectorStocks]', error.message);
-        return [];
-    }
+            if (error) {
+                console.error('[getSectorStocks]', error.message);
+                return [];
+            }
 
-    const stocks = (data ?? []) as SectorStock[];
-    const chipData = await fetchChipData(stocks.map(s => s.stock_id));
-    return stocks.map(s => ({ ...s, ...chipData[s.stock_id] }));
+            const stocks = (data ?? []) as SectorStock[];
+            const chipData = await fetchChipData(stocks.map(s => s.stock_id));
+            return stocks.map(s => ({ ...s, ...chipData[s.stock_id] }));
+        },
+        ['sector-stocks', category, date],
+        { revalidate: 3600 },
+    );
+    return cached();
 }

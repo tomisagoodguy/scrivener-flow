@@ -27,7 +27,7 @@ class PriceDataService:
     - 附加營收指標
     """
     
-    def __init__(self, client: FinlabClient = None):
+    def __init__(self, client: Optional[FinlabClient] = None):
         self.client = client or FinlabClient()
     
     def attach(self, df: pd.DataFrame, date_str: str) -> pd.DataFrame:
@@ -64,7 +64,7 @@ class PriceDataService:
             target_date = self._normalize_date(date_str)
             
             # 取得目標日期或最近日期的資料
-            latest_prices, latest_changes, actual_date = self._get_prices_for_date(
+            latest_prices, latest_changes, _ = self._get_prices_for_date(
                 price_df, target_date
             )
             latest_amounts = self._get_data_for_date(amount_df, target_date)
@@ -152,7 +152,8 @@ class PriceDataService:
         if df.empty:
             return None
         if target_date in df.index:
-            return df.loc[target_date]
+            result = df.loc[target_date]
+            return result if isinstance(result, pd.Series) else result.iloc[0]
         return df.iloc[-1]
     
     def _get_market_cap(self, target_date: str) -> Optional[pd.Series]:
@@ -186,7 +187,7 @@ class PriceDataService:
         rev_yoy_df = self.client.get_data('monthly_revenue_yoy')
         rev_mom_df = self.client.get_data('revenue_mom')
         
-        result = {
+        result: dict[str, Optional[pd.Series]] = {
             'revenue': None,
             'yoy': None,
             'mom': None,

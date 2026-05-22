@@ -1,20 +1,21 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 import { buildEtfSectorActivityMap, type EtfSectorActivityMap } from '@/lib/investment/etfSectorActivityUtils';
 import { ETF_CODES } from '@/lib/investment/etfRegistry';
 
 export type { EtfSectorActivityMap } from '@/lib/investment/etfSectorActivityUtils';
 
-type DiffLogRow = {
+interface DiffLogRow {
     stock_code: string;
     etf_code: string;
     diff_weight: number;
     change_type: string;
-};
+}
 
 async function fetchAllSectorStocks(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: ReturnType<typeof getPublicClient>,
     sectorDate: string,
 ): Promise<{ stock_id: string; category: string }[]> {
     const PAGE_SIZE = 1000;
@@ -33,7 +34,7 @@ async function fetchAllSectorStocks(
             break;
         }
         if (!data || data.length === 0) break;
-        all.push(...data);
+        all.push(...(data as { stock_id: string; category: string }[]));
         if (data.length < PAGE_SIZE) break;
         offset += PAGE_SIZE;
     }
@@ -42,7 +43,7 @@ async function fetchAllSectorStocks(
 }
 
 async function fetchAllDiffLogs(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: ReturnType<typeof getPublicClient>,
     cutoffStr: string,
     sectorDate: string,
 ): Promise<DiffLogRow[]> {
@@ -73,7 +74,7 @@ async function fetchAllDiffLogs(
 }
 
 async function fetchHoldingsStockEtfMap(
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: ReturnType<typeof getPublicClient>,
 ): Promise<Record<string, string[]>> {
     const { data: dateRow } = await supabase
         .from('etf_holdings_snapshot')
@@ -82,7 +83,7 @@ async function fetchHoldingsStockEtfMap(
         .order('data_date', { ascending: false })
         .limit(1);
 
-    const latestDate = dateRow?.[0]?.data_date;
+    const latestDate = (dateRow as { data_date: string }[] | null)?.[0]?.data_date;
     if (!latestDate) return {};
 
     const PAGE_SIZE = 1000;
@@ -102,7 +103,7 @@ async function fetchHoldingsStockEtfMap(
             break;
         }
         if (!data || data.length === 0) break;
-        for (const row of data) {
+        for (const row of data as { stock_code: string; etf_code: string }[]) {
             if (!map[row.stock_code]) map[row.stock_code] = [];
             if (!map[row.stock_code].includes(row.etf_code)) {
                 map[row.stock_code].push(row.etf_code);
@@ -115,13 +116,13 @@ async function fetchHoldingsStockEtfMap(
     return map;
 }
 
-export async function getEtfSectorActivity(sectorDate: string): Promise<EtfSectorActivityMap> {
+async function _fetchEtfSectorActivity(sectorDate: string): Promise<EtfSectorActivityMap> {
     if (sectorDate === '') return {};
 
     const parsedDate = new Date(sectorDate);
     if (isNaN(parsedDate.getTime())) return {};
 
-    const supabase = await createClient();
+    const supabase = getPublicClient();
 
     const cutoff = new Date(parsedDate);
     cutoff.setDate(cutoff.getDate() - 30);
@@ -135,10 +136,8 @@ export async function getEtfSectorActivity(sectorDate: string): Promise<EtfSecto
 
     const stockToCategory = new Map(allStocks.map((s) => [s.stock_id, s.category]));
 
-    // sector-level etf_codes / stock_codes: from BUY/IN (buy activity semantics)
     const activityMap = buildEtfSectorActivityMap(stockToCategory, diffLogs);
 
-    // stock_etf_map: override with full holdings (consistent with investment page)
     for (const stock of allStocks) {
         const { stock_id, category } = stock;
         const etfs = holdingsMap[stock_id];
@@ -151,4 +150,13 @@ export async function getEtfSectorActivity(sectorDate: string): Promise<EtfSecto
     }
 
     return activityMap;
+}
+
+export async function getEtfSectorActivity(sectorDate: string): Promise<EtfSectorActivityMap> {
+    const cached = unstable_cache(
+        () => _fetchEtfSectorActivity(sectorDate),
+        ['etf-sector-activity', sectorDate],
+        { revalidate: 3600 },
+    );
+    return cached();
 }

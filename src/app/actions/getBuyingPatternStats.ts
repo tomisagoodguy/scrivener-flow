@@ -1,6 +1,7 @@
 'use server';
 
-import { getServiceClient } from '@/lib/supabase/service';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 
 export interface PatternStats {
     patternType: string;
@@ -16,21 +17,29 @@ interface PatternRow {
 
 const HORIZONS = ['1', '2', '3', '5', '7', '10', '15', '20', '25', '30'];
 
+const _getBuyingPatternStats = unstable_cache(
+    async (): Promise<PatternStats[]> => {
+        const supabase = getPublicClient();
+
+        const { data, error } = await supabase
+            .from('etf_buying_patterns')
+            .select('pattern_type, future_returns')
+            .not('future_returns', 'is', null);
+
+        if (error) {
+            console.error('[getBuyingPatternStats] query error:', error.message);
+            return [];
+        }
+
+        const rows = (data ?? []) as PatternRow[];
+        return _aggregate(rows);
+    },
+    ['buying-pattern-stats'],
+    { revalidate: 3600 },
+);
+
 export async function getBuyingPatternStats(): Promise<PatternStats[]> {
-    const supabase = getServiceClient();
-
-    const { data, error } = await supabase
-        .from('etf_buying_patterns')
-        .select('pattern_type, future_returns')
-        .not('future_returns', 'is', null);
-
-    if (error) {
-        console.error('[getBuyingPatternStats] query error:', error.message);
-        return [];
-    }
-
-    const rows = (data ?? []) as PatternRow[];
-    return _aggregate(rows);
+    return _getBuyingPatternStats();
 }
 
 function _aggregate(rows: PatternRow[]): PatternStats[] {

@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { getEtfFrontrunningEvents } from '@/app/actions/getEtfFrontrunningEvents';
 import FrontrunningTable from './FrontrunningTable';
 

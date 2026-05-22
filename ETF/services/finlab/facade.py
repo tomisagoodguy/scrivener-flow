@@ -6,7 +6,7 @@ FinlabService Facade
 
 import logging
 import pandas as pd
-from typing import List
+from typing import List, Optional
 
 from ETF.services.finlab.client import FinlabClient
 from ETF.services.finlab.price_service import PriceDataService
@@ -26,7 +26,7 @@ class FinlabService:
     # 繼承 DATA_MAP 以供舊程式碼使用
     DATA_MAP = FinlabClient.DATA_MAP
     
-    def __init__(self, stock_list: List[str] = None):
+    def __init__(self, stock_list: Optional[List[str]] = None):
         self.stock_list = stock_list or ["00981"]
         self.client = FinlabClient()
         self._price_service = None

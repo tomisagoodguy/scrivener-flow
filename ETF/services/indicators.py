@@ -102,7 +102,8 @@ def calculate_volatility(
         volatility = (vol_avg / price_avg) * 100
         
         if target_date in volatility.index:
-            return volatility.loc[target_date]
+            row = volatility.loc[target_date]
+            return row.iloc[0] if isinstance(row, pd.DataFrame) else row
         else:
             return volatility.iloc[-1]
             
@@ -130,7 +131,8 @@ def calculate_revenue_momentum(revenue_df: pd.DataFrame, target_date: str) -> Op
         momentum_rank = momentum.rank(pct=True, axis=1)
         
         if target_date in momentum_rank.index:
-            return momentum_rank.loc[target_date]
+            row = momentum_rank.loc[target_date]
+            return row.iloc[0] if isinstance(row, pd.DataFrame) else row
         else:
             return momentum_rank.iloc[-1]
             

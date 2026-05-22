@@ -1,5 +1,6 @@
 import 'server-only';
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { getPublicClient } from '@/lib/supabase/service';
 
 export interface EquityRow {
     stock_code: string;
@@ -67,7 +68,7 @@ const DB_SORT_KEYS = new Set<SortKey>([
 
 export async function fetchPriceIndicators(stockCodes: string[]): Promise<Record<string, PriceIndicator>> {
     if (stockCodes.length === 0) return {};
-    const supabase = await createClient();
+    const supabase = getPublicClient();
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 310);
@@ -89,10 +90,11 @@ export async function fetchPriceIndicators(stockCodes: string[]): Promise<Record
         )
     );
 
+    type PriceRow = { stock_code: string; close: unknown; amount: unknown; it_buy: unknown };
     const byCode: Record<string, { close: number; amount: number | null; it_buy: number | null }[]> = {};
     for (const { data } of batchResults) {
         if (!data) continue;
-        for (const row of data) {
+        for (const row of data as PriceRow[]) {
             if (!byCode[row.stock_code]) byCode[row.stock_code] = [];
             byCode[row.stock_code].push({
                 close: Number(row.close),
@@ -143,7 +145,7 @@ export function applySortToRows(
 }
 
 async function fetchFlowMap(): Promise<Record<string, FlowEntry>> {
-    const supabase = await createClient();
+    const supabase = getPublicClient();
 
     const { data } = await supabase
         .from('etf_flow_daily')
@@ -156,12 +158,14 @@ async function fetchFlowMap(): Promise<Record<string, FlowEntry>> {
     if (!data) return {};
 
     type RawStock = { stock_code: string; total_nt: number; etf_count: number };
+    type FlowData = { inflow: RawStock[] | null; outflow: RawStock[] | null };
+    const flowData = data as unknown as FlowData;
     const map: Record<string, FlowEntry> = {};
 
-    for (const s of (data.inflow as RawStock[] | null) ?? []) {
+    for (const s of flowData.inflow ?? []) {
         map[s.stock_code] = { nt: s.total_nt, direction: 'in', etf_count: s.etf_count };
     }
-    for (const s of (data.outflow as RawStock[] | null) ?? []) {
+    for (const s of flowData.outflow ?? []) {
         if (!map[s.stock_code]) {
             map[s.stock_code] = { nt: s.total_nt, direction: 'out', etf_count: s.etf_count };
         }
@@ -171,26 +175,30 @@ async function fetchFlowMap(): Promise<Record<string, FlowEntry>> {
 
 async function fetchEtfMap(stockCodes: string[]): Promise<Record<string, string[]>> {
     if (stockCodes.length === 0) return {};
-    const supabase = await createClient();
+    const supabase = getPublicClient();
 
-    const { data: latest } = await supabase
+    type OverlapDateRow = { data_date: string };
+    type OverlapRow = { stock_code: string; etf_list: { etf_code: string }[] | null };
+
+    const { data: latestRaw } = await supabase
         .from('etf_stock_overlap')
         .select('data_date')
         .order('data_date', { ascending: false })
         .limit(1)
         .single();
 
+    const latest = latestRaw as unknown as OverlapDateRow | null;
     if (!latest) return {};
 
-    const { data } = await supabase
+    const { data: rawData } = await supabase
         .from('etf_stock_overlap')
         .select('stock_code, etf_list')
         .eq('data_date', latest.data_date)
         .in('stock_code', stockCodes);
 
     const map: Record<string, string[]> = {};
-    for (const row of data ?? []) {
-        const list = (row.etf_list as { etf_code: string }[] | null) ?? [];
+    for (const row of (rawData as unknown as OverlapRow[]) ?? []) {
+        const list = row.etf_list ?? [];
         map[row.stock_code] = list.map(e => e.etf_code);
     }
     return map;
@@ -201,31 +209,50 @@ function formatDateMD(dateStr: string): string {
     return `${parts[1]}/${parts[2]}`;
 }
 
-export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null, weeks: Weeks = 1): Promise<RankingData | null> {
-    const supabase = await createClient();
+type EqStatDateRow = { snapshot_date: string };
+type EqStatCurrentRow = {
+    stock_code: string;
+    stock_name: string | null;
+    total_shareholders: number | null;
+    big_holder_pct: number | null;
+    mid_holder_pct: number | null;
+    whale_holder_pct: number | null;
+};
+type EqStatOldRow = {
+    stock_code: string;
+    total_shareholders: number | null;
+    big_holder_pct: number | null;
+    mid_holder_pct: number | null;
+    whale_holder_pct: number | null;
+};
 
-    const { data: latestRow } = await supabase
+async function _fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null, weeks: Weeks): Promise<RankingData | null> {
+    const supabase = getPublicClient();
+
+    const { data: latestRaw } = await supabase
         .from('equity_distribution_stats')
         .select('snapshot_date')
         .order('snapshot_date', { ascending: false })
         .limit(1)
         .single();
 
+    const latestRow = latestRaw as unknown as EqStatDateRow | null;
     if (!latestRow) return null;
     const snapshotDate: string = latestRow.snapshot_date;
 
     // Fetch previous N distinct snapshot dates (needed for multi-week comparison)
-    const { data: prevRows } = await supabase
+    const { data: prevRaw } = await supabase
         .from('equity_distribution_stats')
         .select('snapshot_date')
         .lt('snapshot_date', snapshotDate)
         .order('snapshot_date', { ascending: false })
         .limit(weeks * 1000);
 
+    const prevRows = prevRaw as unknown as EqStatDateRow[] | null;
     const prevDates: string[] = [];
     const seen = new Set<string>();
     for (const row of prevRows ?? []) {
-        const d = row.snapshot_date as string;
+        const d = row.snapshot_date;
         if (!seen.has(d)) {
             seen.add(d);
             prevDates.push(d);
@@ -263,10 +290,13 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
     const CURRENT_SELECT = 'stock_code, stock_name, total_shareholders, big_holder_pct, mid_holder_pct, whale_holder_pct';
     const OLD_SELECT = 'stock_code, total_shareholders, big_holder_pct, mid_holder_pct, whale_holder_pct';
 
-    const [{ data: currentRows }, { data: oldRows }] = await Promise.all([
+    const [{ data: currentRaw }, { data: oldRaw }] = await Promise.all([
         supabase.from('equity_distribution_stats').select(CURRENT_SELECT).eq('snapshot_date', snapshotDate),
         supabase.from('equity_distribution_stats').select(OLD_SELECT).eq('snapshot_date', oldDate),
     ]);
+
+    const currentRows = currentRaw as unknown as EqStatCurrentRow[] | null;
+    const oldRows = oldRaw as unknown as EqStatOldRow[] | null;
 
     // Build old pct lookup map
     const oldPctMap = new Map<string, { total: number | null; big: number | null; mid: number | null; whale: number | null }>();
@@ -286,11 +316,11 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         const curMid = row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null;
         const curWhale = row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null;
         return {
-            stock_code: row.stock_code as string,
-            stock_name: row.stock_name as string | null,
-            total_shareholders: row.total_shareholders as number | null,
+            stock_code: row.stock_code,
+            stock_name: row.stock_name,
+            total_shareholders: row.total_shareholders != null ? Number(row.total_shareholders) : null,
             shareholders_change_rate: (row.total_shareholders != null && old?.total != null && old.total > 0)
-                ? Math.round((row.total_shareholders - old.total) / old.total * 10000) / 100
+                ? Math.round((Number(row.total_shareholders) - old.total) / old.total * 10000) / 100
                 : null,
             big_holder_pct_change: (curBig != null && old?.big != null) ? curBig - old.big : null,
             mid_holder_pct_change: (curMid != null && old?.mid != null) ? curMid - old.mid : null,
@@ -349,4 +379,13 @@ export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier:
         weeks,
         dateRange,
     };
+}
+
+export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null, weeks: Weeks = 1): Promise<RankingData | null> {
+    const cached = unstable_cache(
+        () => _fetchRankingData(sort, dir, tier, weeks),
+        ['equity-ranking', sort ?? 'null', dir, tier ?? 'null', String(weeks)],
+        { revalidate: 3600 },
+    );
+    return cached();
 }
