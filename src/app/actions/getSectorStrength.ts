@@ -162,8 +162,9 @@ async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<
     const [{ data: dateRows }, { data: priceRows }] = await Promise.all([
         supabase.from('equity_distribution_stats')
             .select('snapshot_date')
+            .eq('stock_code', stockCodes[0])
             .order('snapshot_date', { ascending: false })
-            .limit(5),
+            .limit(2),
         supabase.from('stock_prices_daily')
             .select('stock_code, it_buy')
             .in('stock_code', stockCodes)

@@ -16,6 +16,19 @@ import type { TreemapData } from '@/app/actions/getTreemapData';
 import type { AdlData } from '@/app/actions/getAdlData';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
+
+function barColor(pct: number | null): string {
+    if (pct === null) return '#e5e7eb';
+    if (pct >= 5) return '#7f1d1d';
+    if (pct >= 3) return '#991b1b';
+    if (pct >= 1.5) return '#dc2626';
+    if (pct >= 0.5) return '#f87171';
+    if (pct >= 0) return '#fecaca';
+    if (pct >= -0.5) return '#bbf7d0';
+    if (pct >= -1.5) return '#4ade80';
+    if (pct >= -3) return '#16a34a';
+    return '#14532d';
+}
 type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth';
 
 interface SectorRowProps {
@@ -51,13 +64,17 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
     const etfBoughtSet = new Set(etfActivity?.stock_codes ?? []);
 
     return (
-        <div className="glass-card mb-2 overflow-hidden">
+        <div className="glass-card overflow-hidden">
             <button
                 onClick={toggle}
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/30 transition-colors text-left"
             >
                 <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-gray-400 text-sm w-6 shrink-0">{rank}</span>
+                    <span
+                        className="shrink-0 w-1 self-stretch rounded-full"
+                        style={{ backgroundColor: barColor(sector.ret_1d), minHeight: 20 }}
+                    />
+                    <span className="text-gray-400 text-sm w-5 shrink-0">{rank}</span>
                     <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{sector.category}</span>
                     <span className="text-xs text-gray-400 shrink-0">{sector.stock_count} 支</span>
                     {displayCodes.length > 0 && (
@@ -131,11 +148,25 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                             {s.is_strategy_hit && (
                                                 <span className="ml-1.5 text-yellow-400 text-xs" title="均線多頭＋月營收成長">⚡</span>
                                             )}
-                                            {(etfActivity?.stock_etf_map[s.stock_id] ?? []).map((code) => (
-                                                <span key={code} className="ml-1 bg-rose-100/80 text-rose-700 text-xs px-1.5 py-0.5 rounded font-mono">
-                                                    {code}
-                                                </span>
-                                            ))}
+                                            {(() => {
+                                                const codes = etfActivity?.stock_etf_map[s.stock_id] ?? [];
+                                                const shown = codes.slice(0, 2);
+                                                const overflow = codes.length - shown.length;
+                                                return (
+                                                    <>
+                                                        {shown.map((code) => (
+                                                            <span key={code} className="ml-1 bg-rose-100/80 text-rose-700 text-xs px-1.5 py-0.5 rounded font-mono">
+                                                                {code}
+                                                            </span>
+                                                        ))}
+                                                        {overflow > 0 && (
+                                                            <span className="ml-1 bg-rose-100/80 text-rose-700 text-xs px-1.5 py-0.5 rounded" title={codes.slice(2).join(', ')}>
+                                                                +{overflow}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </td>
                                         <td className={`text-right py-1.5 ${pctClass(s.ret_1d)}`}>{fmtPct(s.ret_1d)}</td>
                                         <td className={`text-right py-1.5 hidden sm:table-cell text-xs font-medium ${ppChangeClass(s.big_holder_pct_change)}`}>
@@ -491,16 +522,18 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                     {isStrengthMode ? '今日無強勢族群' : (positiveOnly ? '今日無正報酬族群' : '尚無族群資料，請等待 Pipeline 執行後重整。')}
                 </p>
             ) : (
-                sorted.map((sector, i) => (
-                    <SectorItem
-                        key={sector.category}
-                        sector={sector}
-                        date={data.date}
-                        rank={i + 1}
-                        sortKey={sortKey}
-                        etfActivity={etfActivity[sector.category]}
-                    />
-                ))
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {sorted.map((sector, i) => (
+                        <SectorItem
+                            key={sector.category}
+                            sector={sector}
+                            date={data.date}
+                            rank={i + 1}
+                            sortKey={sortKey}
+                            etfActivity={etfActivity[sector.category]}
+                        />
+                    ))}
+                </div>
             )}
         </div>
     );

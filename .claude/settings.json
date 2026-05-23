@@ -84,7 +84,10 @@
       "PowerShell(Stop-Process -Id 3208 -Force)",
       "Bash(ls /mnt/c/Users/user/Documents/GitHub/scrivener-flow/openspec/specs/ 2>/dev/null || echo \"Directory not found or empty\")",
       "Read(//mnt/c/Users/user/Documents/GitHub/scrivener-flow/openspec/**)",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\openspec\\\\specs\\\\investment-server-cache\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\openspec\\\\specs\\\\investment-server-cache\")",
+      "PowerShell(gh run list --workflow=etf_daily.yml --limit=5 2>&1)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: 族群強弱列表改雙欄+左側色條+ETF badge截斷修正\")",
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 族群強弱列表改雙欄+左側色條+ETF badge截斷修正\")"
     ]
   },
   "enabledMcpjsonServers": [
