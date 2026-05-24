@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { SectorRow, SectorStock } from '@/app/actions/getSectorStrength';
 import { getSectorStocks } from '@/app/actions/getSectorStrength';
 import { fmtPct, pctClass, fmtAmount } from '@/lib/investment/formatUtils';
+import { blockColor, textColor, computeTreemap, type TreemapItem } from '@/lib/investment/treemapUtils';
 
 export type HeatmapPeriod = '1d' | '5d' | '20d';
 
@@ -14,30 +15,7 @@ const PERIOD_KEY: Record<HeatmapPeriod, keyof SectorRow> = {
     '20d': 'ret_20d',
 };
 
-// Taiwan convention: red = up, green = down
-function blockColor(pct: number | null): string {
-    if (pct === null) return '#e5e7eb';
-    if (pct >= 5) return '#7f1d1d';
-    if (pct >= 3) return '#991b1b';
-    if (pct >= 1.5) return '#dc2626';
-    if (pct >= 0.5) return '#f87171';
-    if (pct >= 0) return '#fecaca';
-    if (pct >= -0.5) return '#bbf7d0';
-    if (pct >= -1.5) return '#4ade80';
-    if (pct >= -3) return '#16a34a';
-    return '#14532d';
-}
-
-function textColor(pct: number | null): string {
-    if (pct === null) return '#374151';
-    return Math.abs(pct) < 0.5 ? '#374151' : '#ffffff';
-}
-
-interface BlockRect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+interface SectorTreemapItem extends TreemapItem {
     sector: SectorRow;
 }
 
@@ -46,50 +24,6 @@ interface TooltipState {
     y: number;
     label: string;
     pct: number | null;
-}
-
-function computeTreemap(
-    sectors: SectorRow[],
-    cw: number,
-    ch: number,
-): BlockRect[] {
-    if (!sectors.length || cw <= 0 || ch <= 0) return [];
-
-    const items = sectors
-        .map((s) => ({ value: Math.max(s.total_amount ?? s.stock_count * 1e9, 1), sector: s }))
-        .sort((a, b) => b.value - a.value);
-
-    const result: BlockRect[] = [];
-
-    function split(arr: typeof items, x0: number, y0: number, x1: number, y1: number) {
-        if (!arr.length) return;
-        if (arr.length === 1) {
-            result.push({ x: x0, y: y0, width: x1 - x0, height: y1 - y0, sector: arr[0].sector });
-            return;
-        }
-        const total = arr.reduce((s, d) => s + d.value, 0);
-        let cum = 0;
-        let splitIdx = arr.length - 1;
-        for (let i = 0; i < arr.length - 1; i++) {
-            cum += arr[i].value;
-            if (cum >= total / 2) { splitIdx = i + 1; break; }
-        }
-        const leftVal = arr.slice(0, splitIdx).reduce((s, d) => s + d.value, 0);
-        const ratio = leftVal / total;
-        const w = x1 - x0, h = y1 - y0;
-        if (w >= h) {
-            const mid = x0 + ratio * w;
-            split(arr.slice(0, splitIdx), x0, y0, mid, y1);
-            split(arr.slice(splitIdx), mid, y0, x1, y1);
-        } else {
-            const mid = y0 + ratio * h;
-            split(arr.slice(0, splitIdx), x0, y0, x1, mid);
-            split(arr.slice(splitIdx), x0, mid, x1, y1);
-        }
-    }
-
-    split(items, 0, 0, cw, ch);
-    return result;
 }
 
 interface Props {
@@ -115,7 +49,14 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
         return () => obs.disconnect();
     }, []);
 
-    const blocks = computeTreemap(sectors, size.width, size.height);
+    const treemapItems: SectorTreemapItem[] = sectors.map((s) => ({
+        id: s.category,
+        value: Math.max(s.total_amount ?? s.stock_count * 1e9, 1),
+        pct: s[PERIOD_KEY[period]] as number | null,
+        label: s.category.split(':').pop() ?? s.category,
+        sector: s,
+    }));
+    const blocks = computeTreemap(treemapItems, size.width, size.height);
     const retKey = PERIOD_KEY[period];
 
     const handleClick = (category: string) => {
@@ -151,17 +92,17 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                 style={{ height: '78vh', minHeight: 520 }}
             >
                 {blocks.map((block) => {
-                    const pct = block.sector[retKey] as number | null;
+                    const pct = block.item.sector[retKey] as number | null;
                     const bg = blockColor(pct);
                     const fg = textColor(pct);
-                    const label = block.sector.category.split(':').pop() ?? block.sector.category;
+                    const label = block.item.label;
                     const showLabel = block.width > 48 && block.height > 26;
                     const showPct = block.width > 48 && block.height > 52;
 
                     return (
                         <div
-                            key={block.sector.category}
-                            onClick={() => handleClick(block.sector.category)}
+                            key={block.item.id}
+                            onClick={() => handleClick(block.item.sector.category)}
                             onMouseMove={(e) => handleMouseMove(e, label, pct)}
                             onMouseLeave={handleMouseLeave}
                             style={{
@@ -176,7 +117,7 @@ export default function SectorHeatmap({ sectors, date, period }: Props) {
                                 cursor: 'pointer',
                             }}
                             className={`flex flex-col items-center justify-center overflow-hidden select-none transition-opacity hover:opacity-80 ${
-                                selected === block.sector.category ? 'ring-2 ring-white/80' : ''
+                                selected === block.item.sector.category ? 'ring-2 ring-white/80' : ''
                             }`}
                         >
                             {showLabel && (

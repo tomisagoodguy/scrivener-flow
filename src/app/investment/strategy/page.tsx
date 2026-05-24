@@ -1,7 +1,9 @@
 import { getStrategySignals } from '@/app/actions/getStrategySignals';
 import { getFactorIC } from '@/app/actions/getFactorIC';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
+import { getStrategyAnalytics } from '@/app/actions/getStrategyAnalytics';
 import StrategySignalCard from '@/components/features/StrategySignalCard';
+import StrategyAnalyticsPanel from '@/components/features/strategy/StrategyAnalyticsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +21,13 @@ function icForStrategy(allIC: FactorICRow[], strategyId: string): FactorICRow[] 
 }
 
 export default async function StrategyPage() {
-    const [result, allIC] = await Promise.all([
+    const [result, allIC, analytics] = await Promise.all([
         getStrategySignals(),
         getFactorIC(
             [...new Set(Object.values(STRATEGY_FACTORS).flat())],
             12,
         ),
+        getStrategyAnalytics(),
     ]);
 
     if (!result) {
@@ -43,6 +46,10 @@ export default async function StrategyPage() {
                 </h1>
                 <span className="text-sm text-gray-400">資料日期：{result.date}</span>
             </div>
+
+            {analytics.stocks.length > 0 && (
+                <StrategyAnalyticsPanel data={analytics} />
+            )}
 
             {result.strategies.length === 0 ? (
                 <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>
