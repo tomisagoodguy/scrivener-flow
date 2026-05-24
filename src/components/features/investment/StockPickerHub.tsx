@@ -8,7 +8,7 @@ import { StockPickerTable } from './StockPickerTable';
 import { useStockPickerHub } from '@/hooks/investment/useStockPickerHub';
 import type { StockPickerHubProps } from './StockPickerHub.types';
 
-export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPickerHubProps) {
+export function StockPickerHub({ etfs, quantFilters, signals = {}, fundConsensusMap = {} }: StockPickerHubProps) {
     const [etfExpanded, setEtfExpanded] = useState(false);
     const {
         panelStock,
@@ -27,7 +27,7 @@ export function StockPickerHub({ etfs, quantFilters, signals = {} }: StockPicker
         toggleFactor,
         clearFactors,
         handleSort,
-    } = useStockPickerHub(etfs, quantFilters, signals);
+    } = useStockPickerHub(etfs, quantFilters, signals, fundConsensusMap);
 
     return (
         <>

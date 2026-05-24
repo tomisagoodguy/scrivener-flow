@@ -55,6 +55,12 @@ export function StockPickerTable({
                         <th className={thBase} onClick={() => onSort('margin_ratio')}>
                             資券% <SortIcon field="margin_ratio" currentSortField={sortField} currentSortOrder={sortOrder} />
                         </th>
+                        <th className={thBase} onClick={() => onSort('fund_consec_days')}>
+                            投信連買 <SortIcon field="fund_consec_days" currentSortField={sortField} currentSortOrder={sortOrder} />
+                        </th>
+                        <th className={thBase} onClick={() => onSort('consensus_count')}>
+                            共識 <SortIcon field="consensus_count" currentSortField={sortField} currentSortOrder={sortOrder} />
+                        </th>
                         {activeEtfCodes.map(code => (
                             <th
                                 key={code}

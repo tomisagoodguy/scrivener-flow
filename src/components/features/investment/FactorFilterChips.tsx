@@ -82,6 +82,7 @@ export function FactorFilterChips({ activeFactors, selectedEtfsSize, onToggle, o
                 <Chip factorKey="all_shared" label={`${selectedEtfsSize}方共持`} color="amber" active={activeFactors.has('all_shared')} onToggle={onToggle} />
                 <Chip factorKey="golden_zone" label="黃金區間" color="yellow" active={activeFactors.has('golden_zone')} onToggle={onToggle} />
                 <Chip factorKey="explosive_zone" label="爆發區間" color="rose" active={activeFactors.has('explosive_zone')} onToggle={onToggle} />
+                <Chip factorKey="triple_consensus" label="三重共識★★★" color="amber" active={activeFactors.has('triple_consensus')} onToggle={onToggle} />
                 {activeFactors.size > 0 && (
                     <button
                         onClick={onClear}

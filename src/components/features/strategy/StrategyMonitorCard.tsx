@@ -12,6 +12,8 @@ export interface StrategyMonitorStock {
     strategies: string[];
     movement: MovementLabel;
     etfHolders: string[];
+    consensus_count?: number;
+    fund_consec_days?: number;
 }
 
 const STRATEGY_SHORT: Record<string, string> = {
@@ -42,6 +44,7 @@ function RetPill({ val, label }: { val: number | null; label: string }) {
 export function StrategyMonitorCard({ stock, index }: { stock: StrategyMonitorStock; index: number }) {
     const badge = MOVEMENT_BADGE[stock.movement];
     const uniqueEtfs = [...new Set(stock.etfHolders)];
+    const isTriple = (stock.consensus_count ?? 0) >= 3;
 
     return (
         <div
@@ -50,7 +53,7 @@ export function StrategyMonitorCard({ stock, index }: { stock: StrategyMonitorSt
         >
             <Link
                 href={`/investment/stock/${stock.stock_id}`}
-                className="glass-card block rounded-2xl p-4 hover:shadow-md transition-all h-full"
+                className={`glass-card block rounded-2xl p-4 hover:shadow-md transition-all h-full${isTriple ? ' ring-1 ring-amber-400/60' : ''}`}
             >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">
@@ -82,6 +85,26 @@ export function StrategyMonitorCard({ stock, index }: { stock: StrategyMonitorSt
                         </span>
                     ))}
                 </div>
+
+                {/* Fund momentum + consensus badges */}
+                {((stock.fund_consec_days ?? 0) >= 1 || (stock.consensus_count ?? 0) >= 2) && (
+                    <div className="flex items-center gap-1 flex-wrap mb-1.5">
+                        {(stock.fund_consec_days ?? 0) >= 1 && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50 rounded-full">
+                                投信 {stock.fund_consec_days}d
+                            </span>
+                        )}
+                        {(stock.consensus_count ?? 0) >= 2 && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium border ${
+                                stock.consensus_count === 3
+                                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700/50'
+                                    : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700/50'
+                            }`}>
+                                共識 {'★'.repeat(stock.consensus_count ?? 0)}
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {/* Movement + ETF holders */}
                 <div className="flex items-center gap-1 flex-wrap">

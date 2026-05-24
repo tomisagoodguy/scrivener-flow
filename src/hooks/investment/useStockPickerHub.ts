@@ -117,6 +117,12 @@ export function sortHoldings(
         } else if (field === 'volatility') {
             aVal = a.volatility ?? Infinity;
             bVal = b.volatility ?? Infinity;
+        } else if (field === 'consensus_count') {
+            aVal = a.consensus_count ?? 0;
+            bVal = b.consensus_count ?? 0;
+        } else if (field === 'fund_consec_days') {
+            aVal = a.fund_consec_days ?? 0;
+            bVal = b.fund_consec_days ?? 0;
         } else {
             aVal = a.filter_score;
             bVal = b.filter_score;
@@ -150,7 +156,8 @@ export interface StockPickerHubHookReturn {
 export function useStockPickerHub(
     etfs: EtfData[],
     quantFilters: Record<string, QuantFilter>,
-    signals: Record<string, { strength: 1 | 2 | 3; type: string }> = {}
+    signals: Record<string, { strength: 1 | 2 | 3; type: string }> = {},
+    fundConsensusMap: Record<string, { consensus_count: number; fund_consec_days: number }> = {}
 ): StockPickerHubHookReturn {
     void signals; // signals passed through to consumers, not used in computations
 
@@ -205,10 +212,15 @@ export function useStockPickerHub(
         return map;
     }, [etfs]);
 
-    const unifiedHoldings = useMemo(
-        () => buildUnifiedHoldings(etfs, selectedEtfs, quantFilters),
-        [etfs, selectedEtfs, quantFilters]
-    );
+    const unifiedHoldings = useMemo(() => {
+        const base = buildUnifiedHoldings(etfs, selectedEtfs, quantFilters);
+        if (Object.keys(fundConsensusMap).length === 0) return base;
+        return base.map(h => {
+            const c = fundConsensusMap[h.stock_code];
+            if (!c) return h;
+            return { ...h, consensus_count: c.consensus_count, fund_consec_days: c.fund_consec_days };
+        });
+    }, [etfs, selectedEtfs, quantFilters, fundConsensusMap]);
 
     const filteredHoldings = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -241,6 +253,7 @@ export function useStockPickerHub(
                 const yoy = h.revenue_yoy;
                 if (yoy === null || yoy <= 100) return false;
             }
+            if (activeFactors.has('triple_consensus') && (h.consensus_count ?? 0) < 3) return false;
             return true;
         });
     }, [unifiedHoldings, activeFactors, selectedEtfs, searchQuery]);

@@ -14,6 +14,7 @@ import FactorICPanel from '@/components/features/FactorICPanel';
 import AdlChart from '@/app/investment/breadth/components/AdlChart';
 import type { TreemapData } from '@/app/actions/getTreemapData';
 import type { AdlData } from '@/app/actions/getAdlData';
+import type { ConsensusSignal } from '@/types';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
 
@@ -37,9 +38,10 @@ interface SectorRowProps {
     rank: number;
     sortKey: SortKey;
     etfActivity?: { etf_codes: string[]; stock_codes: string[]; stock_etf_map: Record<string, string[]> };
+    consensusMap?: Record<string, ConsensusSignal>;
 }
 
-function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps) {
+function SectorItem({ sector, date, rank, sortKey, etfActivity, consensusMap = {} }: SectorRowProps) {
     const [expanded, setExpanded] = useState(false);
     const [stocks, setStocks] = useState<SectorStock[]>([]);
     const [isPending, startTransition] = useTransition();
@@ -62,6 +64,10 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
     const displayCodes = sectorEtfCodes.slice(0, 3);
     const overflowCount = sectorEtfCodes.length - displayCodes.length;
     const etfBoughtSet = new Set(etfActivity?.stock_codes ?? []);
+    // Count stocks in this sector with both ETF buying AND fund buying
+    const fundEtfOverlapCount = [...etfBoughtSet].filter(
+        (sid) => consensusMap[sid]?.fund_buying === true
+    ).length;
 
     return (
         <div className="glass-card overflow-hidden">
@@ -90,6 +96,11 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                 </span>
                             )}
                         </div>
+                    )}
+                    {fundEtfOverlapCount > 0 && (
+                        <span className="bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs px-1.5 py-0.5 rounded font-medium shrink-0">
+                            投信＋{fundEtfOverlapCount}
+                        </span>
                     )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -148,6 +159,11 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity }: SectorRowProps
                                             {s.is_strategy_hit && (
                                                 <span className="ml-1.5 text-yellow-400 text-xs" title="均線多頭＋月營收成長">⚡</span>
                                             )}
+                                            {(consensusMap[s.stock_id]?.fund_consec_days ?? 0) >= 1 && (
+                                                <span className="ml-1 text-[10px] px-1 py-0.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50 rounded">
+                                                    投信 {consensusMap[s.stock_id].fund_consec_days}d
+                                                </span>
+                                            )}
                                             {(() => {
                                                 const codes = etfActivity?.stock_etf_map[s.stock_id] ?? [];
                                                 const shown = codes.slice(0, 2);
@@ -202,6 +218,7 @@ interface Props {
     etfActivity?: EtfSectorActivityMap;
     treemapData?: TreemapData;
     adlData?: AdlData;
+    consensusMap?: Record<string, ConsensusSignal>;
 }
 
 const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
@@ -229,7 +246,7 @@ const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
     death: { label: '廣度收縮警訊', cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 
-export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData }: Props) {
+export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData, consensusMap = {} }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
@@ -531,6 +548,7 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                             rank={i + 1}
                             sortKey={sortKey}
                             etfActivity={etfActivity[sector.category]}
+                            consensusMap={consensusMap}
                         />
                     ))}
                 </div>

@@ -194,6 +194,30 @@ export function HoldingsTableRow({
                     <span className="text-slate-300 dark:text-slate-600">—</span>
                 )}
             </td>
+            <td className="py-2 px-2 text-center">
+                {(h.fund_consec_days ?? 0) > 0 ? (
+                    <span className={`text-xs font-medium ${(h.fund_consec_days ?? 0) >= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                        {h.fund_consec_days}d
+                    </span>
+                ) : (
+                    <span className="text-slate-300 dark:text-slate-600">—</span>
+                )}
+            </td>
+            <td className="py-2 px-2 text-center">
+                {(h.consensus_count ?? 0) > 0 ? (
+                    <span className={`text-xs font-bold ${
+                        h.consensus_count === 3
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : h.consensus_count === 2
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                        {'★'.repeat(h.consensus_count ?? 0)}{'☆'.repeat(3 - (h.consensus_count ?? 0))}
+                    </span>
+                ) : (
+                    <span className="text-slate-300 dark:text-slate-600">—</span>
+                )}
+            </td>
             {activeEtfCodes.map(code => (
                 <td key={code} className="py-2 px-2 text-center">
                     {h.weights[code] !== undefined ? (

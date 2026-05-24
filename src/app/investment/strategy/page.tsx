@@ -4,6 +4,8 @@ import { getFactorIC } from '@/app/actions/getFactorIC';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
 import { getStrategyAnalytics } from '@/app/actions/getStrategyAnalytics';
 import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
+import { getConsensusSignals } from '@/app/actions/getConsensusSignals';
+import type { ConsensusSignal } from '@/types';
 import StrategySignalCard from '@/components/features/StrategySignalCard';
 import StrategyAnalyticsPanel from '@/components/features/strategy/StrategyAnalyticsPanel';
 import { StrategyMonitorCard } from '@/components/features/strategy/StrategyMonitorCard';
@@ -31,6 +33,7 @@ function icForStrategy(allIC: FactorICRow[], strategyId: string): FactorICRow[] 
 function buildMonitorStocks(
     result: StrategySignalsResult | null,
     analytics: StrategyAnalyticsData,
+    consensusMap: Record<string, ConsensusSignal> = {},
 ): StrategyMonitorStock[] {
     // Build stock → strategies/movement/etfHolders from signals
     const signalMap = new Map<string, { strategies: string[]; movement: MovementLabel; etfHolders: string[] }>();
@@ -51,6 +54,7 @@ function buildMonitorStocks(
 
     return analytics.stocks.map((s) => {
         const sig = signalMap.get(s.stock_id);
+        const c = consensusMap[s.stock_id];
         return {
             stock_id: s.stock_id,
             name: s.stock_name ?? null,
@@ -61,6 +65,8 @@ function buildMonitorStocks(
             strategies: sig?.strategies ?? [],
             movement: sig?.movement ?? ('none' as MovementLabel),
             etfHolders: sig?.etfHolders ?? [],
+            consensus_count: c?.consensus_count,
+            fund_consec_days: c?.fund_consec_days,
         };
     });
 }
@@ -74,16 +80,20 @@ export default async function StrategyPage({
     const isMonitor = view === 'monitor';
     const isChart = view === 'chart';
 
-    const [result, allIC, analytics] = await Promise.all([
+    const [result, allIC, analytics, rawConsensus] = await Promise.all([
         getStrategySignals(),
         getFactorIC(
             [...new Set(Object.values(STRATEGY_FACTORS).flat())],
             12,
         ),
         getStrategyAnalytics(),
+        getConsensusSignals().catch(() => ({ signals: [], date: null })),
     ]);
 
-    const monitorStocks = (isMonitor || isChart) ? buildMonitorStocks(result, analytics) : [];
+    const consensusMap: Record<string, ConsensusSignal> = {};
+    for (const s of rawConsensus.signals) consensusMap[s.stock_id] = s;
+
+    const monitorStocks = (isMonitor || isChart) ? buildMonitorStocks(result, analytics, consensusMap) : [];
 
     const snapshotMap: Map<string, BareKSnapshot | null> = isChart
         ? await getStrategySnapshots(monitorStocks.map((s) => s.stock_id))
