@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -157,6 +157,8 @@ function SourceNav({ from, rank, list, names, cats }: {
     );
 }
 
+const NOW = Date.now();
+
 export default function StockPage() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -199,12 +201,12 @@ export default function StockPage() {
         priceError, revenueError, chipsError, brokerError,
     } = useStockDashboard(stockCode);
 
-    const chipsLatestDate = (() => {
+    const chipsLatestDate = useMemo(() => {
         if (!chipsData || chipsData.length === 0) return null;
         const latest = chipsData.reduce((a, b) => (a.data_date > b.data_date ? a : b)).data_date;
-        const daysSince = Math.floor((Date.now() - new Date(latest).getTime()) / 86400000);
+        const daysSince = Math.floor((NOW - new Date(latest).getTime()) / 86400000);
         return { label: latest.slice(5).replace('-', '/'), stale: daysSince > 10 };
-    })();
+    }, [chipsData]);
 
     if (loading) {
         return (
