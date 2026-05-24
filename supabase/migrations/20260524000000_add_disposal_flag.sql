@@ -1,0 +1,2 @@
+ALTER TABLE etf_holdings_snapshot
+  ADD COLUMN IF NOT EXISTS is_disposal BOOLEAN NOT NULL DEFAULT FALSE;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -16,6 +16,7 @@ import { ManagerPnlSection } from '@/components/features/investment/ManagerPnlSe
 import { useStockDashboard } from '@/hooks/investment/useStockDashboard';
 import { StockPoolMetrics } from '@/components/features/investment/StockPoolMetrics';
 import { StockDetailSections } from '@/components/features/investment/StockDetailSections';
+import { createClient } from '@/lib/supabase/client';
 
 function SideNavButton({ stock, direction, onNavigate }: {
     stock: { code: string; name: string } | null;
@@ -161,6 +162,22 @@ export default function StockPage() {
     const searchParams = useSearchParams();
     const stockCode = params.code as string;
     const sourceFrom = searchParams.get('from');
+    const [isDisposal, setIsDisposal] = useState(false);
+
+    useEffect(() => {
+        if (!stockCode) return;
+        const supabase = createClient();
+        supabase
+            .from('etf_holdings_snapshot')
+            .select('is_disposal')
+            .eq('stock_code', stockCode)
+            .eq('is_disposal', true)
+            .order('data_date', { ascending: false })
+            .limit(1)
+            .then(({ data }) => {
+                setIsDisposal((data?.length ?? 0) > 0);
+            });
+    }, [stockCode]);
     const sourceRank = searchParams.get('rank');
     const sourceList = searchParams.get('list');
     const [hitContext] = useState<{ names: string[]; cats: string[] } | null>(() => {
@@ -209,6 +226,13 @@ export default function StockPage() {
                 chipRank={chipRank}
                 retailRank={retailRank}
             />
+
+            {isDisposal && (
+                <div className="mt-3 mx-1 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300">
+                    <span className="shrink-0 text-base">⚠️</span>
+                    此股票目前處於分盤交易（處置）狀態
+                </div>
+            )}
 
             <div className="mt-3 mb-1 px-1">
                 <SourceNav

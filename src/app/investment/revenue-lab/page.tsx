@@ -42,6 +42,7 @@ async function getUnionHoldings(): Promise<Holding[]> {
                 change_percent: null,
                 amount: null,
                 currency: null,
+                is_disposal: false,
             });
         }
     }

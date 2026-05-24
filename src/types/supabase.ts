@@ -843,6 +843,7 @@ export type Database = {
           data_date: string
           etf_code: string
           id: string | null
+          is_disposal: boolean
           is_high_200d: boolean | null
           is_high_20d: boolean | null
           is_high_5d: boolean | null
@@ -867,6 +868,7 @@ export type Database = {
           data_date: string
           etf_code: string
           id?: string | null
+          is_disposal?: boolean
           is_high_200d?: boolean | null
           is_high_20d?: boolean | null
           is_high_5d?: boolean | null
@@ -891,6 +893,7 @@ export type Database = {
           data_date?: string
           etf_code?: string
           id?: string | null
+          is_disposal?: boolean
           is_high_200d?: boolean | null
           is_high_20d?: boolean | null
           is_high_5d?: boolean | null

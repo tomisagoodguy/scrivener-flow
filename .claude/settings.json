@@ -100,7 +100,10 @@
       "Bash(Start-Process powershell *)",
       "Bash(Write-Output \"Dev server started\")",
       "PowerShell(cd \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow'; yarn dev\" -PassThru | Out-Null; Start-Sleep 6; Write-Output \"Dev server launched\")",
-      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 族群漲跌排行同時顯示日週月，支援點擊欄位排序\")"
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 族群漲跌排行同時顯示日週月，支援點擊欄位排序\")",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(f['severity'], f['id'], f['summary']\\) for f in data['findings'] if f['severity'] in ['Critical','Warning']]\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: add ETF holdings disposal marker detection and UI badges\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat: add ETF holdings disposal marker detection and UI badges\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"

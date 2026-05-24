@@ -46,6 +46,7 @@ const makeHolding = (stock_code: string, price: number): Holding => ({
     change_percent: 0,
     amount: null,
     currency: 'TWD',
+    is_disposal: false,
 });
 
 describe('aggregateBuyCapital', () => {

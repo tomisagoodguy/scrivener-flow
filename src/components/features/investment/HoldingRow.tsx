@@ -77,6 +77,11 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                         </div>
                     </div>
                     {getNewHighBadge(item)}
+                    {item.is_disposal && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700">
+                            處置中
+                        </span>
+                    )}
                 </div>
             </td>
 

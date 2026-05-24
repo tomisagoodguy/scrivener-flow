@@ -21,6 +21,7 @@ const mockHoldings: Holding[] = [
     amount: 500000000,
     margin_ratio: 45.2,
     currency: 'TWD',
+    is_disposal: false,
   },
   {
     stock_id: '2317',
@@ -36,6 +37,7 @@ const mockHoldings: Holding[] = [
     amount: 100000000,
     margin_ratio: 30.5,
     currency: 'TWD',
+    is_disposal: false,
   },
 ];
 

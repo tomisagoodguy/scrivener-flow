@@ -90,4 +90,5 @@ export interface Holding {
     rev_ma3?: number | null;            // 最新 3月均營收 (千元)
     rev_ma3_new_high?: boolean;         // filter: rev_ma3 == rolling(12).max()
     filter_score?: number;              // 通過 Filter 數 (0~3)
+    is_disposal: boolean;               // 分時交易（處置）狀態，由 DisposalDetectStep 每日更新
 }
