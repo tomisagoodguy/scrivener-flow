@@ -233,3 +233,22 @@ const { data } = await supabase.from('equity_distribution_stats')
 // ❌ 禁止：依賴第一支股票
 .eq('stock_code', stockCodes[0])  // 若該股無資料則 distinctDates.length < 2，靜默失敗
 ```
+
+## FinLab 策略檔案的 Pylance 型別錯誤
+
+`FinlabDataFrame` 無 `py.typed` stubs，pandas-stubs 的 `__getattr__` 會把任何未知屬性（`.average`、`.rise`、`.is_smallest`、`.index_str_to_date` 等 FinLab 擴展方法）推斷為 `Series[Any]`，導致 `reportCallIssue`（物件無法呼叫）。
+
+**解法**：在呼叫 FinLab 擴展方法的行尾加 `# type: ignore[operator]`，不要包裝 `FinlabDataFrame()` 或改動邏輯。
+
+```python
+# ✅ 正確：針對性抑制
+rev_ma2 = rev.average(2)  # type: ignore[operator]
+close.average(10).rise() & close.average(20).rise(),  # type: ignore[operator]
+position = position[position > 0].is_smallest(5)  # type: ignore[operator]
+position = position.reindex(rev.index_str_to_date().index, method='ffill')  # type: ignore[operator]
+
+# ❌ 錯誤：包裝 FinlabDataFrame() 無法解決中間運算（如 .rolling().mean().rise()）的型別推斷
+close = FinlabDataFrame(cache.close)  # 仍然報錯
+```
+
+適用範圍：`ETF/strategies/` 下所有策略檔案，凡呼叫 FinLab 擴展方法皆適用。

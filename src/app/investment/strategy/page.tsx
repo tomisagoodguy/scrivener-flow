@@ -18,11 +18,12 @@ import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 export const dynamic = 'force-dynamic';
 
 const STRATEGY_FACTORS: Record<string, string[]> = {
-    super8888:     ['vol_breakout'],
-    capital_layer: ['rev_momentum_3_12', 'rsv_180', 'broker_force'],
-    low_vol_cap:   ['rev_momentum_3_12', 'rsv_180', 'price_to_high_240'],
-    broker_ranked: ['rev_momentum_3_12', 'broker_force', 'rsv_180'],
-    low_vol_alpha: ['rev_momentum_3_12', 'rs_100'],
+    super8888:      ['vol_breakout'],
+    capital_layer:  ['rev_momentum_3_12', 'rsv_180', 'broker_force'],
+    low_vol_cap:    ['rev_momentum_3_12', 'rsv_180', 'price_to_high_240'],
+    broker_ranked:  ['rev_momentum_3_12', 'broker_force', 'rsv_180'],
+    low_vol_alpha:  ['rev_momentum_3_12', 'rs_100'],
+    trend_template: ['rsv_180', 'rs_100', 'price_to_high_240', 'rev_momentum_3_12', 'broker_force'],
 };
 
 function icForStrategy(allIC: FactorICRow[], strategyId: string): FactorICRow[] {

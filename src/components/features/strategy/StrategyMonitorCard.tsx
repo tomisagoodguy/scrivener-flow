@@ -17,11 +17,12 @@ export interface StrategyMonitorStock {
 }
 
 const STRATEGY_SHORT: Record<string, string> = {
-    super8888:     'S8888',
-    capital_layer: 'Capital',
-    broker_ranked: 'Broker',
-    low_vol_alpha: 'α年增率',
-    low_vol_cap:   'LowVol',
+    super8888:      'S8888',
+    capital_layer:  'Capital',
+    broker_ranked:  'Broker',
+    low_vol_alpha:  'α年增率',
+    low_vol_cap:    'LowVol',
+    trend_template: 'Trend',
 };
 
 const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }> = {

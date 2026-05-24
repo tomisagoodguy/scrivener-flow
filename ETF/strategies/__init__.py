@@ -13,6 +13,7 @@ from ETF.strategies.broker_ranked import BrokerRankedStrategy
 from ETF.strategies.low_vol_alpha import LowVolAlphaStrategy
 from ETF.strategies.low_vol_cap import LowVolCapStrategy
 from ETF.strategies.htf_gvi import HtfGviStrategy
+from ETF.strategies.trend_template import TrendTemplateStrategy
 
 ALL_STRATEGIES: list[BaseStrategy] = [
     Super8888Strategy(),
@@ -22,4 +23,5 @@ ALL_STRATEGIES: list[BaseStrategy] = [
     LowVolAlphaStrategy(),
     LowVolCapStrategy(),
     HtfGviStrategy(),
+    TrendTemplateStrategy(),
 ]

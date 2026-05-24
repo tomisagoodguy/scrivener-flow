@@ -85,7 +85,7 @@ def extract_data_date_from_xlsx(xlsx_path: pathlib.Path) -> Optional[str]:
 
                 # 2) try right cell
                 v2 = ws.cell(row=r, column=c + 1).value
-                d2 = roc_to_ad_yyyymmdd(v2) if v2 is not None else None
+                d2 = roc_to_ad_yyyymmdd(v2) if v2 is not None else None  # type: ignore[arg-type]
                 if d2:
                     wb.close()
                     return d2
@@ -239,7 +239,7 @@ def parse_holdings_from_xlsx(xlsx_path: pathlib.Path) -> Tuple[pd.DataFrame, Opt
     df = df[df["code"].str.match(r"^[0-9A-Za-z.\-]+$", na=False)]
 
     df = df.groupby(["code", "name"], as_index=False)["shares"].sum()
-    df = df.sort_values("shares", ascending=False).reset_index(drop=True)
+    df = df.sort_values("shares", ascending=False).reset_index(drop=True)  # type: ignore[call-overload]
     return df, data_date
 
 
@@ -261,7 +261,7 @@ def compute_diff(prev_df: pd.DataFrame, curr_df: pd.DataFrame) -> pd.DataFrame:
 
     merged = prev.merge(curr, on=["code"], how="outer", suffixes=("_prev", "_curr"))
 
-    merged["name"] = merged.get("name_curr", "").fillna("")
+    merged["name"] = merged.get("name_curr", pd.Series(dtype=str)).fillna("")  # type: ignore[call-overload]
     if "name_prev" in merged.columns:
         merged.loc[merged["name"].eq("") | merged["name"].isna(), "name"] = merged["name_prev"].fillna("")
 
