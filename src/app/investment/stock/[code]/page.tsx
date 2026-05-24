@@ -191,13 +191,6 @@ export default function StockPage() {
     });
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
-    const chipsLatestDate = (() => {
-        if (!chipsData || chipsData.length === 0) return null;
-        const latest = chipsData.reduce((a, b) => (a.data_date > b.data_date ? a : b)).data_date;
-        const daysSince = Math.floor((Date.now() - new Date(latest).getTime()) / 86400000);
-        return { label: latest.slice(5).replace('-', '/'), stale: daysSince > 10 };
-    })();
-
     const {
         stockName, prevStock, nextStock, currentIndex, totalCount, chipRank, retailRank, handleNavigate, quantMetrics,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
@@ -205,6 +198,13 @@ export default function StockPage() {
         loading, priceLoading, revenueLoading, chipsLoading, brokerLoading,
         priceError, revenueError, chipsError, brokerError,
     } = useStockDashboard(stockCode);
+
+    const chipsLatestDate = (() => {
+        if (!chipsData || chipsData.length === 0) return null;
+        const latest = chipsData.reduce((a, b) => (a.data_date > b.data_date ? a : b)).data_date;
+        const daysSince = Math.floor((Date.now() - new Date(latest).getTime()) / 86400000);
+        return { label: latest.slice(5).replace('-', '/'), stale: daysSince > 10 };
+    })();
 
     if (loading) {
         return (
