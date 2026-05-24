@@ -191,6 +191,13 @@ export default function StockPage() {
     });
     const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
+    const chipsLatestDate = (() => {
+        if (!chipsData || chipsData.length === 0) return null;
+        const latest = chipsData.reduce((a, b) => (a.data_date > b.data_date ? a : b)).data_date;
+        const daysSince = Math.floor((Date.now() - new Date(latest).getTime()) / 86400000);
+        return { label: latest.slice(5).replace('-', '/'), stale: daysSince > 10 };
+    })();
+
     const {
         stockName, prevStock, nextStock, currentIndex, totalCount, chipRank, retailRank, handleNavigate, quantMetrics,
         priceData, revenueData, monthlyPriceData, chipsData, brokerData,
@@ -277,7 +284,14 @@ export default function StockPage() {
 
                 {/* 股權分散 */}
                 <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4">
-                    <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">🎯 籌碼分析 - 股權分散</h2>
+                    <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        🎯 籌碼分析 - 股權分散
+                        {chipsLatestDate && (
+                            <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${chipsLatestDate.stale ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                截至 {chipsLatestDate.label}{chipsLatestDate.stale ? ' ⚠️' : ''}
+                            </span>
+                        )}
+                    </h2>
                     <div className="relative h-[calc(100%-2rem)]">
                         <ChartPanel loading={chipsLoading} error={chipsError} emptyText={chipsData.length === 0 ? '無籌碼數據' : undefined}>
                             {chipsData.length > 0 && <ChipsChart data={chipsData} />}
@@ -299,13 +313,27 @@ export default function StockPage() {
                 <div className="col-span-1 lg:col-span-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
                         <div className="flex flex-col h-full overflow-hidden">
-                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">🔥 大戶籌碼流向</h2>
+                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                🔥 大戶籌碼流向
+                                {chipsLatestDate && (
+                                    <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${chipsLatestDate.stale ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                        截至 {chipsLatestDate.label}{chipsLatestDate.stale ? ' ⚠️' : ''}
+                                    </span>
+                                )}
+                            </h2>
                             <div className="flex-1 min-h-0">
                                 {chipsData.length > 0 ? <ShareholderFlowChart data={chipsData} type="large" /> : <div className="flex items-center justify-center h-full text-slate-400 text-sm">無大戶流向數據</div>}
                             </div>
                         </div>
                         <div className="flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-4 md:pt-0 md:pl-6">
-                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">💎 散戶籌碼流向</h2>
+                            <h2 className="text-sm font-bold mb-2 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                💎 散戶籌碼流向
+                                {chipsLatestDate && (
+                                    <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${chipsLatestDate.stale ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                        截至 {chipsLatestDate.label}{chipsLatestDate.stale ? ' ⚠️' : ''}
+                                    </span>
+                                )}
+                            </h2>
                             <div className="flex-1 min-h-0">
                                 {chipsData.length > 0 ? <ShareholderFlowChart data={chipsData} type="retail" /> : <div className="flex items-center justify-center h-full text-slate-400 text-sm">無散戶流向數據</div>}
                             </div>

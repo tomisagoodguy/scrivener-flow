@@ -20,7 +20,8 @@ on:
         options: ['false', 'true']
 
 jobs:
-  sync:
+  equity-distribution:
+    name: Sync Equity Distribution Stats
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
@@ -39,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.13"
           enable-cache: true
@@ -51,7 +52,7 @@ jobs:
         run: mkdir -p ~/.finlab
 
       - name: Cache FinLab Data
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ~/.finlab
           key: ${{ runner.os }}-finlab-equity-v1
@@ -71,10 +72,60 @@ jobs:
             uv run python ETF/sync_equity_distribution.py $FORCE_FLAG
           fi
 
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 equity_weekly 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: equity-distribution\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+
+  shareholder-weekly:
+    name: Sync Shareholder Weekly Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+      TZ: 'Asia/Taipei'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Ensure FinLab cache dir exists
+        run: mkdir -p ~/.finlab
+
+      - name: Cache FinLab Data
+        uses: actions/cache@v4
+        with:
+          path: ~/.finlab
+          key: ${{ runner.os }}-finlab-shareholder-v1
+          restore-keys: |
+            ${{ runner.os }}-finlab-shareholder-
+
+      - name: Install dependencies
+        run: uv sync
+
       - name: Sync raw shareholder weekly data
         run: |
-          # 週排程同步 stock_shareholder_weekly（原始集保分層數據），不跳過 shareholder
-          # --skip-broker：broker 資料日排程已同步，週排程跳過避免重複下載巨型資料集（曾導致 6 小時 timeout）
+          # 週排程同步 stock_shareholder_weekly（原始集保分層數據）
+          # --skip-broker：broker 資料日排程已同步，週排程跳過避免重複下載巨型資料集
           uv run python ETF/sync_stock_financials.py --days 14 --skip-broker
 
       - name: Notify LINE on failure
@@ -83,4 +134,4 @@ jobs:
           curl -s -X POST https://api.line.me/v2/bot/message/push \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
-            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync (equity_weekly)\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 equity_weekly 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: shareholder-weekly\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
