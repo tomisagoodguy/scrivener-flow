@@ -1,14 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import type { StrategySectorRow } from '@/app/actions/getStrategyAnalytics';
 import type { SectorStock } from '@/app/actions/getSectorStrength';
 import { fmtPct } from '@/lib/investment/formatUtils';
 
 type Period = '1d' | '5d' | '20d';
 
+const PERIOD_LABELS: Record<Period, string> = { '1d': '日', '5d': '週', '20d': '月' };
+
 interface Props {
     sectorRanking: StrategySectorRow[];
-    period: Period;
     stocks?: SectorStock[];
 }
 
@@ -18,7 +20,8 @@ function retForPeriod(row: StrategySectorRow, period: Period): number | null {
     return row.weightedRet20d;
 }
 
-export default function StrategySectorRanking({ sectorRanking, period, stocks = [] }: Props) {
+export default function StrategySectorRanking({ sectorRanking, stocks = [] }: Props) {
+    const [period, setPeriod] = useState<Period>('1d');
     const sorted = [...sectorRanking]
         .sort((a, b) => (retForPeriod(b, period) ?? -999) - (retForPeriod(a, period) ?? -999))
         .slice(0, 12);
@@ -45,6 +48,24 @@ export default function StrategySectorRanking({ sectorRanking, period, stocks = 
 
     return (
         <div className="space-y-1.5">
+            {/* Period toggle */}
+            <div className="flex items-center justify-end mb-1">
+                <div className="flex rounded-lg overflow-hidden border border-gray-200/50 dark:border-white/10">
+                    {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+                        <button
+                            key={p}
+                            onClick={() => setPeriod(p)}
+                            className={`px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                                period === p
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-500 hover:bg-gray-100/50 dark:hover:bg-white/10'
+                            }`}
+                        >
+                            {PERIOD_LABELS[p]}
+                        </button>
+                    ))}
+                </div>
+            </div>
             {sorted.map((row) => {
                 const ret = retForPeriod(row, period);
                 const isPos = ret !== null && ret >= 0;

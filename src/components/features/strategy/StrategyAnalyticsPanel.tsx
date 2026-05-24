@@ -65,7 +65,7 @@ export default function StrategyAnalyticsPanel({ data }: Props) {
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div>
                             <p className="text-xs text-gray-400 mb-2">族群漲跌排行</p>
-                            <StrategySectorRanking sectorRanking={data.sectorRanking} period={period} stocks={data.stocks} />
+                            <StrategySectorRanking sectorRanking={data.sectorRanking} stocks={data.stocks} />
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 mb-2">成交金額排行 Top 15</p>
