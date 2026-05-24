@@ -284,3 +284,16 @@ export interface FundMomentumSignal {
     fund_ratio_5d: number | null;
     etf_consensus: boolean;
 }
+
+export interface ConsensusSignal {
+    stock_id: string;
+    stock_name: string | null;
+    date: string;
+    etf_buying: boolean;
+    etf_etfs: string[];
+    fund_score: number | null;
+    fund_buying: boolean;
+    fund_consec_days: number;
+    strategy_hits: string[];
+    consensus_count: number;
+}

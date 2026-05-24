@@ -21,6 +21,7 @@ const moreGroup = [
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
     { name: '投信追蹤', href: '/investment/fund-tracker' },
+    { name: '共識掃描', href: '/investment/consensus-signal' },
 ];
 
 const watchGroup = [
