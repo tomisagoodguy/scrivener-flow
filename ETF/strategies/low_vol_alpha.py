@@ -81,8 +81,8 @@ def _build_position():
         '6951', '8162', '8487',
     ]
 
-    position = rev_yoy_growth[position_condition].is_largest(10)
-    positionC = position.reindex(rev.index_str_to_date().index)
+    position = rev_yoy_growth[position_condition].is_largest(10)  # type: ignore[attr-defined]
+    positionC = position.reindex(rev.index_str_to_date().index)  # type: ignore[attr-defined]
     positionC[stocks_to_exclude] = False
 
     return positionC

@@ -26,4 +26,4 @@
 ## 6. 收尾
 
 - [x] 6.1 確認 TypeScript 無 `any`，`yarn build` 通過
-- [ ] 6.2 commit 並 push
+- [x] 6.2 commit 並 push

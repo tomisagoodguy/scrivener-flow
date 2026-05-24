@@ -62,7 +62,7 @@ def _build_position():
         (rs100 > 0.5) &
         (natr.rank(axis=1, pct=True) < 0.65) &
         ((rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8) &
-        close.average(5).rise() &
+        close.average(5).rise() &  # type: ignore[attr-defined]
         (price_to_high > 0.85)
     )
 
@@ -72,8 +72,8 @@ def _build_position():
         '6951', '8162', '8487',
     ]
 
-    positionB = cap[position_cond].is_smallest(10)
-    positionB = positionB.reindex(rev.index_str_to_date().index)
+    positionB = cap[position_cond].is_smallest(10)  # type: ignore[attr-defined]
+    positionB = positionB.reindex(rev.index_str_to_date().index)  # type: ignore[attr-defined]
     positionB.loc[:, stocks_to_exclude] = False
 
     return positionB

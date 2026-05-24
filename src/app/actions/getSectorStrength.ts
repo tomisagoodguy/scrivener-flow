@@ -95,9 +95,16 @@ export async function getAllStrategyHitStocks(date: string): Promise<SectorStock
                 return [];
             }
 
-            return (data ?? []) as SectorStock[];
+            // 同一 stock_id 可能跨多族群重複出現，保留 momentum_score 最高的那筆
+            const seen = new Map<string, SectorStock>();
+            for (const row of (data ?? []) as SectorStock[]) {
+                if (!seen.has(row.stock_id)) {
+                    seen.set(row.stock_id, row);
+                }
+            }
+            return Array.from(seen.values());
         },
-        ['all-strategy-hit-stocks', date],
+        ['all-strategy-hit-stocks-v2', date],
         { revalidate: 3600 },
     );
     return cached();
@@ -148,7 +155,7 @@ export async function getAllSectorStocks(date: string): Promise<Record<string, S
     return cached();
 }
 
-interface EquityPctRow { stock_code: string; big_holder_pct: number | string | null; mid_holder_pct: number | string | null; whale_holder_pct: number | string | null }
+interface EquityChangeRow { stock_code: string; big_holder_pct_change: number | string | null; mid_holder_pct_change: number | string | null; whale_holder_pct_change: number | string | null }
 interface PriceItBuyRow { stock_code: string; it_buy: number | string | null }
 
 async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<SectorStock, 'big_holder_pct_change' | 'mid_holder_pct_change' | 'whale_holder_pct_change' | 'it_buy_5d'>>> {
@@ -159,50 +166,27 @@ async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<
     cutoffDate.setDate(cutoffDate.getDate() - 14);
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
 
-    const [{ data: dateRows }, { data: priceRows }] = await Promise.all([
-        supabase.from('equity_distribution_stats')
-            .select('snapshot_date')
-            .eq('stock_code', stockCodes[0])
-            .order('snapshot_date', { ascending: false })
-            .limit(2),
+    // 取全局最新 snapshot 日期（不依賴特定股票，避免該股無資料時靜默失敗）
+    const { data: latestDateRow } = await supabase
+        .from('equity_distribution_stats')
+        .select('snapshot_date')
+        .order('snapshot_date', { ascending: false })
+        .limit(1);
+    const latestDate: string | null = (latestDateRow as { snapshot_date: string }[] | null)?.[0]?.snapshot_date ?? null;
+
+    const [{ data: equityRows }, { data: priceRows }] = await Promise.all([
+        latestDate
+            ? supabase.from('equity_distribution_stats')
+                .select('stock_code, big_holder_pct_change, mid_holder_pct_change, whale_holder_pct_change')
+                .eq('snapshot_date', latestDate)
+                .in('stock_code', stockCodes)
+            : Promise.resolve({ data: [] }),
         supabase.from('stock_prices_daily')
             .select('stock_code, it_buy')
             .in('stock_code', stockCodes)
             .gte('data_date', cutoffStr)
             .order('data_date', { ascending: false }),
     ]);
-
-    const distinctDates: string[] = [];
-    const seenDates = new Set<string>();
-    for (const row of (dateRows ?? []) as { snapshot_date: string }[]) {
-        const d = row.snapshot_date;
-        if (!seenDates.has(d)) { seenDates.add(d); distinctDates.push(d); }
-        if (distinctDates.length >= 2) break;
-    }
-
-    let currentRows: EquityPctRow[] = [];
-    let prevRows: EquityPctRow[] = [];
-    if (distinctDates.length >= 2) {
-        const [curRes, prevRes] = await Promise.all([
-            supabase.from('equity_distribution_stats')
-                .select('stock_code, big_holder_pct, mid_holder_pct, whale_holder_pct')
-                .eq('snapshot_date', distinctDates[0]).in('stock_code', stockCodes),
-            supabase.from('equity_distribution_stats')
-                .select('stock_code, big_holder_pct, mid_holder_pct, whale_holder_pct')
-                .eq('snapshot_date', distinctDates[1]).in('stock_code', stockCodes),
-        ]);
-        currentRows = (curRes.data ?? []) as EquityPctRow[];
-        prevRows = (prevRes.data ?? []) as EquityPctRow[];
-    }
-
-    const prevMap = new Map<string, { big: number | null; mid: number | null; whale: number | null }>();
-    for (const row of prevRows) {
-        prevMap.set(row.stock_code, {
-            big: row.big_holder_pct != null ? Number(row.big_holder_pct) : null,
-            mid: row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null,
-            whale: row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null,
-        });
-    }
 
     const itBuySum: Record<string, number[]> = {};
     for (const row of (priceRows ?? []) as PriceItBuyRow[]) {
@@ -212,17 +196,12 @@ async function fetchChipData(stockCodes: string[]): Promise<Record<string, Pick<
         }
     }
 
-    // Build result
     const result: Record<string, Pick<SectorStock, 'big_holder_pct_change' | 'mid_holder_pct_change' | 'whale_holder_pct_change' | 'it_buy_5d'>> = {};
-    for (const row of currentRows) {
-        const p = prevMap.get(row.stock_code);
-        const curBig = row.big_holder_pct != null ? Number(row.big_holder_pct) : null;
-        const curMid = row.mid_holder_pct != null ? Number(row.mid_holder_pct) : null;
-        const curWhale = row.whale_holder_pct != null ? Number(row.whale_holder_pct) : null;
+    for (const row of (equityRows ?? []) as EquityChangeRow[]) {
         result[row.stock_code] = {
-            big_holder_pct_change: curBig != null && p?.big != null ? curBig - p.big : null,
-            mid_holder_pct_change: curMid != null && p?.mid != null ? curMid - p.mid : null,
-            whale_holder_pct_change: curWhale != null && p?.whale != null ? curWhale - p.whale : null,
+            big_holder_pct_change: row.big_holder_pct_change != null ? Number(row.big_holder_pct_change) : null,
+            mid_holder_pct_change: row.mid_holder_pct_change != null ? Number(row.mid_holder_pct_change) : null,
+            whale_holder_pct_change: row.whale_holder_pct_change != null ? Number(row.whale_holder_pct_change) : null,
             it_buy_5d: itBuySum[row.stock_code] ? itBuySum[row.stock_code].reduce((a, b) => a + b, 0) : null,
         };
     }
@@ -260,7 +239,7 @@ export async function getSectorStocks(category: string, date: string): Promise<S
             const chipData = await fetchChipData(stocks.map(s => s.stock_id));
             return stocks.map(s => ({ ...s, ...chipData[s.stock_id] }));
         },
-        ['sector-stocks', category, date],
+        ['sector-stocks-v2', category, date],
         { revalidate: 3600 },
     );
     return cached();

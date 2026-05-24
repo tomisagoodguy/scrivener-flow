@@ -1,11 +1,8 @@
-# strategy-volume-ranking
+## ADDED Requirements
 
-## Purpose
-列出策略命中股票的成交金額排行，協助使用者優先關注籌碼最活躍的標的。
+### Requirement: 策略命中股成交金額排行
 
-## Requirements
-
-### 資料
+#### 資料
 - 資料來源：`getAllStrategyHitStocks()` 回傳的清單
 - 切換 `日` 時排序欄位為 `amount`（當日成交金額）
 - 切換 `周(5d)` / `月(20d)` 時——因資料只有 `ret_5d/ret_20d` 而無對應累積成交量——改以 `ret_5d` / `ret_20d` 漲跌幅排序，並在 Tab 標籤說明「按漲跌幅排序」

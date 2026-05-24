@@ -1,11 +1,8 @@
-# strategy-sector-ranking
+## ADDED Requirements
 
-## Purpose
-顯示策略命中股票所屬族群的漲跌幅排行，協助使用者判斷哪個產業族群最強勢/最弱勢。
+### Requirement: 策略涉及族群漲跌幅排行
 
-## Requirements
-
-### 資料
+#### 資料
 - 資料來源：策略股 `category` 分組後，以各股 `amount` 為權重計算加權平均漲跌幅
 - 若族群內所有股票的 `amount` 均為 null，改用簡單平均
 - 只顯示「策略命中股有涉及的族群」，不顯示全市場所有族群

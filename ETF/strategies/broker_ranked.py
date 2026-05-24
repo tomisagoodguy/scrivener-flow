@@ -110,7 +110,7 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
     ]
 
     positionG = (c1 & c2 & c3 & c4 & c5 & c6 & c7 & disposal_stocks) * cap
-    positionG = positionG[positionG > 0].is_smallest(10)
+    positionG = positionG[positionG > 0].is_smallest(10)  # type: ignore[attr-defined]
     positionG[stocks_to_exclude] = False
     positionG = positionG.reindex(rev.index_str_to_date().index)  # type: ignore[operator]
 

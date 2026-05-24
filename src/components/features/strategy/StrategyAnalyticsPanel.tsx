@@ -54,22 +54,22 @@ export default function StrategyAnalyticsPanel({ data }: Props) {
             </div>
 
             {!collapsed && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                    {/* Heatmap — takes 2 columns on xl */}
-                    <div className="xl:col-span-2">
+                <div className="space-y-4">
+                    {/* Heatmap full width */}
+                    <div>
                         <p className="text-xs text-gray-400 mb-2">策略股熱力圖（大小=成交金額，色=漲跌幅）</p>
                         <StrategyHeatmap stocks={data.stocks} period={period} />
                     </div>
 
-                    {/* Right column: sector ranking + volume ranking */}
-                    <div className="space-y-4">
+                    {/* Bottom two columns side by side */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div>
                             <p className="text-xs text-gray-400 mb-2">族群漲跌排行</p>
-                            <StrategySectorRanking sectorRanking={data.sectorRanking} period={period} />
+                            <StrategySectorRanking sectorRanking={data.sectorRanking} period={period} stocks={data.stocks} />
                         </div>
-                        <div className="border-t border-white/20 pt-4">
+                        <div>
                             <p className="text-xs text-gray-400 mb-2">成交金額排行 Top 15</p>
-                            <StrategyVolumeRanking stocks={data.stocks} period={period} />
+                            <StrategyVolumeRanking stocks={data.stocks} />
                         </div>
                     </div>
                 </div>

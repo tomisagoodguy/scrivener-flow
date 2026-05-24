@@ -90,14 +90,14 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
         return ((close - lo) / (hi - lo)).rank(pct=True, axis=1)
 
     # 選股條件
-    c1 = (amt > 1.5 * 10**7) & ((amt / cap).rolling(5).mean().rise())
-    c2 = (rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8
+    c1 = (amt > 1.5 * 10**7) & ((amt / cap).rolling(5).mean().rise())  # type: ignore[attr-defined]
+    c2 = (rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8  # type: ignore[attr-defined]
     c3 = yoy.rank(pct=True, axis=1) > 0.85
     c4 = rsv(180) > 0.9
     c5 = (
-        (close > close.average(5)) &
-        (close.average(5) > close.average(20)) &
-        close.average(20).rise()
+        (close > close.average(5)) &  # type: ignore[attr-defined]
+        (close.average(5) > close.average(20)) &  # type: ignore[attr-defined]
+        close.average(20).rise()  # type: ignore[attr-defined]
     )
     c6 = (
         close.rolling(60).mean()
@@ -125,15 +125,15 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
 
     # 第一層：營收成長前100名
     positionH = rev_growth * conditions
-    positionH = positionH[positionH > 0].is_largest(100)
+    positionH = positionH[positionH > 0].is_largest(100)  # type: ignore[attr-defined]
 
     # 第二層：大戶籌碼前50名
     positionH = s_holder * positionH
-    positionH = positionH[positionH > 0].is_largest(50)
+    positionH = positionH[positionH > 0].is_largest(50)  # type: ignore[attr-defined]
 
     # 第三層：主力強度前20名
     positionH = force * positionH
-    positionH = positionH[positionH > 0].is_largest(20)
+    positionH = positionH[positionH > 0].is_largest(20)  # type: ignore[attr-defined]
 
     # 第四層：動量調整前15名（Parkinson 波動率修正）
     m = v.rolling(60).sum()
@@ -141,11 +141,11 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
     parkinson_vol = np.sqrt((1 / (4 * np.log(2))) * log_hl_sq.rolling(60).mean())  # type: ignore[union-attr]
     s_momentum = close / close.shift(60) - 1
     positionH = ((s_momentum * m) / parkinson_vol) * positionH
-    positionH = positionH[positionH > 0].is_largest(15)
+    positionH = positionH[positionH > 0].is_largest(15)  # type: ignore[attr-defined]
 
     # 第五層：市值最小8名
     positionH = cap * positionH
-    positionH = positionH[positionH > 0].is_smallest(8)
+    positionH = positionH[positionH > 0].is_smallest(8)  # type: ignore[attr-defined]
 
-    positionH = positionH.reindex(rev.index_str_to_date().index)
+    positionH = positionH.reindex(rev.index_str_to_date().index)  # type: ignore[attr-defined]
     return positionH

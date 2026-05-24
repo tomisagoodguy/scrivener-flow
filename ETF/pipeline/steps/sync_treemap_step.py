@@ -96,12 +96,15 @@ class SyncTreemapStep(BaseStep):
 
         # 3. 取市值（etl:market_cap）
         self.logger.info("Fetching market_cap for treemap...")
+        last_mktcap = pd.Series(dtype=float)
         try:
             mktcap_df = fd.get("etl:market_cap")
-            last_mktcap = mktcap_df.iloc[-1] if mktcap_df is not None and not mktcap_df.empty else pd.Series(dtype=float)
+            if mktcap_df is not None and not mktcap_df.empty:
+                last_mktcap = mktcap_df.iloc[-1]
+            else:
+                self.logger.warning("etl:market_cap returned empty, market_cap will be null in treemap rows.")
         except Exception as e:
             self.logger.warning(f"Failed to fetch etl:market_cap: {e}")
-            last_mktcap = pd.Series(dtype=float)
 
         # 4. 取股票名稱
         stock_names: dict[str, str] = {}

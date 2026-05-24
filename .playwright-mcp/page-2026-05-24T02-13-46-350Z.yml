@@ -1,0 +1,476 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - generic [ref=e10]: S
+              - generic [ref=e11]: 投資監控
+            - navigation [ref=e12]:
+              - link "選股池" [ref=e13] [cursor=pointer]:
+                - /url: /investment
+              - link "籌碼排行" [ref=e14] [cursor=pointer]:
+                - /url: /investment/equity
+              - link "策略選股" [ref=e15] [cursor=pointer]:
+                - /url: /investment/strategy
+              - link "族群強弱" [ref=e16] [cursor=pointer]:
+                - /url: /investment/sectors
+              - button "更多" [ref=e18]:
+                - text: 更多
+                - img [ref=e19]
+              - button "觀察清單" [ref=e22]:
+                - text: 觀察清單
+                - img [ref=e23]
+          - link "代書系統" [ref=e27] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e28]
+            - text: 代書系統
+        - main [ref=e30]:
+          - main [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]:
+                - heading "策略選股中心" [level=1] [ref=e34]
+                - generic [ref=e35]: 資料日期：2026-05-11
+              - generic [ref=e36]:
+                - link "策略視角" [ref=e37] [cursor=pointer]:
+                  - /url: /investment/strategy
+                - link "監控清單" [ref=e38] [cursor=pointer]:
+                  - /url: /investment/strategy?view=monitor
+            - paragraph [ref=e39]: 共 30 支策略股 · 漲跌幅來源：sector_strength_stocks
+            - generic [ref=e40]:
+              - link "3036 文曄 半導體:IC通路 1d -0.9% 5d +7.0% S8888 加碼中 00403 00980 00981 +8" [ref=e42] [cursor=pointer]:
+                - /url: /investment/stock/3036
+                - generic [ref=e43]:
+                  - generic [ref=e44]:
+                    - generic [ref=e45]:
+                      - generic [ref=e46]: "3036"
+                      - generic [ref=e47]: 文曄
+                    - text: 半導體:IC通路
+                  - generic [ref=e48]:
+                    - generic [ref=e50]: 1d -0.9%
+                    - generic [ref=e52]: 5d +7.0%
+                - generic [ref=e54]: S8888
+                - generic [ref=e55]:
+                  - generic [ref=e56]: 加碼中
+                  - generic "主動統一升級50" [ref=e57]: "00403"
+                  - generic "主動野村臺灣優選" [ref=e58]: "00980"
+                  - generic "主動統一台股增長" [ref=e59]: "00981"
+                  - generic [ref=e60]: "+8"
+              - link "4127 天良 食品生技:加工製成品 1d +10.0% 5d +60.9% S8888 Capital Broker LowVol 未持有" [ref=e62] [cursor=pointer]:
+                - /url: /investment/stock/4127
+                - generic [ref=e63]:
+                  - generic [ref=e64]:
+                    - generic [ref=e65]:
+                      - generic [ref=e66]: "4127"
+                      - generic [ref=e67]: 天良
+                    - text: 食品生技:加工製成品
+                  - generic [ref=e68]:
+                    - generic [ref=e70]: 1d +10.0%
+                    - generic [ref=e72]: 5d +60.9%
+                - generic [ref=e73]:
+                  - generic [ref=e74]: S8888
+                  - generic [ref=e75]: Capital
+                  - generic [ref=e76]: Broker
+                  - generic [ref=e77]: LowVol
+                - generic [ref=e79]: 未持有
+              - link "5864 致和證 金融:證券業 1d +2.8% 5d +9.9% S8888 α年增率 未持有" [ref=e81] [cursor=pointer]:
+                - /url: /investment/stock/5864
+                - generic [ref=e82]:
+                  - generic [ref=e83]:
+                    - generic [ref=e84]:
+                      - generic [ref=e85]: "5864"
+                      - generic [ref=e86]: 致和證
+                    - text: 金融:證券業
+                  - generic [ref=e87]:
+                    - generic [ref=e89]: 1d +2.8%
+                    - generic [ref=e91]: 5d +9.9%
+                - generic [ref=e92]:
+                  - generic [ref=e93]: S8888
+                  - generic [ref=e94]: α年增率
+                - generic [ref=e96]: 未持有
+              - link "6016 康和證 金融:證券業 1d +2.0% 5d +3.6% S8888 Capital Broker α年增率 未持有" [ref=e98] [cursor=pointer]:
+                - /url: /investment/stock/6016
+                - generic [ref=e99]:
+                  - generic [ref=e100]:
+                    - generic [ref=e101]:
+                      - generic [ref=e102]: "6016"
+                      - generic [ref=e103]: 康和證
+                    - text: 金融:證券業
+                  - generic [ref=e104]:
+                    - generic [ref=e106]: 1d +2.0%
+                    - generic [ref=e108]: 5d +3.6%
+                - generic [ref=e109]:
+                  - generic [ref=e110]: S8888
+                  - generic [ref=e111]: Capital
+                  - generic [ref=e112]: Broker
+                  - generic [ref=e113]: α年增率
+                - generic [ref=e115]: 未持有
+              - link "6417 韋僑 通信網路:無線通訊設備(如行動電話、衛星定位系統、衛星通訊設備、微波通訊設備、數位機上盒) 1d +1.9% 5d +6.4% S8888 未持有" [ref=e117] [cursor=pointer]:
+                - /url: /investment/stock/6417
+                - generic [ref=e118]:
+                  - generic [ref=e119]:
+                    - generic [ref=e120]:
+                      - generic [ref=e121]: "6417"
+                      - generic [ref=e122]: 韋僑
+                    - text: 通信網路:無線通訊設備(如行動電話、衛星定位系統、衛星通訊設備、微波通訊設備、數位機上盒)
+                  - generic [ref=e123]:
+                    - generic [ref=e125]: 1d +1.9%
+                    - generic [ref=e127]: 5d +6.4%
+                - generic [ref=e129]: S8888
+                - generic [ref=e131]: 未持有
+              - link "2855 統一證 金融:證券業 1d +1.4% 5d -0.1% Capital α年增率 未持有 00984" [ref=e133] [cursor=pointer]:
+                - /url: /investment/stock/2855
+                - generic [ref=e134]:
+                  - generic [ref=e135]:
+                    - generic [ref=e136]:
+                      - generic [ref=e137]: "2855"
+                      - generic [ref=e138]: 統一證
+                    - text: 金融:證券業
+                  - generic [ref=e139]:
+                    - generic [ref=e141]: 1d +1.4%
+                    - generic [ref=e143]: 5d -0.1%
+                - generic [ref=e144]:
+                  - generic [ref=e145]: Capital
+                  - generic [ref=e146]: α年增率
+                - generic [ref=e147]:
+                  - generic [ref=e148]: 未持有
+                  - generic "主動安聯台灣高息" [ref=e149]: "00984"
+              - link "3209 全科 半導體:IC通路 1d -1.4% 5d +14.7% Capital Broker 未持有" [ref=e151] [cursor=pointer]:
+                - /url: /investment/stock/3209
+                - generic [ref=e152]:
+                  - generic [ref=e153]:
+                    - generic [ref=e154]:
+                      - generic [ref=e155]: "3209"
+                      - generic [ref=e156]: 全科
+                    - text: 半導體:IC通路
+                  - generic [ref=e157]:
+                    - generic [ref=e159]: 1d -1.4%
+                    - generic [ref=e161]: 5d +14.7%
+                - generic [ref=e162]:
+                  - generic [ref=e163]: Capital
+                  - generic [ref=e164]: Broker
+                - generic [ref=e166]: 未持有
+              - link "3229 晟鈦 貿易百貨:貿易商、代理商、經銷商 1d +5.2% 5d +8.9% Capital 未持有" [ref=e168] [cursor=pointer]:
+                - /url: /investment/stock/3229
+                - generic [ref=e169]:
+                  - generic [ref=e170]:
+                    - generic [ref=e171]:
+                      - generic [ref=e172]: "3229"
+                      - generic [ref=e173]: 晟鈦
+                    - text: 貿易百貨:貿易商、代理商、經銷商
+                  - generic [ref=e174]:
+                    - generic [ref=e176]: 1d +5.2%
+                    - generic [ref=e178]: 5d +8.9%
+                - generic [ref=e180]: Capital
+                - generic [ref=e182]: 未持有
+              - link "3691 碩禾 太陽能產業:材料 1d +0.7% 5d -5.9% Capital 未持有" [ref=e184] [cursor=pointer]:
+                - /url: /investment/stock/3691
+                - generic [ref=e185]:
+                  - generic [ref=e186]:
+                    - generic [ref=e187]:
+                      - generic [ref=e188]: "3691"
+                      - generic [ref=e189]: 碩禾
+                    - text: 太陽能產業:材料
+                  - generic [ref=e190]:
+                    - generic [ref=e192]: 1d +0.7%
+                    - generic [ref=e194]: 5d -5.9%
+                - generic [ref=e196]: Capital
+                - generic [ref=e198]: 未持有
+              - link "6015 宏遠證 金融:證券業 1d +1.6% 5d +5.7% Capital α年增率 未持有" [ref=e200] [cursor=pointer]:
+                - /url: /investment/stock/6015
+                - generic [ref=e201]:
+                  - generic [ref=e202]:
+                    - generic [ref=e203]:
+                      - generic [ref=e204]: "6015"
+                      - generic [ref=e205]: 宏遠證
+                    - text: 金融:證券業
+                  - generic [ref=e206]:
+                    - generic [ref=e208]: 1d +1.6%
+                    - generic [ref=e210]: 5d +5.7%
+                - generic [ref=e211]:
+                  - generic [ref=e212]: Capital
+                  - generic [ref=e213]: α年增率
+                - generic [ref=e215]: 未持有
+              - link "6166 凌華 電腦及週邊設備:工業電腦 1d +7.2% 5d +13.4% Capital Broker 未持有" [ref=e217] [cursor=pointer]:
+                - /url: /investment/stock/6166
+                - generic [ref=e218]:
+                  - generic [ref=e219]:
+                    - generic [ref=e220]:
+                      - generic [ref=e221]: "6166"
+                      - generic [ref=e222]: 凌華
+                    - text: 電腦及週邊設備:工業電腦
+                  - generic [ref=e223]:
+                    - generic [ref=e225]: 1d +7.2%
+                    - generic [ref=e227]: 5d +13.4%
+                - generic [ref=e228]:
+                  - generic [ref=e229]: Capital
+                  - generic [ref=e230]: Broker
+                - generic [ref=e232]: 未持有
+              - link "2464 盟立 電腦及週邊設備:其他電腦及週邊設備 1d +5.9% 5d +13.8% Broker 未持有" [ref=e234] [cursor=pointer]:
+                - /url: /investment/stock/2464
+                - generic [ref=e235]:
+                  - generic [ref=e236]:
+                    - generic [ref=e237]:
+                      - generic [ref=e238]: "2464"
+                      - generic [ref=e239]: 盟立
+                    - text: 電腦及週邊設備:其他電腦及週邊設備
+                  - generic [ref=e240]:
+                    - generic [ref=e242]: 1d +5.9%
+                    - generic [ref=e244]: 5d +13.8%
+                - generic [ref=e246]: Broker
+                - generic [ref=e248]: 未持有
+              - link "3088 艾訊 電腦及週邊設備:工業電腦 1d +3.3% 5d +8.4% Broker 未持有" [ref=e250] [cursor=pointer]:
+                - /url: /investment/stock/3088
+                - generic [ref=e251]:
+                  - generic [ref=e252]:
+                    - generic [ref=e253]:
+                      - generic [ref=e254]: "3088"
+                      - generic [ref=e255]: 艾訊
+                    - text: 電腦及週邊設備:工業電腦
+                  - generic [ref=e256]:
+                    - generic [ref=e258]: 1d +3.3%
+                    - generic [ref=e260]: 5d +8.4%
+                - generic [ref=e262]: Broker
+                - generic [ref=e264]: 未持有
+              - link "4576 大銀微系統 電機機械:傳動元件 1d +5.4% 5d -1.5% Broker 未持有" [ref=e266] [cursor=pointer]:
+                - /url: /investment/stock/4576
+                - generic [ref=e267]:
+                  - generic [ref=e268]:
+                    - generic [ref=e269]:
+                      - generic [ref=e270]: "4576"
+                      - generic [ref=e271]: 大銀微系統
+                    - text: 電機機械:傳動元件
+                  - generic [ref=e272]:
+                    - generic [ref=e274]: 1d +5.4%
+                    - generic [ref=e276]: 5d -1.5%
+                - generic [ref=e278]: Broker
+                - generic [ref=e280]: 未持有
+              - link "6494 九齊 半導體:消費性IC 1d +3.4% 5d +11.3% Broker LowVol 未持有" [ref=e282] [cursor=pointer]:
+                - /url: /investment/stock/6494
+                - generic [ref=e283]:
+                  - generic [ref=e284]:
+                    - generic [ref=e285]:
+                      - generic [ref=e286]: "6494"
+                      - generic [ref=e287]: 九齊
+                    - text: 半導體:消費性IC
+                  - generic [ref=e288]:
+                    - generic [ref=e290]: 1d +3.4%
+                    - generic [ref=e292]: 5d +11.3%
+                - generic [ref=e293]:
+                  - generic [ref=e294]: Broker
+                  - generic [ref=e295]: LowVol
+                - generic [ref=e297]: 未持有
+              - link "6716 應廣 半導體:微控制器IC 1d +1.7% 5d +10.3% Broker 未持有" [ref=e299] [cursor=pointer]:
+                - /url: /investment/stock/6716
+                - generic [ref=e300]:
+                  - generic [ref=e301]:
+                    - generic [ref=e302]:
+                      - generic [ref=e303]: "6716"
+                      - generic [ref=e304]: 應廣
+                    - text: 半導體:微控制器IC
+                  - generic [ref=e305]:
+                    - generic [ref=e307]: 1d +1.7%
+                    - generic [ref=e309]: 5d +10.3%
+                - generic [ref=e311]: Broker
+                - generic [ref=e313]: 未持有
+              - link "6834 天二科技 被動元件:電阻器 1d +5.9% 5d +40.4% Broker LowVol 未持有" [ref=e315] [cursor=pointer]:
+                - /url: /investment/stock/6834
+                - generic [ref=e316]:
+                  - generic [ref=e317]:
+                    - generic [ref=e318]:
+                      - generic [ref=e319]: "6834"
+                      - generic [ref=e320]: 天二科技
+                    - text: 被動元件:電阻器
+                  - generic [ref=e321]:
+                    - generic [ref=e323]: 1d +5.9%
+                    - generic [ref=e325]: 5d +40.4%
+                - generic [ref=e326]:
+                  - generic [ref=e327]: Broker
+                  - generic [ref=e328]: LowVol
+                - generic [ref=e330]: 未持有
+              - link "2360 致茂 電腦及週邊設備:電源供應器 1d +0.0% 5d +1.3% α年增率 未持有 00403 00980 00982 +10" [ref=e332] [cursor=pointer]:
+                - /url: /investment/stock/2360
+                - generic [ref=e333]:
+                  - generic [ref=e334]:
+                    - generic [ref=e335]:
+                      - generic [ref=e336]: "2360"
+                      - generic [ref=e337]: 致茂
+                    - text: 電腦及週邊設備:電源供應器
+                  - generic [ref=e338]:
+                    - generic [ref=e340]: 1d +0.0%
+                    - generic [ref=e342]: 5d +1.3%
+                - generic [ref=e344]: α年增率
+                - generic [ref=e345]:
+                  - generic [ref=e346]: 未持有
+                  - generic "主動統一升級50" [ref=e347]: "00403"
+                  - generic "主動野村臺灣優選" [ref=e348]: "00980"
+                  - generic "主動群益台灣強棒" [ref=e349]: "00982"
+                  - generic [ref=e350]: "+10"
+              - link "3055 蔚華科 半導體:生產製程及檢測設備 1d +1.3% 5d +14.6% α年增率 未持有" [ref=e352] [cursor=pointer]:
+                - /url: /investment/stock/3055
+                - generic [ref=e353]:
+                  - generic [ref=e354]:
+                    - generic [ref=e355]:
+                      - generic [ref=e356]: "3055"
+                      - generic [ref=e357]: 蔚華科
+                    - text: 半導體:生產製程及檢測設備
+                  - generic [ref=e358]:
+                    - generic [ref=e360]: 1d +1.3%
+                    - generic [ref=e362]: 5d +14.6%
+                - generic [ref=e364]: α年增率
+                - generic [ref=e366]: 未持有
+              - link "3498 陽程 電機機械:專用機械(如紡織成衣生產用機械、食品飲料生產用機械、農林用機械等) 1d +9.2% 5d +7.4% α年增率 未持有" [ref=e368] [cursor=pointer]:
+                - /url: /investment/stock/3498
+                - generic [ref=e369]:
+                  - generic [ref=e370]:
+                    - generic [ref=e371]:
+                      - generic [ref=e372]: "3498"
+                      - generic [ref=e373]: 陽程
+                    - text: 電機機械:專用機械(如紡織成衣生產用機械、食品飲料生產用機械、農林用機械等)
+                  - generic [ref=e374]:
+                    - generic [ref=e376]: 1d +9.2%
+                    - generic [ref=e378]: 5d +7.4%
+                - generic [ref=e380]: α年增率
+                - generic [ref=e382]: 未持有
+              - link "6005 群益證 金融:證券業 1d +0.9% 5d +2.1% α年增率 未持有 00984" [ref=e384] [cursor=pointer]:
+                - /url: /investment/stock/6005
+                - generic [ref=e385]:
+                  - generic [ref=e386]:
+                    - generic [ref=e387]:
+                      - generic [ref=e388]: "6005"
+                      - generic [ref=e389]: 群益證
+                    - text: 金融:證券業
+                  - generic [ref=e390]:
+                    - generic [ref=e392]: 1d +0.9%
+                    - generic [ref=e394]: 5d +2.1%
+                - generic [ref=e396]: α年增率
+                - generic [ref=e397]:
+                  - generic [ref=e398]: 未持有
+                  - generic "主動安聯台灣高息" [ref=e399]: "00984"
+              - link "8227 巨有科技 半導體:IP設計_IC設計代工服務 1d +9.9% 5d +9.1% α年增率 未持有" [ref=e401] [cursor=pointer]:
+                - /url: /investment/stock/8227
+                - generic [ref=e402]:
+                  - generic [ref=e403]:
+                    - generic [ref=e404]:
+                      - generic [ref=e405]: "8227"
+                      - generic [ref=e406]: 巨有科技
+                    - text: 半導體:IP設計_IC設計代工服務
+                  - generic [ref=e407]:
+                    - generic [ref=e409]: 1d +9.9%
+                    - generic [ref=e411]: 5d +9.1%
+                - generic [ref=e413]: α年增率
+                - generic [ref=e415]: 未持有
+              - link "8926 台汽電 風力發電:風場開發 1d -0.2% 5d -0.3% α年增率 未持有" [ref=e417] [cursor=pointer]:
+                - /url: /investment/stock/8926
+                - generic [ref=e418]:
+                  - generic [ref=e419]:
+                    - generic [ref=e420]:
+                      - generic [ref=e421]: "8926"
+                      - generic [ref=e422]: 台汽電
+                    - text: 風力發電:風場開發
+                  - generic [ref=e423]:
+                    - generic [ref=e425]: 1d -0.2%
+                    - generic [ref=e427]: 5d -0.3%
+                - generic [ref=e429]: α年增率
+                - generic [ref=e431]: 未持有
+              - link "1762 中化生 製藥:中藥材、西藥原料藥 1d +0.5% 5d +5.9% LowVol 未持有" [ref=e433] [cursor=pointer]:
+                - /url: /investment/stock/1762
+                - generic [ref=e434]:
+                  - generic [ref=e435]:
+                    - generic [ref=e436]:
+                      - generic [ref=e437]: "1762"
+                      - generic [ref=e438]: 中化生
+                    - text: 製藥:中藥材、西藥原料藥
+                  - generic [ref=e439]:
+                    - generic [ref=e441]: 1d +0.5%
+                    - generic [ref=e443]: 5d +5.9%
+                - generic [ref=e445]: LowVol
+                - generic [ref=e447]: 未持有
+              - link "3467 台灣精材 半導體:生產製程及檢測設備 1d +2.9% 5d -2.1% LowVol 未持有" [ref=e449] [cursor=pointer]:
+                - /url: /investment/stock/3467
+                - generic [ref=e450]:
+                  - generic [ref=e451]:
+                    - generic [ref=e452]:
+                      - generic [ref=e453]: "3467"
+                      - generic [ref=e454]: 台灣精材
+                    - text: 半導體:生產製程及檢測設備
+                  - generic [ref=e455]:
+                    - generic [ref=e457]: 1d +2.9%
+                    - generic [ref=e459]: 5d -2.1%
+                - generic [ref=e461]: LowVol
+                - generic [ref=e463]: 未持有
+              - link "4952 凌通 電動車輛產業:電動汽車、電動機車、電動自行車 1d +2.7% 5d +7.2% LowVol 未持有" [ref=e465] [cursor=pointer]:
+                - /url: /investment/stock/4952
+                - generic [ref=e466]:
+                  - generic [ref=e467]:
+                    - generic [ref=e468]:
+                      - generic [ref=e469]: "4952"
+                      - generic [ref=e470]: 凌通
+                    - text: 電動車輛產業:電動汽車、電動機車、電動自行車
+                  - generic [ref=e471]:
+                    - generic [ref=e473]: 1d +2.7%
+                    - generic [ref=e475]: 5d +7.2%
+                - generic [ref=e477]: LowVol
+                - generic [ref=e479]: 未持有
+              - link "5464 霖宏 印刷電路板:硬板、軟板、IC載板製造 1d -0.7% 5d +24.3% LowVol 未持有" [ref=e481] [cursor=pointer]:
+                - /url: /investment/stock/5464
+                - generic [ref=e482]:
+                  - generic [ref=e483]:
+                    - generic [ref=e484]:
+                      - generic [ref=e485]: "5464"
+                      - generic [ref=e486]: 霖宏
+                    - text: 印刷電路板:硬板、軟板、IC載板製造
+                  - generic [ref=e487]:
+                    - generic [ref=e489]: 1d -0.7%
+                    - generic [ref=e491]: 5d +24.3%
+                - generic [ref=e493]: LowVol
+                - generic [ref=e495]: 未持有
+              - link "6020 大展證 金融:證券業 1d -0.7% 5d +1.2% LowVol 未持有" [ref=e497] [cursor=pointer]:
+                - /url: /investment/stock/6020
+                - generic [ref=e498]:
+                  - generic [ref=e499]:
+                    - generic [ref=e500]:
+                      - generic [ref=e501]: "6020"
+                      - generic [ref=e502]: 大展證
+                    - text: 金融:證券業
+                  - generic [ref=e503]:
+                    - generic [ref=e505]: 1d -0.7%
+                    - generic [ref=e507]: 5d +1.2%
+                - generic [ref=e509]: LowVol
+                - generic [ref=e511]: 未持有
+              - link "6259 百徽 被動元件:電感器 1d +2.0% 5d +7.5% LowVol 未持有" [ref=e513] [cursor=pointer]:
+                - /url: /investment/stock/6259
+                - generic [ref=e514]:
+                  - generic [ref=e515]:
+                    - generic [ref=e516]:
+                      - generic [ref=e517]: "6259"
+                      - generic [ref=e518]: 百徽
+                    - text: 被動元件:電感器
+                  - generic [ref=e519]:
+                    - generic [ref=e521]: 1d +2.0%
+                    - generic [ref=e523]: 5d +7.5%
+                - generic [ref=e525]: LowVol
+                - generic [ref=e527]: 未持有
+              - link "6924 榮惠-KY創 電子零組件業 1d — 5d — LowVol 未持有" [ref=e529] [cursor=pointer]:
+                - /url: /investment/stock/6924
+                - generic [ref=e530]:
+                  - generic [ref=e531]:
+                    - generic [ref=e532]:
+                      - generic [ref=e533]: "6924"
+                      - generic [ref=e534]: 榮惠-KY創
+                    - text: 電子零組件業
+                  - generic [ref=e535]:
+                    - generic [ref=e537]: 1d —
+                    - generic [ref=e539]: 5d —
+                - generic [ref=e541]: LowVol
+                - generic [ref=e543]: 未持有
+            - paragraph [ref=e544]: 營收條件以最新公告月份為準，月中換股前後數日可能存在滯後
+      - link "返回儀表板" [ref=e546] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e547]:
+          - img [ref=e548]
+          - generic: 返回儀表板
+  - button "Open Next.js Dev Tools" [ref=e556] [cursor=pointer]:
+    - img [ref=e557]

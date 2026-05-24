@@ -35,14 +35,14 @@ const _getTreemapData = unstable_cache(
             .from('market_treemap_daily')
             .select('stock_code, stock_name, industry, market_cap, close, change_pct')
             .eq('date', latestDate)
-            .gt('market_cap', 0);
+            .gt('close', 0);
 
         return {
             date: latestDate,
             stocks: (stocks ?? []) as TreemapStock[],
         };
     },
-    ['treemap-data'],
+    ['treemap-data-v2'],
     { revalidate: 3600 },
 );
 

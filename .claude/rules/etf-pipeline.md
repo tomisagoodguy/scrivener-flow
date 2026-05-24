@@ -218,3 +218,18 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 **前瞻報酬單位**：`future_returns` jsonb 的 key 是天期字串（`"1"/"5"/...`），value 是小數報酬率（0.07 = 7%）。  
 **增量 merge**：UPDATE 用 `future_returns = COALESCE(future_returns, '{}') || :new_data`，不可整欄覆蓋。  
 **前端聚合**：`src/app/actions/getBuyingPatternStats.ts`（Server Action）在 Server 端 reduce，不回傳原始事件給瀏覽器。
+
+## equity_distribution_stats 查詢規則
+
+`equity_distribution_stats` 已有預計算欄位 `big_holder_pct_change`、`mid_holder_pct_change`、`whale_holder_pct_change`（週變化 pp），直接查最新 `snapshot_date` 即可，**禁止**重複拉兩個 snapshot 再手動算差。
+
+查最新全局 snapshot 日期必須用獨立查詢，不能依賴特定 `stock_code`（該股若無資料會靜默回傳空，導致整批查詢失敗）：
+
+```ts
+// ✅ 正確：全局最新日期
+const { data } = await supabase.from('equity_distribution_stats')
+    .select('snapshot_date').order('snapshot_date', { ascending: false }).limit(1);
+
+// ❌ 禁止：依賴第一支股票
+.eq('stock_code', stockCodes[0])  // 若該股無資料則 distinctDates.length < 2，靜默失敗
+```

@@ -82,12 +82,12 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
     h = (FinlabDataFrame(h2 / (h1 + h2)).rank(pct=True, axis=1) * (c.notna()))
 
     # 選股條件
-    c1 = (amt > 2 * 10**7) & (amt > amt.average(60) * 1.3) & (amt / cap).rolling(5).mean().rise()
+    c1 = (amt > 2 * 10**7) & (amt > amt.average(60) * 1.3) & (amt / cap).rolling(5).mean().rise()  # type: ignore[attr-defined]
     c2 = (c == c.rolling(200, 120).max())
-    c3 = (rev.average(6) == rev.average(6).rolling(20, 16).max())
-    c4 = ((volatility < 10).sustain(3) & (volatility > 2))
-    c5 = ((margin_transaction_ratio < 34) & (margin_transaction_ratio > 2)).sustain(3, 2)
-    c6 = ((rev.rolling(12).min()) / (rev) < 0.8).sustain(2, 1)
+    c3 = (rev.average(6) == rev.average(6).rolling(20, 16).max())  # type: ignore[attr-defined]
+    c4 = ((volatility < 10).sustain(3) & (volatility > 2))  # type: ignore[attr-defined]
+    c5 = ((margin_transaction_ratio < 34) & (margin_transaction_ratio > 2)).sustain(3, 2)  # type: ignore[attr-defined]
+    c6 = ((rev.rolling(12).min()) / (rev) < 0.8).sustain(2, 1)  # type: ignore[attr-defined]
     c7 = ~(rev_year_growth < 0)
     c8 = ((c == c.rolling(15).min()).rolling(4).sum() == 0)
 
@@ -121,9 +121,9 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
     positionJ = (c1 & c2 & c3 & c4 & c5 & c6 & c7 & c8 & disposal_stocks) * \
         h * turnover_rank_momentum * risk_adjusted_metric
 
-    positionJ = positionJ[positionJ > 0].is_largest(5)
+    positionJ = positionJ[positionJ > 0].is_largest(5)  # type: ignore[attr-defined]
     positionJ[stocks_to_exclude] = False
-    positionJ = positionJ.reindex(rev.index_str_to_date().index)
+    positionJ = positionJ.reindex(rev.index_str_to_date().index)  # type: ignore[attr-defined]
 
     return positionJ
 
