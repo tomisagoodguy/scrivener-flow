@@ -270,3 +270,17 @@ export interface CustomWatchlistItem {
     strategies: string[];
     created_at: string;
 }
+
+export interface FundMomentumSignal {
+    stock_id: string;
+    stock_name?: string | null;
+    date: string;
+    score: number;
+    is_selected: boolean;
+    fund_1d: number | null;
+    fund_5d: number | null;
+    fund_20d: number | null;
+    consec_days: number;
+    fund_ratio_5d: number | null;
+    etf_consensus: boolean;
+}

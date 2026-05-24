@@ -61,7 +61,7 @@ def _build_position():
         (std150 < 0.92) &
         (rs100 > 0.5) &
         (natr.rank(axis=1, pct=True) < 0.65) &
-        ((rev.average(3) / rev.average(12)).rank(pct=True, axis=1) > 0.8) &
+        ((rev.rolling(3).mean() / rev.rolling(12).mean()).rank(pct=True, axis=1) > 0.8) &
         close.average(5).rise() &  # type: ignore[attr-defined]
         (price_to_high > 0.85)
     )

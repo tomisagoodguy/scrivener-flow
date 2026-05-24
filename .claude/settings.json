@@ -103,7 +103,10 @@
       "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 族群漲跌排行同時顯示日週月，支援點擊欄位排序\")",
       "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(f['severity'], f['id'], f['summary']\\) for f in data['findings'] if f['severity'] in ['Critical','Warning']]\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: add ETF holdings disposal marker detection and UI badges\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat: add ETF holdings disposal marker detection and UI badges\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat: add ETF holdings disposal marker detection and UI badges\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('state:', d['state']\\); print\\('progress:', d['progress']\\)\")",
+      "Bash(bash .claude/skills/git-pushing/scripts/smart_commit.sh \"feat: 新增投信買超追蹤功能 \\(fund-momentum-tracker\\)\")",
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 新增投信買超追蹤功能 \\(fund-momentum-tracker\\)\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"

@@ -172,4 +172,4 @@ class StrategyDataCache:
             abs(high - low) + abs(low - c)
         )
         vol = bull_vol.where(bullish, bear_vol)
-        return vol.average(20) / c.average(20) * 100
+        return vol.rolling(20).mean() / c.rolling(20).mean() * 100

@@ -61,6 +61,27 @@ TBD - created by archiving change 'sector-strategy-signal'. Update Purpose after
 | 40               | 20                     | 55 (unique)  | 50 (5 strategy stocks dropped)      |
 | 50               | 15                     | 60 (unique)  | 50 (all 15 strategy stocks dropped) |
 
+---
+### Requirement: strategy_signals score column semantics
+
+The `score` column in `strategy_signals` SHALL support strategy-specific value ranges. Consumers of `strategy_signals` SHALL NOT apply a universal threshold to `score` across all strategy types; they MUST filter by `strategy_id` first and interpret `score` according to the strategy definition.
+
+For `strategy_id = 'fund_momentum'`: `score` is a 0–100 integer representing the market-wide percentile rank of 20-day cumulative investment trust net-buy shares (higher = stronger relative buying pressure).
+
+For all other existing strategy types: `score` semantics are unchanged (0/1 boolean-equivalent).
+
+#### Scenario: Front-end reads fund_momentum score
+
+- **WHEN** `getStrategySignals()` or `getFundMomentumSignals()` returns rows with `strategy_id = 'fund_momentum'`
+- **THEN** the caller SHALL interpret `score` as a 0–100 percentile rank
+- **THEN** the caller SHALL NOT compare `score > 0.5` or any threshold intended for boolean strategies
+
+#### Scenario: Existing strategy scores unaffected
+
+- **WHEN** rows have `strategy_id` other than `fund_momentum`
+- **THEN** the `score` values SHALL remain in their original boolean-equivalent format
+- **THEN** no migration of existing rows is required
+
 <!-- @trace
 source: sector-strategy-signal
 updated: 2026-05-16
@@ -90,4 +111,26 @@ code:
   - src/components/features/strategy/StrategyChartViewer.tsx
   - .playwright-mcp/page-2026-05-24T08-23-37-356Z.png
   - .playwright-mcp/page-2026-05-24T08-23-50-805Z.yml
+-->
+
+<!-- @trace
+source: fund-momentum-tracker
+updated: 2026-05-24
+code:
+  - ETF/pipeline/steps/fund_momentum_step.py
+  - src/app/investment/fund-tracker/components/AccumulationCycleCard.tsx
+  - src/app/investment/layout.tsx
+  - src/app/investment/fund-tracker/components/EtfFundCrossSignal.tsx
+  - src/app/investment/fund-tracker/components/FundHealthTable.tsx
+  - ETF/pipeline/steps/__init__.py
+  - ETF/strategies/shared_cache.py
+  - src/types/index.ts
+  - src/lib/investment/strategyUtils.ts
+  - ETF/strategies/low_vol_cap.py
+  - ETF/pipeline/orchestrator.py
+  - src/app/investment/fund-tracker/page.tsx
+  - src/app/actions/getFundMomentumSignals.ts
+tests:
+  - src/__tests__/actions/getFundMomentumSignals.test.ts
+  - ETF/tests/test_fund_momentum_step.py
 -->

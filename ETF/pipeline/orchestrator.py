@@ -37,6 +37,7 @@ from ETF.pipeline.steps import (
     ActiveShareStep,
     CumulativeDragStep,
     MatchedPairsStep,
+    FundMomentumStep,
 )
 from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
 from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
@@ -80,6 +81,7 @@ class PipelineOrchestrator:
         ActiveShareStep,        # [輔助] 持股重疊度（週一執行，非週一自動 skip）→ etf_active_share
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
+        FundMomentumStep,       # [輔助] 投信買超多維度指標 → strategy_signals (fund_momentum)
         SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
         NotifyStep,

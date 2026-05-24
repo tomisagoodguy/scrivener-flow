@@ -20,6 +20,7 @@ const moreGroup = [
     { name: '營收實驗室', href: '/investment/revenue-lab' },
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
+    { name: '投信追蹤', href: '/investment/fund-tracker' },
 ];
 
 const watchGroup = [
