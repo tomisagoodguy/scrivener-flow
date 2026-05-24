@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - generic [ref=e10]: S
+              - generic [ref=e11]: 投資監控
+            - navigation [ref=e12]:
+              - link "選股池" [ref=e13] [cursor=pointer]:
+                - /url: /investment
+              - link "籌碼排行" [ref=e14] [cursor=pointer]:
+                - /url: /investment/equity
+              - link "策略選股" [ref=e15] [cursor=pointer]:
+                - /url: /investment/strategy
+              - link "族群強弱" [ref=e16] [cursor=pointer]:
+                - /url: /investment/sectors
+              - button "更多" [ref=e18]:
+                - text: 更多
+                - img [ref=e19]
+              - button "觀察清單" [ref=e22]:
+                - text: 觀察清單
+                - img [ref=e23]
+          - generic [ref=e25]:
+            - button "Toggle theme" [ref=e26]:
+              - img [ref=e27]
+            - link "代書系統" [ref=e29] [cursor=pointer]:
+              - /url: /cases
+              - img [ref=e30]
+              - text: 代書系統
+        - main [ref=e32]
+      - link "返回儀表板" [ref=e70] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e71]:
+          - img [ref=e72]
+          - generic: 返回儀表板
+  - button "Open Next.js Dev Tools" [ref=e80] [cursor=pointer]:
+    - img [ref=e81]
+  - alert [ref=e84]

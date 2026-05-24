@@ -35,16 +35,26 @@ class SyncBareKStep(BaseStep):
 
     def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         # 1. 從 watch_list 聚合所有使用者的股票（service role 繞過 RLS）
-        stock_ids = self._fetch_watch_list_stocks(ctx, services)
+        watch_list_ids = self._fetch_watch_list_stocks(ctx, services)
+
+        # 2. 額外納入策略股（watch_list 優先，策略股 append 後去重）
+        strategy_ids = self._fetch_strategy_stocks(ctx, services)
+        seen: set[str] = set(watch_list_ids)
+        merged: list[str] = list(watch_list_ids)
+        for sid in strategy_ids:
+            if sid not in seen:
+                merged.append(sid)
+                seen.add(sid)
+        stock_ids = merged
 
         if not stock_ids:
-            self.logger.info("watch_list is empty, skipping BareK sync.")
+            self.logger.info("watch_list and strategy_signals are both empty, skipping BareK sync.")
             ctx.bare_k_synced_count = 0
             return ctx
 
         if len(stock_ids) > MAX_STOCKS:
             self.logger.warning(
-                f"watch_list has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
+                f"Combined watch_list + strategy stocks has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
             )
             stock_ids = stock_ids[:MAX_STOCKS]
 
@@ -84,6 +94,25 @@ class SyncBareKStep(BaseStep):
         return ctx
 
     # ──────────────────────────────────────────────────────────────────────
+
+    def _fetch_strategy_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
+        """
+        查詢 strategy_signals 最新 date 的 is_selected = true 股票。
+        失敗時 log error 並回傳空列表（不 raise）。
+        """
+        try:
+            with services.sql_storage.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT DISTINCT stock_id
+                    FROM strategy_signals
+                    WHERE date = (SELECT MAX(date) FROM strategy_signals)
+                      AND is_selected = true
+                    ORDER BY stock_id
+                """))
+                return [row[0] for row in result.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Failed to fetch strategy stocks: {e}")
+            return []
 
     def _fetch_watch_list_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
         """

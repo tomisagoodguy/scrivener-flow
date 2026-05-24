@@ -1,0 +1,872 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - main [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e8]:
+              - generic [ref=e10]: S
+              - generic [ref=e11]: 投資監控
+            - navigation [ref=e12]:
+              - link "選股池" [ref=e13] [cursor=pointer]:
+                - /url: /investment
+              - link "籌碼排行" [ref=e14] [cursor=pointer]:
+                - /url: /investment/equity
+              - link "策略選股" [ref=e15] [cursor=pointer]:
+                - /url: /investment/strategy
+              - link "族群強弱" [ref=e16] [cursor=pointer]:
+                - /url: /investment/sectors
+              - button "更多" [ref=e18]:
+                - text: 更多
+                - img [ref=e19]
+              - button "觀察清單" [ref=e22]:
+                - text: 觀察清單
+                - img [ref=e23]
+          - generic [ref=e25]:
+            - button "Toggle theme" [ref=e26]:
+              - img [ref=e27]
+            - link "代書系統" [ref=e29] [cursor=pointer]:
+              - /url: /cases
+              - img [ref=e30]
+              - text: 代書系統
+        - main [ref=e32]:
+          - main [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - heading "策略選股中心" [level=1] [ref=e36]
+                - generic [ref=e37]: 資料日期：2026-05-11
+              - generic [ref=e38]:
+                - link "策略視角" [ref=e39] [cursor=pointer]:
+                  - /url: /investment/strategy
+                - link "監控清單" [ref=e40] [cursor=pointer]:
+                  - /url: /investment/strategy?view=monitor
+                - link "圖表" [ref=e41] [cursor=pointer]:
+                  - /url: /investment/strategy?view=chart
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - generic [ref=e44]:
+                  - heading "策略股分析" [level=2] [ref=e45]
+                  - generic [ref=e46]:
+                    - button "日" [ref=e47]
+                    - button "週" [ref=e48]
+                    - button "月" [ref=e49]
+                  - generic [ref=e50]: 30 支策略命中股
+                - button "收起 ▲" [ref=e51]
+              - generic [ref=e52]:
+                - generic [ref=e53]:
+                  - paragraph [ref=e54]: 策略股熱力圖（大小=成交金額，色=漲跌幅）
+                  - generic [ref=e55]:
+                    - generic [ref=e56]:
+                      - generic [ref=e57] [cursor=pointer]:
+                        - generic [ref=e58]: "2360"
+                        - generic [ref=e59]: 致茂
+                        - generic [ref=e60]: 0.00%
+                      - generic [ref=e61] [cursor=pointer]:
+                        - generic [ref=e62]: "2464"
+                        - generic [ref=e63]: 盟立
+                        - generic [ref=e64]: 5.88%
+                      - generic [ref=e65] [cursor=pointer]:
+                        - generic [ref=e66]: "3036"
+                        - generic [ref=e67]: 文曄
+                        - generic [ref=e68]: "-0.86%"
+                      - generic [ref=e69] [cursor=pointer]:
+                        - generic [ref=e70]: "4576"
+                        - generic [ref=e71]: 大銀微系統
+                        - generic [ref=e72]: 5.44%
+                      - generic [ref=e73] [cursor=pointer]:
+                        - generic [ref=e74]: "6834"
+                        - generic [ref=e75]: 天二科技
+                        - generic [ref=e76]: 5.86%
+                      - generic [ref=e77] [cursor=pointer]:
+                        - generic [ref=e78]: "6166"
+                        - generic [ref=e79]: 凌華
+                        - generic [ref=e80]: 7.17%
+                      - generic [ref=e81] [cursor=pointer]:
+                        - generic [ref=e82]: "3055"
+                        - generic [ref=e83]: 蔚華科
+                        - generic [ref=e84]: 1.29%
+                      - generic [ref=e85] [cursor=pointer]:
+                        - generic [ref=e86]: "3209"
+                        - generic [ref=e87]: 全科
+                        - generic [ref=e88]: "-1.39%"
+                      - generic [ref=e89] [cursor=pointer]:
+                        - generic [ref=e90]: "8926"
+                        - generic [ref=e91]: 台汽電
+                        - generic [ref=e92]: "-0.16%"
+                      - generic [ref=e93] [cursor=pointer]:
+                        - generic [ref=e94]: "3088"
+                        - generic [ref=e95]: 艾訊
+                        - generic [ref=e96]: 3.27%
+                      - generic [ref=e97] [cursor=pointer]:
+                        - generic [ref=e98]: "8227"
+                        - generic [ref=e99]: 巨有科技
+                        - generic [ref=e100]: 9.93%
+                      - generic [ref=e101] [cursor=pointer]:
+                        - generic [ref=e102]: "4127"
+                        - generic [ref=e103]: 天良
+                        - generic [ref=e104]: 9.97%
+                      - generic [ref=e105] [cursor=pointer]:
+                        - generic [ref=e106]: "6005"
+                        - generic [ref=e107]: 0.95%
+                      - generic [ref=e108] [cursor=pointer]:
+                        - generic [ref=e109]: "3691"
+                        - generic [ref=e110]: 碩禾
+                        - generic [ref=e111]: 0.70%
+                      - generic [ref=e112] [cursor=pointer]:
+                        - generic [ref=e113]: "2855"
+                        - generic [ref=e114]: 統一證
+                        - generic [ref=e115]: 1.37%
+                      - generic [ref=e116] [cursor=pointer]:
+                        - generic [ref=e117]: "3498"
+                        - generic [ref=e118]: 陽程
+                        - generic [ref=e119]: 9.22%
+                      - generic [ref=e120] [cursor=pointer]:
+                        - generic [ref=e121]: "5864"
+                        - generic [ref=e122]: 致和證
+                        - generic [ref=e123]: 2.79%
+                      - generic [ref=e124] [cursor=pointer]:
+                        - generic [ref=e125]: "4952"
+                        - generic [ref=e126]: 2.67%
+                      - generic [ref=e127] [cursor=pointer]:
+                        - generic [ref=e128]: "6016"
+                        - generic [ref=e129]: 2.00%
+                    - generic [ref=e140]:
+                      - generic [ref=e141]: 跌多
+                      - generic [ref=e151]: 漲多
+                - generic [ref=e152]:
+                  - generic [ref=e153]:
+                    - paragraph [ref=e154]: 族群漲跌排行
+                    - generic [ref=e155]:
+                      - generic [ref=e157]:
+                        - button "日" [ref=e158]
+                        - button "週" [ref=e159]
+                        - button "月" [ref=e160]
+                      - generic [ref=e161]:
+                        - generic [ref=e162]:
+                          - generic "加工製成品" [ref=e163]
+                          - generic [ref=e167]: 9.97%
+                          - generic [ref=e168]: "1"
+                        - generic [ref=e170]:
+                          - generic [ref=e171]: "4127"
+                          - generic [ref=e172]: 天良
+                          - generic [ref=e173]: 9.97%
+                      - generic [ref=e174]:
+                        - generic [ref=e175]:
+                          - generic "IP設計_IC設計代工服務" [ref=e176]
+                          - generic [ref=e180]: 9.93%
+                          - generic [ref=e181]: "1"
+                        - generic [ref=e183]:
+                          - generic [ref=e184]: "8227"
+                          - generic [ref=e185]: 巨有科技
+                          - generic [ref=e186]: 9.93%
+                      - generic [ref=e187]:
+                        - generic [ref=e188]:
+                          - generic "專用機械(如紡織成衣生產用機械、食品飲料生產用機械、農林用機械等)" [ref=e189]
+                          - generic [ref=e193]: 9.22%
+                          - generic [ref=e194]: "1"
+                        - generic [ref=e196]:
+                          - generic [ref=e197]: "3498"
+                          - generic [ref=e198]: 陽程
+                          - generic [ref=e199]: 9.22%
+                      - generic [ref=e200]:
+                        - generic [ref=e201]:
+                          - generic "其他電腦及週邊設備" [ref=e202]
+                          - generic [ref=e206]: 5.88%
+                          - generic [ref=e207]: "1"
+                        - generic [ref=e209]:
+                          - generic [ref=e210]: "2464"
+                          - generic [ref=e211]: 盟立
+                          - generic [ref=e212]: 5.88%
+                      - generic [ref=e213]:
+                        - generic [ref=e214]:
+                          - generic "電阻器" [ref=e215]
+                          - generic [ref=e219]: 5.86%
+                          - generic [ref=e220]: "1"
+                        - generic [ref=e222]:
+                          - generic [ref=e223]: "6834"
+                          - generic [ref=e224]: 天二科技
+                          - generic [ref=e225]: 5.86%
+                      - generic [ref=e226]:
+                        - generic [ref=e227]:
+                          - generic "工業電腦" [ref=e228]
+                          - generic [ref=e232]: 5.71%
+                          - generic [ref=e233]: "2"
+                        - generic [ref=e234]:
+                          - generic [ref=e235]:
+                            - generic [ref=e236]: "6166"
+                            - generic [ref=e237]: 凌華
+                            - generic [ref=e238]: 7.17%
+                          - generic [ref=e239]:
+                            - generic [ref=e240]: "3088"
+                            - generic [ref=e241]: 艾訊
+                            - generic [ref=e242]: 3.27%
+                      - generic [ref=e243]:
+                        - generic [ref=e244]:
+                          - generic "傳動元件" [ref=e245]
+                          - generic [ref=e249]: 5.44%
+                          - generic [ref=e250]: "1"
+                        - generic [ref=e252]:
+                          - generic [ref=e253]: "4576"
+                          - generic [ref=e254]: 大銀微系統
+                          - generic [ref=e255]: 5.44%
+                      - generic [ref=e256]:
+                        - generic [ref=e257]:
+                          - generic "貿易商、代理商、經銷商" [ref=e258]
+                          - generic [ref=e262]: 5.18%
+                          - generic [ref=e263]: "1"
+                        - generic [ref=e265]:
+                          - generic [ref=e266]: "3229"
+                          - generic [ref=e267]: 晟鈦
+                          - generic [ref=e268]: 5.18%
+                      - generic [ref=e269]:
+                        - generic [ref=e270]:
+                          - generic "消費性IC" [ref=e271]
+                          - generic [ref=e275]: 3.39%
+                          - generic [ref=e276]: "1"
+                        - generic [ref=e278]:
+                          - generic [ref=e279]: "6494"
+                          - generic [ref=e280]: 九齊
+                          - generic [ref=e281]: 3.39%
+                      - generic [ref=e282]:
+                        - generic [ref=e283]:
+                          - generic "電動汽車、電動機車、電動自行車" [ref=e284]
+                          - generic [ref=e288]: 2.67%
+                          - generic [ref=e289]: "1"
+                        - generic [ref=e291]:
+                          - generic [ref=e292]: "4952"
+                          - generic [ref=e293]: 凌通
+                          - generic [ref=e294]: 2.67%
+                      - generic [ref=e295]:
+                        - generic [ref=e296]:
+                          - generic "電感器" [ref=e297]
+                          - generic [ref=e301]: 2.02%
+                          - generic [ref=e302]: "1"
+                        - generic [ref=e304]:
+                          - generic [ref=e305]: "6259"
+                          - generic [ref=e306]: 百徽
+                          - generic [ref=e307]: 2.02%
+                      - generic [ref=e308]:
+                        - generic [ref=e309]:
+                          - generic "無線通訊設備(如行動電話、衛星定位系統、衛星通訊設備、微波通訊設備、數位機上盒)" [ref=e310]
+                          - generic [ref=e314]: 1.92%
+                          - generic [ref=e315]: "1"
+                        - generic [ref=e317]:
+                          - generic [ref=e318]: "6417"
+                          - generic [ref=e319]: 韋僑
+                          - generic [ref=e320]: 1.92%
+                      - generic [ref=e321]:
+                        - generic [ref=e322]: 漲跌幅
+                        - generic [ref=e323]: 檔
+                  - generic [ref=e324]:
+                    - paragraph [ref=e325]: 成交金額排行 Top 15
+                    - table [ref=e326]:
+                      - rowgroup [ref=e327]:
+                        - row "# 股票 族群 成交金額 ▼ 日 週 月" [ref=e328]:
+                          - columnheader "#" [ref=e329]
+                          - columnheader "股票" [ref=e330]
+                          - columnheader "族群" [ref=e331]
+                          - columnheader "成交金額 ▼" [ref=e332] [cursor=pointer]
+                          - columnheader "日" [ref=e333] [cursor=pointer]
+                          - columnheader "週" [ref=e334] [cursor=pointer]
+                          - columnheader "月" [ref=e335] [cursor=pointer]
+                      - rowgroup [ref=e336]:
+                        - row "1 致茂2360 電源供應器 83.7 億 0.00% 1.34% 17.01%" [ref=e337]:
+                          - cell "1" [ref=e338]
+                          - cell "致茂2360" [ref=e339]:
+                            - link "致茂2360" [ref=e340] [cursor=pointer]:
+                              - /url: /investment/stock/2360
+                          - cell "電源供應器" [ref=e341]
+                          - cell "83.7 億" [ref=e342]
+                          - cell "0.00%" [ref=e343]
+                          - cell "1.34%" [ref=e344]
+                          - cell "17.01%" [ref=e345]
+                        - row "2 盟立2464 其他電腦及週邊設備 53.6 億 5.88% 13.83% 70.21%" [ref=e346]:
+                          - cell "2" [ref=e347]
+                          - cell "盟立2464" [ref=e348]:
+                            - link "盟立2464" [ref=e349] [cursor=pointer]:
+                              - /url: /investment/stock/2464
+                          - cell "其他電腦及週邊設備" [ref=e350]
+                          - cell "53.6 億" [ref=e351]
+                          - cell "5.88%" [ref=e352]
+                          - cell "13.83%" [ref=e353]
+                          - cell "70.21%" [ref=e354]
+                        - row "3 文曄3036 IC通路 36.8 億 -0.86% 7.04% 40.29%" [ref=e355]:
+                          - cell "3" [ref=e356]
+                          - cell "文曄3036" [ref=e357]:
+                            - link "文曄3036" [ref=e358] [cursor=pointer]:
+                              - /url: /investment/stock/3036
+                          - cell "IC通路" [ref=e359]
+                          - cell "36.8 億" [ref=e360]
+                          - cell "-0.86%" [ref=e361]
+                          - cell "7.04%" [ref=e362]
+                          - cell "40.29%" [ref=e363]
+                        - row "4 大銀微系統4576 傳動元件 11.4 億 5.44% -1.51% 37.63%" [ref=e364]:
+                          - cell "4" [ref=e365]
+                          - cell "大銀微系統4576" [ref=e366]:
+                            - link "大銀微系統4576" [ref=e367] [cursor=pointer]:
+                              - /url: /investment/stock/4576
+                          - cell "傳動元件" [ref=e368]
+                          - cell "11.4 億" [ref=e369]
+                          - cell "5.44%" [ref=e370]
+                          - cell "-1.51%" [ref=e371]
+                          - cell "37.63%" [ref=e372]
+                        - row "5 天二科技6834 電阻器 8.8 億 5.86% 40.44% 99.15%" [ref=e373]:
+                          - cell "5" [ref=e374]
+                          - cell "天二科技6834" [ref=e375]:
+                            - link "天二科技6834" [ref=e376] [cursor=pointer]:
+                              - /url: /investment/stock/6834
+                          - cell "電阻器" [ref=e377]
+                          - cell "8.8 億" [ref=e378]
+                          - cell "5.86%" [ref=e379]
+                          - cell "40.44%" [ref=e380]
+                          - cell "99.15%" [ref=e381]
+                        - row "6 凌華6166 工業電腦 6.0 億 7.17% 13.39% 69.56%" [ref=e382]:
+                          - cell "6" [ref=e383]
+                          - cell "凌華6166" [ref=e384]:
+                            - link "凌華6166" [ref=e385] [cursor=pointer]:
+                              - /url: /investment/stock/6166
+                          - cell "工業電腦" [ref=e386]
+                          - cell "6.0 億" [ref=e387]
+                          - cell "7.17%" [ref=e388]
+                          - cell "13.39%" [ref=e389]
+                          - cell "69.56%" [ref=e390]
+                        - row "7 蔚華科3055 生產製程及檢測設備 5.6 億 1.29% 14.56% 45.32%" [ref=e391]:
+                          - cell "7" [ref=e392]
+                          - cell "蔚華科3055" [ref=e393]:
+                            - link "蔚華科3055" [ref=e394] [cursor=pointer]:
+                              - /url: /investment/stock/3055
+                          - cell "生產製程及檢測設備" [ref=e395]
+                          - cell "5.6 億" [ref=e396]
+                          - cell "1.29%" [ref=e397]
+                          - cell "14.56%" [ref=e398]
+                          - cell "45.32%" [ref=e399]
+                        - row "8 全科3209 IC通路 4.5 億 -1.39% 14.71% 57.42%" [ref=e400]:
+                          - cell "8" [ref=e401]
+                          - cell "全科3209" [ref=e402]:
+                            - link "全科3209" [ref=e403] [cursor=pointer]:
+                              - /url: /investment/stock/3209
+                          - cell "IC通路" [ref=e404]
+                          - cell "4.5 億" [ref=e405]
+                          - cell "-1.39%" [ref=e406]
+                          - cell "14.71%" [ref=e407]
+                          - cell "57.42%" [ref=e408]
+                        - row "9 台汽電8926 風場開發 4.2 億 -0.16% -0.33% 34.14%" [ref=e409]:
+                          - cell "9" [ref=e410]
+                          - cell "台汽電8926" [ref=e411]:
+                            - link "台汽電8926" [ref=e412] [cursor=pointer]:
+                              - /url: /investment/stock/8926
+                          - cell "風場開發" [ref=e413]
+                          - cell "4.2 億" [ref=e414]
+                          - cell "-0.16%" [ref=e415]
+                          - cell "-0.33%" [ref=e416]
+                          - cell "34.14%" [ref=e417]
+                        - row "10 艾訊3088 工業電腦 3.6 億 3.27% 8.40% 47.30%" [ref=e418]:
+                          - cell "10" [ref=e419]
+                          - cell "艾訊3088" [ref=e420]:
+                            - link "艾訊3088" [ref=e421] [cursor=pointer]:
+                              - /url: /investment/stock/3088
+                          - cell "工業電腦" [ref=e422]
+                          - cell "3.6 億" [ref=e423]
+                          - cell "3.27%" [ref=e424]
+                          - cell "8.40%" [ref=e425]
+                          - cell "47.30%" [ref=e426]
+                        - row "11 巨有科技8227 IP設計_IC設計代工服務 2.9 億 9.93% 9.13% 42.32%" [ref=e427]:
+                          - cell "11" [ref=e428]
+                          - cell "巨有科技8227" [ref=e429]:
+                            - link "巨有科技8227" [ref=e430] [cursor=pointer]:
+                              - /url: /investment/stock/8227
+                          - cell "IP設計_IC設計代工服務" [ref=e431]
+                          - cell "2.9 億" [ref=e432]
+                          - cell "9.93%" [ref=e433]
+                          - cell "9.13%" [ref=e434]
+                          - cell "42.32%" [ref=e435]
+                        - row "12 天良4127 加工製成品 2.9 億 9.97% 60.87% 67.73%" [ref=e436]:
+                          - cell "12" [ref=e437]
+                          - cell "天良4127" [ref=e438]:
+                            - link "天良4127" [ref=e439] [cursor=pointer]:
+                              - /url: /investment/stock/4127
+                          - cell "加工製成品" [ref=e440]
+                          - cell "2.9 億" [ref=e441]
+                          - cell "9.97%" [ref=e442]
+                          - cell "60.87%" [ref=e443]
+                          - cell "67.73%" [ref=e444]
+                        - row "13 群益證6005 證券業 2.6 億 0.95% 2.08% 13.73%" [ref=e445]:
+                          - cell "13" [ref=e446]
+                          - cell "群益證6005" [ref=e447]:
+                            - link "群益證6005" [ref=e448] [cursor=pointer]:
+                              - /url: /investment/stock/6005
+                          - cell "證券業" [ref=e449]
+                          - cell "2.6 億" [ref=e450]
+                          - cell "0.95%" [ref=e451]
+                          - cell "2.08%" [ref=e452]
+                          - cell "13.73%" [ref=e453]
+                        - row "14 碩禾3691 材料 2.3 億 0.70% -5.90% 28.13%" [ref=e454]:
+                          - cell "14" [ref=e455]
+                          - cell "碩禾3691" [ref=e456]:
+                            - link "碩禾3691" [ref=e457] [cursor=pointer]:
+                              - /url: /investment/stock/3691
+                          - cell "材料" [ref=e458]
+                          - cell "2.3 億" [ref=e459]
+                          - cell "0.70%" [ref=e460]
+                          - cell "-5.90%" [ref=e461]
+                          - cell "28.13%" [ref=e462]
+                        - row "15 統一證2855 證券業 2.2 億 1.37% -0.12% 19.85%" [ref=e463]:
+                          - cell "15" [ref=e464]
+                          - cell "統一證2855" [ref=e465]:
+                            - link "統一證2855" [ref=e466] [cursor=pointer]:
+                              - /url: /investment/stock/2855
+                          - cell "證券業" [ref=e467]
+                          - cell "2.2 億" [ref=e468]
+                          - cell "1.37%" [ref=e469]
+                          - cell "-0.12%" [ref=e470]
+                          - cell "19.85%" [ref=e471]
+            - generic [ref=e472]:
+              - generic [ref=e473]:
+                - generic [ref=e474]:
+                  - heading "超級8888 量化選股" [level=2] [ref=e475]
+                  - generic [ref=e476]:
+                    - generic [ref=e477]: 🔥
+                    - generic [ref=e478]: 瑤姊共識 1 支
+                - paragraph [ref=e479]: "策略 ID: super8888"
+                - list [ref=e480]:
+                  - listitem [ref=e481]:
+                    - link "▶ 3036 文曄 電子通路業 00403 00980 00981 +8 1.000 加碼中" [ref=e482] [cursor=pointer]:
+                      - /url: /investment/stock/3036?from=%E7%AD%96%E7%95%A5%3A%E8%B6%85%E7%B4%9A8888%20%E9%87%8F%E5%8C%96%E9%81%B8%E8%82%A1&rank=1&list=3036%2C4127%2C5864%2C6016%2C6417
+                      - generic [ref=e483]:
+                        - generic [ref=e484]: ▶
+                        - generic [ref=e485]: 3036 文曄
+                        - generic [ref=e486]: 電子通路業
+                        - generic "主動統一升級50" [ref=e487]: "00403"
+                        - generic "主動野村臺灣優選" [ref=e488]: "00980"
+                        - generic "主動統一台股增長" [ref=e489]: "00981"
+                        - generic "00982, 00984, 00985, 00991, 00992, 00993, 00994, 00995" [ref=e490]: "+8"
+                      - generic [ref=e491]:
+                        - generic [ref=e492]: "1.000"
+                        - generic [ref=e493]: 加碼中
+                  - listitem [ref=e494]:
+                    - link "4127 天良 生技醫療業 1.000 未持有" [ref=e495] [cursor=pointer]:
+                      - /url: /investment/stock/4127?from=%E7%AD%96%E7%95%A5%3A%E8%B6%85%E7%B4%9A8888%20%E9%87%8F%E5%8C%96%E9%81%B8%E8%82%A1&rank=2&list=3036%2C4127%2C5864%2C6016%2C6417
+                      - generic [ref=e496]:
+                        - generic [ref=e497]: 4127 天良
+                        - generic [ref=e498]: 生技醫療業
+                      - generic [ref=e499]:
+                        - generic [ref=e500]: "1.000"
+                        - generic [ref=e501]: 未持有
+                  - listitem [ref=e502]:
+                    - link "5864 致和證 金融業 1.000 未持有" [ref=e503] [cursor=pointer]:
+                      - /url: /investment/stock/5864?from=%E7%AD%96%E7%95%A5%3A%E8%B6%85%E7%B4%9A8888%20%E9%87%8F%E5%8C%96%E9%81%B8%E8%82%A1&rank=3&list=3036%2C4127%2C5864%2C6016%2C6417
+                      - generic [ref=e504]:
+                        - generic [ref=e505]: 5864 致和證
+                        - generic [ref=e506]: 金融業
+                      - generic [ref=e507]:
+                        - generic [ref=e508]: "1.000"
+                        - generic [ref=e509]: 未持有
+                  - listitem [ref=e510]:
+                    - link "6016 康和證 金融業 1.000 未持有" [ref=e511] [cursor=pointer]:
+                      - /url: /investment/stock/6016?from=%E7%AD%96%E7%95%A5%3A%E8%B6%85%E7%B4%9A8888%20%E9%87%8F%E5%8C%96%E9%81%B8%E8%82%A1&rank=4&list=3036%2C4127%2C5864%2C6016%2C6417
+                      - generic [ref=e512]:
+                        - generic [ref=e513]: 6016 康和證
+                        - generic [ref=e514]: 金融業
+                      - generic [ref=e515]:
+                        - generic [ref=e516]: "1.000"
+                        - generic [ref=e517]: 未持有
+                  - listitem [ref=e518]:
+                    - link "6417 韋僑 通信網路業 1.000 未持有" [ref=e519] [cursor=pointer]:
+                      - /url: /investment/stock/6417?from=%E7%AD%96%E7%95%A5%3A%E8%B6%85%E7%B4%9A8888%20%E9%87%8F%E5%8C%96%E9%81%B8%E8%82%A1&rank=5&list=3036%2C4127%2C5864%2C6016%2C6417
+                      - generic [ref=e520]:
+                        - generic [ref=e521]: 6417 韋僑
+                        - generic [ref=e522]: 通信網路業
+                      - generic [ref=e523]:
+                        - generic [ref=e524]: "1.000"
+                        - generic [ref=e525]: 未持有
+                - button "量能突破 0.015" [disabled] [ref=e528]
+              - generic [ref=e529]:
+                - heading "Capital Layer 多層籌碼選股" [level=2] [ref=e531]
+                - paragraph [ref=e532]: "策略 ID: capital_layer"
+                - list [ref=e533]:
+                  - listitem [ref=e534]:
+                    - link "2855 統一證 金融保險業 00984 1.000 未持有" [ref=e535] [cursor=pointer]:
+                      - /url: /investment/stock/2855?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=1&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e536]:
+                        - generic [ref=e537]: 2855 統一證
+                        - generic [ref=e538]: 金融保險業
+                        - generic "主動安聯台灣高息" [ref=e539]: "00984"
+                      - generic [ref=e540]:
+                        - generic [ref=e541]: "1.000"
+                        - generic [ref=e542]: 未持有
+                  - listitem [ref=e543]:
+                    - link "3209 全科 電子通路業 1.000 未持有" [ref=e544] [cursor=pointer]:
+                      - /url: /investment/stock/3209?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=2&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e545]:
+                        - generic [ref=e546]: 3209 全科
+                        - generic [ref=e547]: 電子通路業
+                      - generic [ref=e548]:
+                        - generic [ref=e549]: "1.000"
+                        - generic [ref=e550]: 未持有
+                  - listitem [ref=e551]:
+                    - link "3229 晟鈦 電子零組件業 1.000 未持有" [ref=e552] [cursor=pointer]:
+                      - /url: /investment/stock/3229?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=3&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e553]:
+                        - generic [ref=e554]: 3229 晟鈦
+                        - generic [ref=e555]: 電子零組件業
+                      - generic [ref=e556]:
+                        - generic [ref=e557]: "1.000"
+                        - generic [ref=e558]: 未持有
+                  - listitem [ref=e559]:
+                    - link "3691 碩禾 光電業 1.000 未持有" [ref=e560] [cursor=pointer]:
+                      - /url: /investment/stock/3691?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=4&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e561]:
+                        - generic [ref=e562]: 3691 碩禾
+                        - generic [ref=e563]: 光電業
+                      - generic [ref=e564]:
+                        - generic [ref=e565]: "1.000"
+                        - generic [ref=e566]: 未持有
+                  - listitem [ref=e567]:
+                    - link "4127 天良 生技醫療業 1.000 未持有" [ref=e568] [cursor=pointer]:
+                      - /url: /investment/stock/4127?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=5&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e569]:
+                        - generic [ref=e570]: 4127 天良
+                        - generic [ref=e571]: 生技醫療業
+                      - generic [ref=e572]:
+                        - generic [ref=e573]: "1.000"
+                        - generic [ref=e574]: 未持有
+                  - listitem [ref=e575]:
+                    - link "6015 宏遠證 金融業 1.000 未持有" [ref=e576] [cursor=pointer]:
+                      - /url: /investment/stock/6015?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=6&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e577]:
+                        - generic [ref=e578]: 6015 宏遠證
+                        - generic [ref=e579]: 金融業
+                      - generic [ref=e580]:
+                        - generic [ref=e581]: "1.000"
+                        - generic [ref=e582]: 未持有
+                  - listitem [ref=e583]:
+                    - link "6016 康和證 金融業 1.000 未持有" [ref=e584] [cursor=pointer]:
+                      - /url: /investment/stock/6016?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=7&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e585]:
+                        - generic [ref=e586]: 6016 康和證
+                        - generic [ref=e587]: 金融業
+                      - generic [ref=e588]:
+                        - generic [ref=e589]: "1.000"
+                        - generic [ref=e590]: 未持有
+                  - listitem [ref=e591]:
+                    - link "6166 凌華 電腦及週邊設備業 1.000 未持有" [ref=e592] [cursor=pointer]:
+                      - /url: /investment/stock/6166?from=%E7%AD%96%E7%95%A5%3ACapital%20Layer%20%E5%A4%9A%E5%B1%A4%E7%B1%8C%E7%A2%BC%E9%81%B8%E8%82%A1&rank=8&list=2855%2C3209%2C3229%2C3691%2C4127%2C6015%2C6016%2C6166
+                      - generic [ref=e593]:
+                        - generic [ref=e594]: 6166 凌華
+                        - generic [ref=e595]: 電腦及週邊設備業
+                      - generic [ref=e596]:
+                        - generic [ref=e597]: "1.000"
+                        - generic [ref=e598]: 未持有
+                - generic [ref=e600]:
+                  - button "RSV180 0.060" [disabled] [ref=e601]
+                  - button "營收動能 0.060" [disabled] [ref=e602]
+                  - button "主力籌碼 0.021" [disabled] [ref=e603]
+              - generic [ref=e604]:
+                - heading "券商籌碼排名選股" [level=2] [ref=e606]
+                - paragraph [ref=e607]: "策略 ID: broker_ranked"
+                - list [ref=e608]:
+                  - listitem [ref=e609]:
+                    - link "2464 盟立 其他電子業 1.000 未持有" [ref=e610] [cursor=pointer]:
+                      - /url: /investment/stock/2464?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=1&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e611]:
+                        - generic [ref=e612]: 2464 盟立
+                        - generic [ref=e613]: 其他電子業
+                      - generic [ref=e614]:
+                        - generic [ref=e615]: "1.000"
+                        - generic [ref=e616]: 未持有
+                  - listitem [ref=e617]:
+                    - link "3088 艾訊 電腦及週邊設備業 1.000 未持有" [ref=e618] [cursor=pointer]:
+                      - /url: /investment/stock/3088?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=2&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e619]:
+                        - generic [ref=e620]: 3088 艾訊
+                        - generic [ref=e621]: 電腦及週邊設備業
+                      - generic [ref=e622]:
+                        - generic [ref=e623]: "1.000"
+                        - generic [ref=e624]: 未持有
+                  - listitem [ref=e625]:
+                    - link "3209 全科 電子通路業 1.000 未持有" [ref=e626] [cursor=pointer]:
+                      - /url: /investment/stock/3209?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=3&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e627]:
+                        - generic [ref=e628]: 3209 全科
+                        - generic [ref=e629]: 電子通路業
+                      - generic [ref=e630]:
+                        - generic [ref=e631]: "1.000"
+                        - generic [ref=e632]: 未持有
+                  - listitem [ref=e633]:
+                    - link "4127 天良 生技醫療業 1.000 未持有" [ref=e634] [cursor=pointer]:
+                      - /url: /investment/stock/4127?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=4&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e635]:
+                        - generic [ref=e636]: 4127 天良
+                        - generic [ref=e637]: 生技醫療業
+                      - generic [ref=e638]:
+                        - generic [ref=e639]: "1.000"
+                        - generic [ref=e640]: 未持有
+                  - listitem [ref=e641]:
+                    - link "4576 大銀微系統 電機機械 1.000 未持有" [ref=e642] [cursor=pointer]:
+                      - /url: /investment/stock/4576?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=5&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e643]:
+                        - generic [ref=e644]: 4576 大銀微系統
+                        - generic [ref=e645]: 電機機械
+                      - generic [ref=e646]:
+                        - generic [ref=e647]: "1.000"
+                        - generic [ref=e648]: 未持有
+                  - listitem [ref=e649]:
+                    - link "6016 康和證 金融業 1.000 未持有" [ref=e650] [cursor=pointer]:
+                      - /url: /investment/stock/6016?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=6&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e651]:
+                        - generic [ref=e652]: 6016 康和證
+                        - generic [ref=e653]: 金融業
+                      - generic [ref=e654]:
+                        - generic [ref=e655]: "1.000"
+                        - generic [ref=e656]: 未持有
+                  - listitem [ref=e657]:
+                    - link "6166 凌華 電腦及週邊設備業 1.000 未持有" [ref=e658] [cursor=pointer]:
+                      - /url: /investment/stock/6166?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=7&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e659]:
+                        - generic [ref=e660]: 6166 凌華
+                        - generic [ref=e661]: 電腦及週邊設備業
+                      - generic [ref=e662]:
+                        - generic [ref=e663]: "1.000"
+                        - generic [ref=e664]: 未持有
+                  - listitem [ref=e665]:
+                    - link "6494 九齊 半導體業 1.000 未持有" [ref=e666] [cursor=pointer]:
+                      - /url: /investment/stock/6494?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=8&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e667]:
+                        - generic [ref=e668]: 6494 九齊
+                        - generic [ref=e669]: 半導體業
+                      - generic [ref=e670]:
+                        - generic [ref=e671]: "1.000"
+                        - generic [ref=e672]: 未持有
+                  - listitem [ref=e673]:
+                    - link "6716 應廣 半導體業 1.000 未持有" [ref=e674] [cursor=pointer]:
+                      - /url: /investment/stock/6716?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=9&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e675]:
+                        - generic [ref=e676]: 6716 應廣
+                        - generic [ref=e677]: 半導體業
+                      - generic [ref=e678]:
+                        - generic [ref=e679]: "1.000"
+                        - generic [ref=e680]: 未持有
+                  - listitem [ref=e681]:
+                    - link "6834 天二科技 電子零組件業 1.000 未持有" [ref=e682] [cursor=pointer]:
+                      - /url: /investment/stock/6834?from=%E7%AD%96%E7%95%A5%3A%E5%88%B8%E5%95%86%E7%B1%8C%E7%A2%BC%E6%8E%92%E5%90%8D%E9%81%B8%E8%82%A1&rank=10&list=2464%2C3088%2C3209%2C4127%2C4576%2C6016%2C6166%2C6494%2C6716%2C6834
+                      - generic [ref=e683]:
+                        - generic [ref=e684]: 6834 天二科技
+                        - generic [ref=e685]: 電子零組件業
+                      - generic [ref=e686]:
+                        - generic [ref=e687]: "1.000"
+                        - generic [ref=e688]: 未持有
+                - generic [ref=e690]:
+                  - button "RSV180 0.060" [disabled] [ref=e691]
+                  - button "營收動能 0.060" [disabled] [ref=e692]
+                  - button "主力籌碼 0.021" [disabled] [ref=e693]
+              - generic [ref=e694]:
+                - heading "低波動 Alpha 年增率選股" [level=2] [ref=e696]
+                - paragraph [ref=e697]: "策略 ID: low_vol_alpha"
+                - list [ref=e698]:
+                  - listitem [ref=e699]:
+                    - link "2360 致茂 其他電子業 00403 00980 00982 +10 1.000 未持有" [ref=e700] [cursor=pointer]:
+                      - /url: /investment/stock/2360?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=1&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e701]:
+                        - generic [ref=e702]: 2360 致茂
+                        - generic [ref=e703]: 其他電子業
+                        - generic "主動統一升級50" [ref=e704]: "00403"
+                        - generic "主動野村臺灣優選" [ref=e705]: "00980"
+                        - generic "主動群益台灣強棒" [ref=e706]: "00982"
+                        - generic "00984, 00985, 00987, 00988, 00990, 00991, 00992, 00993, 00994, 00995" [ref=e707]: "+10"
+                      - generic [ref=e708]:
+                        - generic [ref=e709]: "1.000"
+                        - generic [ref=e710]: 未持有
+                  - listitem [ref=e711]:
+                    - link "2855 統一證 金融保險業 00984 1.000 未持有" [ref=e712] [cursor=pointer]:
+                      - /url: /investment/stock/2855?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=2&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e713]:
+                        - generic [ref=e714]: 2855 統一證
+                        - generic [ref=e715]: 金融保險業
+                        - generic "主動安聯台灣高息" [ref=e716]: "00984"
+                      - generic [ref=e717]:
+                        - generic [ref=e718]: "1.000"
+                        - generic [ref=e719]: 未持有
+                  - listitem [ref=e720]:
+                    - link "3055 蔚華科 電子通路業 1.000 未持有" [ref=e721] [cursor=pointer]:
+                      - /url: /investment/stock/3055?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=3&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e722]:
+                        - generic [ref=e723]: 3055 蔚華科
+                        - generic [ref=e724]: 電子通路業
+                      - generic [ref=e725]:
+                        - generic [ref=e726]: "1.000"
+                        - generic [ref=e727]: 未持有
+                  - listitem [ref=e728]:
+                    - link "3498 陽程 其他電子業 1.000 未持有" [ref=e729] [cursor=pointer]:
+                      - /url: /investment/stock/3498?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=4&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e730]:
+                        - generic [ref=e731]: 3498 陽程
+                        - generic [ref=e732]: 其他電子業
+                      - generic [ref=e733]:
+                        - generic [ref=e734]: "1.000"
+                        - generic [ref=e735]: 未持有
+                  - listitem [ref=e736]:
+                    - link "5864 致和證 金融業 1.000 未持有" [ref=e737] [cursor=pointer]:
+                      - /url: /investment/stock/5864?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=5&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e738]:
+                        - generic [ref=e739]: 5864 致和證
+                        - generic [ref=e740]: 金融業
+                      - generic [ref=e741]:
+                        - generic [ref=e742]: "1.000"
+                        - generic [ref=e743]: 未持有
+                  - listitem [ref=e744]:
+                    - link "6005 群益證 金融保險業 00984 1.000 未持有" [ref=e745] [cursor=pointer]:
+                      - /url: /investment/stock/6005?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=6&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e746]:
+                        - generic [ref=e747]: 6005 群益證
+                        - generic [ref=e748]: 金融保險業
+                        - generic "主動安聯台灣高息" [ref=e749]: "00984"
+                      - generic [ref=e750]:
+                        - generic [ref=e751]: "1.000"
+                        - generic [ref=e752]: 未持有
+                  - listitem [ref=e753]:
+                    - link "6015 宏遠證 金融業 1.000 未持有" [ref=e754] [cursor=pointer]:
+                      - /url: /investment/stock/6015?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=7&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e755]:
+                        - generic [ref=e756]: 6015 宏遠證
+                        - generic [ref=e757]: 金融業
+                      - generic [ref=e758]:
+                        - generic [ref=e759]: "1.000"
+                        - generic [ref=e760]: 未持有
+                  - listitem [ref=e761]:
+                    - link "6016 康和證 金融業 1.000 未持有" [ref=e762] [cursor=pointer]:
+                      - /url: /investment/stock/6016?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=8&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e763]:
+                        - generic [ref=e764]: 6016 康和證
+                        - generic [ref=e765]: 金融業
+                      - generic [ref=e766]:
+                        - generic [ref=e767]: "1.000"
+                        - generic [ref=e768]: 未持有
+                  - listitem [ref=e769]:
+                    - link "8227 巨有科技 半導體業 1.000 未持有" [ref=e770] [cursor=pointer]:
+                      - /url: /investment/stock/8227?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=9&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e771]:
+                        - generic [ref=e772]: 8227 巨有科技
+                        - generic [ref=e773]: 半導體業
+                      - generic [ref=e774]:
+                        - generic [ref=e775]: "1.000"
+                        - generic [ref=e776]: 未持有
+                  - listitem [ref=e777]:
+                    - link "8926 台汽電 油電燃氣業 1.000 未持有" [ref=e778] [cursor=pointer]:
+                      - /url: /investment/stock/8926?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%20Alpha%20%E5%B9%B4%E5%A2%9E%E7%8E%87%E9%81%B8%E8%82%A1&rank=10&list=2360%2C2855%2C3055%2C3498%2C5864%2C6005%2C6015%2C6016%2C8227%2C8926
+                      - generic [ref=e779]:
+                        - generic [ref=e780]: 8926 台汽電
+                        - generic [ref=e781]: 油電燃氣業
+                      - generic [ref=e782]:
+                        - generic [ref=e783]: "1.000"
+                        - generic [ref=e784]: 未持有
+                - generic [ref=e786]:
+                  - button "RS100 0.057" [disabled] [ref=e787]
+                  - button "營收動能 0.060" [disabled] [ref=e788]
+              - generic [ref=e789]:
+                - heading "低波動市值選股" [level=2] [ref=e791]
+                - paragraph [ref=e792]: "策略 ID: low_vol_cap"
+                - list [ref=e793]:
+                  - listitem [ref=e794]:
+                    - link "1762 中化生 生技醫療業 1.000 未持有" [ref=e795] [cursor=pointer]:
+                      - /url: /investment/stock/1762?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=1&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e796]:
+                        - generic [ref=e797]: 1762 中化生
+                        - generic [ref=e798]: 生技醫療業
+                      - generic [ref=e799]:
+                        - generic [ref=e800]: "1.000"
+                        - generic [ref=e801]: 未持有
+                  - listitem [ref=e802]:
+                    - link "3467 台灣精材 半導體業 1.000 未持有" [ref=e803] [cursor=pointer]:
+                      - /url: /investment/stock/3467?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=2&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e804]:
+                        - generic [ref=e805]: 3467 台灣精材
+                        - generic [ref=e806]: 半導體業
+                      - generic [ref=e807]:
+                        - generic [ref=e808]: "1.000"
+                        - generic [ref=e809]: 未持有
+                  - listitem [ref=e810]:
+                    - link "4127 天良 生技醫療業 1.000 未持有" [ref=e811] [cursor=pointer]:
+                      - /url: /investment/stock/4127?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=3&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e812]:
+                        - generic [ref=e813]: 4127 天良
+                        - generic [ref=e814]: 生技醫療業
+                      - generic [ref=e815]:
+                        - generic [ref=e816]: "1.000"
+                        - generic [ref=e817]: 未持有
+                  - listitem [ref=e818]:
+                    - link "4952 凌通 半導體業 1.000 未持有" [ref=e819] [cursor=pointer]:
+                      - /url: /investment/stock/4952?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=4&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e820]:
+                        - generic [ref=e821]: 4952 凌通
+                        - generic [ref=e822]: 半導體業
+                      - generic [ref=e823]:
+                        - generic [ref=e824]: "1.000"
+                        - generic [ref=e825]: 未持有
+                  - listitem [ref=e826]:
+                    - link "5464 霖宏 電子零組件業 1.000 未持有" [ref=e827] [cursor=pointer]:
+                      - /url: /investment/stock/5464?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=5&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e828]:
+                        - generic [ref=e829]: 5464 霖宏
+                        - generic [ref=e830]: 電子零組件業
+                      - generic [ref=e831]:
+                        - generic [ref=e832]: "1.000"
+                        - generic [ref=e833]: 未持有
+                  - listitem [ref=e834]:
+                    - link "6020 大展證 金融業 1.000 未持有" [ref=e835] [cursor=pointer]:
+                      - /url: /investment/stock/6020?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=6&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e836]:
+                        - generic [ref=e837]: 6020 大展證
+                        - generic [ref=e838]: 金融業
+                      - generic [ref=e839]:
+                        - generic [ref=e840]: "1.000"
+                        - generic [ref=e841]: 未持有
+                  - listitem [ref=e842]:
+                    - link "6259 百徽 電子零組件業 1.000 未持有" [ref=e843] [cursor=pointer]:
+                      - /url: /investment/stock/6259?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=7&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e844]:
+                        - generic [ref=e845]: 6259 百徽
+                        - generic [ref=e846]: 電子零組件業
+                      - generic [ref=e847]:
+                        - generic [ref=e848]: "1.000"
+                        - generic [ref=e849]: 未持有
+                  - listitem [ref=e850]:
+                    - link "6494 九齊 半導體業 1.000 未持有" [ref=e851] [cursor=pointer]:
+                      - /url: /investment/stock/6494?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=8&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e852]:
+                        - generic [ref=e853]: 6494 九齊
+                        - generic [ref=e854]: 半導體業
+                      - generic [ref=e855]:
+                        - generic [ref=e856]: "1.000"
+                        - generic [ref=e857]: 未持有
+                  - listitem [ref=e858]:
+                    - link "6834 天二科技 電子零組件業 1.000 未持有" [ref=e859] [cursor=pointer]:
+                      - /url: /investment/stock/6834?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=9&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e860]:
+                        - generic [ref=e861]: 6834 天二科技
+                        - generic [ref=e862]: 電子零組件業
+                      - generic [ref=e863]:
+                        - generic [ref=e864]: "1.000"
+                        - generic [ref=e865]: 未持有
+                  - listitem [ref=e866]:
+                    - link "6924 榮惠-KY創 電子零組件業 1.000 未持有" [ref=e867] [cursor=pointer]:
+                      - /url: /investment/stock/6924?from=%E7%AD%96%E7%95%A5%3A%E4%BD%8E%E6%B3%A2%E5%8B%95%E5%B8%82%E5%80%BC%E9%81%B8%E8%82%A1&rank=10&list=1762%2C3467%2C4127%2C4952%2C5464%2C6020%2C6259%2C6494%2C6834%2C6924
+                      - generic [ref=e868]:
+                        - generic [ref=e869]: 6924 榮惠-KY創
+                        - generic [ref=e870]: 電子零組件業
+                      - generic [ref=e871]:
+                        - generic [ref=e872]: "1.000"
+                        - generic [ref=e873]: 未持有
+                - generic [ref=e875]:
+                  - button "RSV180 0.060" [disabled] [ref=e876]
+                  - button "營收動能 0.060" [disabled] [ref=e877]
+                  - button "近高點 0.093" [disabled] [ref=e878]
+            - paragraph [ref=e879]: 營收條件以最新公告月份為準，月中換股前後數日可能存在滯後
+      - link "返回儀表板" [ref=e881] [cursor=pointer]:
+        - /url: /
+        - generic "返回儀表板" [ref=e882]:
+          - img [ref=e883]
+          - generic: 返回儀表板
+  - button "Open Next.js Dev Tools" [ref=e891] [cursor=pointer]:
+    - img [ref=e892]
+  - alert [ref=e895]

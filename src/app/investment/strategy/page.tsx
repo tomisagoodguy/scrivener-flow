@@ -3,12 +3,15 @@ import { getStrategySignals } from '@/app/actions/getStrategySignals';
 import { getFactorIC } from '@/app/actions/getFactorIC';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
 import { getStrategyAnalytics } from '@/app/actions/getStrategyAnalytics';
+import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
 import StrategySignalCard from '@/components/features/StrategySignalCard';
 import StrategyAnalyticsPanel from '@/components/features/strategy/StrategyAnalyticsPanel';
 import { StrategyMonitorCard } from '@/components/features/strategy/StrategyMonitorCard';
+import { StrategyChartViewer } from '@/components/features/strategy/StrategyChartViewer';
 import type { StrategyMonitorStock } from '@/components/features/strategy/StrategyMonitorCard';
 import type { MovementLabel, StrategySignalsResult } from '@/lib/investment/strategyUtils';
 import type { StrategyAnalyticsData } from '@/app/actions/getStrategyAnalytics';
+import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +72,7 @@ export default async function StrategyPage({
 }) {
     const { view } = await searchParams;
     const isMonitor = view === 'monitor';
+    const isChart = view === 'chart';
 
     const [result, allIC, analytics] = await Promise.all([
         getStrategySignals(),
@@ -79,9 +83,13 @@ export default async function StrategyPage({
         getStrategyAnalytics(),
     ]);
 
-    const monitorStocks = isMonitor ? buildMonitorStocks(result, analytics) : [];
+    const monitorStocks = (isMonitor || isChart) ? buildMonitorStocks(result, analytics) : [];
 
-    if (!result && !isMonitor) {
+    const snapshotMap: Map<string, BareKSnapshot | null> = isChart
+        ? await getStrategySnapshots(monitorStocks.map((s) => s.stock_id))
+        : new Map();
+
+    if (!result && !isMonitor && !isChart) {
         return (
             <main className="max-w-4xl mx-auto px-4 py-8">
                 <p className="text-gray-400 text-sm">尚無策略訊號資料，請稍後再試。</p>
@@ -105,7 +113,7 @@ export default async function StrategyPage({
                     <Link
                         href="/investment/strategy"
                         className={`text-sm px-3 py-1.5 rounded-lg transition-all ${
-                            !isMonitor
+                            !isMonitor && !isChart
                                 ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm font-medium'
                                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
@@ -122,10 +130,27 @@ export default async function StrategyPage({
                     >
                         監控清單
                     </Link>
+                    <Link
+                        href="/investment/strategy?view=chart"
+                        className={`text-sm px-3 py-1.5 rounded-lg transition-all ${
+                            isChart
+                                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm font-medium'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        圖表
+                    </Link>
                 </div>
             </div>
 
-            {isMonitor ? (
+            {isChart ? (
+                /* Chart view: scroll viewer with BareK charts */
+                monitorStocks.length === 0 ? (
+                    <p className="text-gray-400 text-sm">本日無策略選股資料</p>
+                ) : (
+                    <StrategyChartViewer stocks={monitorStocks} snapshots={snapshotMap} />
+                )
+            ) : isMonitor ? (
                 /* Monitor view: individual stock cards */
                 monitorStocks.length === 0 ? (
                     <p className="text-gray-400 text-sm">本日無策略選股資料。</p>

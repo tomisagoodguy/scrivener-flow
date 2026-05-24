@@ -17,9 +17,12 @@ interface Props {
     slides: StockSlide[];
     initialIndex: number;
     isOwner?: boolean;
+    backHref?: string;
+    noSnapshotMessage?: string;
+    disableHistoryUpdate?: boolean;
 }
 
-export function BareKScrollViewer({ slides, initialIndex, isOwner = false }: Props) {
+export function BareKScrollViewer({ slides, initialIndex, isOwner = false, backHref = '/investment/bare-k', noSnapshotMessage, disableHistoryUpdate = false }: Props) {
     const sectionsRef = useRef<(HTMLElement | null)[]>([]);
     const headersRef = useRef<(HTMLElement | null)[]>([]);
     const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -57,7 +60,7 @@ export function BareKScrollViewer({ slides, initialIndex, isOwner = false }: Pro
                         return next;
                     });
                     const code = slides[idx]?.code;
-                    if (code) history.replaceState(null, '', `/investment/bare-k/${code}`);
+                    if (code && !disableHistoryUpdate) history.replaceState(null, '', `/investment/bare-k/${code}`);
                 });
             },
             { threshold: 0, rootMargin: '-120px 0px -40% 0px' }
@@ -86,7 +89,7 @@ export function BareKScrollViewer({ slides, initialIndex, isOwner = false }: Pro
                 <div className="max-w-5xl mx-auto flex items-center gap-3">
                     {/* 返回列表 */}
                     <Link
-                        href="/investment/bare-k"
+                        href={backHref}
                         className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 bg-white/60 hover:bg-white border border-gray-200 hover:border-blue-300 px-2.5 py-1.5 rounded-lg transition-all shrink-0"
                     >
                         <ArrowLeft size={14} />
@@ -156,8 +159,10 @@ export function BareKScrollViewer({ slides, initialIndex, isOwner = false }: Pro
                                 </div>
                             ) : (
                                 <div className="glass-card rounded-2xl p-10 text-center">
-                                    <p className="text-gray-500 font-medium mb-1">{slide.code} 的裸K資料尚未同步</p>
-                                    {isOwner && (
+                                    <p className="text-gray-500 font-medium mb-1">
+                                        {noSnapshotMessage ?? `${slide.code} 的裸K資料尚未同步`}
+                                    </p>
+                                    {isOwner && !noSnapshotMessage && (
                                         <p className="text-sm text-gray-400">
                                             請確認已在
                                             <Link href="/investment/watch-list" className="text-blue-500 hover:underline mx-1">
