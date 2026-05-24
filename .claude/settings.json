@@ -117,7 +117,10 @@
       "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\openspec\\\\specs\\\\fund-consensus-integration\")",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\openspec\\\\specs\\\\fund-consensus-integration\")",
       "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: 將投信/共識資訊融合至選股池、策略選股、族群強弱\")",
-      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 將投信/共識資訊融合至選股池、策略選股、族群強弱\")"
+      "Bash(bash \"C:\\\\Users\\\\user\\\\.claude\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"feat: 將投信/共識資訊融合至選股池、策略選股、族群強弱\")",
+      "Bash(python -c ' *)",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: 新增 super888 量化選股策略\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"feat: 新增 super888 量化選股策略\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"

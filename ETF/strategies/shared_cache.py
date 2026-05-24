@@ -63,6 +63,12 @@ class StrategyDataCache:
         return data.get('monthly_revenue:去年同月增減(%)')
 
     @cached_property
+    def rev_cyoy(self):
+        """月營收月增率（前期比較增減%）。用於 super888。"""
+        from finlab import data
+        return data.get('monthly_revenue:前期比較增減(%)')
+
+    @cached_property
     def share(self):
         """普通股股本。用於 super8888 動量調整周轉率計算。"""
         from finlab import data

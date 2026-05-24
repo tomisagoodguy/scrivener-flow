@@ -8,6 +8,7 @@ export type MovementLabel = 'adding' | 'reducing' | 'holding' | 'none';
  */
 export type StrategyId =
     | 'super8888'
+    | 'super888'
     | 'capital_layer'
     | 'low_vol_cap'
     | 'broker_ranked'

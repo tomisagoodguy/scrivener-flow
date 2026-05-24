@@ -6,5 +6,6 @@ export function getStrategyDescriptions(): Record<string, string> {
         broker_ranked: '券商籌碼排名選股',
         low_vol_alpha: '低波動 Alpha 年增率選股',
         low_vol_cap: '低波動市值選股',
+        htf_gvi: 'HTF GVI 多因子選股',
     };
 }
