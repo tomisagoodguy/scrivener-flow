@@ -126,7 +126,8 @@
       "Bash(bash \"c:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix: 修復 chipsData 在宣告前使用導致 Vercel build 失敗\")",
       "Bash(bash \"c:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"fix: 改用模組級 NOW 常數解決 react-hooks/purity ESLint 錯誤\")",
       "Bash(bash \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"ci: 拆分 Daily ETF Tracker，financials sync 移至獨立排程\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 拆分 Daily ETF Tracker，financials sync 移至獨立排程\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 拆分 Daily ETF Tracker，financials sync 移至獨立排程\")",
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 調整排程時間，etf_daily 20:00、etf_financials 21:00 台灣時間\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"

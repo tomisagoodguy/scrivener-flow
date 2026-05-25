@@ -2,8 +2,8 @@ name: Daily Financials Sync
 
 on:
   schedule:
-    # 台灣時間 00:00（UTC 16:00），待 ETF 日排程完成後再跑
-    - cron: '0 16 * * *'
+    # 台灣時間 21:00（UTC 13:00），待 etf_daily 完成（~25 分鐘）後再跑
+    - cron: '0 13 * * *'
   workflow_dispatch:
     inputs:
       runner:

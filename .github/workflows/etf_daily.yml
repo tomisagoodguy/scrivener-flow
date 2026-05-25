@@ -2,9 +2,8 @@ name: Daily ETF Tracker
 
 on:
   schedule:
-    # 每天執行三次：
-    # 台灣時間 22:00 (UTC 14:00): 每日一次收盤後更新
-    - cron: '0 14 * * *'
+    # 台灣時間 20:00 (UTC 12:00): 收盤後 FinLab 資料更新完畢
+    - cron: '0 12 * * *'
   workflow_dispatch: # 允許手動觸發
     inputs:
       runner:
