@@ -1,9 +1,9 @@
-name: Daily Financials Sync
+name: Daily Equity Distribution Sync
 
 on:
   schedule:
-    # 台灣時間 21:00（UTC 13:00），待 etf_daily 完成（~25 分鐘）後再跑
-    - cron: '0 13 * * *'
+    # 台灣時間 23:00（UTC 15:00），待 etf_financials 完成後再跑
+    - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
       runner:
@@ -14,13 +14,13 @@ on:
         options: ['ubuntu-latest', 'self-hosted']
 
 concurrency:
-  group: etf-financials
+  group: etf-equity-daily
   cancel-in-progress: false
 
 jobs:
-  sync-financials:
+  sync-equity-daily:
     runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
-    timeout-minutes: 110
+    timeout-minutes: 30
     defaults:
       run:
         shell: bash
@@ -52,18 +52,17 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.finlab
-          key: ${{ runner.os }}-finlab-financials-v1
+          key: ${{ runner.os }}-finlab-equity-daily-v1
           restore-keys: |
-            ${{ runner.os }}-finlab-financials-
+            ${{ runner.os }}-finlab-equity-daily-
 
       - name: Install dependencies
         run: uv sync
 
-      - name: Sync broker & financials
+      - name: Sync equity distribution
         run: |
-          # 券商交易 + 月營收（60 天，確保抓到月初 10 日截止公告的月營收）
-          # --skip-shareholder: 集保資料每週才更新，由 equity_weekly.yml 負責
-          uv run python ETF/sync_stock_financials.py --days 60 --skip-shareholder
+          # 補入當日新增成分股的大戶籌碼（多數日子無新股 → 秒退）
+          uv run python ETF/sync_equity_distribution.py
 
       - name: Notify LINE on failure
         if: failure()
@@ -71,4 +70,4 @@ jobs:
           curl -s -X POST https://api.line.me/v2/bot/message/push \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
-            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 Financials Sync 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync-financials\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 Equity Daily Sync 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync-equity-daily\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
