@@ -128,7 +128,11 @@
       "Bash(bash \"c:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\scrivener-flow\\\\skills\\\\git-pushing\\\\scripts\\\\smart_commit.sh\" \"ci: 拆分 Daily ETF Tracker，financials sync 移至獨立排程\")",
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 拆分 Daily ETF Tracker，financials sync 移至獨立排程\")",
       "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 調整排程時間，etf_daily 20:00、etf_financials 21:00 台灣時間\")",
-      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 拆分大戶籌碼至獨立排程 etf_equity_daily.yml（23:00 台灣時間）\")"
+      "Bash(bash \"C:/Users/user/.claude/skills/git-pushing/scripts/smart_commit.sh\" \"ci: 拆分大戶籌碼至獨立排程 etf_equity_daily.yml（23:00 台灣時間）\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['instruction'][:300]\\)\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['instruction']\\)\")",
+      "Bash(bash skills/git-pushing/scripts/smart_commit.sh \"feat: 新增多策略共選面板（MultiStrategyConsensusPanel）\")",
+      "Bash(bash ~/.claude/skills/git-pushing/scripts/smart_commit.sh \"feat: 新增多策略共選面板（MultiStrategyConsensusPanel）\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"

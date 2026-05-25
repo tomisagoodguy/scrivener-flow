@@ -14,6 +14,8 @@ import type { StrategyMonitorStock } from '@/components/features/strategy/Strate
 import type { MovementLabel, StrategySignalsResult } from '@/lib/investment/strategyUtils';
 import type { StrategyAnalyticsData } from '@/app/actions/getStrategyAnalytics';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import MultiStrategyConsensusPanel from '@/components/features/strategy/MultiStrategyConsensusPanel';
+import { buildMultiConsensusStocks } from '@/lib/investment/strategyConsensusUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,6 +185,8 @@ export default async function StrategyPage({
                     {analytics.stocks.length > 0 && (
                         <StrategyAnalyticsPanel data={analytics} />
                     )}
+
+                    <MultiStrategyConsensusPanel stocks={buildMultiConsensusStocks(result)} />
 
                     {!result || result.strategies.length === 0 ? (
                         <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>
