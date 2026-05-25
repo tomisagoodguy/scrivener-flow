@@ -116,17 +116,10 @@ jobs:
 
       - name: Run ETF Tracker
         run: |
-          # 預設同步最近 30 天數據即可，節省每日執行時間
+          # ETF 持股爬取 + diff 計算 + LINE 推播
           uv run python ETF/main.py --days 30
-          # sync_stock_financials 用 60 天，確保抓到剛公布的月營收（台灣上市公司月初 10 日截止）
-          # --skip-shareholder: TDCC 集保資料每週才更新，改由 equity_weekly.yml 週排程負責，節省 ~69 分鐘
-          uv run python ETF/sync_stock_financials.py --days 60 --skip-shareholder
-          # 補入當日新增成分股的大戶籌碼（純 DB 預檢，多數日子無新股 → 秒退，不消耗 FinLab 配額）
-          uv run python ETF/sync_equity_distribution.py
-          # Run quantitative strategy signals (writes to strategy_signals table)
+          # 量化策略選股信號（寫入 strategy_signals）
           uv run python ETF/run_strategies.py --days 5
-          # Run AI Analysis Report
-          uv run python ETF/daily_ai_report.py
 
       - name: Upload ETF History Artifacts
         uses: actions/upload-artifact@v7

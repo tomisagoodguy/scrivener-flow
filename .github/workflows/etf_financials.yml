@@ -1,0 +1,76 @@
+name: Daily Financials Sync
+
+on:
+  schedule:
+    # 台灣時間 00:00（UTC 16:00），待 ETF 日排程完成後再跑
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: '執行環境'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options: ['ubuntu-latest', 'self-hosted']
+
+concurrency:
+  group: etf-financials
+  cancel-in-progress: false
+
+jobs:
+  sync-financials:
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 110
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+      TZ: 'Asia/Taipei'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Ensure FinLab cache dir exists
+        run: mkdir -p ~/.finlab
+
+      - name: Cache Finlab Data
+        uses: actions/cache@v5
+        with:
+          path: ~/.finlab
+          key: ${{ runner.os }}-finlab-financials-v1
+          restore-keys: |
+            ${{ runner.os }}-finlab-financials-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Sync broker & financials
+        run: |
+          # 券商交易 + 月營收（60 天，確保抓到月初 10 日截止公告的月營收）
+          # --skip-shareholder: 集保資料每週才更新，由 equity_weekly.yml 負責
+          uv run python ETF/sync_stock_financials.py --days 60 --skip-shareholder
+          # 補入當日新增成分股的大戶籌碼（多數日子無新股 → 秒退）
+          uv run python ETF/sync_equity_distribution.py
+
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 Financials Sync 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync-financials\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
