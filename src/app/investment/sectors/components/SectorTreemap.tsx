@@ -152,14 +152,29 @@ function CustomCell({ x = 0, y = 0, width = 0, height = 0, depth, name, stock, a
         const bg = getColor(stock?.change_pct ?? null);
         const pct = stock?.change_pct ?? 0;
         const pctStr = `${pct >= 0 ? '+' : ''}${(pct * 100).toFixed(2)}%`;
-        const showLabel = width > 32 && height > 22;
-        const showPct = width > 48 && height > 40;
-        const isNeutral = Math.abs(pct) < 0.003;
-        const textFill = isNeutral ? '#1e293b' : '#ffffff';
-        const fontSize = Math.min(11, width / 5.5, height / 3);
-        const pctSize = Math.min(9, width / 7, height / 4.5);
         const code = stock?.stock_code ?? '';
-        const sname = stock?.stock_name ?? code;
+        const sname = stock?.stock_name && stock.stock_name !== code ? stock.stock_name : null;
+
+        // 顯示門檻：依可用空間決定顯示層次
+        const showCode  = width > 28 && height > 20;
+        const showPct   = width > 36 && height > 38;
+        const showName  = !!sname && width > 60 && height > 58;
+
+        const isNeutral = Math.abs(pct) < 0.003;
+        const textFill  = isNeutral ? '#1e293b' : '#ffffff';
+
+        // 三行模式（code + name + pct）時 code 往上移，否則置中
+        const lines = (showCode ? 1 : 0) + (showPct ? 1 : 0) + (showName ? 1 : 0);
+        const lineH = 13;
+        const blockH = lines * lineH;
+        const baseY  = y + height / 2 - blockH / 2 + lineH / 2;
+
+        let lineIdx = 0;
+        const ly = (i: number) => baseY + i * lineH;
+
+        const codeSize = Math.min(13, width / 4, height / 3.5);
+        const nameSize = Math.min(10, width / 6, height / 5);
+        const pctSize  = Math.min(11, width / 5, height / 4);
 
         return (
             <g>
@@ -169,19 +184,33 @@ function CustomCell({ x = 0, y = 0, width = 0, height = 0, depth, name, stock, a
                     width={Math.max(width - 2, 1)}
                     height={Math.max(height - 2, 1)}
                     fill={bg}
-                    stroke="rgba(255,255,255,0.1)"
+                    stroke="rgba(255,255,255,0.12)"
                     strokeWidth={0.5}
                     rx={3}
                 />
-                {showLabel && (
+                {showCode && (
                     <text
                         x={x + width / 2}
-                        y={y + height / 2 - (showPct ? 7 : 0)}
+                        y={ly(lineIdx++)}
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill={textFill}
-                        fontSize={fontSize}
-                        fontWeight="600"
+                        fontSize={codeSize}
+                        fontWeight="700"
+                        fontFamily="'Courier New', monospace"
+                        style={{ pointerEvents: 'none' }}
+                    >
+                        {code}
+                    </text>
+                )}
+                {showName && (
+                    <text
+                        x={x + width / 2}
+                        y={ly(lineIdx++)}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={isNeutral ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)'}
+                        fontSize={nameSize}
                         fontFamily="system-ui, sans-serif"
                         style={{ pointerEvents: 'none' }}
                     >
@@ -191,11 +220,12 @@ function CustomCell({ x = 0, y = 0, width = 0, height = 0, depth, name, stock, a
                 {showPct && (
                     <text
                         x={x + width / 2}
-                        y={y + height / 2 + 9}
+                        y={ly(lineIdx)}
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill={textFill}
                         fontSize={pctSize}
+                        fontWeight="600"
                         fontFamily="system-ui, sans-serif"
                         style={{ pointerEvents: 'none' }}
                     >
@@ -222,6 +252,8 @@ const LEGEND_STOPS = [
 ];
 
 const TOP_N_OPTIONS: { label: string; value: number | null }[] = [
+    { label: '前 25', value: 25 },
+    { label: '前 50', value: 50 },
     { label: '前 200', value: 200 },
     { label: '前 500', value: 500 },
     { label: '全部', value: null },
@@ -340,7 +372,7 @@ export default function SectorTreemap({ stocks, date }: Props) {
             </div>
 
             {/* Treemap */}
-            <ResponsiveContainer width="100%" height={580}>
+            <ResponsiveContainer width="100%" height={640}>
                 <Treemap
                     data={data as unknown as TreemapDataType[]}
                     dataKey="size"

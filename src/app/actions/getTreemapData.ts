@@ -37,9 +37,30 @@ const _getTreemapData = unstable_cache(
             .eq('date', latestDate)
             .gt('close', 0);
 
+        // stock_name 可能是 null（pipeline 未寫入），從 stock_basic_info 補齊
+        const nullNameCodes = (stocks ?? [])
+            .filter((s) => !s.stock_name)
+            .map((s) => s.stock_code);
+
+        let nameMap: Record<string, string> = {};
+        if (nullNameCodes.length > 0) {
+            const { data: basicRows } = await supabase
+                .from('stock_basic_info')
+                .select('stock_code, name_short')
+                .in('stock_code', nullNameCodes);
+            for (const r of basicRows ?? []) {
+                if (r.name_short) nameMap[r.stock_code] = r.name_short;
+            }
+        }
+
+        const filled = (stocks ?? []).map((s) => ({
+            ...s,
+            stock_name: s.stock_name ?? nameMap[s.stock_code] ?? null,
+        }));
+
         return {
             date: latestDate,
-            stocks: (stocks ?? []) as TreemapStock[],
+            stocks: filled as TreemapStock[],
         };
     },
     ['treemap-data-v2'],
