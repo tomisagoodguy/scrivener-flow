@@ -29,26 +29,92 @@ class EtfEntry:
 # ──────────────────────────────────────────────────────────────────────────────
 ETF_REGISTRY: list[EtfEntry] = [
     # ── 主流程 ETF（ScrapeStep + fhtrust_scraper 處理）──
-    EtfEntry(code="00981A", name="主動統一台股增長", manager="統一投信",       source="official_api", is_primary=True),
-
+    EtfEntry(
+        code="00981A",
+        name="主動統一台股增長",
+        manager="統一投信",
+        source="official_api",
+        is_primary=True,
+    ),
     # ── 官網 API 備援（official_api_scraper 支援）──
-    EtfEntry(code="00403A", name="主動統一升級50", manager="統一投信",     source="official_api"),
-    EtfEntry(code="00980A", name="主動野村臺灣優選", manager="野村投信",       source="official_api"),
-    EtfEntry(code="00982A", name="主動群益台灣強棒", manager="群益投信",       source="official_api"),
-    EtfEntry(code="00984A", name="主動安聯台灣高息", manager="安聯投信",       source="official_api"),
-    EtfEntry(code="00985A", name="主動野村台灣50",   manager="野村投信",       source="official_api"),
-    EtfEntry(code="00988A", name="主動統一全球創新", manager="統一投信",       source="official_api"),
-    EtfEntry(code="00991A", name="主動復華未來50",   manager="復華投信",       source="official_api"),
-    EtfEntry(code="00992A", name="主動群益科技創新", manager="群益投信",       source="official_api"),
-    EtfEntry(code="00993A", name="主動安聯台灣",     manager="安聯投信",       source="official_api"),
-    EtfEntry(code="00997A", name="主動群益美國增長", manager="群益投信",       source="official_api"),
-
+    EtfEntry(
+        code="00403A", name="主動統一升級50", manager="統一投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00980A",
+        name="主動野村臺灣優選",
+        manager="野村投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00982A",
+        name="主動群益台灣強棒",
+        manager="群益投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00984A",
+        name="主動安聯台灣高息",
+        manager="安聯投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00985A", name="主動野村台灣50", manager="野村投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00988A",
+        name="主動統一全球創新",
+        manager="統一投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00991A", name="主動復華未來50", manager="復華投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00992A",
+        name="主動群益科技創新",
+        manager="群益投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00993A", name="主動安聯台灣", manager="安聯投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00997A",
+        name="主動群益美國增長",
+        manager="群益投信",
+        source="official_api",
+    ),
+    # ── 官網 API 備援（stable-etf-scrapers 新增）──
+    EtfEntry(
+        code="00987A",
+        name="主動台新優勢成長",
+        manager="台新投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00990A",
+        name="主動元大AI新經濟",
+        manager="元大投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00994A",
+        name="主動第一金台股優",
+        manager="第一金投信",
+        source="official_api",
+    ),
+    EtfEntry(
+        code="00995A",
+        name="主動中信台灣卓越",
+        manager="中國信託投信",
+        source="official_api",
+    ),
     # ── Pocket.tw 爬蟲（官網 API 待破解）──
-    EtfEntry(code="00986A", name="主動兆豐台灣主動", manager="兆豐投信",       source="pocket"),
-    EtfEntry(code="00987A", name="主動台新優勢成長", manager="台新投信",       source="pocket"),
-    EtfEntry(code="00990A", name="主動元大AI新經濟", manager="元大投信",       source="official_api"),
-    EtfEntry(code="00994A", name="主動第一金台股優", manager="第一金投信",     source="pocket"),
-    EtfEntry(code="00995A", name="主動中信台灣卓越", manager="中國信託投信",   source="pocket"),
+    # 00986A：兆豐 fund_id 尚未確認，保留 pocket 來源，下一期補完
+    EtfEntry(
+        code="00986A", name="主動兆豐台灣主動", manager="兆豐投信", source="pocket"
+    ),
 ]
 
 # ──────────────────────────────────────────────────────────────────────────────
