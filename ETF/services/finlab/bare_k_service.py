@@ -119,7 +119,7 @@ class BareKService:
 
         buf = c_all.tail(buf_size)
         c = buf.tail(days)
-        idx = c.index
+        idx = pd.DatetimeIndex(c.index)
 
         # ── Panel 1: OHLCV ──
         ohlcv = self._build_ohlcv(sid, c, idx, buf)
@@ -197,7 +197,7 @@ class BareKService:
             })
         return records
 
-    def _build_mas(self, buf: pd.Series, idx: pd.DatetimeIndex) -> dict[str, list]:
+    def _build_mas(self, buf: pd.Series, idx: pd.DatetimeIndex) -> dict[str, Any]:
         ma_periods = [5, 20, 60, 120]
         result: dict[str, list] = {}
         for p in ma_periods:

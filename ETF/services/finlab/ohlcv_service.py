@@ -6,7 +6,7 @@ OHLCV Service
 
 import logging
 import pandas as pd
-from typing import List
+from typing import List, Optional
 
 from ETF.services.finlab.client import FinlabClient
 
@@ -22,7 +22,7 @@ class OHLCVService:
     - 轉換為 long-format
     """
     
-    def __init__(self, client: FinlabClient = None):
+    def __init__(self, client: Optional[FinlabClient] = None):
         self.client = client or FinlabClient()
     
     def get(self, stock_list: List[str], days: int = 250) -> pd.DataFrame:

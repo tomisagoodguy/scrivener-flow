@@ -6,7 +6,7 @@ Company Info Service
 
 import logging
 import pandas as pd
-from typing import List
+from typing import List, Optional
 
 from ETF.services.finlab.client import FinlabClient
 
@@ -21,7 +21,7 @@ class CompanyInfoService:
     - 獲取公司簡稱、全名、產業類別
     """
     
-    def __init__(self, client: FinlabClient = None):
+    def __init__(self, client: Optional[FinlabClient] = None):
         self.client = client or FinlabClient()
     
     def get(self, stock_list: List[str]) -> pd.DataFrame:
