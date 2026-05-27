@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
 import { SignalBadge } from './SignalBadge';
+import { TopicBadge } from './TopicBadge';
 import type { UnifiedHolding, SortField, SortOrder } from './StockPickerHub.types';
 import { HOLDING_SORT_FIELDS } from './StockPickerHub.types';
 
@@ -108,6 +109,7 @@ export function HoldingsTableRow({
                             高20
                         </span>
                     )}
+                    <TopicBadge stockCode={h.stock_code} />
                     {signals[h.stock_code] && (
                         <SignalBadge
                             strength={signals[h.stock_code].strength}

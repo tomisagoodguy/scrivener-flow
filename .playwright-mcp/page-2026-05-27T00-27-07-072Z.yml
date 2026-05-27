@@ -1,0 +1,206 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI智慧產業地圖" [level=1] [ref=e8]:
+            - generic [ref=e9]: AI智慧產業地圖
+          - generic [ref=e10]:
+            - button "開啟搜尋" [ref=e11]:
+              - img [ref=e12]
+              - generic [ref=e15]: 搜尋...
+              - generic [ref=e16]:
+                - generic [ref=e17]: ⌘
+                - text: K
+            - link "我的收藏" [ref=e18] [cursor=pointer]:
+              - /url: /favorites/
+              - img [ref=e19]
+            - button "升級會員" [ref=e21]:
+              - img [ref=e22]
+            - button "Show Tutorial" [ref=e24]:
+              - img [ref=e25]
+            - button [ref=e29]:
+              - img [ref=e30]
+        - generic [ref=e35]:
+          - button "每日焦點" [ref=e36]:
+            - generic [ref=e37]: 每日焦點
+          - button "題材總覽" [ref=e39]:
+            - generic [ref=e40]: 題材總覽
+          - button "半導體製造｜矽晶圓 總覽" [ref=e42]:
+            - generic [ref=e43]: 半導體製造｜矽晶圓 總覽
+          - button "產業地圖" [ref=e45]:
+            - generic [ref=e46]: 產業地圖
+          - button "公司資料庫" [ref=e48]:
+            - generic [ref=e49]: 公司資料庫
+          - link "財經節目(Beta)Beta" [ref=e51] [cursor=pointer]:
+            - /url: /influencer/
+            - generic [ref=e52]: 財經節目(Beta)Beta
+          - button "市場熱力圖" [ref=e54]:
+            - generic [ref=e55]: 市場熱力圖
+          - button "AI 分析" [ref=e57]:
+            - generic [ref=e58]: AI 分析
+    - generic [ref=e62]:
+      - button "功能說明" [ref=e65]:
+        - img [ref=e66]
+        - generic [ref=e69]: 功能說明
+      - generic [ref=e72]:
+        - heading "半導體製造｜矽晶圓" [level=1] [ref=e73]
+        - paragraph [ref=e74]: 位於半導體製造最上游，生產供晶圓代工廠與記憶體 IDM 使用之矽晶圓基板，涵蓋拋光矽晶圓、磊晶晶圓及再生晶圓，是先進製程與 AI 晶片產能擴張的關鍵材料制約點。
+      - generic [ref=e75]:
+        - heading "產業關鍵指標" [level=2] [ref=e78]
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - img [ref=e82]
+            - generic [ref=e85]:
+              - generic [ref=e86]: 需求驅動
+              - generic [ref=e87]: AI 先進製程 + HBM + 電動車
+          - generic [ref=e88]:
+            - img [ref=e90]
+            - generic [ref=e93]:
+              - generic [ref=e94]: 關鍵規格
+              - generic [ref=e95]: 12 吋拋光 / SiC 8 吋磊晶 / 薄化
+          - generic [ref=e96]:
+            - img [ref=e98]
+            - generic [ref=e101]:
+              - generic [ref=e102]: 技術門檻
+              - generic [ref=e103]: 高純度矽晶球成長 + 表面平整度控制
+          - generic [ref=e104]:
+            - img [ref=e106]
+            - generic [ref=e109]:
+              - generic [ref=e110]: 產業特性
+              - generic [ref=e111]: 長約主導 / 高資本支出 / 寡占市場
+      - generic [ref=e112]:
+        - generic [ref=e113]:
+          - generic [ref=e114]:
+            - heading "產業漲跌熱力圖" [level=2] [ref=e115]: 產業漲跌熱力圖
+            - paragraph [ref=e117]: 依個股漲跌幅度(絕對值)決定區塊大小，可切換觀察時間維度。
+            - generic [ref=e119]: 資料更新於 上午2:43:27
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - button "熱力圖" [ref=e122]:
+                - img [ref=e123]
+              - button "條列式" [ref=e128]:
+                - img [ref=e129]
+            - generic [ref=e132]:
+              - button "單日" [ref=e133]
+              - button "單週" [ref=e134]
+              - button "單月" [ref=e135]
+        - img [ref=e139]:
+          - generic [ref=e141]:
+            - generic [ref=e144]:
+              - generic: Industry
+              - generic: 0.00%
+            - generic [ref=e149]:
+              - generic: 環球晶
+              - generic: +9.90%
+            - generic [ref=e154]:
+              - generic: 台勝科
+              - generic: +9.89%
+            - generic [ref=e159]:
+              - generic: 中美晶
+              - generic: +6.15%
+            - generic [ref=e169]:
+              - generic: 合晶
+              - generic: +9.90%
+            - generic [ref=e174]:
+              - generic: 嘉晶
+              - generic: "-5.26%"
+        - generic [ref=e176]:
+          - generic [ref=e177]: 跌
+          - generic [ref=e186]: 漲
+        - generic [ref=e187]:
+          - paragraph [ref=e188]:
+            - img [ref=e189]
+            - text: 一個月一杯咖啡支持作者，解鎖盤中即時漲跌數據
+          - link "登入升級" [ref=e191] [cursor=pointer]:
+            - /url: /login/
+      - generic [ref=e192]:
+        - heading "產業價值鏈結構" [level=2] [ref=e195]
+        - paragraph [ref=e198]: 點擊節點可查看相關公司或展開子項目
+        - generic [ref=e199]:
+          - generic [ref=e200] [cursor=pointer]:
+            - heading "上游：原料與設備" [level=3] [ref=e202]
+            - paragraph [ref=e207]: 多晶矽 / 矽砂原料
+          - generic [ref=e208] [cursor=pointer]:
+            - heading "中游：矽晶圓製造" [level=3] [ref=e210]
+            - generic [ref=e211]:
+              - paragraph [ref=e215]: 拋光矽晶圓
+              - paragraph [ref=e219]: 磊晶晶圓
+              - paragraph [ref=e223]: 晶圓薄化與再生
+          - generic [ref=e224] [cursor=pointer]:
+            - heading "下游：晶圓製造廠" [level=3] [ref=e226]
+            - generic [ref=e227]:
+              - paragraph [ref=e231]: 邏輯晶圓代工廠
+              - paragraph [ref=e235]: 記憶體廠
+              - paragraph [ref=e239]: 功率半導體廠
+    - button [ref=e241]:
+      - img [ref=e243]
+  - contentinfo [ref=e244]:
+    - generic [ref=e245]:
+      - paragraph [ref=e246]: 運用 AI 將複雜產業轉化為易懂的產業地圖。歡迎追蹤，一同探索產業奧秘！
+      - paragraph [ref=e247]:
+        - link "Facebook 粉專" [ref=e248] [cursor=pointer]:
+          - /url: https://www.facebook.com/profile.php?id=61579107820934
+        - link "Threads" [ref=e249] [cursor=pointer]:
+          - /url: https://www.threads.com/@rayray_9601
+      - generic [ref=e250]:
+        - generic [ref=e251]:
+          - link "服務條款" [ref=e252] [cursor=pointer]:
+            - /url: /terms/
+          - link "隱私權政策" [ref=e253] [cursor=pointer]:
+            - /url: /privacy/
+          - link "退換貨政策" [ref=e254] [cursor=pointer]:
+            - /url: /refund/
+          - link "消費者權益" [ref=e255] [cursor=pointer]:
+            - /url: /consumer-rights/
+          - link "免責申明" [ref=e256] [cursor=pointer]:
+            - /url: /privacy/#disclaimer
+        - generic [ref=e257]: © 2026 AI 智慧產業地圖. All rights reserved.
+  - alert [ref=e258]
+  - generic:
+    - generic:
+      - generic:
+        - dialog "網站更新" [active]:
+          - generic [ref=e262]:
+            - heading "網站更新" [level=3] [ref=e263]
+            - generic [ref=e264]:
+              - heading "歡迎使用 AI 智慧產業地圖 🎉" [level=2] [ref=e265]
+              - paragraph [ref=e266]: 這裡匯整了台股、美股、日股的產業供應鏈與個股題材分析，幫助你快速掌握市場脈絡。
+              - paragraph [ref=e267]: 如果這個工具對你的投資有幫助，歡迎透過以下方式支持我繼續開發：
+              - list [ref=e268]:
+                - listitem [ref=e269]:
+                  - text: ☕
+                  - link "小額打賞支持" [ref=e270] [cursor=pointer]:
+                    - /url: https://core.newebpay.com/EPG/aistockmap/50SSL4
+                  - text: — 鼓勵作者繼續維護
+                - listitem [ref=e271]:
+                  - text: 👍
+                  - link "Facebook 粉絲專頁" [ref=e272] [cursor=pointer]:
+                    - /url: https://www.facebook.com/profile.php?id=61579107820934
+                  - text: — 追蹤最新更新
+                - listitem [ref=e273]:
+                  - text: 🌐 網址：
+                  - strong [ref=e274]:
+                    - link "https://aistockmap.com" [ref=e275] [cursor=pointer]:
+                      - /url: https://aistockmap.com
+                - listitem [ref=e276]: 📱 加入主畫面 使用手機瀏覽器開啟本站，點選瀏覽器選單中的「加入到主畫面」，即可像 App 一樣從桌面直接啟動。
+              - separator [ref=e277]
+              - separator [ref=e278]
+              - heading "Version 4.7.0" [level=2] [ref=e279]
+              - paragraph [ref=e280]:
+                - strong [ref=e281]: 2026-05-09
+              - list [ref=e282]:
+                - listitem [ref=e283]: 重構：產業地圖分類全面重整為 16 大精簡分類
+                - listitem [ref=e284]: 新增：每日焦點 新增「重大資訊觀測站」，依日期分類顯示重大事件
+                - listitem [ref=e285]: 優化：資料更新時間說明
+              - separator [ref=e286]
+              - separator [ref=e287]
+              - heading "Version 4.6.0" [level=2] [ref=e288]
+              - paragraph [ref=e289]:
+                - strong [ref=e290]: 2026-05-04
+              - list [ref=e291]:
+                - listitem [ref=e292]: 新增："每日焦點“新增 本週強勢股／大戶加碼股／主動式 ETF 追蹤
+                - listitem [ref=e293]: 新增：CNC 工具機、馬達驅動 兩個新題材
+                - listitem [ref=e294]: 優化：ETF 架構重構；熱力圖快取分層（免費/付費）；大戶資訊＋籌碼資訊
+                - listitem [ref=e295]: 調整：產業 group 分類重新命名；多間公司重新歸類題材
+            - button "我知道了！" [ref=e297]

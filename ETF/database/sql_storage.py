@@ -1,7 +1,6 @@
 
 import os
 import logging
-import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
@@ -287,6 +286,10 @@ class SQLStorage:
                 "title": item["title"],
                 "source": item.get("source", "公開資訊觀測站"),
                 "url": item.get("url"),
+                "content": item.get("content"),
+                "speaker": item.get("speaker"),
+                "event_date": item.get("event_date"),
+                "company_name": item.get("company_name"),
             }
             for item in news_list
         ]
@@ -296,9 +299,13 @@ class SQLStorage:
                 for rec in records:
                     conn.execute(
                         text("""
-                            INSERT INTO etf_news (etf_code, stock_code, pub_date, pub_time, title, source, url)
-                            VALUES (:etf_code, :stock_code, :pub_date, :pub_time, :title, :source, :url)
-                            ON CONFLICT (etf_code, stock_code, pub_date, title) DO NOTHING
+                            INSERT INTO etf_news (etf_code, stock_code, pub_date, pub_time, title, source, url, content, speaker, event_date, company_name)
+                            VALUES (:etf_code, :stock_code, :pub_date, :pub_time, :title, :source, :url, :content, :speaker, :event_date, :company_name)
+                            ON CONFLICT (etf_code, stock_code, pub_date, title) DO UPDATE SET
+                                content = COALESCE(EXCLUDED.content, etf_news.content),
+                                speaker = COALESCE(EXCLUDED.speaker, etf_news.speaker),
+                                event_date = COALESCE(EXCLUDED.event_date, etf_news.event_date),
+                                company_name = COALESCE(EXCLUDED.company_name, etf_news.company_name)
                         """),
                         rec,
                     )

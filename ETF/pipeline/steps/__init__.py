@@ -19,6 +19,7 @@ from ETF.pipeline.steps.overlap_compute_step import OverlapComputeStep
 from ETF.pipeline.steps.sync_bare_k_step import SyncBareKStep
 from ETF.pipeline.steps.shareholder_signal_step import ShareholderSignalStep
 from ETF.pipeline.steps.news_context_step import NewsContextStep
+from ETF.pipeline.steps.news_media_step import NewsMediaStep
 from ETF.pipeline.steps.aum_sync_step import AumSyncStep
 from ETF.pipeline.steps.signal_detect_step import SignalDetectStep
 from ETF.pipeline.steps.position_summary_step import PositionSummaryStep
@@ -48,6 +49,7 @@ __all__ = [
     "SyncBareKStep",
     "ShareholderSignalStep",
     "NewsContextStep",
+    "NewsMediaStep",
     "AumSyncStep",
     "SignalDetectStep",
     "PositionSummaryStep",

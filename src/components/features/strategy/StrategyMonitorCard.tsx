@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { MovementLabel } from '@/lib/investment/strategyUtils';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
+import { TopicBadge } from '@/components/features/investment/TopicBadge';
 
 export interface StrategyMonitorStock {
     stock_id: string;
@@ -64,6 +65,7 @@ export function StrategyMonitorCard({ stock, index }: { stock: StrategyMonitorSt
                             {stock.name && (
                                 <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{stock.name}</span>
                             )}
+                            <TopicBadge stockCode={stock.stock_id} />
                         </div>
                         {stock.category && (
                             <span className="text-[11px] text-gray-400 dark:text-gray-500">{stock.category}</span>

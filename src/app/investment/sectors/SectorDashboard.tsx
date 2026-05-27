@@ -15,6 +15,8 @@ import AdlChart from '@/app/investment/breadth/components/AdlChart';
 import type { TreemapData } from '@/app/actions/getTreemapData';
 import type { AdlData } from '@/app/actions/getAdlData';
 import type { ConsensusSignal } from '@/types';
+import type { TopicWithStats } from '@/lib/investment/topicUtils';
+import { SectorTopicHeatmap } from '@/components/features/investment/sectors/SectorTopicHeatmap';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
 
@@ -219,6 +221,7 @@ interface Props {
     treemapData?: TreemapData;
     adlData?: AdlData;
     consensusMap?: Record<string, ConsensusSignal>;
+    topics?: TopicWithStats[];
 }
 
 const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
@@ -246,7 +249,7 @@ const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
     death: { label: '廣度收縮警訊', cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 
-export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData, consensusMap = {} }: Props) {
+export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData, consensusMap = {}, topics = [] }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
@@ -552,6 +555,10 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                         />
                     ))}
                 </div>
+            )}
+
+            {topics.length > 0 && (
+                <SectorTopicHeatmap topics={topics} />
             )}
         </div>
     );

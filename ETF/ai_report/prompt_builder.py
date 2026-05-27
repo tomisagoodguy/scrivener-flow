@@ -53,9 +53,20 @@ def build_report_prompt(
 
     news_block = ""
     if news_context:
+        news_lines: list[str] = []
+        for item in news_context:
+            pub_date = item.get("pub_date", "")
+            company = item.get("company_name") or item.get("stock_code", "")
+            title = item.get("title", "")
+            line = f"- [{pub_date}] {company}：{title}"
+            content = item.get("content")
+            if content:
+                line += f"\n  內文摘要：{content[:500]}"
+            news_lines.append(line)
         news_block = (
-            f"\n### 4. 新聞與重大公告（最近 7 日）\n"
-            f"{json.dumps(news_context, ensure_ascii=False, indent=2)}\n"
+            "\n### 4. 新聞與重大公告（最近 7 日）\n"
+            + "\n".join(news_lines)
+            + "\n"
         )
 
     return f"""

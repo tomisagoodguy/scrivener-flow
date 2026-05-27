@@ -4,6 +4,7 @@ import { HighBadge } from './HighBadge';
 import { HolderPctCell } from './HolderPctCell';
 import { SortableHeader } from './SortableHeader';
 import { EtfBadge } from './EtfBadge';
+import { TopicBadge } from '@/components/features/investment/TopicBadge';
 
 function fmtNt(nt: number): string {
     const abs = Math.abs(nt);
@@ -63,6 +64,7 @@ export function RankingTable({
                                         {(etfMap[row.stock_code] ?? []).map(code => (
                                             <EtfBadge key={code} etfCode={code} />
                                         ))}
+                                        <TopicBadge stockCode={row.stock_code} />
                                         {row.mid_holder_pct_change != null && row.mid_holder_pct_change > 0 &&
                                          row.big_holder_pct_change != null && row.big_holder_pct_change > 0 &&
                                          row.whale_holder_pct_change != null && row.whale_holder_pct_change > 0 && (

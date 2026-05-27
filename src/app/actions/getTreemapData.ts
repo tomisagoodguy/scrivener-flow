@@ -31,14 +31,16 @@ const _getTreemapData = unstable_cache(
         if (!latestRow) return { date: '', stocks: [] };
         const latestDate = (latestRow as { date: string }).date;
 
-        const { data: stocks } = await supabase
+        const { data: rawStocks } = await supabase
             .from('market_treemap_daily')
             .select('stock_code, stock_name, industry, market_cap, close, change_pct')
             .eq('date', latestDate)
             .gt('close', 0);
 
+        const stocks = (rawStocks ?? []) as TreemapStock[];
+
         // stock_name 可能是 null（pipeline 未寫入），從 stock_basic_info 補齊
-        const nullNameCodes = (stocks ?? [])
+        const nullNameCodes = stocks
             .filter((s) => !s.stock_name)
             .map((s) => s.stock_code);
 
@@ -48,19 +50,19 @@ const _getTreemapData = unstable_cache(
                 .from('stock_basic_info')
                 .select('stock_code, name_short')
                 .in('stock_code', nullNameCodes);
-            for (const r of basicRows ?? []) {
+            for (const r of (basicRows ?? []) as Array<{ stock_code: string; name_short: string | null }>) {
                 if (r.name_short) nameMap[r.stock_code] = r.name_short;
             }
         }
 
-        const filled = (stocks ?? []).map((s) => ({
+        const filled: TreemapStock[] = stocks.map((s) => ({
             ...s,
             stock_name: s.stock_name ?? nameMap[s.stock_code] ?? null,
         }));
 
         return {
             date: latestDate,
-            stocks: filled as TreemapStock[],
+            stocks: filled,
         };
     },
     ['treemap-data-v2'],

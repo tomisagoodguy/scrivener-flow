@@ -29,6 +29,7 @@ from ETF.pipeline.steps import (
     SyncBareKStep,
     ShareholderSignalStep,
     NewsContextStep,
+    NewsMediaStep,
     SyncTreemapStep,
     SyncAdlStep,
     NotifyStep,
@@ -81,6 +82,7 @@ class PipelineOrchestrator:
         ActiveShareStep,        # [輔助] 持股重疊度（週一執行，非週一自動 skip）→ etf_active_share
         SyncBareKStep,          # 同步 watch_list 裸K快照
         NewsContextStep,        # 查 Cloudflare D1 取近期新聞供 AI 報告使用
+        NewsMediaStep,          # [輔助] 媒體新聞（CNYES/UDN/MoneyDJ）→ etf_news + ctx.news_context
         FundMomentumStep,       # [輔助] 投信買超多維度指標 → strategy_signals (fund_momentum)
         SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
