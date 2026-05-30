@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, List, Search, ChevronRight } from 'lucide-react';
+import { LayoutGrid, List, Search, ChevronRight, ChevronDown } from 'lucide-react';
 
 export interface SidebarGroup {
     title: string;
@@ -38,6 +38,15 @@ export function PageSidebar({
 }: PageSidebarProps) {
     const [filterText, setFilterText] = useState('');
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+    const toggleGroup = (title: string) => {
+        setCollapsedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(title)) { next.delete(title); } else { next.add(title); }
+            return next;
+        });
+    };
 
     const toggleExpand = (id: string) => {
         setExpandedIds(prev => {
@@ -166,37 +175,52 @@ export function PageSidebar({
                         );
                     };
 
+                    const isGroupCollapsed = collapsedGroups.has(group.title);
+
                     return (
                         <div key={idx} className="space-y-1">
                             {group.title && (
-                                <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                    {group.title}
-                                    {filterText && (
-                                        <span className="ml-1 text-indigo-400 normal-case font-normal">
-                                            ({matched.length} 筆)
-                                        </span>
-                                    )}
-                                </h3>
+                                <button
+                                    onClick={() => toggleGroup(group.title)}
+                                    className="w-full flex items-center justify-between px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors"
+                                >
+                                    <span>
+                                        {group.title}
+                                        {filterText && (
+                                            <span className="ml-1 text-indigo-400 normal-case font-normal">
+                                                ({matched.length} 筆)
+                                            </span>
+                                        )}
+                                    </span>
+                                    {isGroupCollapsed
+                                        ? <ChevronRight className="w-3 h-3" />
+                                        : <ChevronDown className="w-3 h-3" />
+                                    }
+                                </button>
                             )}
 
-                            {/* 熱門區 */}
-                            {!filterText && hotItems.length > 0 && (
+                            {!isGroupCollapsed && (
                                 <>
-                                    <div className="px-3 py-1 flex items-center gap-1">
-                                        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">🔥 熱門</span>
-                                    </div>
-                                    {hotItems.map(renderItem)}
-                                    {restItems.length > 0 && (
-                                        <div className="mx-3 my-2 border-t border-slate-100" />
+                                    {/* 熱門區 */}
+                                    {!filterText && hotItems.length > 0 && (
+                                        <>
+                                            <div className="px-3 py-1 flex items-center gap-1">
+                                                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">🔥 熱門</span>
+                                            </div>
+                                            {hotItems.map(renderItem)}
+                                            {restItems.length > 0 && (
+                                                <div className="mx-3 my-2 border-t border-slate-100" />
+                                            )}
+                                        </>
                                     )}
+
+                                    {/* 正常搜尋時不分層 */}
+                                    {filterText
+                                        ? matched.map(renderItem)
+                                        : restItems.map(renderItem)
+                                    }
                                 </>
                             )}
-
-                            {/* 正常搜尋時不分層 */}
-                            {filterText
-                                ? matched.map(renderItem)
-                                : restItems.map(renderItem)
-                            }
                         </div>
                     );
                 })}

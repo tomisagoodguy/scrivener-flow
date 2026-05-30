@@ -73,16 +73,20 @@ export function useClauses() {
 
     const categories = Array.from(new Set(clauses.map((c) => c.category).filter(Boolean))).sort();
     const tagsByCategory = Object.fromEntries(
-        categories.map((cat) => [
-            cat,
-            Array.from(new Set(clauses.filter((c) => c.category === cat).flatMap((c) => c.tags || []))).sort(),
-        ])
+        categories.map((cat) => {
+            const catClauses = clauses.filter((c) => c.category === cat);
+            const tagCount: Record<string, number> = {};
+            catClauses.forEach((c) => (c.tags ?? []).forEach((t) => { tagCount[t] = (tagCount[t] ?? 0) + 1; }));
+            return [cat, Object.keys(tagCount).sort((a, b) => tagCount[b] - tagCount[a])];
+        })
     );
 
     const filteredClauses = clauses.filter((clause) => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
         if (!matchesSearch) return false;
+
+        if (searchTerm) return true; // 搜尋時跨所有分類
 
         if (!selectedCategory) return true;
         if (selectedCategory.includes('::')) {

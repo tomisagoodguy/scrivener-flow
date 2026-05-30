@@ -1,9 +1,10 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { getServiceClient } from '@/lib/supabase/service';
+import { getServiceClient, getPublicClient } from '@/lib/supabase/service';
 import type { Holding, DiffLog } from '@/types/investment';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
+import { attachTopicsToHoldings, filterHoldingsByTopic, type TopicChip } from '@/lib/investment/topicUtils';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
 export type { QuantFilter } from '@/lib/investment/quantFilters';
 
@@ -31,7 +32,7 @@ export interface EtfNewsRow {
 
 export type DiffLogWithMeta = DiffLog;
 
-async function _getHoldings(etfCode: string): Promise<{
+async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
     holdings: Holding[];
     updatedAt: string | null;
     dataDate: string | null;
@@ -75,14 +76,23 @@ async function _getHoldings(etfCode: string): Promise<{
     }
 
     const codes = (data || []).map(h => h.stock_code);
+    const publicClient = getPublicClient();
 
-    const [{ data: industryData }, { data: revData }] = await Promise.all([
+    const [{ data: industryData }, { data: revData }, { data: topicAssignmentsRaw }] = await Promise.all([
         supabase.from('stock_basic_info').select('stock_code, industry').in('stock_code', codes),
         supabase.from('stock_revenue_monthly')
             .select('stock_code, data_date, revenue_yoy, revenue_mom')
             .in('stock_code', codes)
             .order('data_date', { ascending: false }),
+        publicClient.from('stock_topic_assignments')
+            .select('stock_code, topic_id, stock_topics(short_name, color)')
+            .in('stock_code', codes),
     ]);
+    const topicAssignments = topicAssignmentsRaw as {
+        stock_code: string;
+        topic_id: string;
+        stock_topics: { short_name: string; color: string } | { short_name: string; color: string }[] | null;
+    }[] | null;
 
     const industryMap: Record<string, string> = {};
     industryData?.forEach(i => { industryMap[i.stock_code] = i.industry ?? '未知'; });
@@ -126,7 +136,21 @@ async function _getHoldings(etfCode: string): Promise<{
         }
     }
 
-    const holdings = (data || []).map(h => {
+    // Build stock_code → TopicChip[] map from joined query
+    const topicMap: Record<string, TopicChip[]> = {};
+    for (const row of topicAssignments ?? []) {
+        if (!topicMap[row.stock_code]) topicMap[row.stock_code] = [];
+        const td = Array.isArray(row.stock_topics) ? row.stock_topics[0] : row.stock_topics;
+        if (td) {
+            topicMap[row.stock_code].push({
+                topic_id: row.topic_id,
+                short_name: (td as { short_name: string; color: string }).short_name,
+                color: (td as { short_name: string; color: string }).color,
+            });
+        }
+    }
+
+    let holdings = (data || []).map(h => {
         const rev = revMap[h.stock_code];
         const pi = priceMap[h.stock_code];
         return {
@@ -143,6 +167,9 @@ async function _getHoldings(etfCode: string): Promise<{
         };
     }) as Holding[];
 
+    holdings = attachTopicsToHoldings(holdings, topicMap);
+    if (topic) holdings = filterHoldingsByTopic(holdings, topic, topicMap);
+
     const etfMeta = getEtfMeta(etfCode);
     const meta: EtfFreshnessMeta | null = targetDate
         ? {
@@ -154,7 +181,11 @@ async function _getHoldings(etfCode: string): Promise<{
     return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate, meta };
 }
 
-export async function getHoldings(etfCode: string) {
+export async function getHoldings(etfCode: string, topic?: string | null) {
+    if (topic) {
+        // Topic-filtered results are not cached (URL-param-specific)
+        return _getHoldings(etfCode, topic);
+    }
     const cached = unstable_cache(
         () => _getHoldings(etfCode),
         ['etf-holdings', etfCode],

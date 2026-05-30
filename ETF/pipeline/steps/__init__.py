@@ -34,6 +34,7 @@ from ETF.pipeline.steps.sync_treemap_step import SyncTreemapStep
 from ETF.pipeline.steps.sync_adl_step import SyncAdlStep
 from ETF.pipeline.steps.disposal_detect_step import DisposalDetectStep
 from ETF.pipeline.steps.fund_momentum_step import FundMomentumStep
+from ETF.pipeline.steps.sync_topics_step import SyncTopicsStep
 
 __all__ = [
     "BaseStep",
@@ -64,6 +65,7 @@ __all__ = [
     "SyncAdlStep",
     "DisposalDetectStep",
     "FundMomentumStep",
+    "SyncTopicsStep",
     "NotifyStep",
     "CleanupStep",
 ]

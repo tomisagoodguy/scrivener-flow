@@ -1,5 +1,6 @@
 import topicMapData from './topicMap.json';
 import type { TopicStockReturn } from '@/app/actions/getTopicStockReturns';
+import type { Holding } from '@/types/investment';
 
 export interface TopicEntry {
     id: string;
@@ -43,4 +44,86 @@ const _stockTopicMap = buildStockTopicMap();
  */
 export function getStockTopics(stockCode: string): TopicEntry[] {
     return _stockTopicMap.get(stockCode) ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// DB-driven topic helpers（與 stock_topics / stock_topic_assignments 資料表對接）
+// ---------------------------------------------------------------------------
+
+export interface TopicChip {
+    topic_id: string;
+    short_name: string;
+    color: string;
+}
+
+export interface TopicMeta {
+    topic_id: string;
+    name: string;
+    short_name: string;
+    color: string;
+}
+
+export interface TopicWeightRow extends TopicMeta {
+    total_weight: number;
+    holding_count: number;
+}
+
+type TopicMap = Record<string, TopicChip[]>;
+
+/** 為每個 holding 附加最多 3 個主題標籤（server-side join 後呼叫） */
+export function attachTopicsToHoldings(
+    holdings: Holding[],
+    topicMap: TopicMap,
+): Holding[] {
+    return holdings.map(h => ({
+        ...h,
+        topics: (topicMap[h.stock_code] ?? []).slice(0, 3),
+    }));
+}
+
+/** 依 topic URL param 過濾持股（server-side filter，null 代表不過濾） */
+export function filterHoldingsByTopic(
+    holdings: Holding[],
+    topic: string | null,
+    topicMap: TopicMap,
+): Holding[] {
+    if (!topic) return holdings;
+    return holdings.filter(h =>
+        (topicMap[h.stock_code] ?? []).some(t => t.topic_id === topic)
+    );
+}
+
+/**
+ * 計算各主題的 ETF 持股加權合計（供熱力圖 Server Action 使用）。
+ * 排除 holding_count = 0 的主題。
+ */
+export function aggregateTopicWeights(
+    topics: TopicMeta[],
+    assignments: { stock_code: string; topic_id: string }[],
+    holdings: { stock_code: string; weight: number }[],
+): TopicWeightRow[] {
+    const holdingWeightMap = new Map<string, number>(
+        holdings.map(h => [h.stock_code, h.weight])
+    );
+
+    const byTopic = new Map<string, { total_weight: number; holding_count: number }>();
+
+    for (const a of assignments) {
+        const w = holdingWeightMap.get(a.stock_code);
+        if (w === undefined) continue;
+        const existing = byTopic.get(a.topic_id) ?? { total_weight: 0, holding_count: 0 };
+        byTopic.set(a.topic_id, {
+            total_weight: existing.total_weight + w,
+            holding_count: existing.holding_count + 1,
+        });
+    }
+
+    return topics
+        .filter(t => (byTopic.get(t.topic_id)?.holding_count ?? 0) > 0)
+        .map(t => ({
+            ...t,
+            total_weight: byTopic.get(t.topic_id)!.total_weight,
+            holding_count: byTopic.get(t.topic_id)!.holding_count,
+        }))
+        .sort((a, b) => b.total_weight - a.total_weight);
 }

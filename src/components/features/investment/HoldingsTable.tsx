@@ -8,13 +8,14 @@
 
 import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, X } from 'lucide-react';
 import { Holding } from '@/types/investment';
 import { SortField } from '@/lib/investment/holdingFilters';
 import { HoldingRow } from './HoldingRow';
 import { HoldingsFilterBar } from './HoldingsFilterBar';
 import { HoldingsSearchBar } from './HoldingsSearchBar';
 import { useHoldingsFilter } from '@/hooks/investment';
+import { useTopicFilter } from '@/hooks/investment/useTopicFilter';
 
 interface HoldingsTableProps {
     initialData: Holding[];
@@ -34,7 +35,7 @@ const SortIndicator = ({ field, sortField, sortOrder }: SortIndicatorProps) => {
 
 export function HoldingsTable({ initialData }: HoldingsTableProps) {
     const router = useRouter();
-    
+
     // 使用 Custom Hook 管理篩選與排序邏輯
     const {
         sortField,
@@ -47,6 +48,19 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
         toggleFilter,
         setSearchTerm,
     } = useHoldingsFilter(initialData);
+
+    const { activeTopic, setTopic, clearTopic } = useTopicFilter();
+
+    // 收集此 ETF 持股中出現的所有主題（供 filter 選單使用）
+    const availableTopics = useMemo(() => {
+        const seen = new Map<string, { short_name: string; color: string }>();
+        for (const h of initialData) {
+            for (const t of h.topics ?? []) {
+                if (!seen.has(t.topic_id)) seen.set(t.topic_id, t);
+            }
+        }
+        return Array.from(seen.entries()).map(([id, t]) => ({ topic_id: id, ...t }));
+    }, [initialData]);
 
     // 計算最大成交金額（用於視覺化）
     const maxAmount = useMemo(() => Math.max(...initialData.map(d => d.amount || 0), 1), [initialData]);
@@ -65,14 +79,56 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
     return (
         <div className="space-y-6">
             {/* 篩選按鈕列 */}
-            <HoldingsFilterBar 
+            <HoldingsFilterBar
                 filterOptions={filterOptions}
                 activeFilters={activeFilters}
                 onToggleFilter={toggleFilter}
             />
 
+            {/* 主題過濾 */}
+            {availableTopics.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-400 font-medium">投資主題：</span>
+                    {availableTopics.slice(0, 20).map(t => (
+                        <button
+                            key={t.topic_id}
+                            onClick={() => activeTopic === t.topic_id ? clearTopic() : setTopic(t.topic_id)}
+                            className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all"
+                            style={activeTopic === t.topic_id
+                                ? { backgroundColor: t.color, color: '#fff', border: `1px solid ${t.color}` }
+                                : { backgroundColor: t.color + '18', color: t.color, border: `1px solid ${t.color}44` }
+                            }
+                        >
+                            {t.short_name}
+                        </button>
+                    ))}
+                    {activeTopic && (
+                        <button
+                            onClick={clearTopic}
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            <X className="w-3 h-3" />清除篩選
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Active topic filter chip */}
+            {activeTopic && (
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">主題篩選中：</span>
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 font-medium">
+                        {availableTopics.find(t => t.topic_id === activeTopic)?.short_name ?? activeTopic}
+                        <button onClick={clearTopic} className="hover:text-indigo-900 dark:hover:text-white transition-colors">
+                            <X className="w-3 h-3" />
+                        </button>
+                    </span>
+                    <span className="text-xs text-slate-400">（伺服器篩選，顯示 {initialData.length} 筆）</span>
+                </div>
+            )}
+
             {/* 搜尋與摘要 */}
-            <HoldingsSearchBar 
+            <HoldingsSearchBar
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
                 matchCount={filteredData.length}

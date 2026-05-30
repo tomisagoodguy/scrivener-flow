@@ -26,15 +26,15 @@ export default async function InvestmentEtfDrilldownPage({
     params, searchParams,
 }: {
     params: Promise<{ etf: string }>;
-    searchParams: Promise<{ tab?: string }>;
+    searchParams: Promise<{ tab?: string; topic?: string }>;
 }) {
     const { etf } = await params;
-    await searchParams;
+    const { topic } = await searchParams;
     if (!(ETF_CODES as string[]).includes(etf)) redirect('/investment');
 
     const etfCode = etf;
     const etfMeta = getEtfMeta(etfCode);
-    const { holdings, updatedAt, dataDate, meta } = await getHoldings(etfCode);
+    const { holdings, updatedAt, dataDate, meta } = await getHoldings(etfCode, topic ?? null);
 
     const [logs, rankingHistory, quantFilters, news, drilldown] = await Promise.all([
         getDiffLogs(etfCode),

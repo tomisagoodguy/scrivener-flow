@@ -74,6 +74,16 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
                                     {item.industry}
                                 </span>
                             )}
+                            {(item.topics ?? []).map(t => (
+                                <span
+                                    key={t.topic_id}
+                                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
+                                    style={{ backgroundColor: t.color + '22', color: t.color, border: `1px solid ${t.color}55` }}
+                                    title={t.topic_id}
+                                >
+                                    {t.short_name}
+                                </span>
+                            ))}
                         </div>
                     </div>
                     {getNewHighBadge(item)}

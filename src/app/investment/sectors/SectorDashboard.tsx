@@ -17,6 +17,8 @@ import type { AdlData } from '@/app/actions/getAdlData';
 import type { ConsensusSignal } from '@/types';
 import type { TopicWithStats } from '@/lib/investment/topicUtils';
 import { SectorTopicHeatmap } from '@/components/features/investment/sectors/SectorTopicHeatmap';
+import type { TopicWeightRow } from '@/lib/investment/topicUtils';
+import { EtfTopicHeatmap } from '@/components/features/investment/sectors/EtfTopicHeatmap';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
 
@@ -32,7 +34,7 @@ function barColor(pct: number | null): string {
     if (pct >= -3) return '#16a34a';
     return '#14532d';
 }
-type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth';
+type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth' | 'topic';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -222,6 +224,8 @@ interface Props {
     adlData?: AdlData;
     consensusMap?: Record<string, ConsensusSignal>;
     topics?: TopicWithStats[];
+    etfTopics?: TopicWeightRow[];
+    etfTopicHoldings?: Record<string, { stock_code: string; stock_name: string; weight: number }[]>;
 }
 
 const SORT_VAL_MAP: Record<SortKey, keyof SectorRow | null> = {
@@ -249,7 +253,7 @@ const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
     death: { label: '廣度收縮警訊', cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 
-export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData, consensusMap = {}, topics = [] }: Props) {
+export default function SectorDashboard({ data, icData = [], etfActivity = {}, treemapData, adlData, consensusMap = {}, topics = [], etfTopics = [], etfTopicHoldings = {} }: Props) {
     const [sortKey, setSortKey] = useState<SortKey>('1d');
     const [positiveOnly, setPositiveOnly] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
@@ -443,11 +447,25 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                         >
                             📈
                         </button>
+                        <button
+                            onClick={() => {
+                                setViewMode('topic');
+                                if (sortKey === 'amount' || sortKey === 'strength' || sortKey === 'hit' || sortKey === 'etf') setSortKey('1d');
+                            }}
+                            className={`px-3 py-1.5 transition-colors text-sm font-medium ${viewMode === 'topic' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white/60'}`}
+                            title="ETF 投資主題"
+                        >
+                            主題
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {viewMode === 'breadth' ? (
+            {viewMode === 'topic' ? (
+                <div>
+                    <EtfTopicHeatmap topics={etfTopics} holdingsByTopic={etfTopicHoldings} />
+                </div>
+            ) : viewMode === 'breadth' ? (
                 <div>
                     {adlData && adlData.records.length > 0 ? (
                         <>
