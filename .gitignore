@@ -43,3 +43,8 @@ Thumbs.db
 mcp.json
 .spectra/
 openspec/.vector-search.db*
+
+# Playwright / browser automation artifacts
+.playwright-mcp/
+*.png
+*.jpeg
