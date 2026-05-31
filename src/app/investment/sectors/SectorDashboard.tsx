@@ -18,6 +18,7 @@ import type { ConsensusSignal } from '@/types';
 import type { TopicWithStats } from '@/lib/investment/topicUtils';
 import { SectorTopicHeatmap } from '@/components/features/investment/sectors/SectorTopicHeatmap';
 import type { TopicWeightRow } from '@/lib/investment/topicUtils';
+import { SectorChainPanel } from './components/SectorChainPanel';
 import { EtfTopicHeatmap } from '@/components/features/investment/sectors/EtfTopicHeatmap';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
@@ -210,6 +211,7 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity, consensusMap = {
                         </table>
                         );
                     })()}
+                    <SectorChainPanel stockIds={stocks.map(s => s.stock_id)} />
                 </div>
             )}
         </div>

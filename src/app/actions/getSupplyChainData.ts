@@ -1,9 +1,9 @@
 'use server';
 
 import { getPublicClient } from '@/lib/supabase/service';
-import { buildSupplyChainGraph, type ChainNode, type ChainEdge } from '@/lib/investment/supplyChainUtils';
+import { buildSupplyChainGraph } from '@/lib/investment/supplyChainUtils';
 
-export async function getSupplyChainData(): Promise<{ nodes: ChainNode[]; edges: ChainEdge[] }> {
+export async function getSupplyChainData() {
     const supabase = getPublicClient();
 
     const [topicsResult, edgesResult] = await Promise.all([
