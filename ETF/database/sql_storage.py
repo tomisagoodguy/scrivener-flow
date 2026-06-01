@@ -126,23 +126,21 @@ class SQLStorage:
             return
             
         logger.info(f"準備寫入 {len(records)} 筆營收記錄...")
-        
+        upsert_sql = text("""
+            INSERT INTO stock_revenue_monthly (stock_code, data_date, revenue, revenue_yoy, revenue_mom)
+            VALUES (:stock_code, :data_date, :revenue, :revenue_yoy, :revenue_mom)
+            ON CONFLICT (stock_code, data_date)
+            DO UPDATE SET
+                revenue = EXCLUDED.revenue,
+                revenue_yoy = EXCLUDED.revenue_yoy,
+                revenue_mom = EXCLUDED.revenue_mom,
+                created_at = NOW()
+        """)
         with self.engine.connect() as conn:
-            chunk_size = 500
+            chunk_size = 3000
             for i in range(0, len(records), chunk_size):
-                chunk = records[i:i+chunk_size]
-                upsert_sql = text("""
-                    INSERT INTO stock_revenue_monthly (stock_code, data_date, revenue, revenue_yoy, revenue_mom)
-                    VALUES (:stock_code, :data_date, :revenue, :revenue_yoy, :revenue_mom)
-                    ON CONFLICT (stock_code, data_date) 
-                    DO UPDATE SET 
-                        revenue = EXCLUDED.revenue,
-                        revenue_yoy = EXCLUDED.revenue_yoy,
-                        revenue_mom = EXCLUDED.revenue_mom,
-                        created_at = NOW()
-                """)
-                conn.execute(upsert_sql, chunk)
-                conn.commit()
+                conn.execute(upsert_sql, records[i:i+chunk_size])
+            conn.commit()
         logger.info("✅ 營收數據寫入完成")
 
     def upsert_shareholder_data(self, records: list):
@@ -176,7 +174,7 @@ class SQLStorage:
 
         logger.info(f"準備寫入 {len(records)} 筆券商交易記錄...")
         with self.engine.connect() as conn:
-            chunk_size = 500
+            chunk_size = 3000
             for i in range(0, len(records), chunk_size):
                 chunk = records[i:i+chunk_size]
                 try:
@@ -325,25 +323,22 @@ class SQLStorage:
         if not records:
             return
         logger.info(f"準備寫入 {len(records)} 筆策略訊號...")
+        upsert_sql = text("""
+            INSERT INTO strategy_signals
+                (strategy_id, date, stock_id, score, is_selected, conditions)
+            VALUES
+                (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
+            ON CONFLICT (strategy_id, date, stock_id)
+            DO UPDATE SET
+                score = EXCLUDED.score,
+                is_selected = EXCLUDED.is_selected,
+                conditions = EXCLUDED.conditions
+        """)
         with self.engine.connect() as conn:
-            chunk_size = 500
+            chunk_size = 3000
             for i in range(0, len(records), chunk_size):
-                chunk = records[i : i + chunk_size]
-                conn.execute(
-                    text("""
-                        INSERT INTO strategy_signals
-                            (strategy_id, date, stock_id, score, is_selected, conditions)
-                        VALUES
-                            (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
-                        ON CONFLICT (strategy_id, date, stock_id)
-                        DO UPDATE SET
-                            score = EXCLUDED.score,
-                            is_selected = EXCLUDED.is_selected,
-                            conditions = EXCLUDED.conditions
-                    """),
-                    chunk,
-                )
-                conn.commit()
+                conn.execute(upsert_sql, records[i:i+chunk_size])
+            conn.commit()
         logger.info("✅ 策略訊號寫入完成")
 
     def _get_stock_name(self, stock_code: str) -> str:
