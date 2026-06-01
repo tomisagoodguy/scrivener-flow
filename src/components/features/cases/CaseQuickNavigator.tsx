@@ -32,9 +32,16 @@ interface CaseQuickNavigatorProps {
 
 export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
     const [showBackToTop, setShowBackToTop] = useState(false);
+    const [showScrollDown, setShowScrollDown] = useState(false);
 
     useEffect(() => {
-        const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+        const handleScroll = () => {
+            const scrollY = window.scrollY;
+            const atBottom = scrollY + window.innerHeight >= document.documentElement.scrollHeight - 400;
+            setShowBackToTop(scrollY > 400);
+            setShowScrollDown(!atBottom && document.documentElement.scrollHeight > window.innerHeight + 400);
+        };
+        handleScroll();
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -103,25 +110,45 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
                 </div>
             </div>
 
-            {/* Back to Top FAB */}
-            <AnimatePresence>
-                {showBackToTop && (
-                    <motion.button
-                        key="back-to-top"
-                        initial={{ opacity: 0, scale: 0.5, y: 50 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.5, y: 50 }}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="fixed bottom-8 right-8 z-100 w-12 h-12 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center border border-white/20 hover:bg-blue-700 pointer-events-auto"
-                    >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 15l-6-6-6 6"/>
-                        </svg>
-                    </motion.button>
-                )}
-            </AnimatePresence>
+            {/* Scroll FABs */}
+            <div className="fixed bottom-8 right-8 z-100 flex flex-col gap-2 pointer-events-auto">
+                <AnimatePresence>
+                    {showBackToTop && (
+                        <motion.button
+                            key="back-to-top"
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                            className="w-12 h-12 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center border border-white/20 hover:bg-blue-700"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 15l-6-6-6 6"/>
+                            </svg>
+                        </motion.button>
+                    )}
+                </AnimatePresence>
+                <AnimatePresence>
+                    {showScrollDown && (
+                        <motion.button
+                            key="scroll-down"
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+                            className="w-12 h-12 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center border border-white/20 hover:bg-blue-700"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </motion.button>
+                    )}
+                </AnimatePresence>
+            </div>
         </>
     );
 }

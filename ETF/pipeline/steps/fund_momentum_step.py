@@ -69,6 +69,12 @@ class FundMomentumStep(BaseStep):
 
         logger.info(f"[FundMomentumStep] 開始計算投信買超指標，日期={date_str}")
 
+        # 確保 FinLab 已登入（main.py pipeline 無統一登入點，需明確呼叫）
+        client = getattr(services.finlab_srv, "client", None)
+        if client and not client.login():
+            logger.error("[FundMomentumStep] FinLab login 失敗，跳過")
+            return
+
         # 取得 FinLab 資料
         fund_raw: pd.DataFrame = data.get("institutional_investors_trading_summary:投信買賣超股數")
         volume_raw: pd.DataFrame = data.get("price:成交股數")

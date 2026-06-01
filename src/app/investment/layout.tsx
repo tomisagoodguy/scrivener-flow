@@ -22,7 +22,6 @@ const moreGroup = [
     { name: '買貴了嗎', href: '/investment/frontrunning' },
     { name: '投信追蹤', href: '/investment/fund-tracker' },
     { name: '共識掃描', href: '/investment/consensus-signal' },
-    { name: '產業鏈', href: '/investment/supply-chain' },
 ];
 
 const watchGroup = [
