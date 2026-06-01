@@ -151,23 +151,22 @@ class SQLStorage:
             return
 
         logger.info(f"準備寫入 {len(records)} 筆集保記錄...")
+        upsert_sql = text("""
+            INSERT INTO stock_shareholder_weekly
+            (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
+            VALUES (:stock_code, :data_date, :shareholder_tier, :holder_count, :shares_held, :custody_ratio)
+            ON CONFLICT (stock_code, data_date, shareholder_tier)
+            DO UPDATE SET
+                holder_count = EXCLUDED.holder_count,
+                shares_held = EXCLUDED.shares_held,
+                custody_ratio = EXCLUDED.custody_ratio,
+                created_at = NOW()
+        """)
         with self.engine.connect() as conn:
-            chunk_size = 500
+            chunk_size = 3000  # 39k records / 3000 = ~14 round trips（原 500 = 79 次，耗時 ~60min）
             for i in range(0, len(records), chunk_size):
-                chunk = records[i:i+chunk_size]
-                upsert_sql = text("""
-                    INSERT INTO stock_shareholder_weekly 
-                    (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
-                    VALUES (:stock_code, :data_date, :shareholder_tier, :holder_count, :shares_held, :custody_ratio)
-                    ON CONFLICT (stock_code, data_date, shareholder_tier) 
-                    DO UPDATE SET 
-                        holder_count = EXCLUDED.holder_count,
-                        shares_held = EXCLUDED.shares_held,
-                        custody_ratio = EXCLUDED.custody_ratio,
-                        created_at = NOW()
-                """)
-                conn.execute(upsert_sql, chunk)
-                conn.commit()
+                conn.execute(upsert_sql, records[i:i+chunk_size])
+            conn.commit()
         logger.info("✅ 集保數據寫入完成")
 
     def upsert_broker_transactions(self, records: list):
