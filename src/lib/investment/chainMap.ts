@@ -177,6 +177,19 @@ export function getCategoryChain(category: string): CategoryChain {
  * upstream and downstream groups via supply chain edges.
  * Works with any sector category naming convention.
  */
+/**
+ * Returns upstream and downstream topic_ids directly connected to the given topic_id.
+ */
+export function getTopicChain(topicId: string): { upstream: string[]; downstream: string[] } {
+    const upstream = new Set<string>();
+    const downstream = new Set<string>();
+    for (const [source, target] of CHAIN_EDGES) {
+        if (target === topicId) upstream.add(source);
+        if (source === topicId) downstream.add(target);
+    }
+    return { upstream: Array.from(upstream), downstream: Array.from(downstream) };
+}
+
 export function getStockChain(stockIds: string[]): CategoryChain {
     // Collect all topic_ids that appear among these stocks
     const myTopics = new Set<string>();

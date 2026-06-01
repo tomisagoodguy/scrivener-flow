@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { fmtPct, pctClass } from '@/lib/investment/formatUtils';
 import type { TopicWithStats } from '@/lib/investment/topicUtils';
+import { getTopicChain } from '@/lib/investment/chainMap';
 
 interface Props {
     topics: TopicWithStats[];
@@ -14,7 +15,7 @@ function heatBgClass(val: number | null): string {
     if (val === null) return 'bg-slate-200 dark:bg-slate-700';
     if (val >= 2) return 'bg-rose-700';
     if (val >= 0.5) return 'bg-rose-400';
-    if (val >= -0.5) return 'bg-slate-200 dark:bg-slate-600';
+    if (val >= -0.5) return 'bg-slate-200';
     if (val >= -2) return 'bg-emerald-400';
     return 'bg-emerald-700';
 }
@@ -32,7 +33,96 @@ function fmtAvgRet(val: number | null): string {
     return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
 }
 
-function TopicDetailPanel({ topic }: { topic: TopicWithStats }) {
+function ChainCompareTable({
+    topicId,
+    currentTopic,
+    allTopics,
+    onSelect,
+}: {
+    topicId: string;
+    currentTopic: TopicWithStats;
+    allTopics: TopicWithStats[];
+    onSelect: (id: string) => void;
+}) {
+    const chain = useMemo(() => getTopicChain(topicId), [topicId]);
+
+    const upstream = chain.upstream
+        .map((id) => allTopics.find((t) => t.id === id))
+        .filter((t): t is TopicWithStats => !!t);
+    const downstream = chain.downstream
+        .map((id) => allTopics.find((t) => t.id === id))
+        .filter((t): t is TopicWithStats => !!t);
+
+    if (upstream.length === 0 && downstream.length === 0) return null;
+
+    interface Row { topic: TopicWithStats; role: '上游' | '本題材' | '下游'; isCurrent: boolean }
+    const rows: Row[] = [
+        ...upstream.map((t) => ({ topic: t, role: '上游' as const, isCurrent: false })),
+        { topic: currentTopic, role: '本題材' as const, isCurrent: true },
+        ...downstream.map((t) => ({ topic: t, role: '下游' as const, isCurrent: false })),
+    ];
+
+    return (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-800">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                供應鏈比對
+            </p>
+            <div className="space-y-0.5">
+                {rows.map(({ topic, role, isCurrent }) => {
+                    const bg = heatBgClass(topic.avgRet1d);
+                    const txt = heatTextClass(topic.avgRet1d);
+                    const roleColor =
+                        role === '上游'
+                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                            : role === '下游'
+                            ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+
+                    const row = (
+                        <div
+                            className={`flex items-center gap-2 px-2 py-1 rounded-lg ${isCurrent ? 'ring-1 ring-blue-400' : ''}`}
+                        >
+                            <span className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${roleColor}`}>
+                                {role}
+                            </span>
+                            <span className="flex-1 text-[11px] text-gray-700 dark:text-gray-200 truncate">
+                                {topic.shortname}
+                            </span>
+                            <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded ${bg} ${txt}`}>
+                                {fmtAvgRet(topic.avgRet1d)}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-gray-400 tabular-nums">
+                                {topic.companyCount}支
+                            </span>
+                        </div>
+                    );
+
+                    return isCurrent ? (
+                        <div key={topic.id}>{row}</div>
+                    ) : (
+                        <button
+                            key={topic.id}
+                            onClick={() => onSelect(topic.id)}
+                            className="w-full text-left hover:bg-white/40 dark:hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            {row}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function TopicDetailPanel({
+    topic,
+    allTopics,
+    onSelect,
+}: {
+    topic: TopicWithStats;
+    allTopics: TopicWithStats[];
+    onSelect: (id: string) => void;
+}) {
     // 依 change_pct 降序排列（無資料者排最後）
     const sortedStocks = [...topic.stocks].sort((a, b) => {
         const pa = topic.stockReturns[a]?.change_pct ?? null;
@@ -48,7 +138,7 @@ function TopicDetailPanel({ topic }: { topic: TopicWithStats }) {
     ).length;
 
     return (
-        <div className="animate-fade-in h-full flex flex-col">
+        <div className="animate-fade-in">
             <div className="mb-3">
                 <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-snug">
                     {topic.name}
@@ -58,7 +148,7 @@ function TopicDetailPanel({ topic }: { topic: TopicWithStats }) {
                 </p>
             </div>
 
-            <div className="overflow-y-auto flex-1 custom-scrollbar">
+            <div>
                 <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-10">
                         <tr className="border-b border-gray-100 dark:border-slate-800">
@@ -102,6 +192,10 @@ function TopicDetailPanel({ topic }: { topic: TopicWithStats }) {
                     </tbody>
                 </table>
             </div>
+
+            <div>
+                <ChainCompareTable topicId={topic.id} currentTopic={topic} allTopics={allTopics} onSelect={onSelect} />
+            </div>
         </div>
     );
 }
@@ -112,6 +206,8 @@ export function SectorTopicHeatmap({ topics }: Props) {
     const selectedTopic = selectedTopicId
         ? (topics.find((t) => t.id === selectedTopicId) ?? null)
         : null;
+
+    const handleSelect = (id: string) => setSelectedTopicId(id);
 
     return (
         <div className="mt-8">
@@ -128,7 +224,7 @@ export function SectorTopicHeatmap({ topics }: Props) {
             <div className="flex gap-4 items-start">
                 {/* 左側：熱力格（固定高度，自身可捲動） */}
                 <div className="flex-1 min-w-0">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
                         {topics.map((topic) => {
                             const bgClass = heatBgClass(topic.avgRet1d);
                             const textClass = heatTextClass(topic.avgRet1d);
@@ -142,7 +238,7 @@ export function SectorTopicHeatmap({ topics }: Props) {
                                             prev === topic.id ? null : topic.id,
                                         )
                                     }
-                                    className={`rounded-lg p-2 text-left transition-all duration-150 ${bgClass} ${
+                                    className={`topic-heat-cell rounded-lg p-2 text-left transition-all duration-150 ${bgClass} ${
                                         isSelected
                                             ? 'ring-2 ring-blue-400 ring-offset-1 opacity-100'
                                             : 'hover:opacity-85'
@@ -162,11 +258,11 @@ export function SectorTopicHeatmap({ topics }: Props) {
 
                 {/* 右側：成分股詳情 Panel（固定寬度，固定高度） */}
                 <div className="w-72 shrink-0">
-                    <div className="glass-card rounded-xl p-3 h-[420px]">
+                    <div className="glass-card rounded-xl p-3">
                         {selectedTopic ? (
-                            <TopicDetailPanel topic={selectedTopic} />
+                            <TopicDetailPanel topic={selectedTopic} allTopics={topics} onSelect={handleSelect} />
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
+                            <div className="flex flex-col items-center justify-center text-center text-gray-400 py-12">
                                 <p className="text-2xl mb-2">👆</p>
                                 <p className="text-xs">點擊左側題材卡片</p>
                                 <p className="text-xs">查看成分股明細</p>

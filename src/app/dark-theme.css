@@ -255,14 +255,14 @@ html.dark .divider {
 }
 
 /* 按鈕 */
-html.dark button:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+html.dark button:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
     background-color: #334155 !important;
     /* slate-800 */
     color: #f8fafc !important;
     /* slate-50 */
 }
 
-html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
+html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
     background-color: #475569 !important;
     /* slate-700 */
 }
@@ -481,3 +481,10 @@ html.dark .movement-none-badge {
     background-color: rgba(51, 65, 85, 0.7) !important; /* slate-700/70 */
     color: #cbd5e1 !important;                           /* slate-300 */
 }
+
+/* 產業題材熱力格（topic-heat-cell，不含 "card" 避開 [class*="card"] 覆蓋） */
+html.dark .topic-heat-cell.bg-rose-700    { background-color: #9f1239 !important; } /* rose-800：深紅 */
+html.dark .topic-heat-cell.bg-rose-400    { background-color: #e11d48 !important; } /* rose-600：鮮紅 */
+html.dark .topic-heat-cell.bg-slate-200   { background-color: #475569 !important; } /* slate-600：中性 */
+html.dark .topic-heat-cell.bg-emerald-400 { background-color: #34d399 !important; } /* emerald-400：鮮綠 */
+html.dark .topic-heat-cell.bg-emerald-700 { background-color: #047857 !important; } /* emerald-700：深綠 */
