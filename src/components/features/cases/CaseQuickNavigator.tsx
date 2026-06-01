@@ -70,7 +70,7 @@ export default function CaseQuickNavigator({ cases }: CaseQuickNavigatorProps) {
     return (
         <>
             {/* Quick Jump - Sticky wrap grid */}
-            <div className="sticky top-[95px] z-40 -mx-4 px-4 pt-2 pb-3 mt-4 mb-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-y border-slate-200/60 dark:border-slate-800/60 shadow-sm">
+            <div className="hidden md:block sticky top-[95px] z-40 -mx-4 px-4 pt-2 pb-3 mt-4 mb-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-y border-slate-200/60 dark:border-slate-800/60 shadow-sm">
                 <div className="flex items-start gap-3">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 dark:bg-blue-500/20 rounded-full shrink-0 border border-white/10 dark:border-blue-500/20 mt-0.5">
                         <span className="text-xs">⚡</span>
