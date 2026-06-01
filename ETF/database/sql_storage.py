@@ -144,11 +144,25 @@ class SQLStorage:
         logger.info("✅ 營收數據寫入完成")
 
     def upsert_shareholder_data(self, records: list):
-        """批次更新集保數據 (Bulk)"""
+        """批次更新集保數據，跳過 DB 已存在的日期（TDCC 週更，舊資料不變）"""
         if not records:
             return
 
-        logger.info(f"準備寫入 {len(records)} 筆集保記錄...")
+        # 查 DB 已有哪些 data_date，只寫新日期的資料
+        with self.engine.connect() as conn:
+            existing = {
+                row[0] for row in conn.execute(
+                    text("SELECT DISTINCT data_date::text FROM stock_shareholder_weekly")
+                )
+            }
+
+        new_records = [r for r in records if r['data_date'] not in existing]
+        if not new_records:
+            logger.info("✅ 集保數據已是最新，無需寫入")
+            return
+
+        new_dates = sorted({r['data_date'] for r in new_records})
+        logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（新日期：{new_dates}）...")
         upsert_sql = text("""
             INSERT INTO stock_shareholder_weekly
             (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
@@ -161,9 +175,9 @@ class SQLStorage:
                 created_at = NOW()
         """)
         with self.engine.connect() as conn:
-            chunk_size = 3000  # 39k records / 3000 = ~14 round trips（原 500 = 79 次，耗時 ~60min）
-            for i in range(0, len(records), chunk_size):
-                conn.execute(upsert_sql, records[i:i+chunk_size])
+            chunk_size = 3000
+            for i in range(0, len(new_records), chunk_size):
+                conn.execute(upsert_sql, new_records[i:i+chunk_size])
             conn.commit()
         logger.info("✅ 集保數據寫入完成")
 
