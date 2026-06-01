@@ -148,21 +148,22 @@ class SQLStorage:
         if not records:
             return
 
-        # 查 DB 已有哪些 data_date，只寫新日期的資料
+        # 查 DB 已有哪些 (stock_code, data_date) 組合
+        # 用組合判斷而非只看日期，避免新進選股池的股票遺漏歷史資料
         with self.engine.connect() as conn:
             existing = {
-                row[0] for row in conn.execute(
-                    text("SELECT DISTINCT data_date::text FROM stock_shareholder_weekly")
+                (row[0], row[1]) for row in conn.execute(
+                    text("SELECT stock_code, data_date::text FROM stock_shareholder_weekly")
                 )
             }
 
-        new_records = [r for r in records if r['data_date'] not in existing]
+        new_records = [r for r in records if (r['stock_code'], r['data_date']) not in existing]
         if not new_records:
             logger.info("✅ 集保數據已是最新，無需寫入")
             return
 
         new_dates = sorted({r['data_date'] for r in new_records})
-        logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（新日期：{new_dates}）...")
+        logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（涉及日期：{new_dates}）...")
         upsert_sql = text("""
             INSERT INTO stock_shareholder_weekly
             (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
