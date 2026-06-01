@@ -220,8 +220,8 @@ class SQLStorage:
                 sql_chips = text("DELETE FROM stock_shareholder_weekly WHERE data_date < CURRENT_DATE - INTERVAL '365 days'")
                 res_chips = conn.execute(sql_chips)
 
-                # 5. 營收數據 (月資料，年增率需比較基準，保留 2 年)
-                sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '730 days'")
+                # 5. 營收數據 (月資料，前端年度選擇器最多看去年，400 天足夠)
+                sql_revenue = text("DELETE FROM stock_revenue_monthly WHERE data_date < CURRENT_DATE - INTERVAL '400 days'")
                 res_revenue = conn.execute(sql_revenue)
 
                 # 6. ETF 新聞（只保留 5 天）
