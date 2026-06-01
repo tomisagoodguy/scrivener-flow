@@ -125,8 +125,9 @@ jobs:
       - name: Sync raw shareholder weekly data
         run: |
           # 週排程同步 stock_shareholder_weekly（原始集保分層數據）
-          # --skip-broker：broker 資料日排程已同步，週排程跳過避免重複下載巨型資料集
-          uv run python ETF/sync_stock_financials.py --days 14 --skip-broker
+          # --skip-broker：broker 資料日排程已同步
+          # --skip-revenue：月營收日排程已同步，週排程只跑集保避免 timeout
+          uv run python ETF/sync_stock_financials.py --days 14 --skip-broker --skip-revenue
 
       - name: Notify LINE on failure
         if: failure()

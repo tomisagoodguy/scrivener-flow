@@ -37,10 +37,10 @@ class FinancialsSync:
         self.finlab = FinlabService()
         self.storage = SQLStorage()
     
-    def run(self, days=300, skip_shareholder=False, skip_broker=False):
+    def run(self, days=300, skip_shareholder=False, skip_broker=False, skip_revenue=False):
         """執行完整同步流程"""
         logger.info("=" * 60)
-        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder}, skip_broker={skip_broker})")
+        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder}, skip_broker={skip_broker}, skip_revenue={skip_revenue})")
         logger.info("=" * 60)
 
         try:
@@ -72,12 +72,15 @@ class FinancialsSync:
             else:
                 logger.info("--- 跳過券商交易數據（skip_broker=True，日排程已同步）---")
 
-            # 3. 同步營收
-            logger.info("--- 同步月營收數據 ---")
-            raw_rev, raw_yoy, raw_mom = self.finlab.get_revenue_data()
-            months = max(3, days // 30)
-            rev_records = RevenueProcessor.process(raw_rev, raw_yoy, raw_mom, stock_list, months=months)
-            self.storage.upsert_revenue_data(rev_records)
+            # 3. 同步營收（日排程已含，週排程用 --skip-revenue 跳過）
+            if not skip_revenue:
+                logger.info("--- 同步月營收數據 ---")
+                raw_rev, raw_yoy, raw_mom = self.finlab.get_revenue_data()
+                months = max(3, days // 30)
+                rev_records = RevenueProcessor.process(raw_rev, raw_yoy, raw_mom, stock_list, months=months)
+                self.storage.upsert_revenue_data(rev_records)
+            else:
+                logger.info("--- 跳過月營收數據（skip_revenue=True，日排程已同步）---")
 
             # 4. 同步股權分散（TDCC 週更新，daily 跳過，改由 equity_weekly.yml 週排程負責）
             if not skip_shareholder:
@@ -105,7 +108,8 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, default=300, help="Number of days for broker data sync (default: 300)")
     parser.add_argument("--skip-shareholder", action="store_true", help="Skip raw shareholder sync (TDCC weekly data, handled by equity_weekly.yml)")
     parser.add_argument("--skip-broker", action="store_true", help="Skip broker transaction sync (large dataset, already synced by daily workflow)")
+    parser.add_argument("--skip-revenue", action="store_true", help="Skip revenue sync (already synced by daily workflow, use in weekly shareholder-only runs)")
     args = parser.parse_args()
 
     sync = FinancialsSync()
-    sync.run(days=args.days, skip_shareholder=args.skip_shareholder, skip_broker=args.skip_broker)
+    sync.run(days=args.days, skip_shareholder=args.skip_shareholder, skip_broker=args.skip_broker, skip_revenue=args.skip_revenue)
