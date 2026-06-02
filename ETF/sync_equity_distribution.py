@@ -56,7 +56,15 @@ def _login_finlab() -> bool:
 
 def _fetch_inventory() -> pd.DataFrame:
     """取得 FinLab 股東分散表，標準化欄位名稱。"""
-    raw = data.get("inventory")
+    try:
+        raw = data.get("inventory")
+    except RuntimeError as e:
+        msg = str(e)
+        if "Usage exceed" in msg or "exceed" in msg.lower():
+            logger.warning(f"FinLab 日配額已用盡，略過本次同步：{msg}")
+        else:
+            logger.error(f"FinLab 取得 inventory 失敗：{msg}")
+        return pd.DataFrame()
     if raw is None or raw.empty:
         return pd.DataFrame()
 
