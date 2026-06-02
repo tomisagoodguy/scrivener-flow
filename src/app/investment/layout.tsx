@@ -20,8 +20,7 @@ const moreGroup = [
     { name: '營收實驗室', href: '/investment/revenue-lab' },
     { name: '模式分析', href: '/investment/buying-patterns' },
     { name: '買貴了嗎', href: '/investment/frontrunning' },
-    { name: '投信追蹤', href: '/investment/fund-tracker' },
-    { name: '共識掃描', href: '/investment/consensus-signal' },
+    { name: '共識掃描 / 投信追蹤', href: '/investment/consensus-signal?tab=watchlist' },
 ];
 
 const watchGroup = [
@@ -44,7 +43,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
     const more = useHoverDropdown();
 
     const isWatchActive = watchGroup.some((i) => pathname.startsWith(i.href));
-    const isMoreActive = moreGroup.some((i) => pathname.startsWith(i.href));
+    const isMoreActive = moreGroup.some((i) => pathname.startsWith(i.href.split('?')[0]));
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -113,7 +112,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                 {more.open && (
                                     <div className="absolute top-full left-0 mt-1.5 min-w-[7rem] rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-slate-200/40 dark:shadow-slate-950/40 py-1 z-50">
                                         {moreGroup.map((item) => {
-                                            const isActive = pathname.startsWith(item.href);
+                                            const isActive = pathname.startsWith(item.href.split('?')[0]);
                                             return (
                                                 <Link
                                                     key={item.href}

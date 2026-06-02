@@ -23,6 +23,9 @@ dependencies = [
     "ta-lib-everywhere>=1.0.1",
     "selenium>=4.41.0",
     "scipy>=1.17.0",
+    "deap>=1.4.4",
+    "pymoo>=0.6.1.6",
+    "joblib>=1.5.3",
 ]
 
 [dependency-groups]

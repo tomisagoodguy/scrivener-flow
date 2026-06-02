@@ -21,6 +21,8 @@ ETF 清單統一由 **`ETF/config/etf_registry.py`** 維護（對應 `src/lib/in
 | **pandas** | — | 持股 DataFrame 處理 |
 | **google-generativeai** | — | Gemini AI 報告產生 |
 | **python-dotenv** | — | 環境變數載入 |
+| **deap** | — | 基因演算法框架（optimizer 模組使用） |
+| **pymoo** | — | 多目標優化（optimizer/moo 實驗性模組使用） |
 
 ---
 
@@ -95,6 +97,21 @@ ETF/
 │   ├── line_notifier.py       # LINE Messaging API 推送
 │   └── message_builder.py     # LINE 訊息格式化
 │
+├── optimizer/                 # GA 策略條件優化器（獨立工具，不進主 pipeline）
+│   ├── run.py                 # 入口：uv run python ETF/optimizer/run.py
+│   ├── condition_pool.py      # BuyCondition — 技術面/基本面/籌碼條件資料載入
+│   ├── conditions.yaml        # 80+ 個條件定義（可自行擴充）
+│   ├── analyze.py             # 逐年交易績效統計工具
+│   ├── ga/                    # DEAP 基因演算法核心
+│   │   ├── compat.py          # FinLab v1/v2 API 自動相容層
+│   │   ├── evaluate.py        # 個體適應度計算
+│   │   ├── score.py           # single / weighted 兩種計分模式
+│   │   ├── setup.py           # DEAP toolbox 初始化（多進程支援）
+│   │   ├── run_ga.py          # eaSimple 執行 → 結果存 JSONL
+│   │   └── tool.py            # 條件快取、YAML 載入、命名空間
+│   └── moo/                   # pymoo 多目標優化（實驗性）
+│       └── run_nsga3.py       # NSGA-III，同時最佳化報酬/回撤/Sortino
+│
 ├── history/                   # 爬取的原始 Excel / CSV（git ignore）
 ├── migrations/                # SQL migration 腳本
 └── legacy/                    # 舊版腳本（不要修改）
@@ -125,6 +142,20 @@ uv run pytest ETF/
 
 # Lint + Format
 uv run ruff check --fix && uv run ruff format
+```
+
+### GA 策略優化器
+
+```bash
+# 執行 GA 優化（第一次需先登入 FinLab）
+uv run python ETF/optimizer/run.py
+
+# 環境變數（選填）
+# PICKLE_FOLDER   條件快取目錄（預設 ./optimizer_cache）
+# GA_RESULTS_PATH 結果輸出目錄（預設 ./optimizer_results）
+
+# 安裝 optimizer 額外依賴
+uv add deap pymoo joblib
 ```
 
 > **本地執行保護**：`main.py` 預設封鎖本地執行（保護 FinLab 5GB/天配額）。  

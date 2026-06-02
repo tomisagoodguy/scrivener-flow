@@ -1,0 +1,557 @@
+# conditions.yaml — GA 策略條件池
+#
+# 格式：
+#   條件名稱:
+#     - "條件運算式"          # eval() 執行，回傳 bool DataFrame
+#     - "[參數值1, 值2, ...]"  # GA 搜尋的離散參數空間
+#     - "group"               # 條件分組（--group 篩選用）
+#
+# 變數命名空間（由 tool.py 注入）：
+#   close, volume, rev, pe, pb_ratio, rev_yoy_growth,
+#   boss_hold, margin_trading_utilization_ratio,
+#   other_income, ope_earn, gross_rate,
+#   c  (BuyCondition 實例), data (FinLab data)
+#
+# Group 分類：
+#   revenue   — 營收動能
+#   quality   — 財務品質
+#   value     — 估值
+#   size      — 市值篩選
+#   momentum  — 技術面/趨勢
+#   volume    — 成交量
+#   chips     — 籌碼/法人
+#   market    — 市場過濾
+
+
+
+# ═══════════════════════════════════════════════════════
+# 1. 營收動能
+# ═══════════════════════════════════════════════════════
+
+# 短期(3月) vs 長期(12月) 平均營收比率
+rev_ma3_ma12_ratio:
+  - "rev.average(3) / rev.average(12) > kwargs.get('rev_ma3_ma12_ratio')"
+  - "[0.8, 1.1, 1.2, 1.3]"
+  - "revenue"
+
+# 月環比動能（月/上月）
+rev_mom_ratio:
+  - "rev / rev.shift() > kwargs.get('rev_mom_ratio')"
+  - "[0.8, 1.0, 1.2]"
+  - "revenue"
+
+# 月營收年增率（月/去年同月）
+month_Revenue_Growth_Rate:
+  - "rev / rev.shift(12) > kwargs.get('month_Revenue_Growth_Rate')"
+  - "[0.7, 0.9, 1.0, 1.3, 1.5]"
+  - "revenue"
+
+# 短期均線成長率 > 長期均線成長率（趨勢加速）
+rev_sl_growth:
+  - "rev.average(3).pct_change(kwargs.get('rev_sl_growth')) > rev.average(12).pct_change(kwargs.get('rev_sl_growth'))"
+  - "[6, 12, 18, 24]"
+  - "revenue"
+
+# 年增率絕對值門檻（%）
+rev_yoy_growth:
+  - "rev_yoy_growth > kwargs.get('rev_yoy_growth')"
+  - "[10, 20, 30]"
+  - "revenue"
+
+# 排除連續負成長（N 期中至少 2 期年增率 < 0 → 排除）
+year_over_year_change:
+  - "~(rev_yoy_growth < 0).sustain(kwargs.get('year_over_year_change'), 2)"
+  - "[1, 3, 5, 7]"
+  - "revenue"
+
+# 營收創 N 個月新高
+revenue_new_high:
+  - "c.revenue_new_high(rolling_window=kwargs.get('revenue_new_high'))"
+  - "[6, 9, 12]"
+  - "revenue"
+
+# 財報狗營收指數（短期成長加速）
+statement_dog_rev_index:
+  - "c.statement_dog_rev_index(timeperiod=kwargs.get('statement_dog_rev_index'))"
+  - "[1, 3, 6, 9]"
+  - "revenue"
+
+# 年增率排名百分位
+rev_yoy_rank:
+  - "c.rev_yoy_rank(rate=kwargs.get('rev_yoy_rank'))"
+  - "[0.5, 0.7, 0.8, 0.9]"
+  - "revenue"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 2. 財務品質
+# ═══════════════════════════════════════════════════════
+
+# 自由現金流（營業 + 投資活動）> 0
+free_cash_flow:
+  - "c.free_cash_flow() > kwargs.get('free_cash_flow')"
+  - "[0]"
+  - "quality"
+
+# 股東權益報酬率 > 門檻
+roe:
+  - "c.return_on_equity() > kwargs.get('roe')"
+  - "[0]"
+  - "quality"
+
+# 營業利益成長率（%）
+operating_profit_growth:
+  - "data.get('fundamental_features:營業利益成長率') > kwargs.get('operating_profit_growth')"
+  - "[-30, -20, -10, -5, 0, 5, 10, 20, 30]"
+  - "quality"
+
+# 業外收入絕對值低（單純本業獲利）
+other_income:
+  - "other_income < kwargs.get('other_income')"
+  - "[5, 10, 15]"
+  - "quality"
+
+# 業外收入低於全市場分位
+other_income_quantile_row:
+  - "(other_income <= other_income.quantile_row(kwargs.get('other_income_quantile_row')))"
+  - "[0.1, 0.2, 0.3]"
+  - "quality"
+
+# 營業利益絕對值門檻
+ope_earn:
+  - "ope_earn >= kwargs.get('ope_earn')"
+  - "[3, 5, 10, 15]"
+  - "quality"
+
+# 營業利益排名分位
+ope_earn_quantile_row:
+  - "(ope_earn >= ope_earn.quantile_row(kwargs.get('ope_earn_quantile_row')))"
+  - "[0.1, 0.2, 0.3, 0.4, 0.6]"
+  - "quality"
+
+# 毛利率絕對值門檻
+gross_rate:
+  - "gross_rate >= kwargs.get('gross_rate')"
+  - "[0.1, 0.2, 0.3]"
+  - "quality"
+
+# 毛利率排名分位
+gross_rate_quantile_row:
+  - "(gross_rate >= gross_rate.quantile_row(kwargs.get('gross_rate_quantile_row')))"
+  - "[0.2, 0.4, 0.6]"
+  - "quality"
+
+# 研發費用率高（高研發投入）
+research_and_development_expense_ratio:
+  - "c.research_and_development_expense_ratio().rank(pct=True, axis=1) > kwargs.get('research_and_development_expense_ratio')"
+  - "[0.5, 0.7, 0.9]"
+  - "quality"
+
+# 合約負債成長率（預收訂單動能）
+contract_debt_gr:
+  - "c.contract_debt_gr(uper=kwargs.get('contract_debt_gr'))"
+  - "[0.3, 0.5, 0.7]"
+  - "quality"
+
+# 合約負債 / 股本（預收訂單覆蓋率）
+ce_ratio:
+  - "c.ce_ratio() > kwargs.get('ce_ratio')"
+  - "[0.4, 0.5, 0.6]"
+  - "quality"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 3. 估值
+# ═══════════════════════════════════════════════════════
+
+# 市值營收比 < 門檻（低估值）
+market_cap_rev_ratio:
+  - "c.price_to_sales_ratio() < kwargs.get('market_cap_rev_ratio')"
+  - "[0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3]"
+  - "value"
+
+# 本益比下限過濾（排除無獲利或極低 PE 股）
+price_earning_ratio_lower:
+  - "pe > kwargs.get('price_earning_ratio_lower')"
+  - "[5, 10, 20]"
+  - "value"
+
+# 本益比區間過濾（排除超高 PE > 100）
+price_earning_ratio_range:
+  - "(pe > kwargs.get('price_earning_ratio_range')) & (pe < 100)"
+  - "[5, 10, 20]"
+  - "value"
+
+# 股價淨值比 < 門檻（低本淨比）
+pb_ratio:
+  - "pb_ratio < kwargs.get('pb_ratio')"
+  - "[1, 2, 3, 4, 5, 6]"
+  - "value"
+
+# 殖利率 >= 門檻（%)
+# ⚠️ 注意：此條件篩選殖利率，key 名 dividend_yield 與資料欄位對應
+dividend_yield:
+  - "data.get('price_earning_ratio:殖利率(%)') >= kwargs.get('dividend_yield')"
+  - "[2, 4, 6, 8]"
+  - "value"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 4. 市值篩選
+# ═══════════════════════════════════════════════════════
+
+# 市值 < 全市場第 N 分位（排除超大型股）
+max_market_capitalization:
+  - "c.max_market_capitalization(quantile=kwargs.get('max_market_capitalization'))"
+  - "[0.6, 0.8]"
+  - "size"
+
+# 市值 > 全市場第 N 分位（排除超小型股）
+min_market_capitalization:
+  - "c.min_market_capitalization(quantile=kwargs.get('min_market_capitalization'))"
+  - "[0.1, 0.2, 0.3]"
+  - "size"
+
+# 股價低於全市場第 N 分位（排除高價股）
+closing_price_below_market_classification:
+  - "c.closing_price_below_market_classification(quantile=kwargs.get('closing_price_below_market_classification'))"
+  - "[0.7, 0.8, 0.9]"
+  - "size"
+
+# 股價高於全市場第 N 分位（排除低價股）
+closing_price_uper_market_classification:
+  - "c.closing_price_uper_market_classification(quantile=kwargs.get('closing_price_uper_market_classification'))"
+  - "[0.1, 0.2, 0.3]"
+  - "size"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 5. 技術面 / 趨勢
+# ═══════════════════════════════════════════════════════
+
+# 股價站上短期均線
+ma_short:
+  - "close > close.average(kwargs.get('ma_short'))"
+  - "[5, 10, 20]"
+  - "momentum"
+
+# 股價站上長期均線
+ma_long:
+  - "close > close.average(kwargs.get('ma_long'))"
+  - "[60, 120]"
+  - "momentum"
+
+# 股價低於短期均線（空頭或回調篩選）
+below_ma_short:
+  - "close < close.average(kwargs.get('below_ma_short'))"
+  - "[5, 10, 20]"
+  - "momentum"
+
+# 股價低於長期均線
+below_ma_long:
+  - "close < close.average(kwargs.get('below_ma_long'))"
+  - "[30, 60]"
+  - "momentum"
+
+# 均線黃金交叉（今日收盤上穿均線）
+break_ma:
+  - "(c.break_ma(ma=kwargs.get('break_ma')))"
+  - "[10, 20, 60, 120]"
+  - "momentum"
+
+# 幾何平均報酬率排名（動能因子）
+geometric_quantile_row:
+  - "(c.geometric() >= c.geometric().quantile_row(kwargs.get('geometric_quantile_row')))"
+  - "[0.3, 0.5, 0.7]"
+  - "momentum"
+
+# 短期幾何均線 > 60 日幾何均線（中期動能向上）
+geometric_average_60ma:
+  - "(c.geometric().average(kwargs.get('geometric_average_60ma')) > c.geometric().average(60))"
+  - "[10, 20, 40]"
+  - "momentum"
+
+# 短期幾何均線 > 20 日幾何均線（短期動能向上）
+geometric_average_20ma:
+  - "(c.geometric().average(kwargs.get('geometric_average_20ma')) > c.geometric().average(20))"
+  - "[5, 10, 20]"
+  - "momentum"
+
+# 股價創 N 日新高
+close_record_breaking:
+  - "(close / close.rolling(kwargs.get('close_record_breaking')).max()) == 1"
+  - "[60, 120, 180]"
+  - "momentum"
+
+# 股價維持在 N 日新高附近（4 天中至少 2 天成立）
+close_record_breaking_sustain:
+  - "((close / close.rolling(kwargs.get('close_record_breaking_sustain')).max()) == 1).sustain(4, 2)"
+  - "[30, 60, 90, 120, 180]"
+  - "momentum"
+
+# 價格區間緊縮（N 日最低 > N 日最高 × 0.7 → 盤整蓄勢）
+# ⚠️ 注意：此條件偵測的是「盤整/橫盤」，不是突破；
+#         真正的突破請使用 close_record_breaking
+price_range_narrow:
+  - "(close.rolling(kwargs.get('price_range_narrow')).min() > close.rolling(kwargs.get('price_range_narrow')).max() * 0.7)"
+  - "[20, 40, 60]"
+  - "momentum"
+
+# 縮量整理（成交量萎縮 + 股價波動縮小，箱型整理）
+pvc:
+  - "c.pvc(timeperiod=kwargs.get('pvc'))"
+  - "[20, 40, 60, 90]"
+  - "momentum"
+
+# RSV（隨機值）高於中位數
+rsv_rank:
+  - "c.rsv(n=kwargs.get('rsv_rank')).rank(pct=True, axis=1) > 0.5"
+  - "[20, 40, 60]"
+  - "momentum"
+
+# RSI 下限過濾（排除超賣）
+lower_rsi:
+  - "(data.indicator('RSI', timeperiod=kwargs.get('lower_rsi')) > 20)"
+  - "[5, 10, 20]"
+  - "momentum"
+
+# RSI 上限過濾（排除超買）
+upper_rsi:
+  - "(data.indicator('RSI', timeperiod=kwargs.get('upper_rsi')) < 90)"
+  - "[5, 10, 20]"
+  - "momentum"
+
+# RCI > -50（趨勢不衰弱）
+RCI50:
+  - "(c.rci(n=kwargs.get('RCI50')) > -50)"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# RCI > -70（趨勢尚可）
+RCI70:
+  - "(c.rci(n=kwargs.get('RCI70')) > -70)"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# 肯特納通道突破（收盤站上 EMA+2ATR）
+keltner_up:
+  - "c.keltner_up(timeperiod=kwargs.get('keltner_up'))"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# 布林通道上軌突破
+break_bollinger_band_up:
+  - "c.break_bollinger_band_up(timeperiod=kwargs.get('break_bollinger_band_up'))"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# 布林通道下軌跌破
+break_bollinger_band_down:
+  - "c.break_bollinger_band_down(timeperiod=kwargs.get('break_bollinger_band_down'))"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# VIX 短均線 <= 長均線（市場恐慌未升溫）
+vix_position:
+  - "c.vix_position(short_par=5, long_par=kwargs.get('vix_position'))"
+  - "[10, 20, 30, 60]"
+  - "momentum"
+
+# 全市場 ADL 短均線 >= 長均線（市場廣度健康）
+ADLs_position:
+  - "c.ADLs_position(short_par=kwargs.get('ADLs_position'), long_par=40)"
+  - "[10, 20, 30]"
+  - "momentum"
+
+# 多空排列（短中長期均線多頭排列）
+ls_order_position:
+  - "c.ls_order_position(short=5, mid=10, long=kwargs.get('ls_order_position'))"
+  - "[10, 20, 30, 60]"
+  - "momentum"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 6. 成交量
+# ═══════════════════════════════════════════════════════
+
+# 成交量絕對值門檻（股 × 1000）
+volume:
+  - "volume > kwargs.get('volume') * 1000"
+  - "[200, 400, 600]"
+  - "volume"
+
+# 成交量高於 N 日均量
+vol_ma_uper:
+  - "(volume > volume.average(kwargs.get('vol_ma_uper')))"
+  - "[5, 10, 20, 40]"
+  - "volume"
+
+# 成交量低於 N 日均量（縮量）
+vol_ma_below:
+  - "(volume < volume.average(kwargs.get('vol_ma_below')))"
+  - "[5, 10, 20, 40]"
+  - "volume"
+
+# 量能放大（N 日內近 5 天有 3 天以上創新量高）
+# ⚠️ sustain(5, 3)：5 天中至少 3 天成交量是 N 日新高；
+#    原始 sustain(5) 等同 5/5 連續創新量，幾乎不可能成立
+vol_boost:
+  - "(((volume / volume.rolling(kwargs.get('vol_boost')).max()) == 1).sustain(5, 3))"
+  - "[3, 5, 7, 10]"
+  - "volume"
+
+# 量能萎縮（N 日內近 5 天有 3 天以上創新量低）
+# ⚠️ 同上，sustain(5, 3) 比 sustain(5) 合理
+vol_crash:
+  - "(((volume / volume.rolling(kwargs.get('vol_crash')).min()) == 1).sustain(5, 3))"
+  - "[3, 5, 7, 10]"
+  - "volume"
+
+# 成交量維持在 N 日均量 80% 以上（量能溫和持穩）
+Rising_trading_volume:
+  - "(volume >= volume.rolling(kwargs.get('Rising_trading_volume')).mean() * 0.8)"
+  - "[20, 40, 60]"
+  - "volume"
+
+# 周轉率排名（高周轉率股，5 天中 2 天以上成立）
+trunover_rate_rank:
+  - "(c.turnover_rate().rank(pct=True, axis=1) > kwargs.get('trunover_rate_rank')).sustain(3, 2)"
+  - "[0.1, 0.2, 0.3, 0.5]"
+  - "volume"
+
+# 短期周轉率均線 > 20 日均線（換手加速）
+trunover_rate_20ma:
+  - "(c.turnover_rate().average(kwargs.get('trunover_rate_20ma')) > c.turnover_rate().average(20))"
+  - "[5, 10, 15]"
+  - "volume"
+
+# 短期周轉率均線 > 60 日均線
+trunover_rate_60ma:
+  - "(c.turnover_rate().average(kwargs.get('trunover_rate_60ma')) > c.turnover_rate().average(60))"
+  - "[5, 10, 15, 20, 25]"
+  - "volume"
+
+# ATR 波動率低（低波動進場時機）
+entry_signal_volatility:
+  - "(c.entry_signal_volatility(timeperiod=20) < kwargs.get('entry_signal_volatility'))"
+  - "[0.6, 0.8]"
+  - "volume"
+
+# K 線實體波動率低
+compute_candle_volatility:
+  - "(c.compute_candle_volatility(timeperiod=20) < kwargs.get('compute_candle_volatility'))"
+  - "[0.6, 0.8]"
+  - "volume"
+
+# 收盤價標準差排名低（低波動）
+close_volatility:
+  - "(c.close_volatility(timeperiod=20).rank(axis=1, pct=True) < kwargs.get('close_volatility'))"
+  - "[0.6, 0.8]"
+  - "volume"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 7. 籌碼 / 法人
+# ═══════════════════════════════════════════════════════
+
+# 主力持股比例上升（大戶 vs 散戶比值近 6 週排名提升）
+major_shareholder_ownership:
+  - "(c.major_shareholder_ownership(small_level=5, boss_down_level=9, boss_up_level=15).rank(pct=True, axis=1) > kwargs.get('major_shareholder_ownership'))"
+  - "[0.3, 0.5, 0.7]"
+  - "chips"
+
+# 董監持有股數占比 > 門檻（%)
+internal_equity_changes:
+  - "boss_hold > kwargs.get('internal_equity_changes')"
+  - "[10, 20, 30]"
+  - "chips"
+
+# 主力護盤（大戶持股比例近 5 天持續回升）
+main_force_protection:
+  - "(c.boss_inv(down_level=kwargs.get('main_force_protection'), up_level=15, datatype='占集保庫存數比例').rise(1).sustain(5, 3))"
+  - "[3, 5, 7]"
+  - "chips"
+
+# 融資使用率絕對值低（融資壓力小）
+margin_trading_utilization_ratio:
+  - "margin_trading_utilization_ratio < kwargs.get('margin_trading_utilization_ratio')"
+  - "[0.1, 0.3, 0.5]"
+  - "chips"
+
+# 融資使用率低於全市場分位
+margin_trading_utilization_ratio_quantile_row:
+  - "(margin_trading_utilization_ratio <= margin_trading_utilization_ratio.quantile_row(kwargs.get('margin_trading_utilization_ratio_quantile_row')))"
+  - "[0.1, 0.3, 0.5]"
+  - "chips"
+
+# 融資餘額排名低（5 天中 3 天以上成立）
+MarginRankPercentage:
+  - "(data.get('margin_transactions:融資今日餘額').rank(pct=True) < kwargs.get('MarginRankPercentage')).sustain(5, 3)"
+  - "[0.1, 0.3, 0.5, 0.7, 0.9]"
+  - "chips"
+
+# 相對強度排名 > 門檻（動能優於大盤）
+relative_strength_low:
+  - "(c.relative_strength().rank(pct=True, axis=1) > kwargs.get('relative_strength_low'))"
+  - "[0.1, 0.3, 0.5]"
+  - "chips"
+
+# 相對強度排名 < 門檻（排除過熱股）
+relative_strength_high:
+  - "(c.relative_strength().rank(pct=True, axis=1) < kwargs.get('relative_strength_high'))"
+  - "[0.9, 0.95, 0.98]"
+  - "chips"
+
+# 近期相對強度排名高且持續（5 天中 3 天以上）
+RSRankPercentage:
+  - "(c.relative_strength(8).rank(pct=True) > kwargs.get('RSRankPercentage')).sustain(5, 3)"
+  - "[0.01, 0.03, 0.05, 0.07]"
+  - "chips"
+
+# 融資使用率低（融資多頭市場指標）
+margin_position:
+  - "c.margin_position(short_par=5, long_par=kwargs.get('margin_position'))"
+  - "[10, 20, 30, 60]"
+  - "chips"
+
+# 投信淨買超 > 0
+institutional_investors:
+  - "(data.get('institutional_investors_trading_summary:投信買賣超股數') > kwargs.get('institutional_investors'))"
+  - "[0]"
+  - "chips"
+
+# 當沖比例 < 門檻（排除高投機性股票）
+intraday_trading:
+  - "c.intraday_trading(rate=kwargs.get('intraday_trading'))"
+  - "[0.1, 0.3, 0.5]"
+  - "chips"
+
+
+
+# ═══════════════════════════════════════════════════════
+# 8. 市場過濾（注意 / 處置 / 全額交割）
+# ═══════════════════════════════════════════════════════
+
+# 過濾注意股
+noticed_stock_filter:
+  - "data.get('etl:noticed_stock_filter')"
+  - "[0]"
+  - "market"
+
+# 過濾處置股
+disposal_stock_filter:
+  - "data.get('etl:disposal_stock_filter')"
+  - "[0]"
+  - "market"
+
+# 過濾全額交割股
+full_cash_delivery_stock_filter:
+  - "data.get('etl:full_cash_delivery_stock_filter')"
+  - "[0]"
+  - "market"

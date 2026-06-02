@@ -8,17 +8,19 @@ TBD — created by syncing change 'fund-momentum-tracker'. Update Purpose after 
 
 ### Requirement: Fund tracker page route
 
-The application SHALL expose a `/investment/fund-tracker` page accessible to authenticated users displaying investment trust net-buy monitoring for the user's watch list stocks.
+The application SHALL expose a `/investment/fund-tracker` route that redirects all requests to `/investment/consensus-signal?tab=watchlist` using a server-side redirect.
 
-#### Scenario: Page loads with watch list stocks
+The route SHALL be accessible to both authenticated and unauthenticated users (redirect occurs before auth check).
 
-- **WHEN** an authenticated user navigates to `/investment/fund-tracker`
-- **THEN** the page SHALL display a health table listing all stocks in the user's `watch_list`
-- **THEN** each row SHALL show: stock code, stock name, 1-day net-buy (張), 5-day cumulative (張), 20-day cumulative (張), consecutive buy days, 5-day buy ratio (%), market rank percentile, and ETF consensus flag
+#### Scenario: Redirect preserves tab context
+
+- **WHEN** a user navigates to `/investment/fund-tracker`
+- **THEN** the server SHALL respond with a redirect to `/investment/consensus-signal?tab=watchlist`
+- **THEN** the user SHALL land on the consensus-signal page with the 自選股 tab active
 
 #### Scenario: Empty watch list
 
-- **WHEN** the user's `watch_list` is empty
+- **WHEN** the user's `watch_list` is empty AND `tab=watchlist` is active on the consensus-signal page
 - **THEN** the page SHALL display a prompt directing the user to add stocks via `/investment/bare-k`
 
 
@@ -176,31 +178,23 @@ tests:
 ---
 ### Requirement: Navigation entry
 
-The sidebar navigation SHALL include a link to `/investment/fund-tracker` within the investment section.
+The sidebar navigation SHALL update the "投信追蹤" link to point to `/investment/consensus-signal?tab=watchlist` instead of `/investment/fund-tracker`.
 
-#### Scenario: Link appears in sidebar
+The "投信追蹤" navigation item SHALL be merged with or placed adjacent to the "共識掃描" item to reflect that both features now reside on the same page.
+
+#### Scenario: Navigation link targets merged page
 
 - **WHEN** an authenticated user views any investment page
-- **THEN** the sidebar SHALL display a "投信追蹤" navigation item pointing to `/investment/fund-tracker`
+- **THEN** the sidebar SHALL display a navigation item pointing to `/investment/consensus-signal?tab=watchlist` with label "共識掃描 / 投信追蹤" or equivalent combined label
 
 <!-- @trace
-source: fund-momentum-tracker
-updated: 2026-05-24
+source: merge-consensus-fund-tracker
+updated: 2026-06-02
 code:
-  - ETF/pipeline/steps/fund_momentum_step.py
-  - src/app/investment/fund-tracker/components/AccumulationCycleCard.tsx
+  - tsconfig.tsbuildinfo
+  - src/app/investment/consensus-signal/components/TabSwitcher.tsx
   - src/app/investment/layout.tsx
-  - src/app/investment/fund-tracker/components/EtfFundCrossSignal.tsx
-  - src/app/investment/fund-tracker/components/FundHealthTable.tsx
-  - ETF/pipeline/steps/__init__.py
-  - ETF/strategies/shared_cache.py
-  - src/types/index.ts
-  - src/lib/investment/strategyUtils.ts
-  - ETF/strategies/low_vol_cap.py
-  - ETF/pipeline/orchestrator.py
+  - next-env.d.ts
+  - src/app/investment/consensus-signal/page.tsx
   - src/app/investment/fund-tracker/page.tsx
-  - src/app/actions/getFundMomentumSignals.ts
-tests:
-  - src/__tests__/actions/getFundMomentumSignals.test.ts
-  - ETF/tests/test_fund_momentum_step.py
 -->

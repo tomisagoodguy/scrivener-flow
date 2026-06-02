@@ -160,6 +160,47 @@ class StrategyDataCache:
 
     # ── 昂貴計算：蠟燭波動率（super8888）────────────────────────────────────
 
+    # ── 財務報表（季頻）— fundamental_momentum 使用 ──────────────────────────
+
+    @cached_property
+    def ope_earn(self):
+        """營業利益率（quarterly）。"""
+        from finlab import data
+        return data.get('fundamental_features:營業利益率')
+
+    @cached_property
+    def net_income_growth_rate(self):
+        """稅後淨利成長率（quarterly）。"""
+        from finlab import data
+        return data.get('fundamental_features:稅後淨利成長率')
+
+    @cached_property
+    def eps_q(self):
+        """每股盈餘（quarterly）。"""
+        from finlab import data
+        return data.get('financial_statement:每股盈餘')
+
+    @cached_property
+    def stock_turnover_rate(self):
+        """存貨週轉率（quarterly）。"""
+        import numpy as np
+        from finlab import data
+        return data.get('fundamental_features:存貨週轉率').replace([np.nan, np.inf], 0)
+
+    @cached_property
+    def fcf_operating(self):
+        """營業活動淨現金流量（quarterly）。"""
+        from finlab import data
+        return data.get('financial_statement:營業活動之淨現金流入_流出')
+
+    @cached_property
+    def fcf_investing(self):
+        """投資活動淨現金流量（quarterly）。"""
+        from finlab import data
+        return data.get('financial_statement:投資活動之淨現金流入_流出')
+
+    # ── 昂貴計算：蠟燭波動率（super8888）────────────────────────────────────
+
     @cached_property
     def candle_volatility(self):
         """蠟燭波動率（20日均值 / 均收盤價，%）。

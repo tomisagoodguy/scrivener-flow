@@ -91,6 +91,7 @@ scrivener-flow/
 ├── prisma/schema.prisma        # ⚠️ 僅含 generator/datasource，不定義 model
 ├── supabase/migrations/        # 真正的 DB Schema（SQL 格式）
 ├── ETF/                        # Python ETF Pipeline（含自己的 CLAUDE.md）
+│   └── optimizer/              # GA 策略條件優化器（DEAP + pymoo，不進主 pipeline）
 ├── openspec/changes/           # 功能變更的 proposal / design / specs / tasks
 └── pyproject.toml              # Python 依賴（uv 管理）
 ```
