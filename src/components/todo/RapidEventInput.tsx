@@ -45,7 +45,10 @@ export function RapidEventInput({ onAdd, persistent = false, showHints = true, s
         if (e.key !== 'Enter') return;
         e.preventDefault();
 
-        const { title, startDate, isAllDay, caseNumber } = parsed;
+        // Read from DOM to avoid stale React state when typing and pressing Enter quickly
+        const currentValue = e.currentTarget.value;
+        const current = parseEventLine(currentValue);
+        const { title, startDate, isAllDay, caseNumber } = current;
         if (!title.trim()) return;
 
         await onAdd(
@@ -56,7 +59,7 @@ export function RapidEventInput({ onAdd, persistent = false, showHints = true, s
             caseNumber,
         );
 
-        const preview = formatPreview(parsed);
+        const preview = formatPreview(current);
         setSession((prev) => [{ title, preview, caseNumber }, ...prev].slice(0, 5));
         setInput('');
         setParsed({ title: '', startDate: null, isAllDay: false });
