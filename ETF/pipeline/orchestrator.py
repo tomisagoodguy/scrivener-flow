@@ -32,6 +32,7 @@ from ETF.pipeline.steps import (
     NewsMediaStep,
     SyncTreemapStep,
     SyncAdlStep,
+    RetailSentimentStep,
     NotifyStep,
     CleanupStep,
     FrontrunningStep,
@@ -88,6 +89,7 @@ class PipelineOrchestrator:
         FundMomentumStep,       # [輔助] 投信買超多維度指標 → strategy_signals (fund_momentum)
         SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
+        RetailSentimentStep,    # [輔助] 週頻集保散戶指標 → market_breadth_daily
         NotifyStep,
         CleanupStep,
     ]

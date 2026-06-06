@@ -1,7 +1,9 @@
 export const revalidate = 3600;
 
 import { getAdlData } from '@/app/actions/getAdlData';
+import { getRetailSentiment } from '@/app/actions/getRetailSentiment';
 import AdlChart from './components/AdlChart';
+import RetailSentimentCard from '@/components/features/RetailSentimentCard';
 
 export const metadata = { title: '大盤廣度 | 投資監控' };
 
@@ -11,7 +13,10 @@ const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
 };
 
 export default async function BreadthPage() {
-    const adlData = await getAdlData();
+    const [adlData, sentiment] = await Promise.all([
+        getAdlData(),
+        getRetailSentiment(),
+    ]);
 
     const badge = CROSS_BADGE[adlData.crossStatus];
 
@@ -43,6 +48,10 @@ export default async function BreadthPage() {
             ) : (
                 <AdlChart records={adlData.records} />
             )}
+
+            <div className="mt-4 max-w-sm">
+                <RetailSentimentCard data={sentiment} />
+            </div>
         </div>
     );
 }

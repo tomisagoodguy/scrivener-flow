@@ -37,6 +37,9 @@ class PipelineContext:
     # 驗證警告（DataValidationStep 寫入，NotifyStep 讀取）
     validation_warnings: List[str] = field(default_factory=list)
 
+    # 散戶情緒指標（RetailSentimentStep 寫入）
+    retail_sentiment: Dict[str, Any] = field(default_factory=dict)
+
     # 執行標誌
     is_dry_run: bool = False
     is_ci: bool = False
