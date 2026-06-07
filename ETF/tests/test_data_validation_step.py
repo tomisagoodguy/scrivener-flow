@@ -104,8 +104,8 @@ def test_anomalous_price_adds_warning_but_does_not_raise():
     assert "price" in result.validation_warnings[0].lower() or "異常" in result.validation_warnings[0]
 
 
-def test_price_above_10000_adds_warning():
-    """WHEN price > 10000 THEN warning recorded."""
+def test_price_above_50000_adds_warning():
+    """WHEN price > 50000 THEN warning recorded."""
     df = _make_df([50.0, 50.0], prices=[99999.0, 100.0])
     ctx = _make_ctx(df=df)
     result = DataValidationStep().execute(ctx, _services())

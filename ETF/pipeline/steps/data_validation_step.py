@@ -3,7 +3,7 @@
 驗證規則：
 - 比重總和 < 50% 或 > 150% → raise ValueError（中斷 Pipeline）
 - 持股筆數 = 0 → raise ValueError（中斷 Pipeline）
-- 個股 price ≤ 0 或 price > 10000 → log warning + 記入 ctx.validation_warnings（繼續）
+- 個股 price ≤ 0 或 price > 50000 → log warning + 記入 ctx.validation_warnings（繼續）
 
 Step 本身的程式 bug（KeyError 等）不 raise，記錄後繼續。
 """
@@ -69,7 +69,7 @@ class DataValidationStep(BaseStep):
         # 3. 個股價格異常偵測（警告，不中斷）
         if "price" in df.columns:
             anomalies = df[
-                df["price"].notna() & ((df["price"] <= 0) | (df["price"] > 10000))
+                df["price"].notna() & ((df["price"] <= 0) | (df["price"] > 50000))
             ]
             for _, row in anomalies.iterrows():
                 code = row.get("code", "N/A")
