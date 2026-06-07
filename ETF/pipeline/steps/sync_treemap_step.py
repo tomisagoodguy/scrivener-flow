@@ -78,12 +78,12 @@ class SyncTreemapStep(BaseStep):
         for stock_code, row in themes.iterrows():
             stock_industry[str(stock_code)] = first_category(row.get("category"))
 
-        # 2. 取收盤價（etl:adj_close）
-        self.logger.info("Fetching adj_close for treemap...")
+        # 2. 取收盤價（price:收盤價，實際成交價，不還原權值）
+        self.logger.info("Fetching 收盤價 for treemap...")
         try:
-            close_df = fd.get("etl:adj_close")
+            close_df = fd.get("price:收盤價")
         except Exception as e:
-            self.logger.error(f"Failed to fetch etl:adj_close: {e}")
+            self.logger.error(f"Failed to fetch price:收盤價: {e}")
             return
 
         if close_df is None or close_df.empty or len(close_df) < 2:
