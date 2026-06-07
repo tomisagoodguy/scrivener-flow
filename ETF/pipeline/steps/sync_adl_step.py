@@ -73,7 +73,7 @@ class SyncAdlStep(BaseStep):
             daily = fluctuation[col].dropna()
             ups = int((daily > BENCHMARK).sum())
             downs = int((daily < BENCHMARK).sum())
-            dataset.append({"date": str(col.date()) if hasattr(col, "date") else str(col), "ups": ups, "downs": downs})
+            dataset.append({"date": str(col.date()) if hasattr(col, "date") else str(col), "ups": ups, "downs": downs})  # type: ignore[union-attr]
 
         ad_df = pd.DataFrame(dataset)
         ad_df = ad_df.sort_values("date").reset_index(drop=True)

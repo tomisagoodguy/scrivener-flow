@@ -98,25 +98,47 @@ export function RevenueChart({ revenueData, priceData }: RevenueChartProps) {
 
   // 找出最新數據月份
   const latestData = revenueWithMA.length > 0 ? revenueWithMA[revenueWithMA.length - 1] : null;
-  const isNewMonth = latestData?.month === '2026-01' || latestData?.month === '2025-01'; // 支援 1 月營收標記
-  
+
+  // 動態計算「最新月份是否剛公布」與「下一個等待月份」
+  const revenueStatus = (() => {
+    if (!latestData?.month) return { isRecent: false, latestMonthNum: 0, waitingLabel: '---', deadlineLabel: '---' };
+    const [yearStr, monthStr] = latestData.month.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr);
+    const today = new Date();
+    // 幾個月前（0 = 本月，1 = 上月）
+    const monthsAgo = (today.getFullYear() - year) * 12 + (today.getMonth() + 1 - month);
+    // 台股營收截止日為次月 10 日，最新資料在 2 個月內算「剛公布」
+    const isRecent = monthsAgo <= 2;
+    // 下一個待公布月份 = latestMonth + 1
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    // 截止月 = nextMonth + 1
+    const deadlineMonth = nextMonth === 12 ? 1 : nextMonth + 1;
+    return {
+      isRecent,
+      latestMonthNum: month,
+      waitingLabel: `${nextYear}-${String(nextMonth).padStart(2, '0')} (${nextYear}/${deadlineMonth}/10前)`,
+    };
+  })();
+
   return (
     <div className="flex flex-col h-full">
       {/* 狀態提示列 */}
       <div className="flex items-center justify-between mb-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isNewMonth ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`} />
+          <div className={`w-2 h-2 rounded-full ${revenueStatus.isRecent ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`} />
           <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
              (營收月份: {latestData?.month || '---'})
           </span>
         </div>
-        {isNewMonth ? (
+        {revenueStatus.isRecent ? (
           <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 rounded-full font-black animate-bounce">
-            NEW 1月營收已開
+            NEW {revenueStatus.latestMonthNum}月營收已公布
           </span>
         ) : (
           <span className="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded-full font-medium">
-            等待 1月營收公布 (2/10前)
+            等待 {revenueStatus.waitingLabel} 營收公布
           </span>
         )}
       </div>
