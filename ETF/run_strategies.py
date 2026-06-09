@@ -55,10 +55,7 @@ def upsert_signals(engine: sqlalchemy.Engine, records: list[dict]) -> None:
 
 def run(days: int = 5) -> None:
     import finlab
-    api_key = os.getenv("FINLAB_API_KEY")
-    if not api_key:
-        raise ValueError("FINLAB_API_KEY 環境變數未設定")
-    finlab.login(api_token=api_key)
+    finlab.login()
 
     from ETF.strategies import ALL_STRATEGIES
     from ETF.strategies.shared_cache import StrategyDataCache

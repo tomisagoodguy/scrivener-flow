@@ -70,12 +70,8 @@ class FinlabClient:
         """登入 Finlab API"""
         if self._logged_in:
             return True
-            
-        if not self.api_key:
-            logger.error("FINLAB_API_KEY not found in environment.")
-            return False
         try:
-            finlab.login(self.api_key)
+            finlab.login()
             self._logged_in = True
             return True
         except Exception as e:

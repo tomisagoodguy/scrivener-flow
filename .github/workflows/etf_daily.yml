@@ -59,7 +59,9 @@ jobs:
         shell: bash
 
     env:
-      # 設定環境變數，對應 GitHub Secrets
+      # FinLab 新版 Firebase 認證（取代舊的 api_token）
+      FINLAB_REFRESH_TOKEN: ${{ secrets.FINLAB_REFRESH_TOKEN }}
+      FINLAB_SESSION_ID: ${{ secrets.FINLAB_SESSION_ID }}
       FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       # Python Storage requires Service Role Key for REST API

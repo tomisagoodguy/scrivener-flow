@@ -45,10 +45,7 @@ def run(days: int = 30) -> None:
         load_dotenv()
 
     import finlab
-    api_key = os.getenv("FINLAB_API_KEY")
-    if not api_key:
-        raise ValueError("FINLAB_API_KEY 環境變數未設定")
-    finlab.login(api_token=api_key)
+    finlab.login()
     logger.info("FinLab 登入成功")
 
     from finlab import data as fl_data
