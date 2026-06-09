@@ -9,14 +9,13 @@ ETF 清單從 ETF/config/etf_registry.py 動態讀取（data_source='pocket'）�
 
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, TYPE_CHECKING
 
 import pandas as pd
 
 from ETF.config.etf_registry import ETF_META, get_secondary_etf_codes
-from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.base import BaseStep, StepDomain
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.diff_engine import compute_diff
 
@@ -28,12 +27,30 @@ logger = logging.getLogger(__name__)
 # ETF 清單從 etf_registry 動態讀取，請勿在此處 hardcode
 
 
+def _get_today_trading_date() -> str:
+    """回傳今日交易日（台灣時間，15:00 前取前一交易日）。
+
+    邏輯同 ScrapeStep._last_weekday()，用於 gap-fill 判斷。
+    """
+    tw_now = datetime.now(timezone(timedelta(hours=8)))
+    if tw_now.hour < 15:
+        tw_now -= timedelta(days=1)
+    d = tw_now.date()
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d.isoformat()
+
+
 class MultiEtfStep(BaseStep):
     """爬取並儲存次要 ETF 的持股、AUM、產業資料（asyncio 並行）"""
 
     @property
     def name(self) -> str:
         return "Multi-ETF Scrape & Save"
+
+    @property
+    def domain(self) -> StepDomain:
+        return StepDomain.SCRAPING
 
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
@@ -115,6 +132,11 @@ class MultiEtfStep(BaseStep):
             services.storage.save_snapshot(df, etf_code, snapshot_date)
             self._save_weight_history(services, etf_code, df, snapshot_date)
 
+            # 補齊交易日空白：Pocket.tw 可能數天才更新一次，來源日期舊於今日
+            # 時仍寫入今日快照，確保時序無斷點。
+            # Ref: stock-data-ai/stock-data etf_utils.py::record_unchanged_snapshot()
+            self._fill_trading_day_gap(services, etf_code, df, snapshot_date)
+
             stock_codes = df["code"].tolist()
 
             diff_logs: list[dict] = []
@@ -145,6 +167,46 @@ class MultiEtfStep(BaseStep):
             return etf_code, [], None
 
     # ------------------------------------------------------------------ helpers
+
+    def _fill_trading_day_gap(
+        self,
+        services: "PipelineServices",
+        etf_code: str,
+        df: pd.DataFrame,
+        source_date: str,
+    ) -> None:
+        """來源未更新時，補寫今日交易日快照，確保 etf_holdings_snapshot / etf_weight_history 無空白。
+
+        Pocket.tw 的 data_date 反映 ETF 公告日，可能數天才更新一次（正常行為）。
+        若不補齊，前端時序圖會出現缺口，buyingPattern / weightHistory 也會斷裂。
+
+        邏輯：
+          1. 計算今日交易日 today_str
+          2. 若 source_date == today_str → 資料是新的，無需補齊
+          3. 若 DB 最新日期已是 today_str → 本次 pipeline 已寫入，跳過
+          4. 否則以相同 df 寫入 today_str 快照（upsert 安全）
+
+        Ref: stock-data-ai/stock-data etf_utils.py::record_unchanged_snapshot()
+        """
+        today_str = _get_today_trading_date()
+        if source_date == today_str:
+            return  # 資料是最新的，不需補齊
+
+        try:
+            latest_in_db = services.storage.get_latest_date(etf_code)
+            if latest_in_db == today_str:
+                self.logger.debug(f"[GAP-FILL] {etf_code}: {today_str} 已在 DB，跳過")
+                return
+
+            services.storage.save_snapshot(df, etf_code, today_str)
+            self._save_weight_history(services, etf_code, df, today_str)
+            self.logger.info(
+                f"[GAP-FILL] {etf_code}: 來源未更新（{source_date}），"
+                f"記錄 {today_str} 快照（持股同 {source_date}）"
+            )
+        except Exception as e:
+            # gap-fill 是輔助行為，失敗不應中斷主流程
+            self.logger.warning(f"[GAP-FILL] {etf_code}: 補齊失敗 — {e}")
 
     def _save_weight_history(
         self, services: "PipelineServices", etf_code: str, df: pd.DataFrame, snapshot_date: str

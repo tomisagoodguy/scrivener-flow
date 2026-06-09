@@ -11,7 +11,7 @@ Scrape Step
 
 from datetime import datetime, timedelta, timezone
 
-from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.base import BaseStep, StepDomain
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -35,6 +35,10 @@ class ScrapeStep(BaseStep):
     @property
     def name(self) -> str:
         return "Scrape Holdings"
+
+    @property
+    def domain(self) -> StepDomain:
+        return StepDomain.SCRAPING
 
     def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         df, date_str = self._try_official_api()

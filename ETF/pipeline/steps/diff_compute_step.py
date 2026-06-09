@@ -4,7 +4,7 @@ Diff Compute Step
 負責計算持股異動（新增/剔除/增減）。
 """
 
-from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.base import BaseStep, StepDomain
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -19,6 +19,10 @@ class DiffComputeStep(BaseStep):
     @property
     def name(self) -> str:
         return "Compute Diff"
+
+    @property
+    def domain(self) -> StepDomain:
+        return StepDomain.CORE
 
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run

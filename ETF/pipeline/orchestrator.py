@@ -154,19 +154,30 @@ class PipelineOrchestrator:
 
         services = self._build_services(ctx)
         current_step_name = "unknown"
-        try:
-            for step_class in self.step_classes:
-                step = step_class()
-                current_step_name = step.name
+
+        for step_class in self.step_classes:
+            step = step_class()
+            current_step_name = step.name
+            try:
                 ctx = step.run(ctx, services)
+            except Exception as e:
+                if step.is_critical:
+                    # 關鍵步驟（SCRAPING / CORE）失敗 → 中斷並發送警報
+                    logger.error(
+                        f"❌ Pipeline failed at [{step.domain.value}] {current_step_name}: {e}"
+                    )
+                    self._send_error_alert(ctx, services, current_step_name, e)
+                    raise
+                else:
+                    # 輔助步驟意外 raise（例如開發中漏寫 try/except）→ 記錄後繼續
+                    # 這層保護確保 NotifyStep 一定能執行
+                    logger.error(
+                        f"⚠️  Non-critical [{step.domain.value}] {current_step_name} "
+                        f"raised unexpectedly: {e} — continuing pipeline"
+                    )
 
-            logger.info("🎉 Pipeline completed successfully!")
-            return ctx
-
-        except Exception as e:
-            logger.error(f"❌ Pipeline failed at [{current_step_name}]: {e}")
-            self._send_error_alert(ctx, services, current_step_name, e)
-            raise
+        logger.info("🎉 Pipeline completed successfully!")
+        return ctx
 
     def _send_error_alert(
         self,

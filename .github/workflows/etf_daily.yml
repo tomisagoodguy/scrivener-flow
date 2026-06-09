@@ -4,7 +4,7 @@ on:
   schedule:
     # 台灣時間 20:00 (UTC 12:00): 收盤後 FinLab 資料更新完畢
     - cron: '0 12 * * *'
-  workflow_dispatch: # 允許手動觸發
+  workflow_dispatch:
     inputs:
       runner:
         description: '執行環境'
@@ -12,10 +12,24 @@ on:
         default: 'ubuntu-latest'
         type: choice
         options: ['ubuntu-latest', 'self-hosted']
+      rerun_round:
+        description: '自動重跑輪次（0=初次執行，1-2=故障重跑）'
+        required: false
+        default: '0'
+      delay_minutes:
+        description: '啟動前等待分鐘數（重跑時用於避開 API rate limit）'
+        required: false
+        default: '0'
 
+# 同一時間只允許一個執行實例；schedule 與手動觸發共用同一 concurrency group。
+# 重跑 job 會等待前一個實例結束，不會互相取消。
 concurrency:
   group: etf-daily
-  cancel-in-progress: false  # 若已在跑，新觸發排隊等待而非同時執行
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write  # 讓 GITHUB_TOKEN 可以觸發 workflow_dispatch（自動重跑用）
 
 jobs:
   validate-registry:
@@ -80,6 +94,20 @@ jobs:
       TZ: 'Asia/Taipei'
 
     steps:
+      - name: Delay startup (rate limit management)
+        if: ${{ github.event.inputs.delay_minutes != '' && github.event.inputs.delay_minutes != '0' }}
+        run: |
+          echo "Waiting ${{ github.event.inputs.delay_minutes }} minute(s) before starting..."
+          sleep $(( ${{ github.event.inputs.delay_minutes }} * 60 ))
+
+      - name: Log rerun context
+        run: |
+          echo "=== ETF Daily Tracker ==="
+          echo "Rerun round : ${{ github.event.inputs.rerun_round || '0' }}"
+          echo "Runner      : ${{ github.event.inputs.runner || 'ubuntu-latest' }}"
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "=========================="
+
       - name: Checkout repository
         uses: actions/checkout@v6
 
@@ -135,4 +163,25 @@ jobs:
           curl -s -X POST https://api.line.me/v2/bot/message/push \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
-            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: run-tracker\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 ETF CI 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: run-tracker\n🔁 重跑輪次: ${{ github.event.inputs.rerun_round || '0' }}\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+
+      - name: Auto-rerun on failure (max 2 rounds)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT_ROUND="${{ github.event.inputs.rerun_round || '0' }}"
+          MAX_ROUNDS=2
+
+          if [ "$CURRENT_ROUND" -lt "$MAX_ROUNDS" ]; then
+            NEXT_ROUND=$(( CURRENT_ROUND + 1 ))
+            echo "Pipeline failed at round $CURRENT_ROUND. Scheduling rerun round $NEXT_ROUND in 30 minutes..."
+            gh workflow run etf_daily.yml \
+              --ref "${{ github.ref_name }}" \
+              --field rerun_round="$NEXT_ROUND" \
+              --field delay_minutes="30" \
+              --field runner="${{ github.event.inputs.runner || 'ubuntu-latest' }}"
+            echo "✅ Rerun round $NEXT_ROUND scheduled."
+          else
+            echo "❌ Reached max reruns ($MAX_ROUNDS). Manual intervention required."
+          fi

@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ETF.pipeline.context import PipelineContext
-from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.base import BaseStep, StepDomain
 
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
@@ -26,6 +26,10 @@ class DataValidationStep(BaseStep):
     @property
     def name(self) -> str:
         return "Data Validation"
+
+    @property
+    def domain(self) -> StepDomain:
+        return StepDomain.CORE
 
     def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
         try:

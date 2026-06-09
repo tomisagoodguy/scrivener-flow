@@ -4,7 +4,7 @@ Price Attach Step
 負責附加股票價格與相關指標資料。
 """
 
-from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.base import BaseStep, StepDomain
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -13,10 +13,14 @@ if TYPE_CHECKING:
 
 class PriceAttachStep(BaseStep):
     """附加價格與指標資料"""
-    
+
     @property
     def name(self) -> str:
         return "Attach Prices"
+
+    @property
+    def domain(self) -> StepDomain:
+        return StepDomain.CORE
     
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
