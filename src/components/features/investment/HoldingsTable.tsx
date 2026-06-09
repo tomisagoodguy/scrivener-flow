@@ -87,13 +87,13 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
 
             {/* 主題過濾 */}
             {availableTopics.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-400 font-medium">投資主題：</span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    <span className="text-xs text-slate-400 font-medium shrink-0">投資主題：</span>
                     {availableTopics.slice(0, 20).map(t => (
                         <button
                             key={t.topic_id}
                             onClick={() => activeTopic === t.topic_id ? clearTopic() : setTopic(t.topic_id)}
-                            className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all"
+                            className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all shrink-0"
                             style={activeTopic === t.topic_id
                                 ? { backgroundColor: t.color, color: '#fff', border: `1px solid ${t.color}` }
                                 : { backgroundColor: t.color + '18', color: t.color, border: `1px solid ${t.color}44` }
@@ -105,7 +105,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                     {activeTopic && (
                         <button
                             onClick={clearTopic}
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0"
                         >
                             <X className="w-3 h-3" />清除篩選
                         </button>

@@ -77,13 +77,13 @@ export function HoldingsFilterBar({
                 )}
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
                 {filterOptions.map((opt) => {
                     const isActive = activeFilters.includes(opt.id);
                     const config = FILTER_UI_CONFIG[opt.id] || { icon: Target, color: 'indigo' };
                     const Icon = config.icon;
                     const color = config.color;
-                    
+
                     return (
                         <motion.button
                             key={opt.id}
@@ -91,23 +91,21 @@ export function HoldingsFilterBar({
                             whileTap={{ scale: 0.98 }}
                             onClick={() => onToggleFilter(opt.id)}
                             className={`
-                                relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300
+                                relative flex items-center justify-between gap-2 px-3 py-2 rounded-xl border transition-all duration-300
                                 ${isActive ? ACTIVE_COLOR_MAP[color] : COLOR_MAP[color]}
                                 ${opt.matchCount === 0 && !isActive ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}
                             `}
                         >
-                            <div className={`p-2 rounded-xl mb-2 ${isActive ? 'bg-white/20' : 'bg-white block'}`}>
-                                <Icon className={`w-6 h-6 ${isActive ? 'text-white' : ''}`} />
-                            </div>
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : ''}`} />
                             <span className="text-[10px] font-bold whitespace-nowrap opacity-90 uppercase tracking-tighter">
                                 {opt.label}
                             </span>
-                            <div className="mt-1 flex items-baseline gap-1">
-                                <span className="text-xl font-black font-mono">
+                            <div className="flex items-baseline gap-0.5 ml-auto">
+                                <span className="text-sm font-black font-mono">
                                     {opt.matchCount}
                                 </span>
                                 <span className="text-[10px] opacity-70">
-                                    / {opt.totalCount}
+                                    /{opt.totalCount}
                                 </span>
                             </div>
                             
