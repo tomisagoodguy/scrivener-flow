@@ -22,6 +22,7 @@ from ETF.pipeline.steps import (
     MultiEtfStep,
     AumSyncStep,
     OverlapComputeStep,
+    DivergenceDetectStep,
     FlowComputeStep,
     SignalDetectStep,
     BuyingPatternStep,
@@ -75,6 +76,7 @@ class PipelineOrchestrator:
         SyncOHLCVStep,          # 合併 ETF 持股 + sector + 策略股一起 sync K 線
         SyncTopicsStep,         # [輔助] 同步投資主題標籤 → stock_topics / stock_topic_assignments
         OverlapComputeStep,     # 聚合跨 ETF 共識持股 → etf_stock_overlap
+        DivergenceDetectStep,   # [輔助] 同日跨 ETF 分歧偵測 → etf_stock_divergence
         FlowComputeStep,        # 計算每日跨 ETF 資金流向 → etf_flow_daily（輔助）
         SignalDetectStep,       # 偵測跨 ETF 進階訊號 → etf_signals（輔助）
         BuyingPatternStep,      # 分類買進模式 + 補前瞻報酬 → etf_buying_patterns（輔助）

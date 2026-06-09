@@ -115,7 +115,26 @@ class MultiEtfStep(BaseStep):
                     )
                     df, data_date = pocket_scraper.scrape_holdings(etf_code)
             else:
-                df, data_date = pocket_scraper.scrape_holdings(etf_code)
+                # pocket source: try Pocket.tw first, fall back to MoneyDJ
+                try:
+                    df, data_date = pocket_scraper.scrape_holdings(etf_code)
+                except Exception as e:
+                    self.logger.warning(f"[{etf_code}] Pocket.tw raised: {e}")
+                    df, data_date = None, None
+
+                if df is None or df.empty:
+                    from ETF.scrapers import moneydj_scraper
+                    moneydj_df = moneydj_scraper.scrape_moneydj(etf_code)
+                    if moneydj_df is not None:
+                        df = moneydj_df
+                        data_date = moneydj_df.attrs.get("data_date", fallback_date)
+                        self.logger.warning(
+                            f"[{etf_code}] MoneyDJ fallback 成功（data_date={data_date}）"
+                        )
+                    else:
+                        self.logger.warning(
+                            f"[{etf_code}] Pocket.tw 與 MoneyDJ 皆無資料，skip"
+                        )
 
             if df is None or df.empty:
                 self.logger.warning(f"No holdings data for {etf_code}")
