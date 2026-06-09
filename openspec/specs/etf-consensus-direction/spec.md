@@ -2,7 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change etf-consensus-direction. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Consensus direction counts persisted in etf_stock_overlap
 
 The `etf_stock_overlap` table SHALL contain two additional integer columns:
@@ -43,6 +45,7 @@ Both columns SHALL default to `0` and SHALL be updated on every `OverlapComputeS
 - **WHEN** one ETF has two BUY log entries for the same stock within the 7-day window
 - **THEN** that ETF is counted only once in `consensus_buy_count` (DISTINCT etf_code)
 
+---
 ### Requirement: Consensus direction threshold constant defined in diff_engine
 
 The `ETF/processors/diff_engine.py` module SHALL define a constant `CONSENSUS_WEIGHT_THRESHOLD = 0.05`.
@@ -53,6 +56,7 @@ This constant SHALL be used exclusively by the consensus direction calculation i
 - **WHEN** `CONSENSUS_WEIGHT_THRESHOLD` is read by `OverlapComputeStep`
 - **THEN** `WEIGHT_CHANGE_THRESHOLD` remains `0.10` and `is_significant` flags in `etf_diff_logs` are unchanged
 
+---
 ### Requirement: Consensus direction displayed on consensus page
 
 The `/investment/consensus` page SHALL display `consensus_buy_count` and `consensus_sell_count` for each row.
@@ -75,6 +79,17 @@ The `/investment/consensus` page SHALL display `consensus_buy_count` and `consen
 - **WHEN** both `consensus_buy_count = 0` and `consensus_sell_count = 0`
 - **THEN** the consensus direction cell is empty with no badges rendered
 
+---
+### Requirement: Consensus page renders divergence tab alongside existing tabs
+
+The `/investment/consensus` page SHALL include a "分歧" tab as an additional navigation tab alongside existing consensus tabs. The tab content SHALL be sourced from the `etf_stock_divergence` table (defined in the `etf-divergence-detection` spec). No existing tabs or their data sources SHALL be removed or modified.
+
+#### Scenario: Divergence tab visible in tab navigation
+
+- **WHEN** a user navigates to `/investment/consensus`
+- **THEN** the tab bar includes a "分歧" tab entry that, when clicked, renders the divergence content panel
+
+---
 ### Requirement: Database migration adds consensus columns
 
 A new Supabase migration file SHALL add `consensus_buy_count INTEGER NOT NULL DEFAULT 0` and `consensus_sell_count INTEGER NOT NULL DEFAULT 0` to the `etf_stock_overlap` table.
@@ -86,4 +101,3 @@ Existing rows SHALL remain valid with default value `0` after migration.
 - **WHEN** migration `20260509000000_add_consensus_counts_to_overlap.sql` is executed against a database with existing `etf_stock_overlap` rows
 - **THEN** all existing rows gain `consensus_buy_count = 0` and `consensus_sell_count = 0`
 - **THEN** no existing rows are deleted or modified in other columns
-
