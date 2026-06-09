@@ -289,6 +289,10 @@ class SQLStorage:
         """將 MOPS 公告列表 upsert 進 etf_news，重複筆數靜默跳過。"""
         if not news_list:
             return 0
+        # 過濾無效 pub_date（空字串或 None），防止 PostgreSQL date 格式錯誤
+        news_list = [item for item in news_list if item.get("pub_date")]
+        if not news_list:
+            return 0
         records = [
             {
                 "etf_code": etf_code,

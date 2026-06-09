@@ -1,13 +1,14 @@
 """經濟日報（UDN）新聞爬蟲。
 
-策略：直接呼叫 UDN 公開搜尋 API，以股票代碼為關鍵字搜尋，
-回傳 JSON 含標題、URL、時間，無需繞過 bot 偵測。
+策略：抓取 UDN 搜尋頁 HTML（舊 /api/more 端點已於 2026-06 下線），
+以 BeautifulSoup 解析 <h2 data-story_list> 標題與 <time class="story-list__time"> 時間。
 """
 
 import logging
 import time
 
 import requests
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,12 @@ _HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept": "application/json, text/plain, */*",
+    "Accept": "text/html,application/xhtml+xml,*/*",
+    "Accept-Language": "zh-TW,zh;q=0.9",
     "Referer": "https://udn.com/",
 }
 _TIMEOUT = 15
-_RATE_LIMIT = 0.3
+_RATE_LIMIT = 0.5
 
 
 def fetch_udn_news(stock_codes: list[str]) -> list[dict]:
@@ -47,8 +49,8 @@ def fetch_udn_news(stock_codes: list[str]) -> list[dict]:
 
 
 def _fetch_single(code: str) -> list[dict]:
-    """呼叫 UDN 搜尋 API 取單支股票新聞，失敗靜默回傳 []。"""
-    url = f"https://udn.com/api/more?page=1&id=search&type=news&kw={code}"
+    """抓取 UDN 搜尋頁 HTML，解析搜尋結果，失敗靜默回傳 []。"""
+    url = f"https://udn.com/search/word/2/{code}"
     try:
         resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
         if resp.status_code >= 400:
@@ -59,38 +61,53 @@ def _fetch_single(code: str) -> list[dict]:
         return []
 
     try:
-        payload = resp.json()
+        return _parse_html(resp.text, code)
     except Exception as e:
-        logger.warning(f"UDN JSON parse failed for {code}: {e}")
+        logger.warning(f"UDN HTML parse failed for {code}: {e}")
         return []
 
-    # 驗證 JSON 結構：需有 result.items
-    result_obj = payload.get("result")
-    if not isinstance(result_obj, dict):
-        logger.warning(f"UDN unexpected JSON structure for {code}: missing 'result'")
-        return []
 
-    items_raw = result_obj.get("items")
-    if not isinstance(items_raw, list):
-        logger.warning(f"UDN unexpected JSON structure for {code}: missing 'items'")
-        return []
+def _parse_html(html: str, code: str) -> list[dict]:
+    """解析 UDN 搜尋結果頁 HTML，抽取標題、URL、日期。
+
+    HTML 結構：
+      <h2><a href="..." title="{title}" data-story_list="list_{code}">...</a></h2>
+      ...（多篇）
+      <time class="story-list__time" datetime="YYYY-MM-DD HH:MM">...</time>
+      ...（依序對應）
+    """
+    soup = BeautifulSoup(html, "lxml")
+
+    # 取搜尋結果 h2（data-story_list 含 code 的 a 元素）
+    selector = f'h2 a[data-story_list="list_{code}"]'
+    anchors = soup.select(selector)
+
+    # 取所有 story-list__time（依順序對應 anchors）
+    times = soup.select("time.story-list__time")
 
     results: list[dict] = []
-    for item in items_raw[:10]:
-        try:
-            title = (item.get("title") or "").strip()
-            item_url = item.get("url") or ""
-            pub_date = (item.get("time") or "")[:10]  # 取前 10 字元 YYYY-MM-DD
-            if not title:
-                continue
-            results.append({
-                "stock_code": code,
-                "title": title,
-                "url": item_url,
-                "pub_date": pub_date,
-                "source": "經濟日報",
-            })
-        except Exception:
+    for i, anchor in enumerate(anchors[:10]):
+        title = (anchor.get("title") or anchor.get_text(strip=True)).strip()
+        story_url = anchor.get("href", "")
+        if not title or not story_url:
             continue
+
+        # 從對應的 time 元素取日期
+        pub_date = ""
+        if i < len(times):
+            t = times[i]
+            dt_str = t.get("datetime") or t.get_text(strip=True)
+            pub_date = dt_str[:10] if dt_str else ""
+
+        if not pub_date:
+            continue
+
+        results.append({
+            "stock_code": code,
+            "title": title,
+            "url": story_url,
+            "pub_date": pub_date,
+            "source": "經濟日報",
+        })
 
     return results

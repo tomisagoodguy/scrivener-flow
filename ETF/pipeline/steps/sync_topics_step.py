@@ -82,6 +82,8 @@ class SyncTopicsStep(BaseStep):
             return
 
         fetched_topic_ids = {r["topic_id"] for r in topic_rows}
+        # 過濾掉 topics.json 沒有定義的 topic_id，防止 FK 違反
+        assignment_rows = [r for r in assignment_rows if r["topic_id"] in fetched_topic_ids]
         fetched_pairs = {(r["stock_code"], r["topic_id"]) for r in assignment_rows}
 
         with services.sql_storage.engine.connect() as conn:

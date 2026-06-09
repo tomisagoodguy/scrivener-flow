@@ -85,7 +85,7 @@ class SignalDetectStep(BaseStep):
             self.logger.info("No signals detected for %s", target_date)
             return
 
-        self._upsert(services, signals, services)
+        self._upsert(services, signals)
         self.logger.info("Upserted %d signals for %s", len(signals), target_date)
 
     @staticmethod

@@ -50,7 +50,7 @@ class FrontrunningStep(BaseStep):
                 return ctx
 
             events = self._attach_volume_ratios(ctx, events)
-            self._upsert(services, events, services)
+            self._upsert(services, events)
             self.logger.info("Upserted %d frontrunning events", len(events))
         except Exception as e:
             self.logger.error(f"FrontrunningStep failed: {e}")
