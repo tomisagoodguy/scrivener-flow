@@ -158,8 +158,10 @@ LINE_USER_ID=                   # 管理員的 LINE User ID（Bot 推播目標�
 # 加密
 ENCRYPTION_MASTER_KEY=          # AES-256-GCM，90 天輪替
 
-# 投資
-FINLAB_API_KEY=
+# 投資（FinLab 新版 Firebase 認證，本地用 `uv run python -m finlab login` 後自動讀 credentials.json）
+FINLAB_REFRESH_TOKEN=           # CI 用：python -m finlab token --env 取得
+FINLAB_SESSION_ID=              # CI 用：python -m finlab token --env 取得
+FINLAB_API_KEY=                 # CI 用：Firebase API Key（非舊版 FinLab token）
 DATABASE_URL=                   # Prisma / SQLAlchemy connection string
 
 # 裸K看盤公開瀏覽

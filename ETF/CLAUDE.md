@@ -212,7 +212,9 @@ ScrapeStep
 DATABASE_URL=              # SQLAlchemy 連線字串（Supabase PostgreSQL）
 NEXT_PUBLIC_SUPABASE_URL=  # Supabase REST API URL
 SUPABASE_SERVICE_ROLE_KEY= # Bypass RLS 的 service role key
-FINLAB_API_KEY=            # FinLab API Key（5GB/天配額，本地謹慎使用）
+FINLAB_REFRESH_TOKEN=      # CI 用 Firebase 認證（python -m finlab token --env 取得）
+FINLAB_SESSION_ID=         # CI 用 Firebase Session ID
+FINLAB_API_KEY=            # CI 用 Firebase API Key（非舊版 FinLab token）；本地用 credentials.json 免設
 GOOGLE_GEMINI_API_KEY=     # Gemini AI 報告
 STOCK_LINE_CHANNEL_ACCESS_TOKEN=  # LINE Bot（股票專用）
 STOCK_LINE_USER_ID=        # LINE 推送目標 User ID
