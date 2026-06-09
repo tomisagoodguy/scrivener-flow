@@ -110,10 +110,31 @@ ETF_REGISTRY: list[EtfEntry] = [
         manager="中國信託投信",
         source="official_api",
     ),
-    # ── Pocket.tw 爬蟲（官網 API 待破解）──
-    # 00986A：兆豐 fund_id 尚未確認，保留 pocket 來源，下一期補完
+    # ── 官網 API（台新第二檔）──
     EtfEntry(
-        code="00986A", name="主動兆豐台灣主動", manager="兆豐投信", source="pocket"
+        code="00986A", name="主動台新龍頭成長", manager="台新投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00999A", name="主動野村臺灣高息", manager="野村投信", source="official_api"
+    ),
+    # ── Pocket.tw 爬蟲（官網 API 待破解或 fund_id 未確認）──
+    # 00996A：兆豐 mega scraper 存在，fund_id 待確認，官網 API empty → 自動 fallback pocket
+    EtfEntry(
+        code="00996A", name="主動兆豐台灣豐收", manager="兆豐投信", source="official_api"
+    ),
+    # 00998A：復華第二檔，fhtrust fund_code 待確認
+    EtfEntry(
+        code="00998A", name="主動復華金融股息", manager="復華投信", source="pocket"
+    ),
+    # 00983A：中信 ARK，ctbc FID 待確認
+    EtfEntry(
+        code="00983A", name="主動中信ARK創新", manager="中國信託投信", source="pocket"
+    ),
+    EtfEntry(
+        code="00401A", name="主動摩根台灣鑫收", manager="摩根投信", source="pocket"
+    ),
+    EtfEntry(
+        code="00400A", name="主動國泰動能高息", manager="國泰投信", source="pocket"
     ),
 ]
 

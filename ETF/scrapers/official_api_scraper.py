@@ -62,13 +62,15 @@ CATALOG: dict[str, dict[str, Any]] = {
     # 元大 00990A 已移交 yuanta_scraper 獨立處理，multi_etf_step 直接呼叫，CATALOG 不重複登記
     # ── 新增 4 家投信直接 API（stable-etf-scrapers）──
     "00987A": {"issuer": "taishin", "name": "台新優勢成長", "fund_code": "00987A"},
+    "00986A": {"issuer": "taishin", "name": "台新龍頭成長", "fund_code": "00986A"},
     "00994A": {"issuer": "first_financial", "name": "第一金台股優", "fund_code": "182"},
     "00995A": {"issuer": "ctbc", "name": "中信台灣卓越", "fund_code": "E0036"},
-    # 兆豐：fund_id 待確認（megafunds.com.tw 上尚未找到 00986A 頁面），暫設 None 觸發 pocket fallback
-    "00986A": {
+    "00999A": {"issuer": "nomura", "name": "野村臺灣高息", "fund_code": "00999A"},
+    # 兆豐：fund_id 待確認（megafunds.com.tw），暫設 None 觸發 pocket fallback
+    "00996A": {
         "issuer": "mega",
-        "name": "兆豐台灣主動",
-        "fund_code": "00986A",
+        "name": "兆豐台灣豐收",
+        "fund_code": "00996A",
         "fund_id": None,
     },
 }
@@ -440,11 +442,11 @@ def _fetch_ctbc(fid: str) -> list[dict[str, Any]]:
     return holdings
 
 
-# ── 兆豐 (00986A) ──────────────────────────────────────────────────────────────
+# ── 兆豐 (00996A) ──────────────────────────────────────────────────────────────
 
 
 def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
-    """Fetch 00986A holdings via Mega Funds official HTML page.
+    """Fetch 兆豐 ETF holdings via Mega Funds official HTML page.
 
     fund_id must be confirmed by browsing https://www.megafunds.com.tw/MEGA/etf/.
     If fund_id is None or empty, returns [] and logs a warning so multi_etf_step
