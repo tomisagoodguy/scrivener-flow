@@ -140,6 +140,16 @@ ETF_REGISTRY: list[EtfEntry] = [
     EtfEntry(
         code="00989A", name="主動摩根美國科技", manager="摩根投信", source="official_api"
     ),
+    # ── D 類 ETF（債券型）——expand-etf-coverage-and-diff-schema 新增 ──
+    EtfEntry(
+        code="00984D", name="主動聯博全球非投", manager="聯博投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00982D", name="主動富邦動態入息", manager="富邦投信", source="official_api"
+    ),
+    EtfEntry(
+        code="00983D", name="主動富邦複合收益", manager="富邦投信", source="official_api"
+    ),
 ]
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -93,26 +93,29 @@ class SQLStorage:
         upsert_sql = text("""
             INSERT INTO etf_diff_logs
                 (etf_code, stock_code, stock_name, data_date, change_type,
+                 change_category,
                  prev_shares, curr_shares, diff_shares,
                  prev_weight, curr_weight, diff_weight,
                  is_significant, description)
             VALUES
                 (:etf_code, :stock_code, :stock_name, :data_date, :change_type,
+                 :change_category,
                  :prev_shares, :curr_shares, :diff_shares,
                  :prev_weight, :curr_weight, :diff_weight,
                  :is_significant, :description)
             ON CONFLICT (etf_code, stock_code, data_date)
             DO UPDATE SET
-                change_type    = EXCLUDED.change_type,
-                stock_name     = EXCLUDED.stock_name,
-                prev_shares    = EXCLUDED.prev_shares,
-                curr_shares    = EXCLUDED.curr_shares,
-                diff_shares    = EXCLUDED.diff_shares,
-                prev_weight    = EXCLUDED.prev_weight,
-                curr_weight    = EXCLUDED.curr_weight,
-                diff_weight    = EXCLUDED.diff_weight,
-                is_significant = EXCLUDED.is_significant,
-                description    = EXCLUDED.description
+                change_type     = EXCLUDED.change_type,
+                change_category = EXCLUDED.change_category,
+                stock_name      = EXCLUDED.stock_name,
+                prev_shares     = EXCLUDED.prev_shares,
+                curr_shares     = EXCLUDED.curr_shares,
+                diff_shares     = EXCLUDED.diff_shares,
+                prev_weight     = EXCLUDED.prev_weight,
+                curr_weight     = EXCLUDED.curr_weight,
+                diff_weight     = EXCLUDED.diff_weight,
+                is_significant  = EXCLUDED.is_significant,
+                description     = EXCLUDED.description
         """)
 
         with self.engine.connect() as conn:

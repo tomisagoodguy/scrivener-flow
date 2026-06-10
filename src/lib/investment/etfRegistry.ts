@@ -47,6 +47,11 @@ export const ETF_REGISTRY: EtfRegistryEntry[] = [
     { code: '00400A', shortCode: '00400', name: '主動國泰動能高息', manager: '國泰投信',     issuer: '國泰',   color: '#ca8a04', dataSource: 'official_api' },
     // 00989A：摩根第二檔（美國科技）
     { code: '00989A', shortCode: '00989', name: '主動摩根美國科技', manager: '摩根投信',     issuer: '摩根',   color: '#0284c7', dataSource: 'official_api' },
+
+    // ── D 類 ETF（債券型）——expand-etf-coverage-and-diff-schema 新增 ──
+    { code: '00984D', shortCode: '00984', name: '主動聯博全球非投', manager: '聯博投信',     issuer: '聯博',   color: '#b45309', dataSource: 'official_api' },
+    { code: '00982D', shortCode: '00982', name: '主動富邦動態入息', manager: '富邦投信',     issuer: '富邦',   color: '#059669', dataSource: 'official_api' },
+    { code: '00983D', shortCode: '00983', name: '主動富邦複合收益', manager: '富邦投信',     issuer: '富邦',   color: '#0d9488', dataSource: 'official_api' },
 ];
 
 export const ETF_CODES = ETF_REGISTRY.map(e => e.code);

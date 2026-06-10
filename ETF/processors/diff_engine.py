@@ -8,6 +8,16 @@ CONSENSUS_WEIGHT_THRESHOLD = 0.05
 # 判定為 CLOSE 的減少幅度（股數歸零或減少超過 99%）
 CLOSE_SHARES_RATIO = 0.99
 
+# change_type → change_category 語意標籤映射
+_CATEGORY_MAP: dict[str, str] = {
+    "IN": "added",
+    "OUT": "removed",
+    "CLOSE": "removed",
+    "BUY": "increased",
+    "SELL": "decreased",
+    "TRIM": "decreased",
+}
+
 
 def compute_diff(
     prev_df: pd.DataFrame,
@@ -46,6 +56,7 @@ def compute_diff(
                 "etf_code": etf_code,
                 "data_date": data_date,
                 "change_type": "IN",
+                "change_category": "added",
                 "stock_code": code,
                 "stock_name": c["name"],
                 "prev_shares": 0,
@@ -65,6 +76,7 @@ def compute_diff(
                 "etf_code": etf_code,
                 "data_date": data_date,
                 "change_type": "OUT",
+                "change_category": "removed",
                 "stock_code": code,
                 "stock_name": p["name"],
                 "prev_shares": p["shares"],
@@ -92,6 +104,7 @@ def compute_diff(
                     "etf_code": etf_code,
                     "data_date": data_date,
                     "change_type": "CLOSE",
+                    "change_category": "removed",
                     "stock_code": code,
                     "stock_name": c["name"],
                     "prev_shares": p["shares"],
@@ -119,6 +132,7 @@ def compute_diff(
                 "etf_code": etf_code,
                 "data_date": data_date,
                 "change_type": change_type,
+                "change_category": _CATEGORY_MAP[change_type],
                 "stock_code": code,
                 "stock_name": c["name"],
                 "prev_shares": p["shares"],

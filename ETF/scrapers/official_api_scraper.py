@@ -91,6 +91,12 @@ CATALOG: dict[str, dict[str, Any]] = {
         "xlsx_url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/asiapacific/tw/zh/regulatory/etf-supplement/jpm_apac_tw_etf_pcf_updates_00989A_TW00000989A5.xlsx",
     },
     "00983A": {"issuer": "ctbc_html", "name": "中信ARK創新", "fund_code": "00983A"},
+    # ── expand-etf-coverage-and-diff-schema：新增 D 類 ETF ──
+    # 聯博（00984D）：REST API，接受 ISIN 等非 4 碼代號
+    "00984D": {"issuer": "alliance_bernstein", "name": "聯博全球非投", "fund_code": "TW00000984D0"},
+    # 富邦（00982D / 00983D）：HTML 解析；兩檔均為債券型 ETF，預期無股票持股明細
+    "00982D": {"issuer": "fubon", "name": "富邦動態入息", "fund_code": "00982D"},
+    "00983D": {"issuer": "fubon", "name": "富邦複合收益", "fund_code": "00983D"},
 }
 
 
@@ -674,6 +680,106 @@ def _fetch_cathay(fund_code: str) -> list[dict[str, Any]]:
     return holdings
 
 
+# ── 聯博 AllianceBernstein (00984D) ───────────────────────────────────────────
+
+
+def _fetch_alliance_bernstein(fund_code: str) -> list[dict[str, Any]]:
+    """Fetch 00984D holdings via AllianceBernstein REST API.
+
+    Parses domesticHoldings[].holdings[].
+    Accepts any non-empty code (bond ISINs, not just 4-digit TW codes).
+    """
+    url = f"https://www.abfunds.com.tw/api/fundholding/{fund_code}"
+    try:
+        raw = _get(url)
+        js: dict[str, Any] = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        logger.error("[AllianceBernstein] %s 抓取失敗：%s", fund_code, exc)
+        return []
+
+    domestic_holdings: list[dict[str, Any]] = js.get("domesticHoldings") or []
+    if not domestic_holdings:
+        logger.warning("[AllianceBernstein] %s 回傳空 domesticHoldings", fund_code)
+        return []
+
+    holdings: list[dict[str, Any]] = []
+    for section in domestic_holdings:
+        for item in (section.get("holdings") or []):
+            code = str(item.get("stockCode") or item.get("code") or "").strip()
+            if not code:
+                continue
+            name = str(item.get("stockName") or item.get("name") or "").strip()
+            shares_val = item.get("shares") or item.get("quantity")
+            shares_num = _to_num(shares_val)
+            weight = _to_num(item.get("weight") or item.get("weightPct"))
+            if weight is not None:
+                holdings.append({
+                    "code": code,
+                    "name": name,
+                    "shares": int(shares_num) if shares_num is not None else 0,
+                    "weight_pct": weight,
+                })
+
+    logger.info("[AllianceBernstein] %s 取得 %d 筆持股", fund_code, len(holdings))
+    return holdings
+
+
+# ── 富邦 Fubon (00982D, 00983D) ────────────────────────────────────────────────
+
+
+def _fetch_fubon(fund_code: str) -> list[dict[str, Any]]:
+    """Fetch 富邦 ETF holdings via official HTML page.
+
+    Locates <h6> containing "持股明細" and reads subsequent <tbody>.
+    Bond ETFs (00982D, 00983D) have no equity section → returns [] gracefully.
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        url = f"https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?lan=TW&stkId={fund_code}"
+        raw = _get(url)
+        html = raw.decode("utf-8", errors="replace")
+        soup = BeautifulSoup(html, "lxml")
+    except Exception as exc:
+        logger.error("[Fubon] %s 抓取失敗：%s", fund_code, exc)
+        return []
+
+    h6 = next(
+        (tag for tag in soup.find_all("h6") if "持股明細" in tag.get_text(strip=True)),
+        None,
+    )
+    if h6 is None:
+        logger.warning("[Fubon] %s 找不到 <h6>持股明細（可能為債券型 ETF）", fund_code)
+        return []
+
+    tbody = h6.find_next("tbody")
+    if tbody is None:
+        logger.warning("[Fubon] %s 找不到持股 <tbody>", fund_code)
+        return []
+
+    code_re = re.compile(r"^\d{4,6}$")
+    holdings: list[dict[str, Any]] = []
+    for tr in tbody.find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) < 4:
+            continue
+        code = tds[0].get_text(strip=True)
+        if not code_re.match(code):
+            continue
+        name = tds[1].get_text(strip=True)
+        shares_raw = tds[2].get_text(strip=True).replace(",", "")
+        weight_raw = tds[3].get_text(strip=True).replace("%", "").strip()
+        shares_num = _to_num(shares_raw)
+        shares = int(shares_num) if shares_num is not None else 0
+        w = _to_num(weight_raw)
+        if w is None:
+            continue
+        holdings.append({"code": code, "name": name, "shares": shares, "weight_pct": w})
+
+    logger.info("[Fubon] %s 取得 %d 筆持股", fund_code, len(holdings))
+    return holdings
+
+
 # ── 中信 HTML (00983A) ─────────────────────────────────────────────────────────
 
 
@@ -848,4 +954,8 @@ def _dispatch(
         return _fetch_cathay(fund_code)
     if issuer == "ctbc_html":
         return _fetch_ctbc_html(fund_code)
+    if issuer == "alliance_bernstein":
+        return _fetch_alliance_bernstein(fund_code)
+    if issuer == "fubon":
+        return _fetch_fubon(fund_code)
     raise RuntimeError(f"未知 issuer: {issuer}")
