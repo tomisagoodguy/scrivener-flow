@@ -8,7 +8,9 @@ TBD — Defines the three-layer fallback strategy for secondary ETF scraping in 
 
 ### Requirement: Secondary ETF scraping uses a three-layer fallback chain
 
-`MultiEtfStep` SHALL attempt to fetch holdings for each secondary ETF using the following ordered strategy: (1) `official_api_scraper`, (2) `moneydj_scraper`, (3) `pocket_scraper`. The step SHALL stop at the first successful layer and SHALL NOT attempt subsequent layers once data is obtained. ETFs 00400A, 00401A, 00983A, 00989A, and 00996A SHALL be registered in `CATALOG` within `official_api_scraper.py` with `source="official_api"` so that layer 1 is attempted first for these ETFs. ETF 00998A SHALL remain registered with `source="pocket"` and SHALL continue to use layer 3 directly.
+`MultiEtfStep` SHALL attempt to fetch holdings for each secondary ETF using the following ordered strategy: (1) `official_api_scraper`, (2) `moneydj_scraper`, (3) `pocket_scraper`. The step SHALL stop at the first successful layer and SHALL NOT attempt subsequent layers once data is obtained.
+
+The `official_api_scraper` CATALOG SHALL include dispatch entries for the following issuers: `uni`, `fhtrust`, `nomura`, `allianz`, `capital`, `yuanta`, `taishin`, `first_financial`, `ctbc`, `mega`, `cathay`, `morgan`, `alliance_bernstein`, `fubon`.
 
 #### Scenario: Official API succeeds
 
@@ -31,51 +33,6 @@ TBD — Defines the three-layer fallback strategy for secondary ETF scraping in 
 
 - **WHEN** all three scrapers raise exceptions or return empty DataFrames
 - **THEN** the step logs an error for that ETF and continues to the next ETF (SHALL NOT abort the pipeline)
-
-#### Scenario: 00400A uses official Cathay REST API
-
-- **WHEN** `fetch_holdings("00400A")` is called via layer 1
-- **THEN** `_fetch_cathay("EA")` is dispatched and returns holdings without Pocket.tw involvement
-
-#### Scenario: 00401A and 00989A use JPM XLSX
-
-- **WHEN** `fetch_holdings("00401A")` or `fetch_holdings("00989A")` is called via layer 1
-- **THEN** `_fetch_jpm(xlsx_url)` is dispatched using the ETF-specific XLSX URL
-
-#### Scenario: 00983A uses CTBC HTML scraper
-
-- **WHEN** `fetch_holdings("00983A")` is called via layer 1
-- **THEN** `_fetch_ctbc_html("00983A")` is dispatched, not the auth-token `_fetch_ctbc()` used for 00995A
-
-#### Scenario: 00996A uses Mega HTML scraper with fund_id=23
-
-- **WHEN** `fetch_holdings("00996A")` is called via layer 1
-- **THEN** `_fetch_mega("23")` is dispatched successfully without fallback to Pocket
-
-##### Example: CATALOG source mapping after this change
-
-| ETF code | issuer | source in registry | Notes |
-|----------|--------|-------------------|-------|
-| 00400A | cathay | official_api | New |
-| 00401A | jpm | official_api | New |
-| 00983A | ctbc_html | official_api | New |
-| 00989A | jpm | official_api | New |
-| 00996A | mega | official_api | fund_id=23 filled |
-| 00998A | fhtrust | pocket | Unchanged |
-
-
-<!-- @trace
-source: replace-pocket-scrapers
-updated: 2026-06-10
-code:
-  - ETF/config/etf_registry.py
-  - EOCS/因子分析_公開版.py
-  - ETF/scrapers/official_api_scraper.py
-  - ETF/parsers/__pycache__/xlsx_parser.cpython-313.pyc
-  - src/lib/investment/etfRegistry.ts
-tests:
-  - ETF/tests/test_new_scrapers.py
--->
 
 ---
 ### Requirement: Fallback results are recorded in pipeline context
