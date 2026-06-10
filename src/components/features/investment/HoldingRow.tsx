@@ -60,30 +60,28 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             </td>
 
             {/* Stock Code & Name - Fixed Column */}
-            <td className="sticky left-[48px] px-4 py-3 whitespace-nowrap bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors z-10 border-r border-slate-100 dark:border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center gap-3">
-                    <div className="flex flex-col min-w-[70px]">
-                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-blue-600 transition-colors tracking-tight">{item.stock_name}</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-400 font-mono font-medium">{item.stock_code}</span>
+            <td className="sticky left-[48px] w-[100px] max-w-[100px] px-2 py-3 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors z-10 border-r border-slate-100 dark:border-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] overflow-hidden">
+                <div className="flex items-center gap-2">
+                    <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-blue-600 transition-colors tracking-tight truncate" title={item.stock_name}>{item.stock_name}</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-slate-400 font-mono font-medium shrink-0">{item.stock_code}</span>
                             {item.industry && (
                                 <span
                                     title={item.industry}
-                                    className="max-w-[140px] truncate text-[9px] px-1.5 py-0.25 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50"
+                                    className="max-w-[60px] truncate text-[9px] px-1 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-sm font-medium border border-blue-100 dark:border-blue-800/50"
                                 >
                                     {item.industry}
                                 </span>
                             )}
-                            {(item.topics ?? []).map(t => (
+                            {(item.topics ?? []).length > 0 && (
                                 <span
-                                    key={t.topic_id}
-                                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
-                                    style={{ backgroundColor: t.color + '22', color: t.color, border: `1px solid ${t.color}55` }}
-                                    title={t.topic_id}
+                                    className="text-[9px] px-1 py-0.5 rounded-full font-medium whitespace-nowrap bg-indigo-50 text-indigo-500 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-700/50 shrink-0"
+                                    title={(item.topics ?? []).map(t => t.short_name).join('、')}
                                 >
-                                    {t.short_name}
+                                    {(item.topics ?? []).length}題材
                                 </span>
-                            ))}
+                            )}
                         </div>
                     </div>
                     {getNewHighBadge(item)}

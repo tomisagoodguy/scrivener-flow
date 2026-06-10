@@ -143,7 +143,7 @@ export function HoldingsTable({ initialData }: HoldingsTableProps) {
                                 <th scope="col" className="sticky left-0 w-12 px-4 py-3 bg-slate-50 dark:bg-slate-800 z-20">
                                     #
                                 </th>
-                                <th scope="col" className="sticky left-[48px] px-4 py-3 bg-slate-50 dark:bg-slate-800 z-20 border-r border-slate-100 dark:border-slate-800">
+                                <th scope="col" className="sticky left-[48px] w-[100px] max-w-[100px] px-2 py-3 bg-slate-50 dark:bg-slate-800 z-20 border-r border-slate-100 dark:border-slate-800">
                                     成分股
                                 </th>
                                 

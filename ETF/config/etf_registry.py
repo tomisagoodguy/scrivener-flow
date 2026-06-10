@@ -136,6 +136,10 @@ ETF_REGISTRY: list[EtfEntry] = [
     EtfEntry(
         code="00400A", name="主動國泰動能高息", manager="國泰投信", source="pocket"
     ),
+    # 00989A：摩根第二檔（美國科技），Pocket.tw 來源
+    EtfEntry(
+        code="00989A", name="主動摩根美國科技", manager="摩根投信", source="pocket"
+    ),
 ]
 
 # ──────────────────────────────────────────────────────────────────────────────

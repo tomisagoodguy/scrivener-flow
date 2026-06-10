@@ -59,7 +59,7 @@ CATALOG: dict[str, dict[str, Any]] = {
     "00982A": {"issuer": "capital", "name": "群益台灣精選強棒", "fund_code": "399"},
     "00992A": {"issuer": "capital", "name": "群益台灣科技創新", "fund_code": "500"},
     "00997A": {"issuer": "capital", "name": "群益美國增長", "fund_code": "502"},
-    # 元大 00990A 已移交 yuanta_scraper 獨立處理，multi_etf_step 直接呼叫，CATALOG 不重複登記
+    "00990A": {"issuer": "yuanta", "name": "元大AI新經濟", "fund_code": "00990A"},
     # ── 新增 4 家投信直接 API（stable-etf-scrapers）──
     "00987A": {"issuer": "taishin", "name": "台新優勢成長", "fund_code": "00987A"},
     "00986A": {"issuer": "taishin", "name": "台新龍頭成長", "fund_code": "00986A"},

@@ -44,6 +44,8 @@ export const ETF_REGISTRY: EtfRegistryEntry[] = [
     { code: '00983A', shortCode: '00983', name: '主動中信ARK創新', manager: '中國信託投信', issuer: '中信',   color: '#7c3aed', dataSource: 'pocket' },
     { code: '00401A', shortCode: '00401', name: '主動摩根台灣鑫收', manager: '摩根投信',     issuer: '摩根',   color: '#0891b2', dataSource: 'pocket' },
     { code: '00400A', shortCode: '00400', name: '主動國泰動能高息', manager: '國泰投信',     issuer: '國泰',   color: '#ca8a04', dataSource: 'pocket' },
+    // 00989A：摩根第二檔（美國科技）
+    { code: '00989A', shortCode: '00989', name: '主動摩根美國科技', manager: '摩根投信',     issuer: '摩根',   color: '#0284c7', dataSource: 'pocket' },
 ];
 
 export const ETF_CODES = ETF_REGISTRY.map(e => e.code);
