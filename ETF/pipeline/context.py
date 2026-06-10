@@ -40,6 +40,10 @@ class PipelineContext:
     # 散戶情緒指標（RetailSentimentStep 寫入）
     retail_sentiment: Dict[str, Any] = field(default_factory=dict)
 
+    # 步驟產出登記（step_name → 寫入筆數），供後續步驟驗證前置條件
+    # 用法：step 執行完後 ctx.completed_artifacts["SaveSnapshot"] = len(rows)
+    completed_artifacts: Dict[str, int] = field(default_factory=dict)
+
     # 執行標誌
     is_dry_run: bool = False
     is_ci: bool = False
