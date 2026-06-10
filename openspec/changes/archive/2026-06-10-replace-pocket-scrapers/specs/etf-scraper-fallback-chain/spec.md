@@ -1,10 +1,4 @@
-# etf-scraper-fallback-chain Specification
-
-## Purpose
-
-TBD — Defines the three-layer fallback strategy for secondary ETF scraping in `MultiEtfStep`: official API → MoneyDJ → Pocket.tw. Ensures data is obtained from the most reliable available source and results are recorded in pipeline context.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Secondary ETF scraping uses a three-layer fallback chain
 
@@ -62,51 +56,3 @@ TBD — Defines the three-layer fallback strategy for secondary ETF scraping in 
 | 00989A | jpm | official_api | New |
 | 00996A | mega | official_api | fund_id=23 filled |
 | 00998A | fhtrust | pocket | Unchanged |
-
-
-<!-- @trace
-source: replace-pocket-scrapers
-updated: 2026-06-10
-code:
-  - ETF/config/etf_registry.py
-  - EOCS/因子分析_公開版.py
-  - ETF/scrapers/official_api_scraper.py
-  - ETF/parsers/__pycache__/xlsx_parser.cpython-313.pyc
-  - src/lib/investment/etfRegistry.ts
-tests:
-  - ETF/tests/test_new_scrapers.py
--->
-
----
-### Requirement: Fallback results are recorded in pipeline context
-
-After each ETF is scraped, the step SHALL append an entry to `ctx.scrape_results` containing `{ etf_code, source, used_fallback, data_date }`.
-
-#### Scenario: Context records fallback usage
-
-- **WHEN** an ETF is fetched via a non-primary layer
-- **THEN** `ctx.scrape_results[etf_code].used_fallback` is `True`
-- **AND** `ctx.scrape_results[etf_code].source` is `"moneydj"` or `"pocket"`
-
-##### Example: fallback source values
-
-| Layer used | source value | used_fallback |
-|------------|-------------|---------------|
-| official_api | "official_api" | False |
-| moneydj | "moneydj" | True |
-| pocket | "pocket" | True |
-
-<!-- @trace
-source: etf-scraper-resilience
-updated: 2026-06-10
-code:
-  - ETF/pipeline/orchestrator.py
-  - ETF/pipeline/signals.py
-  - ETF/pipeline/steps/multi_etf_step.py
-  - ETF/parsers/xlsx_parser.py
-  - ETF/parsers/__pycache__/xlsx_parser.cpython-313.pyc
-  - ETF/pipeline/context.py
-  - ETF/pipeline/steps/base.py
-  - ETF/pipeline/steps/__init__.py
-  - ETF/pipeline/steps/check_trade_date_step.py
--->

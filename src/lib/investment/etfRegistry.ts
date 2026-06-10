@@ -40,12 +40,13 @@ export const ETF_REGISTRY: EtfRegistryEntry[] = [
     { code: '00996A', shortCode: '00996', name: '主動兆豐台灣豐收', manager: '兆豐投信',     issuer: '兆豐',   color: '#78716c', dataSource: 'official_api' },
     // 00998A：復華第二檔，fhtrust fund_code 待確認
     { code: '00998A', shortCode: '00998', name: '主動復華金融股息', manager: '復華投信',     issuer: '復華',   color: '#e11d48', dataSource: 'pocket' },
-    // 00983A：中信 ARK，ctbc FID 待確認
-    { code: '00983A', shortCode: '00983', name: '主動中信ARK創新', manager: '中國信託投信', issuer: '中信',   color: '#7c3aed', dataSource: 'pocket' },
-    { code: '00401A', shortCode: '00401', name: '主動摩根台灣鑫收', manager: '摩根投信',     issuer: '摩根',   color: '#0891b2', dataSource: 'pocket' },
-    { code: '00400A', shortCode: '00400', name: '主動國泰動能高息', manager: '國泰投信',     issuer: '國泰',   color: '#ca8a04', dataSource: 'pocket' },
+    // 00983A：中信 ARK HTML 爬蟲（replace-pocket-scrapers）
+    { code: '00983A', shortCode: '00983', name: '主動中信ARK創新', manager: '中國信託投信', issuer: '中信',   color: '#7c3aed', dataSource: 'official_api' },
+    // 00401A、00400A、00989A：已有官方 API（replace-pocket-scrapers）
+    { code: '00401A', shortCode: '00401', name: '主動摩根台灣鑫收', manager: '摩根投信',     issuer: '摩根',   color: '#0891b2', dataSource: 'official_api' },
+    { code: '00400A', shortCode: '00400', name: '主動國泰動能高息', manager: '國泰投信',     issuer: '國泰',   color: '#ca8a04', dataSource: 'official_api' },
     // 00989A：摩根第二檔（美國科技）
-    { code: '00989A', shortCode: '00989', name: '主動摩根美國科技', manager: '摩根投信',     issuer: '摩根',   color: '#0284c7', dataSource: 'pocket' },
+    { code: '00989A', shortCode: '00989', name: '主動摩根美國科技', manager: '摩根投信',     issuer: '摩根',   color: '#0284c7', dataSource: 'official_api' },
 ];
 
 export const ETF_CODES = ETF_REGISTRY.map(e => e.code);

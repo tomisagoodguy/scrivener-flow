@@ -13,7 +13,10 @@ CATALOG 來源：reference/tw-active/tools/etfdaily.py（Round 45 破解）
   台新 taishin      : 00987A          (GET HTML + BeautifulSoup)
   第一金 first_financial : 00994A    (POST JSON double-decode)
   中信 ctbc         : 00995A          (POST JSON two-step auth token)
-  兆豐 mega         : 00986A          (GET HTML + BeautifulSoup, fund_id required)
+  兆豐 mega         : 00986A, 00996A  (GET HTML + BeautifulSoup, fund_id required)
+  摩根 jpm          : 00401A, 00989A  (GET XLSX + openpyxl two-section parse)
+  國泰 cathay       : 00400A          (GET JSON REST API)
+  中信 HTML ctbc_html: 00983A         (GET HTML + BeautifulSoup, legacy ASP.NET page)
 
 Public interface:
   fetch_holdings(etf_code, date_str=None) -> pd.DataFrame
@@ -66,13 +69,28 @@ CATALOG: dict[str, dict[str, Any]] = {
     "00994A": {"issuer": "first_financial", "name": "第一金台股優", "fund_code": "182"},
     "00995A": {"issuer": "ctbc", "name": "中信台灣卓越", "fund_code": "E0036"},
     "00999A": {"issuer": "nomura", "name": "野村臺灣高息", "fund_code": "00999A"},
-    # 兆豐：fund_id 待確認（megafunds.com.tw），暫設 None 觸發 pocket fallback
+    # 兆豐：fund_id=23 由 TW_Active_Tracker 確認
     "00996A": {
         "issuer": "mega",
         "name": "兆豐台灣豐收",
         "fund_code": "00996A",
-        "fund_id": None,
+        "fund_id": "23",
     },
+    # ── replace-pocket-scrapers：新增 4 支 ETF 直接 API ──
+    "00400A": {"issuer": "cathay", "name": "國泰動能高息", "fund_code": "EA"},
+    "00401A": {
+        "issuer": "jpm",
+        "name": "摩根台灣鑫收",
+        "fund_code": "00401A",
+        "xlsx_url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/asiapacific/tw/zh/regulatory/etf-supplement/jpm_apac_tw_etf_pcf_updates_00401A_TW00000401A1.xlsx",
+    },
+    "00989A": {
+        "issuer": "jpm",
+        "name": "摩根美國科技",
+        "fund_code": "00989A",
+        "xlsx_url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/asiapacific/tw/zh/regulatory/etf-supplement/jpm_apac_tw_etf_pcf_updates_00989A_TW00000989A5.xlsx",
+    },
+    "00983A": {"issuer": "ctbc_html", "name": "中信ARK創新", "fund_code": "00983A"},
 }
 
 
@@ -506,6 +524,205 @@ def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
         return []
 
 
+# ── 摩根 JPM (00401A, 00989A) ─────────────────────────────────────────────────
+
+
+def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
+    """Fetch JPM ETF holdings from a fixed XLSX URL.
+
+    The XLSX uses a two-section layout:
+    - Summary section: header row with 'Fund Ticker' + 'Estimated Total Market Value'
+    - Detail section: header row with 'Constituent Ticker', then 'D' rows
+    weight = Market Value Base / Estimated Total Market Value * 100
+    """
+    import openpyxl
+
+    try:
+        req = urllib.request.Request(
+            xlsx_url,
+            headers={
+                "User-Agent": UA,
+                "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*",
+                "Referer": "https://am.jpmorgan.com/tw/zh/asset-management/per/",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read()
+    except Exception as exc:
+        logger.error("[JPM] XLSX 下載失敗：%s", exc)
+        return []
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
+        ws = wb.active
+        if ws is None:
+            return []
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception as exc:
+        logger.error("[JPM] XLSX 解析失敗：%s", exc)
+        return []
+
+    def cells(row: tuple[Any, ...]) -> list[str]:
+        return [str(c).strip() if c is not None else "" for c in row]
+
+    # Locate header rows
+    summary_hdr_idx = -1
+    detail_hdr_idx = -1
+    for i, row in enumerate(rows):
+        if not row:
+            continue
+        cs = cells(row)
+        if "Record Type" in cs and "Fund Ticker" in cs and summary_hdr_idx == -1:
+            summary_hdr_idx = i
+        if "Record Type" in cs and "Constituent Ticker" in cs and detail_hdr_idx == -1:
+            detail_hdr_idx = i
+
+    if summary_hdr_idx == -1 or detail_hdr_idx == -1:
+        logger.warning("[JPM] XLSX 結構未識別（找不到 header rows），URL=%s", xlsx_url)
+        return []
+
+    # Extract Estimated Total Market Value from summary "S" row
+    s_headers = cells(rows[summary_hdr_idx])
+    rt_col_s = s_headers.index("Record Type") if "Record Type" in s_headers else -1
+    etmv_col = next((i for i, h in enumerate(s_headers) if "Estimated Total Market Value" in h), -1)
+    total_market_value = 0.0
+    if etmv_col >= 0:
+        for row in rows[summary_hdr_idx + 1 : detail_hdr_idx]:
+            if not row or all(c is None for c in row):
+                continue
+            v = _to_num(row[etmv_col]) if etmv_col < len(row) else None
+            if v is not None and v > 0:
+                total_market_value = v
+                break
+
+    # Parse detail rows
+    d_headers = cells(rows[detail_hdr_idx])
+
+    def col(name: str) -> int:
+        return next((i for i, h in enumerate(d_headers) if name in h), -1)
+
+    rt_col = col("Record Type")
+    ticker_col = col("Constituent Ticker")
+    name_col = col("Constituent Description")
+    shares_col = col("Shares or PAR Amount")
+    mv_col = col("Market Value Base")
+
+    if ticker_col == -1 or mv_col == -1:
+        logger.warning("[JPM] XLSX 缺少必要欄位（Constituent Ticker / Market Value Base）")
+        return []
+
+    holdings: list[dict[str, Any]] = []
+    for row in rows[detail_hdr_idx + 1 :]:
+        if not row or all(c is None for c in row):
+            if holdings:
+                break
+            continue
+        if rt_col >= 0 and len(row) > rt_col:
+            rt_val = str(row[rt_col]).strip() if row[rt_col] is not None else ""
+            if rt_val != "D":
+                continue
+        code = str(row[ticker_col]).strip() if ticker_col < len(row) and row[ticker_col] is not None else ""
+        if not code:
+            continue
+        name = str(row[name_col]).strip() if name_col >= 0 and name_col < len(row) and row[name_col] is not None else ""
+        shares_raw = _to_num(row[shares_col]) if shares_col >= 0 and shares_col < len(row) else None
+        mv_raw = _to_num(row[mv_col]) if mv_col < len(row) and row[mv_col] is not None else None
+        if mv_raw is None:
+            continue
+        weight_pct = (mv_raw / total_market_value * 100) if total_market_value > 0 else 0.0
+        holdings.append({
+            "code": code,
+            "name": name,
+            "shares": int(shares_raw) if shares_raw is not None else 0,
+            "weight_pct": weight_pct,
+        })
+
+    logger.info("[JPM] %s 取得 %d 筆持股", xlsx_url.split("/")[-1], len(holdings))
+    return holdings
+
+
+# ── 國泰 Cathay (00400A) ───────────────────────────────────────────────────────
+
+
+def _fetch_cathay(fund_code: str) -> list[dict[str, Any]]:
+    """Fetch 國泰 ETF holdings via REST GET endpoint.
+
+    shares is always 0 — 國泰官方不揭露股數。
+    """
+    url = f"https://cwapi.cathaysite.com.tw/api/ETF/GetIndexStockWeights?fundCode={fund_code}"
+    try:
+        raw = _get(url)
+        js: dict[str, Any] = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        logger.error("[Cathay] %s 抓取失敗：%s", fund_code, exc)
+        return []
+
+    stock_weights: list[dict[str, Any]] = ((js.get("result") or {}).get("stockWeights") or [])
+    if not stock_weights:
+        logger.warning("[Cathay] %s 回傳空 stockWeights", fund_code)
+        return []
+
+    holdings: list[dict[str, Any]] = []
+    for sw in stock_weights:
+        code = str(sw.get("stockCode") or "").strip()
+        name = str(sw.get("stockName") or "").strip()
+        weight_pct = _to_num(sw.get("weights"))
+        if code and weight_pct is not None:
+            holdings.append({"code": code, "name": name, "shares": 0, "weight_pct": weight_pct})
+
+    logger.info("[Cathay] %s 取得 %d 筆持股", fund_code, len(holdings))
+    return holdings
+
+
+# ── 中信 HTML (00983A) ─────────────────────────────────────────────────────────
+
+
+def _fetch_ctbc_html(etf_code: str) -> list[dict[str, Any]]:
+    """Fetch 中信 ARK ETF holdings via legacy ASP.NET HTML page.
+
+    Uses pcd.aspx (not the auth-token REST API used for 00995A).
+    SSL verification disabled for consistency with other CTBC calls.
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        url = f"https://www.ctbcinvestments.com.tw/CTWEB/Content/ETF/pcd.aspx?ETF_ID={etf_code}"
+        raw = _get(url, verify_ssl=False)
+        html = raw.decode("utf-8", errors="replace")
+        soup = BeautifulSoup(html, "lxml")
+    except Exception as exc:
+        logger.error("[CTBC_HTML] %s 抓取失敗：%s", etf_code, exc)
+        return []
+
+    # Log disclosure date (Label_AUM01)
+    aum_label = soup.find(id="Label_AUM01")
+    data_date = aum_label.get_text(strip=True) if aum_label else ""
+    logger.info("[CTBC_HTML] %s 揭露日期：%s", etf_code, data_date)
+
+    # 支援台股 4 位數代號（2330）與美股代號（TSLA US, AMD US）
+    code_re = re.compile(r"^\d{4,6}$|^[A-Z0-9]{2,10}(\s+[A-Z]{2,3})?$")
+    holdings: list[dict[str, Any]] = []
+    for tr in soup.find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) < 4:
+            continue
+        code = tds[0].get_text(strip=True)
+        if not code_re.match(code):
+            continue
+        name = tds[1].get_text(strip=True)
+        shares_raw = tds[2].get_text(strip=True).replace(",", "")
+        weight_raw = tds[3].get_text(strip=True).replace("%", "").strip()
+        shares_num = _to_num(shares_raw)
+        shares = int(shares_num) if shares_num is not None else 0
+        w = _to_num(weight_raw)
+        if w is None:
+            continue
+        holdings.append({"code": code, "name": name, "shares": shares, "weight_pct": w})
+
+    logger.info("[CTBC_HTML] %s 取得 %d 筆持股", etf_code, len(holdings))
+    return holdings
+
+
 # ── Date utils ────────────────────────────────────────────────────────────────
 
 
@@ -624,4 +841,11 @@ def _dispatch(
     if issuer == "mega":
         fund_id: str | None = (cat_entry or {}).get("fund_id")
         return _fetch_mega(fund_id)
+    if issuer == "jpm":
+        xlsx_url: str = (cat_entry or {}).get("xlsx_url", "")
+        return _fetch_jpm(xlsx_url)
+    if issuer == "cathay":
+        return _fetch_cathay(fund_code)
+    if issuer == "ctbc_html":
+        return _fetch_ctbc_html(fund_code)
     raise RuntimeError(f"未知 issuer: {issuer}")
