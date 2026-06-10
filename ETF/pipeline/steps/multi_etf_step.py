@@ -64,7 +64,8 @@ class MultiEtfStep(BaseStep):
             if isinstance(result, Exception):
                 self.logger.error(f"ETF scrape task failed: {result}")
                 continue
-            etf_code, codes, summary = result
+            etf_code, codes, summary, scrape_result = result
+            ctx.scrape_results.append(scrape_result)
             if codes:
                 all_secondary_codes.extend(codes)
             if summary:
@@ -96,49 +97,31 @@ class MultiEtfStep(BaseStep):
         ctx: PipelineContext,
         services: "PipelineServices",
         etf_code: str,
-    ) -> tuple[str, list[str], dict | None]:
-        """Scrape & save one ETF. Returns (etf_code, stock_codes, summary_or_None)."""
-        from ETF.scrapers import official_api_scraper, pocket_scraper
+    ) -> tuple[str, list[str], dict | None, dict]:
+        """Scrape & save one ETF. Returns (etf_code, stock_codes, summary_or_None, scrape_result).
 
+        Three-layer fallback chain: official_api → moneydj → pocket.
+        No exception propagates regardless of which layers fail.
+        """
         fallback_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
         entry = ETF_META.get(etf_code)
         name = entry.name if entry else etf_code
         self.logger.info(f"Processing {etf_code} ({name})...")
 
+        df, data_date, source, used_fallback = self._fetch_with_fallback(
+            ctx, etf_code, fallback_date
+        )
+        scrape_result = {
+            "etf_code": etf_code,
+            "source": source,
+            "used_fallback": used_fallback,
+            "data_date": data_date,
+        }
+
         try:
-            if entry and entry.source == "official_api":
-                df = official_api_scraper.fetch_holdings(etf_code, ctx.date_str)
-                data_date = ctx.date_str or fallback_date
-                if df.empty:
-                    self.logger.warning(
-                        f"[OFFICIAL_API] {etf_code} 回傳空資料，fallback → pocket_scraper"
-                    )
-                    df, data_date = pocket_scraper.scrape_holdings(etf_code)
-            else:
-                # pocket source: try Pocket.tw first, fall back to MoneyDJ
-                try:
-                    df, data_date = pocket_scraper.scrape_holdings(etf_code)
-                except Exception as e:
-                    self.logger.warning(f"[{etf_code}] Pocket.tw raised: {e}")
-                    df, data_date = None, None
-
-                if df is None or df.empty:
-                    from ETF.scrapers import moneydj_scraper
-                    moneydj_df = moneydj_scraper.scrape_moneydj(etf_code)
-                    if moneydj_df is not None:
-                        df = moneydj_df
-                        data_date = moneydj_df.attrs.get("data_date", fallback_date)
-                        self.logger.warning(
-                            f"[{etf_code}] MoneyDJ fallback 成功（data_date={data_date}）"
-                        )
-                    else:
-                        self.logger.warning(
-                            f"[{etf_code}] Pocket.tw 與 MoneyDJ 皆無資料，skip"
-                        )
-
             if df is None or df.empty:
                 self.logger.warning(f"No holdings data for {etf_code}")
-                return etf_code, [], None
+                return etf_code, [], None, scrape_result
 
             snapshot_date = (data_date or fallback_date).replace("/", "-")
 
@@ -179,11 +162,75 @@ class MultiEtfStep(BaseStep):
                     "adjusted": len([d for d in diff_logs if d["change_type"] in ["BUY", "SELL"]]),
                 },
             }
-            return etf_code, stock_codes, summary
+            return etf_code, stock_codes, summary, scrape_result
 
         except Exception as e:
             self.logger.error(f"Holdings scrape failed for {etf_code}: {e}")
-            return etf_code, [], None
+            return etf_code, [], None, scrape_result
+
+    # ------------------------------------------------------------------ fallback chain
+
+    def _fetch_with_fallback(
+        self,
+        ctx: PipelineContext,
+        etf_code: str,
+        fallback_date: str,
+    ) -> tuple[pd.DataFrame | None, str | None, str, bool]:
+        """Fixed three-layer fallback: official_api → moneydj → pocket.
+
+        Returns (df, data_date, source, used_fallback).
+        All layer exceptions are caught; logs each failure reason when all layers fail.
+        """
+        from ETF.scrapers import official_api_scraper, moneydj_scraper, pocket_scraper
+
+        layer_errors: dict[str, str] = {}
+
+        # Layer 1: official_api
+        try:
+            df = official_api_scraper.fetch_holdings(etf_code, ctx.date_str)
+            if df is not None and not df.empty:
+                self.logger.info(f"[{etf_code}] official_api succeeded")
+                return df, ctx.date_str or fallback_date, "official_api", False
+            layer_errors["official_api"] = "empty DataFrame"
+        except Exception as e:
+            layer_errors["official_api"] = str(e)
+            self.logger.warning(f"[{etf_code}] official_api raised: {e}")
+
+        # Layer 2: moneydj (1s delay to avoid anti-scraping)
+        try:
+            import time
+            time.sleep(1)
+            moneydj_df = moneydj_scraper.scrape_moneydj(etf_code)
+            if moneydj_df is not None and not moneydj_df.empty:
+                data_date = moneydj_df.attrs.get("data_date", fallback_date)
+                # Normalize column names: scrape_moneydj returns code/name/weight/shares already
+                self.logger.info(
+                    f"[{etf_code}] moneydj fallback succeeded (data_date={data_date})"
+                )
+                return moneydj_df, data_date, "moneydj", True
+            layer_errors["moneydj"] = "None or empty DataFrame"
+        except Exception as e:
+            layer_errors["moneydj"] = str(e)
+            self.logger.warning(f"[{etf_code}] moneydj raised: {e}")
+
+        # Layer 3: pocket
+        try:
+            pocket_df, pocket_date = pocket_scraper.scrape_holdings(etf_code)
+            if pocket_df is not None and not pocket_df.empty:
+                self.logger.info(
+                    f"[{etf_code}] pocket fallback succeeded (data_date={pocket_date})"
+                )
+                return pocket_df, pocket_date or fallback_date, "pocket", True
+            layer_errors["pocket"] = "None or empty DataFrame"
+        except Exception as e:
+            layer_errors["pocket"] = str(e)
+            self.logger.warning(f"[{etf_code}] pocket raised: {e}")
+
+        # All three layers failed
+        for layer_name, err in layer_errors.items():
+            self.logger.error(f"[{etf_code}] {layer_name} failed: {err}")
+        self.logger.error(f"[{etf_code}] All three layers failed, skipping this ETF")
+        return None, None, "none", False
 
     # ------------------------------------------------------------------ helpers
 

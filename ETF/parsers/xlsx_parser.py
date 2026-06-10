@@ -22,6 +22,14 @@ COL_NAME: str = "name"
 COL_SHARES: str = "shares"
 COL_WEIGHT: str = "weight"
 
+# Alias mapping: standard column name → all known header variants across issuers
+COLUMN_ALIASES: dict[str, list[str]] = {
+    COL_CODE: ["證券代號", "股票代號", "代號", "代碼", "stock_code", "StockCode"],
+    COL_NAME: ["證券名稱", "股票名稱", "名稱", "stock_name", "StockName"],
+    COL_WEIGHT: ["持股比重", "比重", "權重", "持股比例", "weight_pct", "Weight"],
+    COL_SHARES: ["持有股數", "持有數量", "股數", "持股數", "shares_held", "Shares"],
+}
+
 def _clean_shares(x: Any) -> int:
     try:
         return int(float(str(x).replace(",", "")))
@@ -65,22 +73,29 @@ def _identify_header_row(df: pd.DataFrame) -> int:
     for i, row in df.iterrows():
         row_str = " ".join(row.fillna("").astype(str))
         if KEY_STOCK_NAME in row_str and KEY_STOCK_CODE in row_str:
-            return i
+            return int(i)  # type: ignore[arg-type]
     return -1
 
 def _standardize_columns(cols: pd.Index) -> Dict[str, str]:
-    """Map raw column names to standardized keys."""
-    col_map = {}
+    """Map raw column names to standardized keys via COLUMN_ALIASES.
+
+    Priority: exact match on standard name → exact match on alias → log warning and exclude.
+    Unknown columns are excluded from the result (no exception raised).
+    """
+    # Build reverse lookup: alias (and standard name itself) → standard name
+    alias_to_std: dict[str, str] = {}
+    for std_name, aliases in COLUMN_ALIASES.items():
+        alias_to_std[std_name] = std_name
+        for alias in aliases:
+            alias_to_std[alias] = std_name
+
+    col_map: Dict[str, str] = {}
     for c in cols:
         c_str = str(c).strip()
-        if "代碼" in c_str or "代號" in c_str:
-            col_map[c] = COL_CODE
-        elif "名稱" in c_str:
-            col_map[c] = COL_NAME
-        elif KEY_SHARES in c_str:
-             col_map[c] = COL_SHARES
-        elif KEY_WEIGHT in c_str or KEY_RATIO in c_str:
-            col_map[c] = COL_WEIGHT
+        if c_str in alias_to_std:
+            col_map[c] = alias_to_std[c_str]
+        else:
+            logger.warning(f"Unknown column '{c_str}', excluded from result")
     return col_map
 
 def parse_holdings_xlsx(xlsx_path: pathlib.Path) -> Tuple[pd.DataFrame, Optional[str]]:

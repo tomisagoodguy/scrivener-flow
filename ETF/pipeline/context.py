@@ -44,6 +44,12 @@ class PipelineContext:
     # 用法：step 執行完後 ctx.completed_artifacts["SaveSnapshot"] = len(rows)
     completed_artifacts: Dict[str, int] = field(default_factory=dict)
 
+    # CheckTradeDateStep：early-exit 原因（"data_up_to_date" or ""）
+    skip_reason: str = ""
+
+    # MultiEtfStep：每支 ETF 爬取來源記錄（etf_code, source, used_fallback, data_date）
+    scrape_results: List[Dict[str, Any]] = field(default_factory=list)
+
     # 執行標誌
     is_dry_run: bool = False
     is_ci: bool = False

@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from ETF.pipeline.signals import EarlyExitSignal
+
 from ETF.pipeline.context import PipelineContext
 
 if TYPE_CHECKING:
@@ -71,6 +73,8 @@ class BaseStep(ABC):
         try:
             ctx = self.execute(ctx, services)
             self.logger.info(f"✅ {self.name} completed")
+        except EarlyExitSignal:
+            raise  # propagate without error logging
         except Exception as e:
             self.logger.error(f"❌ {self.name} failed: {e}")
             raise

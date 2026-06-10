@@ -37,6 +37,7 @@ from ETF.pipeline.steps.disposal_detect_step import DisposalDetectStep
 from ETF.pipeline.steps.fund_momentum_step import FundMomentumStep
 from ETF.pipeline.steps.sync_topics_step import SyncTopicsStep
 from ETF.pipeline.steps.divergence_detect_step import DivergenceDetectStep
+from ETF.pipeline.steps.check_trade_date_step import CheckTradeDateStep
 
 __all__ = [
     "BaseStep",
@@ -70,6 +71,7 @@ __all__ = [
     "FundMomentumStep",
     "SyncTopicsStep",
     "DivergenceDetectStep",
+    "CheckTradeDateStep",
     "NotifyStep",
     "CleanupStep",
 ]

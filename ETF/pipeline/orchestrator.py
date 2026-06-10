@@ -10,6 +10,8 @@ from typing import List, Optional, Type
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.signals import EarlyExitSignal
+from ETF.pipeline.steps.check_trade_date_step import CheckTradeDateStep
 from ETF.pipeline.steps import (
     ScrapeStep,
     PriceAttachStep,
@@ -60,6 +62,7 @@ class PipelineOrchestrator:
     
     # 預設步驟順序
     DEFAULT_STEPS: List[Type[BaseStep]] = [
+        CheckTradeDateStep,     # 前置確認：資料已是最新時 early-exit，節省 FinLab API 配額
         ScrapeStep,
         PriceAttachStep,
         DataValidationStep,
@@ -162,6 +165,12 @@ class PipelineOrchestrator:
             current_step_name = step.name
             try:
                 ctx = step.run(ctx, services)
+            except EarlyExitSignal:
+                logger.info(
+                    f"⏭️  Pipeline early exit: {ctx.skip_reason or 'requested'} — "
+                    f"no DB writes, no LINE notification"
+                )
+                return ctx
             except Exception as e:
                 if step.is_critical:
                     # 關鍵步驟（SCRAPING / CORE）失敗 → 中斷並發送警報
