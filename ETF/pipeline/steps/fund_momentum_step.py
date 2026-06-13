@@ -112,7 +112,9 @@ class FundMomentumStep(BaseStep):
         vol_5d_series: pd.Series = vol_5d.iloc[-1]
 
         # 全市場百分位排名 → score 整數 0-100
-        score_series: pd.Series = (fund_20d_series.rank(pct=True) * 100).round().astype(int)
+        # 無投信資料的個股 fund_20d=NaN → rank=NaN，需 fillna(0) 才能 astype(int)
+        # （否則 IntCastingNaNError 會讓整個步驟靜默失敗，停止寫入）
+        score_series: pd.Series = (fund_20d_series.rank(pct=True) * 100).round().fillna(0).astype(int)
 
         # 買超比率（避免除以零）
         fund_ratio_5d = fund_5d_series / vol_5d_series.replace(0, float("nan"))
