@@ -14,6 +14,8 @@ import { ETF_REGISTRY, ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistr
 import Link from 'next/link';
 import { ConsensusPanel, type ConsensusRow } from '@/components/features/investment/ConsensusPanel';
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
+import { getEtfOverviewStats } from '@/lib/investment/etfOverviewStats';
+import { EtfOverviewGrid } from '@/components/features/investment/EtfOverviewGrid';
 import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import { fetchSectorCategoryMap } from '@/lib/investment/sectorUtils';
 import ExcelDownloadButton from '@/components/features/investment/ExcelDownloadButton';
@@ -218,7 +220,7 @@ export default async function InvestmentPoolPage() {
     const unionHoldings = buildUnionHoldings(byEtf);
     const allCodes = unionHoldings.map(h => h.stock_code);
 
-    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals, industryMap, rawConsensus] = await Promise.all([
+    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals, industryMap, rawConsensus, overviewStats] = await Promise.all([
         fetchQuantFiltersBatched(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
@@ -227,6 +229,7 @@ export default async function InvestmentPoolPage() {
         fetchLatestSignals(),
         fetchSectorCategoryMap(allCodes),
         getConsensusSignals().catch(() => ({ signals: [], date: null })),
+        getEtfOverviewStats(),
     ]);
 
     const fundConsensusMap: Record<string, { consensus_count: number; fund_consec_days: number }> = {};
@@ -316,6 +319,7 @@ export default async function InvestmentPoolPage() {
 
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <InvestmentTabs
+                    overviewContent={<EtfOverviewGrid stats={overviewStats} />}
                     stockPickerContent={
                         <StockPickerHub etfs={etfsForPicker} quantFilters={quantFilters} signals={signals} fundConsensusMap={fundConsensusMap} />
                     }

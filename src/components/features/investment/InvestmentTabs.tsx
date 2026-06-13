@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface InvestmentTabsProps {
     stockPickerContent: React.ReactNode;
+    overviewContent: React.ReactNode;
     analysisContent: React.ReactNode;
     ledgerContent: React.ReactNode;
     compareContent: React.ReactNode;
@@ -13,10 +14,11 @@ interface InvestmentTabsProps {
     flowContent: React.ReactNode;
 }
 
-const VALID_TABS = ['stock-picker', 'analysis', 'ledger', 'compare', 'consensus', 'flow'] as const;
+const VALID_TABS = ['stock-picker', 'overview', 'analysis', 'ledger', 'compare', 'consensus', 'flow'] as const;
 
 export function InvestmentTabs({
     stockPickerContent,
+    overviewContent,
     analysisContent,
     ledgerContent,
     compareContent,
@@ -67,8 +69,9 @@ export function InvestmentTabs({
 
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-6 max-w-4xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <TabsList className="grid w-full grid-cols-7 max-w-4xl mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                 <TabsTrigger value="stock-picker" className={triggerClass}>🎯 選股池</TabsTrigger>
+                <TabsTrigger value="overview" className={triggerClass}>ETF 總覽</TabsTrigger>
                 <TabsTrigger value="analysis" className={triggerClass}>策略分析</TabsTrigger>
                 <TabsTrigger value="ledger" className={triggerClass}>異動紀錄</TabsTrigger>
                 <TabsTrigger value="compare" className={triggerClass}>ETF 對比</TabsTrigger>
@@ -77,6 +80,7 @@ export function InvestmentTabs({
             </TabsList>
 
             <TabsContent value="stock-picker">{stockPickerContent}</TabsContent>
+            <TabsContent value="overview">{overviewContent}</TabsContent>
             <TabsContent value="analysis">{analysisContent}</TabsContent>
             <TabsContent value="ledger">{ledgerContent}</TabsContent>
             <TabsContent value="compare">{compareContent}</TabsContent>
