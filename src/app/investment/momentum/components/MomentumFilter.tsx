@@ -6,6 +6,7 @@ const WINDOW_OPTIONS = [
     { label: '3 天', value: '3' },
     { label: '5 天', value: '5' },
     { label: '10 天', value: '10' },
+    { label: '14 天', value: '14' },
 ];
 
 const MIN_COUNT_OPTIONS = [

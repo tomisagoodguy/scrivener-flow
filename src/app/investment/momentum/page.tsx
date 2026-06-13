@@ -5,7 +5,7 @@ import { getWindowMomentum } from '@/app/actions/getWindowMomentum';
 import { MomentumCard } from './components/MomentumCard';
 import { MomentumFilter } from './components/MomentumFilter';
 
-const VALID_WINDOWS = [3, 5, 10];
+const VALID_WINDOWS = [3, 5, 10, 14];
 const VALID_MIN_COUNTS = [2, 3, 5];
 const DEFAULT_WINDOW = 5;
 const DEFAULT_MIN_COUNT = 2;

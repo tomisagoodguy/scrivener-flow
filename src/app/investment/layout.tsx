@@ -11,10 +11,10 @@ const primaryNavItems = [
     { name: '籌碼排行', href: '/investment/equity' },
     { name: '策略選股', href: '/investment/strategy' },
     { name: '族群強弱', href: '/investment/sectors' },
+    { name: '同步加碼', href: '/investment/momentum' },
 ];
 
 const moreGroup = [
-    { name: '同步加碼', href: '/investment/momentum' },
     { name: '法人共識', href: '/investment/consensus' },
     { name: 'ETF 對比', href: '/investment/compare' },
     { name: '歷史回顧', href: '/investment/history' },
