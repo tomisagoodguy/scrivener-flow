@@ -139,11 +139,13 @@ def run(days: int = 30) -> None:
             conditions = EXCLUDED.conditions
     """)
 
+    # 每個 chunk 獨立 commit：避免單一大型交易累積，
+    # ON CONFLICT 索引檢查隨未提交筆數增加而變慢 → 觸發 statement timeout
     chunk_size = 500
     with engine.connect() as conn:
         for i in range(0, len(all_rows), chunk_size):
             conn.execute(sql, all_rows[i: i + chunk_size])
-        conn.commit()
+            conn.commit()
 
     selected = sum(1 for r in all_rows if r["is_selected"])
     logger.info(f"✅ 完成。is_selected={selected} 筆")

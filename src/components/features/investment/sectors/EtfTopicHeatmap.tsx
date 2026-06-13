@@ -10,14 +10,34 @@ interface Props {
     holdingsByTopic: Record<string, { stock_code: string; stock_name: string; weight: number }[]>;
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-    const cleaned = hex.replace('#', '');
-    const num = parseInt(cleaned.padEnd(6, '0'), 16);
-    return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+// 資料來源的 color 可能是 hex（#rrggbb / #rgb）或 CSS 命名色（violet、cyan、orange…）。
+// 只解析 hex 會把命名色誤判成黑色，導致淺色底（violet/cyan/orange）配白字而看不到文字。
+const NAMED_COLORS: Record<string, [number, number, number]> = {
+    red: [255, 0, 0], orange: [255, 165, 0], yellow: [255, 255, 0], gold: [255, 215, 0],
+    green: [0, 128, 0], lime: [0, 255, 0], olive: [128, 128, 0],
+    teal: [0, 128, 128], cyan: [0, 255, 255], aqua: [0, 255, 255], turquoise: [64, 224, 208],
+    blue: [0, 0, 255], navy: [0, 0, 128], skyblue: [135, 206, 235], indigo: [75, 0, 130],
+    purple: [128, 0, 128], violet: [238, 130, 238], magenta: [255, 0, 255], fuchsia: [255, 0, 255],
+    pink: [255, 192, 203], crimson: [220, 20, 60], coral: [255, 127, 80], salmon: [250, 128, 114],
+    brown: [165, 42, 42], maroon: [128, 0, 0], lavender: [230, 230, 250],
+    gray: [128, 128, 128], grey: [128, 128, 128], silver: [192, 192, 192],
+    black: [0, 0, 0], white: [255, 255, 255],
+};
+
+function resolveRgb(color: string): [number, number, number] {
+    const c = color.trim().toLowerCase();
+    if (c.startsWith('#')) {
+        const hex = c.slice(1);
+        const full = hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex.padEnd(6, '0');
+        const num = parseInt(full, 16);
+        if (!Number.isNaN(num)) return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+    }
+    if (NAMED_COLORS[c]) return NAMED_COLORS[c];
+    return [99, 102, 241]; // 未知值 fallback：indigo（深色，配白字）
 }
 
-function isLight(hex: string): boolean {
-    const [r, g, b] = hexToRgb(hex);
+function isLight(color: string): boolean {
+    const [r, g, b] = resolveRgb(color);
     return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }
 
