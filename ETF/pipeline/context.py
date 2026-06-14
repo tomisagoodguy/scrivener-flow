@@ -31,6 +31,9 @@ class PipelineContext:
     secondary_stock_codes: List[str] = field(default_factory=list)
     bare_k_synced_count: int = 0
     all_etf_summaries: List[Dict[str, Any]] = field(default_factory=list)
+    # MultiEtfStep 寫入、AumSyncStep 消費：每支 ETF 的基金資產摘要
+    # key = ETF code，value = {aum, nav, units, nav_date}（任一欄位可為 None）
+    etf_fund_assets: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     shareholder_signals: Dict[str, str] = field(default_factory=dict)
     news_context: List[Dict[str, Any]] = field(default_factory=list)
 

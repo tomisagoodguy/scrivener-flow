@@ -2,15 +2,14 @@
 AUM Sync Step
 
 每日同步各 ETF 的 AUM 到 etf_aum_series 表。
-資料來源優先順序：
-  1. FinLab ETF 基金資料（fund_price 系列）
-  2. 若 FinLab 無資料，跳過該 ETF
+資料來源：MultiEtfStep 在持股爬取時順手抽出的基金資產摘要，
+經 PipelineContext.etf_fund_assets 傳入（{aum, nav, units, nav_date}）。
 
 屬於輔助步驟，整體失敗時只 log，不中斷 pipeline。
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 from sqlalchemy import text
@@ -18,21 +17,12 @@ from sqlalchemy import text
 from ETF.config.etf_registry import get_all_etf_codes
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
 from ETF.pipeline.steps.base import BaseStep
 
 logger = logging.getLogger(__name__)
-
-# FinLab 的 ETF 基金資料表名稱（依可用性嘗試）
-_NAV_TABLE_CANDIDATES = [
-    "fund_price:收盤價",
-    "etf:nav",
-]
-_UNITS_TABLE_CANDIDATES = [
-    "fund_price:已發行受益權單位數",
-    "etf:units",
-]
 
 
 class AumSyncStep(BaseStep):
@@ -45,7 +35,9 @@ class AumSyncStep(BaseStep):
     def should_skip(self, ctx: PipelineContext) -> bool:
         return ctx.is_dry_run
 
-    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
+    def execute(
+        self, ctx: PipelineContext, services: "PipelineServices"
+    ) -> PipelineContext:
         try:
             self._sync_all(ctx, services)
         except Exception as e:
@@ -63,16 +55,17 @@ class AumSyncStep(BaseStep):
 
     def _sync_all(self, ctx: PipelineContext, services: "PipelineServices") -> None:
         target_date = ctx.date_str or date.today().strftime("%Y-%m-%d")
-        all_codes = get_all_etf_codes()
+        fund_assets = ctx.etf_fund_assets or {}
 
-        nav_df, units_df = self._fetch_finlab_etf_data(ctx, services)
-        if nav_df is None or units_df is None:
-            self.logger.warning("FinLab ETF fund data not available; skipping AUM sync")
+        if not fund_assets:
+            self.logger.warning(
+                "No fund assets in context (ctx.etf_fund_assets empty); skipping AUM sync"
+            )
             return
 
         records = []
-        for etf_code in all_codes:
-            row = self._build_row(etf_code, target_date, nav_df, units_df)
+        for etf_code, assets in fund_assets.items():
+            row = self._build_row(etf_code, target_date, assets)
             if row:
                 records.append(row)
 
@@ -80,81 +73,38 @@ class AumSyncStep(BaseStep):
             self.logger.warning("No AUM records produced for %s", target_date)
             return
 
-        self._upsert(services, records, services)
+        self._upsert(services, records)
         self.logger.info("Upserted %d AUM records for %s", len(records), target_date)
-
-    def _fetch_finlab_etf_data(self, ctx, services: "PipelineServices"):
-        """從 FinLab 取 ETF NAV 與流通單位數 DataFrame"""
-        client = services.finlab_srv._client if hasattr(services.finlab_srv, "_client") else None
-        if client and not client.login():
-            return None, None
-
-        import finlab.data as fd
-
-        nav_df = self._try_tables(fd, _NAV_TABLE_CANDIDATES)
-        units_df = self._try_tables(fd, _UNITS_TABLE_CANDIDATES)
-        return nav_df, units_df
-
-    @staticmethod
-    def _try_tables(fd, candidates: list[str]):
-        """嘗試多個 FinLab 資料表名稱，回傳第一個成功的 DataFrame"""
-        for table in candidates:
-            try:
-                df = fd.get(table)
-                if df is not None and not df.empty:
-                    return df
-            except Exception as e:
-                logger.debug("FinLab table '%s' not available: %s", table, e)
-        return None
 
     def _build_row(
         self,
         etf_code: str,
         target_date: str,
-        nav_df,
-        units_df,
+        assets: dict,
     ) -> Optional[dict]:
-        """從 FinLab DataFrame 中取得指定 ETF 在 target_date 最近可用的 NAV/units"""
-        code_upper = etf_code.upper()
+        """將 ctx.etf_fund_assets 的單支摘要換算成 etf_aum_series record。
 
-        if code_upper not in nav_df.columns or code_upper not in units_df.columns:
-            logger.debug("ETF %s not found in FinLab ETF fund data", etf_code)
+        aum_100m = aum / 1e8（億元）、units = units / 1e8（億份）、nav 不變（元/份）。
+        aum 缺失時無法寫入，回 None；nav / units 可為 None。
+        """
+        aum = assets.get("aum")
+        if aum is None:
+            logger.debug("ETF %s 無 aum，跳過", etf_code)
             return None
 
-        nav_series = nav_df[code_upper].dropna()
-        units_series = units_df[code_upper].dropna()
-
-        nav = self._latest_value(nav_series, target_date)
-        units = self._latest_value(units_series, target_date)
-
-        if nav is None or units is None:
-            return None
-
-        # AUM（億元）= NAV（元/份）× 流通單位數（份）/ 1e8
-        aum_100m = float(nav) * float(units) / 1e8
+        nav = assets.get("nav")
+        units = assets.get("units")
 
         return {
             "etf_code": etf_code,
             "data_date": target_date,
-            "aum_100m": round(aum_100m, 6),
-            "nav": round(float(nav), 4),
-            "units": round(float(units) / 1e8, 6),  # 換算億份
+            "aum_100m": round(float(aum) / 1e8, 6),
+            "nav": round(float(nav), 4) if nav is not None else None,
+            "units": round(float(units) / 1e8, 6)
+            if units is not None
+            else None,  # 換算億份
             "inflow_100m": None,  # 由 backfill / flow_compute 另行計算
         }
-
-    @staticmethod
-    def _latest_value(series, target_date: str):
-        """取 ≤ target_date 的最新值"""
-        from datetime import datetime
-        target_dt = datetime.strptime(target_date, "%Y-%m-%d").date()
-        past_rows = [
-            (idx, val)
-            for idx, val in series.items()
-            if (idx.date() if hasattr(idx, "date") else idx) <= target_dt
-        ]
-        if not past_rows:
-            return None
-        return max(past_rows, key=lambda x: x[0])[1]
 
     @staticmethod
     def _upsert(services: "PipelineServices", records: list[dict]) -> None:
@@ -173,7 +123,9 @@ class AumSyncStep(BaseStep):
             conn.execute(sql, records)
             conn.commit()
 
-    def _sync_aum_series(self, ctx: PipelineContext, services: "PipelineServices") -> None:
+    def _sync_aum_series(
+        self, ctx: PipelineContext, services: "PipelineServices"
+    ) -> None:
         """計算並更新 cumulative_inflow_yi 與 inflow_share_of_growth（增量欄位）"""
         all_codes = get_all_etf_codes()
         sql_read = text("""
@@ -190,6 +142,7 @@ class AumSyncStep(BaseStep):
             return
 
         from collections import defaultdict
+
         by_etf: dict[str, list] = defaultdict(list)
         for r in rows:
             by_etf[r.etf_code].append(r)
@@ -211,12 +164,16 @@ class AumSyncStep(BaseStep):
                 else:
                     share = None
 
-                updates.append({
-                    "etf_code": etf_code,
-                    "data_date": str(r.data_date),
-                    "cumulative_inflow_yi": round(cumulative, 6),
-                    "inflow_share_of_growth": round(share, 6) if share is not None else None,
-                })
+                updates.append(
+                    {
+                        "etf_code": etf_code,
+                        "data_date": str(r.data_date),
+                        "cumulative_inflow_yi": round(cumulative, 6),
+                        "inflow_share_of_growth": round(share, 6)
+                        if share is not None
+                        else None,
+                    }
+                )
 
         sql_update = text("""
             UPDATE etf_aum_series SET

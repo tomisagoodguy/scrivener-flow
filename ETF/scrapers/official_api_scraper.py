@@ -93,7 +93,11 @@ CATALOG: dict[str, dict[str, Any]] = {
     "00983A": {"issuer": "ctbc_html", "name": "中信ARK創新", "fund_code": "00983A"},
     # ── expand-etf-coverage-and-diff-schema：新增 D 類 ETF ──
     # 聯博（00984D）：REST API，接受 ISIN 等非 4 碼代號
-    "00984D": {"issuer": "alliance_bernstein", "name": "聯博全球非投", "fund_code": "TW00000984D0"},
+    "00984D": {
+        "issuer": "alliance_bernstein",
+        "name": "聯博全球非投",
+        "fund_code": "TW00000984D0",
+    },
     # 富邦（00982D / 00983D）：HTML 解析；兩檔均為債券型 ETF，預期無股票持股明細
     "00982D": {"issuer": "fubon", "name": "富邦動態入息", "fund_code": "00982D"},
     "00983D": {"issuer": "fubon", "name": "富邦複合收益", "fund_code": "00983D"},
@@ -205,6 +209,23 @@ def _to_num(v: Any) -> float | None:
         return None
 
 
+def _fund_assets(
+    aum: Any = None, nav: Any = None, units: Any = None, nav_date: Any = None
+) -> dict[str, Any]:
+    """組基金資產摘要 dict，單一欄位解析失敗即帶 None，不影響持股解析。
+
+    aum/nav/units 經 _to_num 容錯（逗號、百分比、非數字 → None）；
+    nav_date 為原始字串（空字串視為 None）。
+    """
+    date_str = str(nav_date).strip() if nav_date else ""
+    return {
+        "aum": _to_num(aum),
+        "nav": _to_num(nav),
+        "units": _to_num(units),
+        "nav_date": date_str or None,
+    }
+
+
 # ── Per-issuer fetchers ───────────────────────────────────────────────────────
 
 
@@ -234,14 +255,17 @@ def _fetch_fhtrust(fund_code: str, date_ymd: str) -> list[dict[str, Any]]:
     return _parse_xlsx(raw)
 
 
-def _fetch_nomura(fund_id: str, date_ymd: str | None) -> list[dict[str, Any]]:
+def _fetch_nomura(
+    fund_id: str, date_ymd: str | None
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     search_date = _ymd_to_dash(date_ymd) if date_ymd else _last_weekday_dash()
     payload = {"FundID": fund_id, "SearchDate": search_date}
     raw = _post_json(
         "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets", payload
     )
     js: dict[str, Any] = json.loads(raw.decode("utf-8"))
-    tables = ((js.get("Entries") or {}).get("Data") or {}).get("Table") or []
+    data = (js.get("Entries") or {}).get("Data") or {}
+    tables = data.get("Table") or []
     holdings: list[dict[str, Any]] = []
     for t in tables:
         title = (t.get("TableTitle") or "").strip()
@@ -262,10 +286,24 @@ def _fetch_nomura(fund_id: str, date_ymd: str | None) -> list[dict[str, Any]]:
                     "weight_pct": _to_num(row[3]),
                 }
             )
-    return holdings
+    # 基金資產摘要：Entries.Data.FundAsset.{Aum,Nav,Units,NavDate}
+    asset = data.get("FundAsset") or {}
+    assets = (
+        _fund_assets(
+            aum=asset.get("Aum"),
+            nav=asset.get("Nav"),
+            units=asset.get("Units"),
+            nav_date=asset.get("NavDate"),
+        )
+        if asset
+        else None
+    )
+    return holdings, assets
 
 
-def _fetch_allianz(fund_no: str, date_ymd: str | None) -> list[dict[str, Any]]:
+def _fetch_allianz(
+    fund_no: str, date_ymd: str | None
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     jar = CookieJar()
     _get(
         "https://etf.allianzgi.com.tw/webapi/api/AntiForgery/GetAntiForgeryToken",
@@ -283,7 +321,8 @@ def _fetch_allianz(fund_no: str, date_ymd: str | None) -> list[dict[str, Any]]:
         cookie_jar=jar,
     )
     js: dict[str, Any] = json.loads(raw.decode("utf-8"))
-    tables = (js.get("Entries") or {}).get("DynamicTableData") or []
+    entries = js.get("Entries") or {}
+    tables = entries.get("DynamicTableData") or []
     holdings: list[dict[str, Any]] = []
     for t in tables:
         for row in t.get("Rows") or []:
@@ -297,10 +336,21 @@ def _fetch_allianz(fund_no: str, date_ymd: str | None) -> list[dict[str, Any]]:
                     "weight_pct": _to_num(row[4]),
                 }
             )
-    return holdings
+    # 基金資產摘要：Entries.{CAnceTotalAv,CAnceNav,CAnceTotalIssues,CNavDt}
+    assets = _fund_assets(
+        aum=entries.get("CAnceTotalAv"),
+        nav=entries.get("CAnceNav"),
+        units=entries.get("CAnceTotalIssues"),
+        nav_date=entries.get("CNavDt"),
+    )
+    if assets["aum"] is None and assets["nav"] is None and assets["units"] is None:
+        assets = None
+    return holdings, assets
 
 
-def _fetch_capital(fund_id: str, date_ymd: str | None) -> list[dict[str, Any]]:
+def _fetch_capital(
+    fund_id: str, date_ymd: str | None
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     payload: dict[str, Any] = {"fundId": fund_id}
     if date_ymd:
         payload["date"] = _ymd_to_dash(date_ymd)
@@ -317,7 +367,19 @@ def _fetch_capital(fund_id: str, date_ymd: str | None) -> list[dict[str, Any]]:
                 "weight_pct": _to_num(s.get("weight")),
             }
         )
-    return holdings
+    # 基金資產摘要：data.pcf.{nav=淨資產, pUnit=每單位淨值, totUnit=流通單位, date1}
+    pcf = data.get("pcf") or {}
+    assets = (
+        _fund_assets(
+            aum=pcf.get("nav"),
+            nav=pcf.get("pUnit"),
+            units=pcf.get("totUnit"),
+            nav_date=pcf.get("date1"),
+        )
+        if pcf
+        else None
+    )
+    return holdings, assets
 
 
 # ── 台新 (00987A) ─────────────────────────────────────────────────────────────
@@ -589,8 +651,9 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
 
     # Extract Estimated Total Market Value from summary "S" row
     s_headers = cells(rows[summary_hdr_idx])
-    rt_col_s = s_headers.index("Record Type") if "Record Type" in s_headers else -1
-    etmv_col = next((i for i, h in enumerate(s_headers) if "Estimated Total Market Value" in h), -1)
+    etmv_col = next(
+        (i for i, h in enumerate(s_headers) if "Estimated Total Market Value" in h), -1
+    )
     total_market_value = 0.0
     if etmv_col >= 0:
         for row in rows[summary_hdr_idx + 1 : detail_hdr_idx]:
@@ -614,7 +677,9 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
     mv_col = col("Market Value Base")
 
     if ticker_col == -1 or mv_col == -1:
-        logger.warning("[JPM] XLSX 缺少必要欄位（Constituent Ticker / Market Value Base）")
+        logger.warning(
+            "[JPM] XLSX 缺少必要欄位（Constituent Ticker / Market Value Base）"
+        )
         return []
 
     holdings: list[dict[str, Any]] = []
@@ -627,21 +692,41 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
             rt_val = str(row[rt_col]).strip() if row[rt_col] is not None else ""
             if rt_val != "D":
                 continue
-        code = str(row[ticker_col]).strip() if ticker_col < len(row) and row[ticker_col] is not None else ""
+        code = (
+            str(row[ticker_col]).strip()
+            if ticker_col < len(row) and row[ticker_col] is not None
+            else ""
+        )
         if not code:
             continue
-        name = str(row[name_col]).strip() if name_col >= 0 and name_col < len(row) and row[name_col] is not None else ""
-        shares_raw = _to_num(row[shares_col]) if shares_col >= 0 and shares_col < len(row) else None
-        mv_raw = _to_num(row[mv_col]) if mv_col < len(row) and row[mv_col] is not None else None
+        name = (
+            str(row[name_col]).strip()
+            if name_col >= 0 and name_col < len(row) and row[name_col] is not None
+            else ""
+        )
+        shares_raw = (
+            _to_num(row[shares_col])
+            if shares_col >= 0 and shares_col < len(row)
+            else None
+        )
+        mv_raw = (
+            _to_num(row[mv_col])
+            if mv_col < len(row) and row[mv_col] is not None
+            else None
+        )
         if mv_raw is None:
             continue
-        weight_pct = (mv_raw / total_market_value * 100) if total_market_value > 0 else 0.0
-        holdings.append({
-            "code": code,
-            "name": name,
-            "shares": int(shares_raw) if shares_raw is not None else 0,
-            "weight_pct": weight_pct,
-        })
+        weight_pct = (
+            (mv_raw / total_market_value * 100) if total_market_value > 0 else 0.0
+        )
+        holdings.append(
+            {
+                "code": code,
+                "name": name,
+                "shares": int(shares_raw) if shares_raw is not None else 0,
+                "weight_pct": weight_pct,
+            }
+        )
 
     logger.info("[JPM] %s 取得 %d 筆持股", xlsx_url.split("/")[-1], len(holdings))
     return holdings
@@ -663,7 +748,9 @@ def _fetch_cathay(fund_code: str) -> list[dict[str, Any]]:
         logger.error("[Cathay] %s 抓取失敗：%s", fund_code, exc)
         return []
 
-    stock_weights: list[dict[str, Any]] = ((js.get("result") or {}).get("stockWeights") or [])
+    stock_weights: list[dict[str, Any]] = (js.get("result") or {}).get(
+        "stockWeights"
+    ) or []
     if not stock_weights:
         logger.warning("[Cathay] %s 回傳空 stockWeights", fund_code)
         return []
@@ -674,7 +761,9 @@ def _fetch_cathay(fund_code: str) -> list[dict[str, Any]]:
         name = str(sw.get("stockName") or "").strip()
         weight_pct = _to_num(sw.get("weights"))
         if code and weight_pct is not None:
-            holdings.append({"code": code, "name": name, "shares": 0, "weight_pct": weight_pct})
+            holdings.append(
+                {"code": code, "name": name, "shares": 0, "weight_pct": weight_pct}
+            )
 
     logger.info("[Cathay] %s 取得 %d 筆持股", fund_code, len(holdings))
     return holdings
@@ -704,7 +793,7 @@ def _fetch_alliance_bernstein(fund_code: str) -> list[dict[str, Any]]:
 
     holdings: list[dict[str, Any]] = []
     for section in domestic_holdings:
-        for item in (section.get("holdings") or []):
+        for item in section.get("holdings") or []:
             code = str(item.get("stockCode") or item.get("code") or "").strip()
             if not code:
                 continue
@@ -713,12 +802,14 @@ def _fetch_alliance_bernstein(fund_code: str) -> list[dict[str, Any]]:
             shares_num = _to_num(shares_val)
             weight = _to_num(item.get("weight") or item.get("weightPct"))
             if weight is not None:
-                holdings.append({
-                    "code": code,
-                    "name": name,
-                    "shares": int(shares_num) if shares_num is not None else 0,
-                    "weight_pct": weight,
-                })
+                holdings.append(
+                    {
+                        "code": code,
+                        "name": name,
+                        "shares": int(shares_num) if shares_num is not None else 0,
+                        "weight_pct": weight,
+                    }
+                )
 
     logger.info("[AllianceBernstein] %s 取得 %d 筆持股", fund_code, len(holdings))
     return holdings
@@ -889,7 +980,7 @@ def fetch_holdings(etf_code: str, date_str: str | None = None) -> pd.DataFrame:
     date_ymd = _to_ymd(date_str)
 
     try:
-        raw_holdings = _dispatch(issuer, fund_code, date_ymd, cat)
+        raw_holdings, fund_assets = _dispatch(issuer, fund_code, date_ymd, cat)
         if not raw_holdings:
             logger.warning("[OFFICIAL_API] %s 回傳空持股", etf_code)
             return pd.DataFrame(columns=["code", "name", "weight", "shares"])
@@ -905,6 +996,10 @@ def fetch_holdings(etf_code: str, date_str: str | None = None) -> pd.DataFrame:
             if h.get("code") and h.get("weight_pct") is not None
         ]
         df = pd.DataFrame(rows, columns=["code", "name", "weight", "shares"])
+        # 基金資產摘要附於 df.attrs（同 moneydj_scraper 的 data_date 慣例），
+        # 供 MultiEtfStep 取出寫入 ctx.etf_fund_assets。無摘要則不附。
+        if fund_assets:
+            df.attrs["fund_assets"] = fund_assets
         logger.info("[OFFICIAL_API] %s 取得 %d 筆持股", etf_code, len(df))
         return df
 
@@ -918,44 +1013,52 @@ def _dispatch(
     fund_code: str,
     date_ymd: str | None,
     cat_entry: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
-    if issuer == "uni":
-        if date_ymd:
-            logger.warning("[OFFICIAL_API] 統一 ezmoney 不支援指定日期，改抓最新")
-        return _fetch_uni(fund_code)
-    if issuer == "fhtrust":
-        ymd = date_ymd or _last_weekday_ymd()
-        return _fetch_fhtrust(fund_code, ymd)
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """回傳 (holdings, fund_assets)。
+
+    holdings 為持股 list；fund_assets 為 {aum, nav, units, nav_date}，
+    來源未揭露基金資產摘要時為 None（XLSX / HTML / 其他僅持股的來源）。
+    """
+    # ── 帶基金資產摘要的 JSON 來源 ──
     if issuer == "nomura":
         return _fetch_nomura(fund_code, date_ymd)
     if issuer == "allianz":
         return _fetch_allianz(fund_code, date_ymd)
     if issuer == "capital":
         return _fetch_capital(fund_code, date_ymd)
+
+    # ── 僅持股、無資產摘要的來源 ──
+    if issuer == "uni":
+        if date_ymd:
+            logger.warning("[OFFICIAL_API] 統一 ezmoney 不支援指定日期，改抓最新")
+        return _fetch_uni(fund_code), None
+    if issuer == "fhtrust":
+        ymd = date_ymd or _last_weekday_ymd()
+        return _fetch_fhtrust(fund_code, ymd), None
     if issuer == "yuanta":
         from ETF.scrapers import yuanta_scraper
 
         df = yuanta_scraper.fetch_holdings(fund_code)
         records = df.rename(columns={"weight": "weight_pct"}).to_dict("records")
-        return cast(list[dict[str, Any]], records) if not df.empty else []
+        return (cast(list[dict[str, Any]], records) if not df.empty else []), None
     if issuer == "taishin":
-        return _fetch_taishin(fund_code)
+        return _fetch_taishin(fund_code), None
     if issuer == "first_financial":
-        return _fetch_first_financial(fund_code)
+        return _fetch_first_financial(fund_code), None
     if issuer == "ctbc":
-        return _fetch_ctbc(fund_code)
+        return _fetch_ctbc(fund_code), None
     if issuer == "mega":
         fund_id: str | None = (cat_entry or {}).get("fund_id")
-        return _fetch_mega(fund_id)
+        return _fetch_mega(fund_id), None
     if issuer == "jpm":
         xlsx_url: str = (cat_entry or {}).get("xlsx_url", "")
-        return _fetch_jpm(xlsx_url)
+        return _fetch_jpm(xlsx_url), None
     if issuer == "cathay":
-        return _fetch_cathay(fund_code)
+        return _fetch_cathay(fund_code), None
     if issuer == "ctbc_html":
-        return _fetch_ctbc_html(fund_code)
+        return _fetch_ctbc_html(fund_code), None
     if issuer == "alliance_bernstein":
-        return _fetch_alliance_bernstein(fund_code)
+        return _fetch_alliance_bernstein(fund_code), None
     if issuer == "fubon":
-        return _fetch_fubon(fund_code)
+        return _fetch_fubon(fund_code), None
     raise RuntimeError(f"未知 issuer: {issuer}")
