@@ -339,12 +339,19 @@ function withStats(ctx: SyncContext): SyncContext {
     return ctx.stats ? ctx : { ...ctx, stats: emptyStats() };
 }
 
+async function resolveContext(injected?: SyncContext): Promise<SyncContext | CalendarSyncResult> {
+    if (injected) return withStats(injected);
+    const built = await buildContext();
+    if ('status' in built) return built;
+    return withStats(built);
+}
+
 /**
  * 同步單一案件的里程碑五日期 + 四約定 + 財務四稅限。
  */
 export async function syncCase(caseId: string, injected?: SyncContext): Promise<CalendarSyncResult> {
     try {
-        const ctx = withStats(injected ?? (await buildContext()));
+        const ctx = await resolveContext(injected);
         if ('status' in ctx) return ctx; // 取 ctx 失敗（未登入 / 需重新授權）
 
         const { data: caseRow } = await ctx.supabase
@@ -410,7 +417,7 @@ export async function syncCase(caseId: string, injected?: SyncContext): Promise<
  */
 export async function syncTodo(todoId: string, injected?: SyncContext): Promise<CalendarSyncResult> {
     try {
-        const ctx = withStats(injected ?? (await buildContext()));
+        const ctx = await resolveContext(injected);
         if ('status' in ctx) return ctx;
 
         const { data: todo } = await ctx.supabase
