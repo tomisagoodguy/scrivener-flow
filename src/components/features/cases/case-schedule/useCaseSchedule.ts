@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { syncTodoToCalendar } from '@/app/actions/calendarSync';
 import { ScheduleItem, FilterType } from './types';
 import { format } from 'date-fns';
 
@@ -80,11 +81,18 @@ export function useCaseSchedule(caseId: string) {
             type: time ? 'appointment' : 'personal',
         };
 
-        const { error } = await supabase.from('todos').insert([newItem]);
+        const { data, error } = await supabase.from('todos').insert([newItem]).select('id').single();
 
         if (error) {
             alert('新增失敗: ' + error.message);
         } else {
+            if (data?.id) {
+                try {
+                    await syncTodoToCalendar(data.id);
+                } catch (syncErr) {
+                    console.error('[CaseSchedule] 行事曆同步失敗（不中斷）:', syncErr);
+                }
+            }
             setContent('');
             setDate('');
             setTime('');
@@ -108,9 +116,19 @@ export function useCaseSchedule(caseId: string) {
                 alert('刪除失敗，請檢查網路連線');
                 fetchSchedule();
             } else {
+                try {
+                    await syncTodoToCalendar(id);
+                } catch (syncErr) {
+                    console.error('[CaseSchedule] 行事曆同步失敗（不中斷）:', syncErr);
+                }
                 router.refresh();
             }
         } else {
+            try {
+                await syncTodoToCalendar(id);
+            } catch (syncErr) {
+                console.error('[CaseSchedule] 行事曆同步失敗（不中斷）:', syncErr);
+            }
             router.refresh();
         }
     };
@@ -147,6 +165,11 @@ export function useCaseSchedule(caseId: string) {
         if (error) {
             alert('更新失敗');
         } else {
+            try {
+                await syncTodoToCalendar(id);
+            } catch (syncErr) {
+                console.error('[CaseSchedule] 行事曆同步失敗（不中斷）:', syncErr);
+            }
             setEditingId(null);
             fetchSchedule();
             router.refresh();

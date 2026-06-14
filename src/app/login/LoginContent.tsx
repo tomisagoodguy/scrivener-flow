@@ -17,10 +17,11 @@ export function LoginContent() {
                 provider: 'google',
                 options: {
                     redirectTo: `${location.origin}/auth/callback`,
+                    scopes:
+                        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created',
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
-                        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created email openid profile',
                     },
                 },
             });

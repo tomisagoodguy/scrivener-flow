@@ -17,9 +17,16 @@ export const CalendarSyncButton = () => {
         try {
             const result = await backfillCalendar();
             if (result.status === 'ok') {
-                toast.success('已同步到 Google 行事曆「案件」');
+                const caseCount = result.casesProcessed ?? 0;
+                const todoCount = result.todosProcessed ?? 0;
+                toast.success(
+                    `已同步 ${caseCount} 件案件、${todoCount} 筆待辦到 Google「案件」子行事曆（請在 Google 日曆左側勾選「案件」）`,
+                    { duration: 8000 }
+                );
             } else if (result.status === 'needs_reauth') {
-                toast.error('需重新登入並授權 Google 行事曆後再試');
+                toast.error('需重新登入並授權 Google 行事曆後再試（請先登出再以 Google 登入）', {
+                    duration: 10000,
+                });
             } else {
                 toast.error('同步失敗：' + (result.error ?? '未知錯誤'));
             }

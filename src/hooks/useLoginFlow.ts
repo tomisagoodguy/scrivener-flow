@@ -34,10 +34,11 @@ export function useLoginFlow() {
                 provider: 'google',
                 options: {
                     redirectTo: `${window.location.origin}/auth/callback`,
+                    scopes:
+                        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created',
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
-                        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created email openid profile',
                     },
                 },
             });

@@ -43,6 +43,11 @@ export type SyncAction = 'create' | 'update' | 'skip' | 'delete' | 'noop';
 export interface CalendarSyncResult {
     status: 'ok' | 'needs_reauth' | 'error';
     error?: string;
+    /** 回填時實際處理的案件 / 待辦數量 */
+    casesProcessed?: number;
+    todosProcessed?: number;
+    /** 回填過程中第一個非授權類錯誤 */
+    firstError?: string;
 }
 
 export interface SyncContext {
@@ -376,9 +381,12 @@ export async function backfillAll(injected?: SyncContext): Promise<CalendarSyncR
     if ('status' in ctx) return ctx;
 
     const { data: cases } = await ctx.supabase.from('cases').select('id');
+    let firstError: string | undefined;
+
     for (const c of cases ?? []) {
         const r = await syncCase(c.id as string, ctx);
         if (r.status === 'needs_reauth') return r;
+        if (r.status === 'error' && !firstError) firstError = r.error;
     }
 
     const { data: todos } = await ctx.supabase
@@ -389,9 +397,23 @@ export async function backfillAll(injected?: SyncContext): Promise<CalendarSyncR
     for (const t of todos ?? []) {
         const r = await syncTodo(t.id as string, ctx);
         if (r.status === 'needs_reauth') return r;
+        if (r.status === 'error' && !firstError) firstError = r.error;
     }
 
-    return { status: 'ok' };
+    if (firstError) {
+        return {
+            status: 'error',
+            error: firstError,
+            casesProcessed: cases?.length ?? 0,
+            todosProcessed: todos?.length ?? 0,
+        };
+    }
+
+    return {
+        status: 'ok',
+        casesProcessed: cases?.length ?? 0,
+        todosProcessed: todos?.length ?? 0,
+    };
 }
 
 /**
