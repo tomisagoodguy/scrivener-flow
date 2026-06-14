@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ConsensusFilter } from './ConsensusFilter';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
+import { formatCoverage, formatAvgWeight } from './consensusMetrics';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,9 @@ interface DivergenceRow {
 
 // ─── Data Fetchers ────────────────────────────────────────────────────────────
 
-async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]; date: string }> {
+async function fetchConsensus(
+    minEtfCount: number,
+): Promise<{ data: OverlapRow[]; date: string; activeEtfCount: number }> {
     const cached = unstable_cache(
         async () => {
             const supabase = getPublicClient();
@@ -54,8 +57,17 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
                 .order('data_date', { ascending: false })
                 .limit(1);
 
-            if (!latest || latest.length === 0) return { data: [], date: '' };
+            if (!latest || latest.length === 0) return { data: [], date: '', activeEtfCount: 0 };
             const queryDate: string = (latest as { data_date: string }[])[0].data_date;
+
+            // 覆蓋率分母：當日有持股資料的 distinct ETF 數（不寫死，隨爬取結果浮動）
+            const { data: activeEtfRows } = await supabase
+                .from('etf_holdings_snapshot')
+                .select('etf_code')
+                .eq('data_date', queryDate);
+            const activeEtfCount = new Set(
+                ((activeEtfRows ?? []) as { etf_code: string }[]).map((r) => r.etf_code),
+            ).size;
 
             const { data: overlapData, error } = await supabase
                 .from('etf_stock_overlap')
@@ -66,7 +78,7 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
                 .order('total_weight', { ascending: false })
                 .limit(100);
 
-            if (error || !overlapData) return { data: [], date: queryDate };
+            if (error || !overlapData) return { data: [], date: queryDate, activeEtfCount };
 
             type OverlapRaw = { stock_code: string; data_date: string; etf_count: number; total_weight: unknown; etf_list: unknown; consensus_buy_count: number | null; consensus_sell_count: number | null };
             const overlapRows = overlapData as OverlapRaw[];
@@ -93,7 +105,7 @@ async function fetchConsensus(minEtfCount: number): Promise<{ data: OverlapRow[]
                 consensus_sell_count: row.consensus_sell_count ?? 0,
             }));
 
-            return { data: enriched, date: queryDate };
+            return { data: enriched, date: queryDate, activeEtfCount };
         },
         ['consensus', String(minEtfCount)],
         { revalidate: 3600 },
@@ -193,11 +205,11 @@ export default async function ConsensusPage({
     const activeTab = params.tab === 'divergence' ? 'divergence' : 'consensus';
 
     const [consensusResult, divergenceResult] = await Promise.all([
-        activeTab === 'consensus' ? fetchConsensus(minEtfCount) : Promise.resolve({ data: [], date: '' }),
+        activeTab === 'consensus' ? fetchConsensus(minEtfCount) : Promise.resolve({ data: [], date: '', activeEtfCount: 0 }),
         activeTab === 'divergence' ? getDivergenceData() : Promise.resolve({ data: [], date: '' }),
     ]);
 
-    const { data: consensusData, date: consensusDate } = consensusResult;
+    const { data: consensusData, date: consensusDate, activeEtfCount } = consensusResult;
     const { data: divergenceData, date: divergenceDate } = divergenceResult;
     const displayDate = activeTab === 'divergence' ? divergenceDate : consensusDate;
 
@@ -244,6 +256,27 @@ export default async function ConsensusPage({
                         </p>
                     </div>
                 ) : (
+                    <>
+                    {/* 衍生欄位計算說明 */}
+                    <div className="glass-card p-5">
+                        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+                            衍生欄位計算方式
+                        </h2>
+                        <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                            <li>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">覆蓋率 %</span>
+                                ＝ 持有 ETF 數 ÷ 當日有資料 ETF 數（{activeEtfCount > 0 ? `${activeEtfCount} 支` : '—'}）。已正規化，可跨日比較。
+                            </li>
+                            <li>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">平均 weight</span>
+                                ＝ 合計權重 ÷ 持有 ETF 數，代表對持有它的 ETF 是否為大部位。忽略各 ETF AUM 差異。
+                            </li>
+                            <li>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">合計權重</span>
+                                ＝ 各 ETF weight 直接加總。各 ETF AUM 基數不同，加總無實際比例意義，僅供排序。
+                            </li>
+                        </ul>
+                    </div>
                     <div className="glass-card overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -252,7 +285,17 @@ export default async function ConsensusPage({
                                         <th className="text-left p-4 font-semibold text-slate-600 dark:text-slate-300 w-8">#</th>
                                         <th className="text-left p-4 font-semibold text-slate-600 dark:text-slate-300">股票</th>
                                         <th className="text-center p-4 font-semibold text-slate-600 dark:text-slate-300">持有 ETF 數</th>
-                                        <th className="text-right p-4 font-semibold text-slate-600 dark:text-slate-300">合計權重</th>
+                                        <th className="text-right p-4 font-semibold text-slate-600 dark:text-slate-300">覆蓋率 %</th>
+                                        <th className="text-right p-4 font-semibold text-slate-600 dark:text-slate-300">平均 weight</th>
+                                        <th
+                                            className="text-right p-4 font-semibold text-slate-600 dark:text-slate-300"
+                                            title="各 ETF AUM 基數不同，加總無實際比例意義，僅供排序"
+                                        >
+                                            合計權重
+                                            <span className="block text-[10px] font-normal text-slate-400 dark:text-slate-500">
+                                                （僅供排序）
+                                            </span>
+                                        </th>
                                         <th className="text-center p-4 font-semibold text-slate-600 dark:text-slate-300">共識動向</th>
                                         <th className="text-left p-4 font-semibold text-slate-600 dark:text-slate-300">持有 ETF</th>
                                     </tr>
@@ -293,6 +336,12 @@ export default async function ConsensusPage({
                                                 </span>
                                             </td>
                                             <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                                                {formatCoverage(row.etf_count, activeEtfCount)}
+                                            </td>
+                                            <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                                                {formatAvgWeight(row.total_weight, row.etf_count)}
+                                            </td>
+                                            <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-300">
                                                 {row.total_weight.toFixed(2)}%
                                             </td>
                                             <td className="p-4 text-center">
@@ -322,6 +371,7 @@ export default async function ConsensusPage({
                             </table>
                         </div>
                     </div>
+                    </>
                 )
             )}
 
