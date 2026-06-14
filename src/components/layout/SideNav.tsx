@@ -9,6 +9,7 @@ import { Send, MessageSquareText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import GoogleDriveUpload from '../features/cases/GoogleDriveUpload';
+import CalendarSyncButton from './CalendarSyncButton';
 
 export const SideNav = () => {
     const supabase = createClient();
@@ -100,6 +101,11 @@ export const SideNav = () => {
                         );
                     })}
                 </nav>
+
+                {/* Google 行事曆同步 */}
+                <div className="w-full px-3">
+                    <CalendarSyncButton />
+                </div>
 
                 {/* Quick Line Area - Only for Boss Tom */}
                 {email === 'tom890108159@gmail.com' && (

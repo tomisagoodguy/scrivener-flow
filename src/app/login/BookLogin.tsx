@@ -25,7 +25,7 @@ export function BookLogin() {
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
-                        scopes: 'https://www.googleapis.com/auth/drive.file email openid profile',
+                        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar email openid profile',
                     },
                 },
             });

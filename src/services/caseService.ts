@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { syncCaseToCalendar } from '@/app/actions/calendarSync';
 
 /**
  * 案件相關資料結構
@@ -127,6 +128,14 @@ export const caseService = {
         } else {
             const { error: fe } = await supabase.from('financials').insert([financialData]);
             if (fe) throw fe;
+        }
+
+        // milestones 與 financials 寫入後觸發 Google 行事曆同步。
+        // 輔助行為：失敗只記錄、不 rethrow，不可中斷案件儲存。
+        try {
+            await syncCaseToCalendar(caseId);
+        } catch (e) {
+            console.error('[CaseService] 行事曆同步失敗（不中斷儲存）:', e);
         }
 
         return { milestoneData, financialData };
