@@ -20,6 +20,8 @@ jest.mock('@/lib/google/calendar', () => {
         ...actual,
         insertCalendar: jest.fn(),
         getCalendar: jest.fn(),
+        getEvent: jest.fn(),
+        listEvents: jest.fn(),
         insertEvent: jest.fn(),
         patchEvent: jest.fn(),
         deleteEvent: jest.fn(),
@@ -113,11 +115,13 @@ beforeEach(() => {
     );
     mockedCalendar.patchEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_p' } });
     mockedCalendar.deleteEvent.mockResolvedValue({ ok: true, status: 204 });
+    mockedCalendar.getEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_1' } });
+    mockedCalendar.listEvents.mockResolvedValue({ ok: true, status: 200, data: { items: [{ id: 'evt_1' }] } });
 });
 
 function seedStore(): Record<string, Rows> {
     return {
-        cases: [{ id: 'c1', case_number: 'AA1258366', buyer_name: '林淑萍', seller_name: '連俊麒' }],
+        cases: [{ id: 'c1', case_number: 'AA1258366', buyer_name: '林淑萍', seller_name: '連俊麒', status: 'Processing' }],
         milestones: [
             {
                 case_id: 'c1',

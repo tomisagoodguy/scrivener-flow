@@ -164,6 +164,32 @@ export async function patchEvent(
     return toResult<{ id: string }>(res);
 }
 
+/** 確認事件是否仍存在（skip 決策時避免 DB 有 mapping 但 Google 端已空）。 */
+export async function getEvent(
+    token: string,
+    calendarId: string,
+    eventId: string
+): Promise<CalendarApiResult<{ id: string }>> {
+    const res = await fetch(
+        `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return toResult<{ id: string }>(res);
+}
+
+/** 列出子行事曆事件（用於回填後驗證實際寫入筆數）。 */
+export async function listEvents(
+    token: string,
+    calendarId: string,
+    maxResults = 250
+): Promise<CalendarApiResult<{ items?: { id: string }[] }>> {
+    const res = await fetch(
+        `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events?maxResults=${maxResults}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return toResult<{ items?: { id: string }[] }>(res);
+}
+
 /** 刪除事件；404/410 視為已刪除（目標達成）→ 回傳 ok。 */
 export async function deleteEvent(token: string, calendarId: string, eventId: string): Promise<CalendarApiResult> {
     const res = await fetch(

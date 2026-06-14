@@ -23,6 +23,8 @@ jest.mock('@/lib/google/calendar', () => {
         ...actual,
         insertCalendar: jest.fn(),
         getCalendar: jest.fn(),
+        getEvent: jest.fn(),
+        listEvents: jest.fn(),
         insertEvent: jest.fn(),
         patchEvent: jest.fn(),
         deleteEvent: jest.fn(),
@@ -71,6 +73,7 @@ function makeSupabase(singleData: unknown) {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockedCalendar.getEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_1' } });
 });
 
 describe('decideSyncAction', () => {
@@ -168,7 +171,8 @@ describe('syncField', () => {
         expect(calls.update[0]).toMatchObject({ synced_value: '2026-08-13' });
     });
 
-    it('skips entirely when the synced value is unchanged (no API call)', async () => {
+    it('skips entirely when the synced value is unchanged and the Google event still exists', async () => {
+        mockedCalendar.getEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_1' } });
         const { supabase, calls } = makeSupabase({
             id: 'map_1',
             google_event_id: 'evt_1',
@@ -185,10 +189,60 @@ describe('syncField', () => {
             title: '待辦：核對謄本｜AA1258366',
         });
 
+        expect(mockedCalendar.getEvent).toHaveBeenCalledWith('tok', 'cal_1', 'evt_1');
         expect(mockedCalendar.insertEvent).not.toHaveBeenCalled();
         expect(mockedCalendar.patchEvent).not.toHaveBeenCalled();
         expect(calls.update).toHaveLength(0);
         expect(calls.upsert).toHaveLength(0);
+    });
+
+    it('recreates the event when skip would apply but Google returns 404', async () => {
+        mockedCalendar.getEvent.mockResolvedValue({ ok: false, status: 404, error: 'Not Found' });
+        mockedCalendar.insertEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_new' } });
+        const { supabase, calls } = makeSupabase({
+            id: 'map_1',
+            google_event_id: 'evt_1',
+            google_calendar_id: 'cal_1',
+            synced_value: '2026-07-24T09:00:00+08:00',
+        });
+
+        await syncField(baseCtx(supabase), {
+            sourceTable: 'todos',
+            sourceId: 'todo_1',
+            sourceField: 'due_date',
+            value: '2026-07-24T09:00:00+08:00',
+            allDay: false,
+            title: '待辦：核對謄本｜AA1258366',
+        });
+
+        expect(mockedCalendar.insertEvent).toHaveBeenCalledTimes(1);
+        expect(calls.update[0]).toMatchObject({
+            google_event_id: 'evt_new',
+            google_calendar_id: 'cal_1',
+        });
+    });
+
+    it('recreates the event when mapping points at a replaced sub-calendar id', async () => {
+        mockedCalendar.insertEvent.mockResolvedValue({ ok: true, status: 200, data: { id: 'evt_new' } });
+        const { supabase, calls } = makeSupabase({
+            id: 'map_1',
+            google_event_id: 'evt_1',
+            google_calendar_id: 'cal_old',
+            synced_value: '2026-07-24',
+        });
+
+        await syncField(baseCtx(supabase), {
+            sourceTable: 'milestones',
+            sourceId: 'case_1',
+            sourceField: 'seal_date',
+            value: '2026-07-24',
+            allDay: true,
+            title: '用印｜AA1258366',
+        });
+
+        expect(mockedCalendar.getEvent).not.toHaveBeenCalled();
+        expect(mockedCalendar.insertEvent).toHaveBeenCalledWith('tok', 'cal_1', expect.any(Object));
+        expect(calls.update[0]).toMatchObject({ google_calendar_id: 'cal_1', google_event_id: 'evt_new' });
     });
 
     it('deletes the event and mapping when the value is cleared', async () => {

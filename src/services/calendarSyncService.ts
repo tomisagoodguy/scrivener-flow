@@ -23,10 +23,13 @@ import {
     buildEventTitle,
     insertCalendar,
     getCalendar,
+    getEvent,
+    listEvents,
     insertEvent,
     patchEvent,
     deleteEvent,
 } from '@/lib/google/calendar';
+import { CASE_INACTIVE_STATUSES } from '@/lib/constants/caseConstants';
 
 const MAPPINGS_TABLE = 'calendar_event_mappings';
 
@@ -40,12 +43,28 @@ export class CalendarAuthError extends Error {
 
 export type SyncAction = 'create' | 'update' | 'skip' | 'delete' | 'noop';
 
+export interface SyncStats {
+    created: number;
+    updated: number;
+    skipped: number;
+    recreated: number;
+    deleted: number;
+    noop: number;
+}
+
 export interface CalendarSyncResult {
     status: 'ok' | 'needs_reauth' | 'error';
     error?: string;
-    /** 回填時實際處理的案件 / 待辦數量 */
+    /** 回填時掃描的案件總數（含已結案） */
     casesProcessed?: number;
+    /** 回填時掃描的承辦中案件數 */
+    activeCasesProcessed?: number;
     todosProcessed?: number;
+    /** 本次實際在 Google 建立 / 更新 / 重建的事件數 */
+    eventsWritten?: number;
+    /** 回填完成後 Google「案件」子行事曆上的事件總數 */
+    googleEventCount?: number;
+    stats?: SyncStats;
     /** 回填過程中第一個非授權類錯誤 */
     firstError?: string;
 }
@@ -56,6 +75,15 @@ export interface SyncContext {
     userId: string;
     token: string;
     calendarId: string;
+    stats?: SyncStats;
+}
+
+function emptyStats(): SyncStats {
+    return { created: 0, updated: 0, skipped: 0, recreated: 0, deleted: 0, noop: 0 };
+}
+
+function bumpStat(stats: SyncStats | undefined, key: keyof SyncStats): void {
+    if (stats) stats[key]++;
 }
 
 export interface FieldSpec {
@@ -131,14 +159,43 @@ export async function provisionCaseCalendar(
 }
 
 async function readMapping(ctx: SyncContext, spec: FieldSpec): Promise<MappingRow | null> {
-    const { data } = await ctx.supabase
+    const { data, error } = await ctx.supabase
         .from(MAPPINGS_TABLE)
         .select('id, google_event_id, google_calendar_id, synced_value')
         .eq('source_table', spec.sourceTable)
         .eq('source_id', spec.sourceId)
         .eq('source_field', spec.sourceField)
         .maybeSingle();
+    if (error) {
+        throw new Error(`讀取行事曆對應失敗：${error.message}（請確認 DB migration 已套用）`);
+    }
     return (data as MappingRow | null) ?? null;
+}
+
+async function persistMappingUpsert(ctx: SyncContext, row: Record<string, unknown>): Promise<void> {
+    const { error } = await ctx.supabase.from(MAPPINGS_TABLE).upsert(row, {
+        onConflict: 'source_table,source_id,source_field',
+    });
+    if (error) throw new Error(`寫入行事曆對應失敗：${error.message}`);
+}
+
+async function recreateMappedEvent(ctx: SyncContext, spec: FieldSpec, map: MappingRow): Promise<void> {
+    const payload = buildEventPayload({ title: spec.title, value: spec.value as string, allDay: spec.allDay });
+    const res = await insertEvent(ctx.token, ctx.calendarId, payload);
+    if (!res.ok || !res.data?.id) {
+        if (isAuthFailure(res.status)) throw new CalendarAuthError();
+        throw new Error(`重建事件失敗：${res.error ?? res.status}`);
+    }
+    const { error } = await ctx.supabase
+        .from(MAPPINGS_TABLE)
+        .update({
+            google_event_id: res.data.id,
+            google_calendar_id: ctx.calendarId,
+            synced_value: spec.value,
+        })
+        .eq('id', map.id);
+    if (error) throw new Error(`更新行事曆對應失敗：${error.message}`);
+    bumpStat(ctx.stats, 'recreated');
 }
 
 /**
@@ -150,8 +207,28 @@ export async function syncField(ctx: SyncContext, spec: FieldSpec): Promise<void
 
     switch (action) {
         case 'noop':
-        case 'skip':
+            bumpStat(ctx.stats, 'noop');
             return;
+
+        case 'skip': {
+            const map = mapping as MappingRow;
+            // 子行事曆被刪除重建後，舊 mapping 仍指向失效 calendarId → 必須重建
+            if (map.google_calendar_id !== ctx.calendarId) {
+                await recreateMappedEvent(ctx, spec, map);
+                return;
+            }
+            const exists = await getEvent(ctx.token, map.google_calendar_id, map.google_event_id);
+            if (!exists.ok) {
+                if (isAuthFailure(exists.status)) throw new CalendarAuthError();
+                if (exists.status === 404 || exists.status === 410) {
+                    await recreateMappedEvent(ctx, spec, map);
+                    return;
+                }
+                throw new Error(`確認事件失敗：${exists.error ?? exists.status}`);
+            }
+            bumpStat(ctx.stats, 'skipped');
+            return;
+        }
 
         case 'create': {
             const payload = buildEventPayload({ title: spec.title, value: spec.value as string, allDay: spec.allDay });
@@ -160,50 +237,39 @@ export async function syncField(ctx: SyncContext, spec: FieldSpec): Promise<void
                 if (isAuthFailure(res.status)) throw new CalendarAuthError();
                 throw new Error(`建立事件失敗：${res.error ?? res.status}`);
             }
-            await ctx.supabase.from(MAPPINGS_TABLE).upsert(
-                {
-                    user_id: ctx.userId,
-                    source_table: spec.sourceTable,
-                    source_id: spec.sourceId,
-                    source_field: spec.sourceField,
-                    google_event_id: res.data.id,
-                    google_calendar_id: ctx.calendarId,
-                    synced_value: spec.value,
-                },
-                { onConflict: 'source_table,source_id,source_field' }
-            );
+            await persistMappingUpsert(ctx, {
+                user_id: ctx.userId,
+                source_table: spec.sourceTable,
+                source_id: spec.sourceId,
+                source_field: spec.sourceField,
+                google_event_id: res.data.id,
+                google_calendar_id: ctx.calendarId,
+                synced_value: spec.value,
+            });
+            bumpStat(ctx.stats, 'created');
             return;
         }
 
         case 'update': {
             const map = mapping as MappingRow;
             const payload = buildEventPayload({ title: spec.title, value: spec.value as string, allDay: spec.allDay });
-            const res = await patchEvent(ctx.token, map.google_calendar_id, map.google_event_id, payload);
+            const calendarForPatch = map.google_calendar_id === ctx.calendarId ? map.google_calendar_id : ctx.calendarId;
+            const res = await patchEvent(ctx.token, calendarForPatch, map.google_event_id, payload);
 
             if (res.ok) {
-                await ctx.supabase
+                const { error } = await ctx.supabase
                     .from(MAPPINGS_TABLE)
-                    .update({ synced_value: spec.value, google_calendar_id: map.google_calendar_id })
+                    .update({ synced_value: spec.value, google_calendar_id: ctx.calendarId })
                     .eq('id', map.id);
+                if (error) throw new Error(`更新行事曆對應失敗：${error.message}`);
+                bumpStat(ctx.stats, 'updated');
                 return;
             }
             if (isAuthFailure(res.status)) throw new CalendarAuthError();
 
             // 事件在 Google 端被刪除（404）→ 重新建立並更新 mapping
             if (res.status === 404) {
-                const recreate = await insertEvent(ctx.token, ctx.calendarId, payload);
-                if (!recreate.ok || !recreate.data?.id) {
-                    if (isAuthFailure(recreate.status)) throw new CalendarAuthError();
-                    throw new Error(`重建事件失敗：${recreate.error ?? recreate.status}`);
-                }
-                await ctx.supabase
-                    .from(MAPPINGS_TABLE)
-                    .update({
-                        google_event_id: recreate.data.id,
-                        google_calendar_id: ctx.calendarId,
-                        synced_value: spec.value,
-                    })
-                    .eq('id', map.id);
+                await recreateMappedEvent(ctx, spec, map);
                 return;
             }
             throw new Error(`更新事件失敗：${res.error ?? res.status}`);
@@ -213,7 +279,9 @@ export async function syncField(ctx: SyncContext, spec: FieldSpec): Promise<void
             const map = mapping as MappingRow;
             const res = await deleteEvent(ctx.token, map.google_calendar_id, map.google_event_id);
             if (!res.ok && isAuthFailure(res.status)) throw new CalendarAuthError();
-            await ctx.supabase.from(MAPPINGS_TABLE).delete().eq('id', map.id);
+            const { error } = await ctx.supabase.from(MAPPINGS_TABLE).delete().eq('id', map.id);
+            if (error) throw new Error(`刪除行事曆對應失敗：${error.message}`);
+            bumpStat(ctx.stats, 'deleted');
             return;
         }
     }
@@ -250,8 +318,8 @@ const TAX_LABELS: Record<string, string> = {
     house_tax_deadline: '房屋稅',
 };
 
-/** 已結案狀態：這些案件不同步到行事曆（既有事件會被刪除）。 */
-const CLOSED_STATUSES = new Set(['Closed', '已結案', '結案', '已關閉']);
+/** 已結案 / 解約：不同步到行事曆（既有事件會被刪除）。 */
+const CLOSED_STATUSES = new Set<string>([...CASE_INACTIVE_STATUSES, '已結案', '結案', '已關閉', '解約']);
 
 function isClosedStatus(status: string | null | undefined): boolean {
     return !!status && CLOSED_STATUSES.has(status);
@@ -261,7 +329,14 @@ type Row = Record<string, unknown> | null;
 
 function str(row: Row, field: string): string | null {
     const v = row?.[field];
-    return typeof v === 'string' && v !== '' ? v : null;
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'string') return v;
+    if (v instanceof Date) return v.toISOString();
+    return String(v);
+}
+
+function withStats(ctx: SyncContext): SyncContext {
+    return ctx.stats ? ctx : { ...ctx, stats: emptyStats() };
 }
 
 /**
@@ -269,7 +344,7 @@ function str(row: Row, field: string): string | null {
  */
 export async function syncCase(caseId: string, injected?: SyncContext): Promise<CalendarSyncResult> {
     try {
-        const ctx = injected ?? (await buildContext());
+        const ctx = withStats(injected ?? (await buildContext()));
         if ('status' in ctx) return ctx; // 取 ctx 失敗（未登入 / 需重新授權）
 
         const { data: caseRow } = await ctx.supabase
@@ -335,7 +410,7 @@ export async function syncCase(caseId: string, injected?: SyncContext): Promise<
  */
 export async function syncTodo(todoId: string, injected?: SyncContext): Promise<CalendarSyncResult> {
     try {
-        const ctx = injected ?? (await buildContext());
+        const ctx = withStats(injected ?? (await buildContext()));
         if ('status' in ctx) return ctx;
 
         const { data: todo } = await ctx.supabase
@@ -377,10 +452,16 @@ export async function syncTodo(todoId: string, injected?: SyncContext): Promise<
  * 未變更的欄位透過 syncField 的 synced_value 去重，不重複建立、不呼叫 Google API。
  */
 export async function backfillAll(injected?: SyncContext): Promise<CalendarSyncResult> {
-    const ctx = injected ?? (await buildContext());
-    if ('status' in ctx) return ctx;
+    const baseCtx = injected ?? (await buildContext());
+    if ('status' in baseCtx) return baseCtx;
 
-    const { data: cases } = await ctx.supabase.from('cases').select('id');
+    const stats = emptyStats();
+    const ctx: SyncContext = { ...baseCtx, stats };
+
+    const { data: cases } = await ctx.supabase.from('cases').select('id, status');
+    const activeCases = (cases ?? []).filter(
+        (c) => !isClosedStatus((c as { status?: string }).status ?? null)
+    );
     let firstError: string | undefined;
 
     for (const c of cases ?? []) {
@@ -400,20 +481,27 @@ export async function backfillAll(injected?: SyncContext): Promise<CalendarSyncR
         if (r.status === 'error' && !firstError) firstError = r.error;
     }
 
-    if (firstError) {
-        return {
-            status: 'error',
-            error: firstError,
-            casesProcessed: cases?.length ?? 0,
-            todosProcessed: todos?.length ?? 0,
-        };
+    const eventsWritten = stats.created + stats.updated + stats.recreated;
+    let googleEventCount: number | undefined;
+    const listed = await listEvents(ctx.token, ctx.calendarId);
+    if (listed.ok) {
+        googleEventCount = listed.data?.items?.length ?? 0;
     }
 
-    return {
-        status: 'ok',
+    const baseResult = {
         casesProcessed: cases?.length ?? 0,
+        activeCasesProcessed: activeCases.length,
         todosProcessed: todos?.length ?? 0,
+        eventsWritten,
+        googleEventCount,
+        stats,
     };
+
+    if (firstError) {
+        return { status: 'error', error: firstError, ...baseResult };
+    }
+
+    return { status: 'ok', ...baseResult };
 }
 
 /**
