@@ -53,7 +53,7 @@ The system SHALL maintain a `calendar_event_mappings` record for each synced sou
 
 ### Requirement: Case date synchronization
 
-The system SHALL synchronize four kinds of date data for cases owned by the signed-in user into the dedicated calendar: milestones (contract/seal/tax/transfer/handover dates), appointment times (sign/seal/tax/handover appointments), financial tax deadlines (land-value/deed/land/house tax deadlines), and active todos (due date). Date-typed sources SHALL produce all-day events; timestamp-typed sources SHALL produce timed events of one hour in the Asia/Taipei time zone. Each event title SHALL identify its source kind and the related case number.
+The system SHALL synchronize four kinds of date data for **in-progress** cases owned by the signed-in user into the dedicated calendar: milestones (contract/seal/tax/transfer/handover dates), appointment times (sign/seal/tax/handover appointments), financial tax deadlines (land-value/deed/land/house tax deadlines), and active todos (due date). Closed cases SHALL NOT have events; if a case becomes closed (or is already closed), its previously synced events SHALL be deleted. Date-typed sources SHALL produce all-day events; timestamp-typed sources SHALL produce timed events of one hour in the Asia/Taipei time zone. Each event title SHALL identify its source kind and the related case number.
 
 #### Scenario: All-day event for a milestone or tax deadline
 
@@ -79,6 +79,12 @@ The system SHALL synchronize four kinds of date data for cases owned by the sign
 
 - **WHEN** a source field becomes null, or a synced todo is soft-deleted (`is_deleted = true`)
 - **THEN** the corresponding event is deleted and the mapping row is removed
+
+#### Scenario: Closed case is excluded and its events removed
+
+- **WHEN** a case's status is closed (e.g. `Closed` / `已結案`)
+- **THEN** no events are created for any of its fields
+- **AND** any events previously synced for that case are deleted and their mappings removed
 
 #### Scenario: Event missing on Google side
 

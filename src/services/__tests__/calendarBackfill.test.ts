@@ -180,6 +180,52 @@ describe('backfillAll', () => {
         expect(store.calendar_event_mappings).toHaveLength(3); // no duplicates
     });
 
+    it('deletes events for closed cases and does not create new ones', async () => {
+        // A Closed case that was previously synced (mapping exists) must have its
+        // event removed; no new event is created.
+        const store: Record<string, Rows> = {
+            cases: [{ id: 'c1', case_number: 'X1', buyer_name: 'A', seller_name: 'B', status: 'Closed' }],
+            milestones: [
+                {
+                    case_id: 'c1',
+                    seal_date: '2026-07-24',
+                    contract_date: null,
+                    tax_payment_date: null,
+                    transfer_date: null,
+                    handover_date: null,
+                    sign_appointment: null,
+                    seal_appointment: null,
+                    tax_appointment: null,
+                    handover_appointment: null,
+                },
+            ],
+            financials: [
+                { case_id: 'c1', land_value_tax_deadline: null, deed_tax_deadline: null, land_tax_deadline: null, house_tax_deadline: null },
+            ],
+            todos: [],
+            user_settings: [{ user_id: 'u1', case_calendar_id: 'cal_1' }],
+            calendar_event_mappings: [
+                {
+                    id: 'm1',
+                    user_id: 'u1',
+                    source_table: 'milestones',
+                    source_id: 'c1',
+                    source_field: 'seal_date',
+                    google_event_id: 'evt_old',
+                    google_calendar_id: 'cal_1',
+                    synced_value: '2026-07-24',
+                },
+            ],
+        };
+
+        const res = await backfillAll(makeCtx(store));
+
+        expect(res.status).toBe('ok');
+        expect(mockedCalendar.insertEvent).not.toHaveBeenCalled();
+        expect(mockedCalendar.deleteEvent).toHaveBeenCalledWith('tok', 'cal_1', 'evt_old');
+        expect(store.calendar_event_mappings).toHaveLength(0);
+    });
+
     it('propagates needs_reauth from the injected context', async () => {
         const res = await backfillAll({ status: 'needs_reauth' } as never);
         expect(res.status).toBe('needs_reauth');

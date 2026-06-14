@@ -245,6 +245,13 @@ const TAX_LABELS: Record<string, string> = {
     house_tax_deadline: '房屋稅',
 };
 
+/** 已結案狀態：這些案件不同步到行事曆（既有事件會被刪除）。 */
+const CLOSED_STATUSES = new Set(['Closed', '已結案', '結案', '已關閉']);
+
+function isClosedStatus(status: string | null | undefined): boolean {
+    return !!status && CLOSED_STATUSES.has(status);
+}
+
 type Row = Record<string, unknown> | null;
 
 function str(row: Row, field: string): string | null {
@@ -262,11 +269,13 @@ export async function syncCase(caseId: string, injected?: SyncContext): Promise<
 
         const { data: caseRow } = await ctx.supabase
             .from('cases')
-            .select('case_number, buyer_name, seller_name')
+            .select('status, case_number, buyer_name, seller_name')
             .eq('id', caseId)
             .maybeSingle();
         const caseNumber = (caseRow?.case_number as string) ?? '';
         const parties = [caseRow?.buyer_name, caseRow?.seller_name].filter(Boolean).join('/');
+        // 只同步「承辦中」案件；已結案（或查無此案）→ 一律刪除其既有事件（value 視為 null）。
+        const active = !!caseRow && !isClosedStatus(caseRow.status as string | null);
 
         const { data: m } = await ctx.supabase.from('milestones').select('*').eq('case_id', caseId).maybeSingle();
         const { data: f } = await ctx.supabase.from('financials').select('*').eq('case_id', caseId).maybeSingle();
@@ -278,14 +287,14 @@ export async function syncCase(caseId: string, injected?: SyncContext): Promise<
                 sourceTable: 'milestones',
                 sourceId: caseId,
                 sourceField: field,
-                value: str(m as Row, field),
+                value: active ? str(m as Row, field) : null,
                 allDay: true,
                 title: buildEventTitle({ kind: 'milestone', label, parties, caseNumber }),
             });
         }
 
         for (const [field, label] of Object.entries(APPOINTMENT_LABELS)) {
-            const value = str(m as Row, field);
+            const value = active ? str(m as Row, field) : null;
             specs.push({
                 sourceTable: 'milestones',
                 sourceId: caseId,
@@ -301,7 +310,7 @@ export async function syncCase(caseId: string, injected?: SyncContext): Promise<
                 sourceTable: 'financials',
                 sourceId: caseId,
                 sourceField: field,
-                value: str(f as Row, field),
+                value: active ? str(f as Row, field) : null,
                 allDay: true,
                 title: buildEventTitle({ kind: 'tax', label, caseNumber }),
             });
