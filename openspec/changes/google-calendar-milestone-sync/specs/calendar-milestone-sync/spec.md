@@ -2,12 +2,12 @@
 
 ### Requirement: Google Calendar authorization scope
 
-The system SHALL request the `https://www.googleapis.com/auth/calendar` OAuth scope at Google sign-in, in addition to existing scopes, so it can create a dedicated calendar and create, update, and delete events on behalf of the signed-in user.
+The system SHALL request the `https://www.googleapis.com/auth/calendar.app.created` OAuth scope at Google sign-in, in addition to existing scopes, so it can create a dedicated app-owned calendar and create, update, and delete events on that calendar on behalf of the signed-in user. This narrow (non-sensitive) scope is sufficient because the system only ever writes to a calendar it created itself.
 
 #### Scenario: Sign-in requests calendar scope
 
 - **WHEN** a user signs in through any Google OAuth entry point
-- **THEN** the requested scopes include `https://www.googleapis.com/auth/calendar`
+- **THEN** the requested scopes include `https://www.googleapis.com/auth/calendar.app.created`
 - **AND** `access_type=offline` and `prompt=consent` are preserved so a refresh token covering the new scope is obtained
 
 #### Scenario: Missing calendar scope on sync

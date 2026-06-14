@@ -15,7 +15,7 @@
 - 事件標題格式統一並標註來源（例：里程碑 `用印｜林淑萍/連俊麒 AA1258366`；約定 `用印約 14:00｜AA1258366`；待辦 `待辦：核對謄本｜AA1258366`；稅限 `房屋稅截止｜AA1258366`）；時區 Asia/Taipei。
 - 資料在 App 變更時**自動同步**：里程碑與約定時間（caseService 的 milestones upsert）、財務稅限（caseService 的 financials 寫入）、待辦（todoService 的新增/完成/軟刪除）→ 新增建立、改日期更新、清空/刪除則刪除事件。
 - 提供既有資料的一次性**回填動作**（Server Action），把目前所有四類資料批次同步到專用行事曆。
-- 在 Google OAuth 登入 scope 追加 `https://www.googleapis.com/auth/calendar`（需建立子行事曆，故用完整 calendar scope 而非僅 calendar.events），複用現有 token 持久化與自動刷新機制（user_settings + getAccessToken）。**BREAKING**：既有使用者需重新登入一次以授權新 scope。
+- 在 Google OAuth 登入 scope 追加 `https://www.googleapis.com/auth/calendar.app.created`（窄權限：僅能管理 app 自己建立的行事曆，屬非敏感 scope，同意畫面溫和、免 Google 驗證；完全涵蓋「建立子行事曆 + 增刪改其中事件」需求），複用現有 token 持久化與自動刷新機制（user_settings + getAccessToken）。**BREAKING**：既有使用者需重新登入一次以授權新 scope。前置：GCP 專案需啟用 Google Calendar API。
 - 新增一般化事件對應表（來源表 + 來源 id + 來源欄位 → google_event_id），作為更新/刪除事件的依據與去重來源，可同時對應里程碑、約定、待辦、財務四種來源。
 
 ## Non-Goals

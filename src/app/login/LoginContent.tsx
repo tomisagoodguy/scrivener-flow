@@ -20,7 +20,7 @@ export function LoginContent() {
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
-                        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar email openid profile',
+                        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created email openid profile',
                     },
                 },
             });

@@ -29,7 +29,7 @@ Scrivener Flow 已具備 Google OAuth（透過 Supabase `signInWithOAuth`，`acc
 
 首次同步時呼叫 Calendar API `calendars.insert` 建立名為「案件」的子行事曆（timeZone=Asia/Taipei），將回傳 `calendarId` 存入 `user_settings.case_calendar_id`；之後所有事件以此 `calendarId` 寫入。同步前先讀 `case_calendar_id`，存在則沿用、不存在才建立（並處理使用者手動刪除行事曆後 id 失效→重建）。
 
-理由：分離子行事曆讓使用者可單獨開關、變色、整批清除，達成公司/個人分層；比寫入 primary calendar 乾淨。因需建立行事曆，OAuth 改用完整 `https://www.googleapis.com/auth/calendar` scope（`calendar.events` 無法建立行事曆）。
+理由：分離子行事曆讓使用者可單獨開關、變色、整批清除，達成公司/個人分層；比寫入 primary calendar 乾淨。建立行事曆並只管理自己建立的那本，使用窄權限 `https://www.googleapis.com/auth/calendar.app.created`（非敏感 scope，同意畫面溫和、免 Google 驗證），完全涵蓋「建立子行事曆 + 於其中增刪改事件」的需求。
 替代方案：寫入 primary calendar → 無法與個人事件分層，否決。
 
 ### 一般化事件對應表 calendar_event_mappings
@@ -65,7 +65,7 @@ Scrivener Flow 已具備 Google OAuth（透過 Supabase `signInWithOAuth`，`acc
 
 ### scope 追加與重新授權
 
-三處登入入口（`useLoginFlow.ts`、`LoginContent.tsx`、`BookLogin.tsx`）的 scopes 追加 `https://www.googleapis.com/auth/calendar`。既有使用者的 refresh token 不含新 scope，需重新登入一次（`prompt=consent` 已存在）。同步若回 403/insufficient scope，向使用者顯示「請重新登入以授權行事曆」提示，不靜默失敗。
+三處登入入口（`useLoginFlow.ts`、`LoginContent.tsx`、`BookLogin.tsx`）的 scopes 追加 `https://www.googleapis.com/auth/calendar.app.created`（窄權限：僅能管理 app 自己建立的行事曆，非敏感 scope）。既有使用者的 refresh token 不含新 scope，需重新登入一次（`prompt=consent` 已存在）。同步若回 403/insufficient scope，向使用者顯示「請重新登入以授權行事曆」提示，不靜默失敗。前置：GCP 專案需啟用 Google Calendar API。
 
 理由：Supabase OAuth scope 在登入時固定，無法事後增量授權。
 
