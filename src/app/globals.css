@@ -256,6 +256,13 @@ h6 {
     animation: shimmer 2s linear infinite;
 }
 
+/* 主題熱力卡片：自訂圓角類，刻意不用 .rounded-lg，
+   以避開 dark-theme.css 的 html.dark .rounded-lg / button 地毯式 !important 覆蓋，
+   讓每張卡片保留自己的 inline 主題色（深淺模式皆然）。 */
+.topic-tile {
+    border-radius: 0.5rem;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;

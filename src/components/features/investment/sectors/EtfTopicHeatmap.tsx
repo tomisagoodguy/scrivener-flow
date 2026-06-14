@@ -10,34 +10,34 @@ interface Props {
     holdingsByTopic: Record<string, { stock_code: string; stock_name: string; weight: number }[]>;
 }
 
-// 資料來源的 color 可能是 hex（#rrggbb / #rgb）或 CSS 命名色（violet、cyan、orange…）。
-// 只解析 hex 會把命名色誤判成黑色，導致淺色底（violet/cyan/orange）配白字而看不到文字。
-const NAMED_COLORS: Record<string, [number, number, number]> = {
-    red: [255, 0, 0], orange: [255, 165, 0], yellow: [255, 255, 0], gold: [255, 215, 0],
-    green: [0, 128, 0], lime: [0, 255, 0], olive: [128, 128, 0],
-    teal: [0, 128, 128], cyan: [0, 255, 255], aqua: [0, 255, 255], turquoise: [64, 224, 208],
-    blue: [0, 0, 255], navy: [0, 0, 128], skyblue: [135, 206, 235], indigo: [75, 0, 130],
-    purple: [128, 0, 128], violet: [238, 130, 238], magenta: [255, 0, 255], fuchsia: [255, 0, 255],
-    pink: [255, 192, 203], crimson: [220, 20, 60], coral: [255, 127, 80], salmon: [250, 128, 114],
-    brown: [165, 42, 42], maroon: [128, 0, 0], lavender: [230, 230, 250],
-    gray: [128, 128, 128], grey: [128, 128, 128], silver: [192, 192, 192],
-    black: [0, 0, 0], white: [255, 255, 255],
+// 資料來源 stock_topics.color 存的是 Tailwind 色票名稱（'sky'、'amber'、'slate'、'violet'…），
+// 不是合法 CSS 顏色。若直接當 backgroundColor 用：'orange'/'cyan' 等剛好是 CSS 命名色會顯示，
+// 但 'sky'/'amber'/'slate'/'emerald' 不是 → 背景變透明、文字對比判斷錯誤
+// （淺色模式下透明底配白字 → 文字看不到）。統一解析成 Tailwind-500 hex，背景與文字都以此為準。
+const TAILWIND_500: Record<string, string> = {
+    slate: '#64748b', gray: '#6b7280', zinc: '#71717a', neutral: '#737373', stone: '#78716c',
+    red: '#ef4444', orange: '#f97316', amber: '#f59e0b', yellow: '#eab308', lime: '#84cc16',
+    green: '#22c55e', emerald: '#10b981', teal: '#14b8a6', cyan: '#06b6d4', sky: '#0ea5e9',
+    blue: '#3b82f6', indigo: '#6366f1', violet: '#8b5cf6', purple: '#a855f7', fuchsia: '#d946ef',
+    pink: '#ec4899', rose: '#f43f5e',
 };
 
-function resolveRgb(color: string): [number, number, number] {
+const FALLBACK_HEX = '#6366f1'; // indigo-500（未知值 fallback，深色配白字）
+
+/** 將資料來源的 color（Tailwind 色名或 #hex）解析成合法 hex 字串。 */
+function resolveHex(color: string): string {
     const c = color.trim().toLowerCase();
-    if (c.startsWith('#')) {
-        const hex = c.slice(1);
-        const full = hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex.padEnd(6, '0');
-        const num = parseInt(full, 16);
-        if (!Number.isNaN(num)) return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
-    }
-    if (NAMED_COLORS[c]) return NAMED_COLORS[c];
-    return [99, 102, 241]; // 未知值 fallback：indigo（深色，配白字）
+    if (c.startsWith('#')) return c;
+    return TAILWIND_500[c] ?? FALLBACK_HEX;
 }
 
-function isLight(color: string): boolean {
-    const [r, g, b] = resolveRgb(color);
+/** 以 hex 計算感知亮度，判斷該配深字（true）或白字（false）。 */
+function isLight(hex: string): boolean {
+    const h = hex.slice(1);
+    const full = h.length === 3 ? h.split('').map((ch) => ch + ch).join('') : h.padEnd(6, '0');
+    const num = parseInt(full, 16);
+    if (Number.isNaN(num)) return false;
+    const [r, g, b] = [(num >> 16) & 255, (num >> 8) & 255, num & 255];
     return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }
 
@@ -71,33 +71,45 @@ export function EtfTopicHeatmap({ topics, holdingsByTopic }: Props) {
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5 max-h-[480px] overflow-y-auto pr-1 custom-scrollbar">
                     {topics.map(t => {
-                        const color = t.color || '#6366f1';
+                        const color = resolveHex(t.color || FALLBACK_HEX);
                         const lightText = isLight(color);
                         const sizeFraction = maxWeight > 0 ? t.total_weight / maxWeight : 0;
                         const isSelected = selectedTopicId === t.topic_id;
+                        // 文字色一律走 inline，避開 dark-theme.css 對 .text-gray-* 的 !important 覆蓋，
+                        // 確保對比永遠相對於卡片自身的主題色（深淺模式一致）。
+                        const titleColor = lightText ? '#1f2937' : '#ffffff';              // gray-800 / white
+                        const subColor = lightText ? '#4b5563' : 'rgba(255,255,255,0.85)';  // gray-600
+                        const subColor2 = lightText ? '#6b7280' : 'rgba(255,255,255,0.65)'; // gray-500
+                        const toggle = () => setSelectedTopicId(prev => prev === t.topic_id ? null : t.topic_id);
 
                         return (
-                            <button
+                            <div
                                 key={t.topic_id}
-                                onClick={() => setSelectedTopicId(prev =>
-                                    prev === t.topic_id ? null : t.topic_id
-                                )}
-                                className={`rounded-lg p-2 text-left transition-all duration-150 relative overflow-hidden ${
+                                role="button"
+                                tabIndex={0}
+                                onClick={toggle}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        toggle();
+                                    }
+                                }}
+                                className={`topic-tile p-2 text-left transition-all duration-150 relative overflow-hidden cursor-pointer ${
                                     isSelected ? 'ring-2 ring-offset-1 ring-white' : 'hover:opacity-90'
                                 }`}
                                 style={{ backgroundColor: color, minHeight: `${48 + sizeFraction * 32}px` }}
                                 title={`${t.name} · 持股 ${t.holding_count} 支 · ETF合計 ${t.total_weight.toFixed(2)}%`}
                             >
-                                <p className={`text-[10px] font-semibold leading-tight line-clamp-2 mb-1 ${lightText ? 'text-gray-800' : 'text-white'}`}>
+                                <p className="text-[10px] font-semibold leading-tight line-clamp-2 mb-1" style={{ color: titleColor }}>
                                     {t.short_name}
                                 </p>
-                                <p className={`text-[10px] tabular-nums ${lightText ? 'text-gray-600' : 'text-white/80'}`}>
+                                <p className="text-[10px] tabular-nums" style={{ color: subColor }}>
                                     {t.holding_count}支
                                 </p>
-                                <p className={`text-[9px] tabular-nums ${lightText ? 'text-gray-500' : 'text-white/60'}`}>
+                                <p className="text-[9px] tabular-nums" style={{ color: subColor2 }}>
                                     {t.total_weight.toFixed(1)}%
                                 </p>
-                            </button>
+                            </div>
                         );
                     })}
                 </div>

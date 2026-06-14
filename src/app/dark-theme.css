@@ -29,8 +29,8 @@ html.dark .min-h-screen {
     /* slate-950 */
 }
 
-/* 強制深色卡片 */
-html.dark .bg-white {
+/* 強制深色卡片（:not([style*="background"]) → 不蓋掉 inline 背景色） */
+html.dark .bg-white:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 */
     color: #f8fafc !important;
@@ -157,56 +157,58 @@ html.dark select:focus {
    確保所有元素都用深灰色調
    ======================================== */
 
-/* 所有淺色背景都改成深灰 */
-html.dark .bg-slate-50,
-html.dark .bg-slate-100,
-html.dark .bg-slate-200,
-html.dark .bg-gray-50,
-html.dark .bg-gray-100,
-html.dark .bg-gray-200,
-html.dark .bg-white {
+/* 所有淺色背景都改成深灰（:not([style*="background"]) → 不蓋掉 inline 背景色） */
+html.dark .bg-slate-50:not([style*="background"]),
+html.dark .bg-slate-100:not([style*="background"]),
+html.dark .bg-slate-200:not([style*="background"]),
+html.dark .bg-gray-50:not([style*="background"]),
+html.dark .bg-gray-100:not([style*="background"]),
+html.dark .bg-gray-200:not([style*="background"]),
+html.dark .bg-white:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 深灰卡片 */
 }
 
 /* 半透明背景 */
-html.dark .bg-slate-50\/50,
-html.dark .bg-slate-50\/30,
-html.dark .bg-white\/50,
-html.dark [class*="bg-slate-50/"] {
+html.dark .bg-slate-50\/50:not([style*="background"]),
+html.dark .bg-slate-50\/30:not([style*="background"]),
+html.dark .bg-white\/50:not([style*="background"]),
+html.dark [class*="bg-slate-50/"]:not([style*="background"]) {
     background-color: rgba(30, 41, 59, 0.5) !important;
     /* slate-900 半透明 */
 }
 
 /* 更深的淺色背景改成更深的灰 */
-html.dark .bg-slate-300,
-html.dark .bg-gray-300 {
+html.dark .bg-slate-300:not([style*="background"]),
+html.dark .bg-gray-300:not([style*="background"]) {
     background-color: #334155 !important;
     /* slate-800 */
 }
 
-/* 圓角卡片 */
-html.dark .rounded-lg,
-html.dark .rounded-xl,
-html.dark .rounded-2xl {
+/* 圓角卡片
+   :not([style*="background"]) → 跳過自帶 inline 背景色的元件（如主題熱力卡片），
+   避免地毯式 !important 蓋掉元件刻意設定的顏色。 */
+html.dark .rounded-lg:not([style*="background"]),
+html.dark .rounded-xl:not([style*="background"]),
+html.dark .rounded-2xl:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 */
 }
 
-/* Shadow 元素（通常是卡片） */
-html.dark .shadow,
-html.dark .shadow-sm,
-html.dark .shadow-md,
-html.dark .shadow-lg,
-html.dark .shadow-xl {
+/* Shadow 元素（通常是卡片）。:not([style*="background"]) → 保留 inline 背景色元件的自有顏色 */
+html.dark .shadow:not([style*="background"]),
+html.dark .shadow-sm:not([style*="background"]),
+html.dark .shadow-md:not([style*="background"]),
+html.dark .shadow-lg:not([style*="background"]),
+html.dark .shadow-xl:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 */
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3) !important;
 }
 
-/* 通用卡片 class */
-html.dark [class*="card"],
-html.dark [class*="Card"] {
+/* 通用卡片 class（:not([style*="background"]) → 不蓋掉 inline 背景色） */
+html.dark [class*="card"]:not([style*="background"]),
+html.dark [class*="Card"]:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 */
     color: #f8fafc !important;
@@ -214,16 +216,16 @@ html.dark [class*="Card"] {
 }
 
 /* 通用容器 */
-html.dark [class*="container"],
-html.dark [class*="Container"] {
+html.dark [class*="container"]:not([style*="background"]),
+html.dark [class*="Container"]:not([style*="background"]) {
     background-color: transparent !important;
 }
 
-/* 通用 panel/section */
-html.dark [class*="panel"],
-html.dark [class*="Panel"],
-html.dark [class*="section"],
-html.dark [class*="Section"] {
+/* 通用 panel/section（:not([style*="background"]) → 不蓋掉 inline 背景色） */
+html.dark [class*="panel"]:not([style*="background"]),
+html.dark [class*="Panel"]:not([style*="background"]),
+html.dark [class*="section"]:not([style*="background"]),
+html.dark [class*="Section"]:not([style*="background"]) {
     background-color: #1e293b !important;
     /* slate-900 */
 }
@@ -254,15 +256,15 @@ html.dark .divider {
     /* slate-800 */
 }
 
-/* 按鈕 */
-html.dark button:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
+/* 按鈕（:not([style*="background"]) → 不蓋掉自帶 inline 背景色的按鈕） */
+html.dark button:not([style*="background"]):not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
     background-color: #334155 !important;
     /* slate-800 */
     color: #f8fafc !important;
     /* slate-50 */
 }
 
-html.dark button:hover:not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
+html.dark button:hover:not([style*="background"]):not([class*="bg-blue"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-rose"]) {
     background-color: #475569 !important;
     /* slate-700 */
 }
