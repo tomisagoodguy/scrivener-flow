@@ -135,6 +135,25 @@ describe('buildMemoSection', () => {
         expect(html).toContain('重要備註');
         expect(html).not.toContain('NO-MEMO');
     });
+
+    it('includes private notes and other memo fields', () => {
+        const html = buildMemoSection([
+            makeCase({
+                case_number: 'PRIVATE-01',
+                private_notes: '僅內部可見',
+            }),
+            makeCase({
+                case_number: 'PENDING-01',
+                pending_tasks: '記得追銀行',
+            }),
+        ]);
+        expect(html).toContain('PRIVATE-01');
+        expect(html).toContain('🔒 私密備註');
+        expect(html).toContain('僅內部可見');
+        expect(html).toContain('PENDING-01');
+        expect(html).toContain('📝 其他備忘');
+        expect(html).toContain('記得追銀行');
+    });
 });
 
 describe('buildTimelineSection', () => {

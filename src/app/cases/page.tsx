@@ -5,6 +5,7 @@ import { DemoCase } from '@/types';
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
 
 import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
+import ExportHtmlButton from '@/components/features/cases/ExportHtmlButton';
 import { CaseTableRow } from '@/components/features/cases/case-list/CaseTableRow';
 import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
 import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
@@ -72,19 +73,6 @@ export default async function CasesPage({
 
     let cases = rawCases;
 
-    // Sort helper: next upcoming date from priority list
-    const getNextActionDate = (c: DemoCase) => {
-        const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
-        if (!m) return 9999999999999;
-        const now = new Date().getTime();
-        const dates = [m.contract_date, m.seal_date, m.tax_payment_date, m.transfer_date, m.handover_date]
-            .filter((d) => d)
-            .map((d) => new Date(d!).getTime())
-            .filter((t) => t >= now)
-            .sort((a, b) => a - b);
-        return dates[0] || 9999999999999;
-    };
-
     // Sort helper: 印→稅→過→交 priority (pick first upcoming)
     const getMilestoneSortKey = (c: DemoCase): number => {
         const m = Array.isArray(c.milestones) ? c.milestones[0] : c.milestones;
@@ -146,6 +134,7 @@ export default async function CasesPage({
                 </div>
                 <div className="flex items-center gap-3">
                     <ExportExcelButton cases={cases} />
+                    <ExportHtmlButton cases={cases} />
                 </div>
             </div>
 
