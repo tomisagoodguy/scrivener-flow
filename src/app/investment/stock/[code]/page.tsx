@@ -173,11 +173,10 @@ export default function StockPage() {
             .from('etf_holdings_snapshot')
             .select('is_disposal')
             .eq('stock_code', stockCode)
-            .eq('is_disposal', true)
             .order('data_date', { ascending: false })
             .limit(1)
             .then(({ data }) => {
-                setIsDisposal((data?.length ?? 0) > 0);
+                setIsDisposal(data?.[0]?.is_disposal === true);
             });
     }, [stockCode]);
     const sourceRank = searchParams.get('rank');
