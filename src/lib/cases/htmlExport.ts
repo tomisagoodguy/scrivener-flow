@@ -1,5 +1,15 @@
 import { format } from 'date-fns';
 import type { DemoCase, Financials, Milestone } from '@/types';
+import {
+    MILESTONE_FIELDS,
+    APPOINTMENT_FIELDS,
+    TAX_DEADLINE_FIELDS,
+} from '@/components/features/cases/timeline-hub/constants';
+import {
+    buildInteractiveScript,
+    serializeInitialState,
+    getExportEventId,
+} from './exportInteractive';
 
 const SIGNING_TODOS = [
     '買方蓋印章',
@@ -112,6 +122,10 @@ function buildPendingTodos(c: DemoCase): string {
     return [...pendingStandard, ...pendingCustom]
         .map((task) => task.replace(/^(S_|T_)/, ''))
         .join(', ');
+}
+
+function buildParties(buyer: string, seller: string): string {
+    return [buyer, seller].filter(Boolean).join(' / ');
 }
 
 function buildPriceBank(f: Partial<Financials>): string {
@@ -227,7 +241,6 @@ export function buildTableSection(cases: DemoCase[]): string {
             <th>稅單性質</th>
             <th>里程碑日期</th>
             <th>未完成待辦</th>
-            <th>備註</th>
           </tr>
         </thead>
         <tbody>
@@ -236,7 +249,7 @@ export function buildTableSection(cases: DemoCase[]): string {
     const rows = cases
         .map((c) => {
             const row = normalizeCaseRow(c);
-            return `<tr>
+            return `<tr data-case-id="${escapeHtml(c.id)}">
         ${cell(row.caseNumber)}
         ${cell(row.district)}
         ${cell(row.buyerName)}
@@ -245,7 +258,6 @@ export function buildTableSection(cases: DemoCase[]): string {
         ${cell(row.taxType)}
         ${cell(row.milestoneDates)}
         ${cell(row.todos)}
-        ${cell(row.notes)}
       </tr>`;
         })
         .join('\n');
@@ -253,11 +265,19 @@ export function buildTableSection(cases: DemoCase[]): string {
     return `${header}${rows}\n        </tbody>\n      </table>\n    </section>`;
 }
 
-export function buildMemoSection(cases: DemoCase[]): string {
+export function buildMemoSection(cases: DemoCase[], now: Date = new Date()): string {
     const cards = cases
         .map((c) => {
             const row = normalizeCaseRow(c);
             if (!hasMemoContent(row)) return '';
+            const upcoming = getUpcomingMilestone(c, now);
+            const nextChip = upcoming
+                ? `<span class="memo-next">${escapeHtml(upcoming.label)} ${escapeHtml(formatExportDate(upcoming.date))}</span>`
+                : '';
+            const parties = buildParties(row.buyerName, row.sellerName);
+            const partiesLine = parties
+                ? `<div class="memo-parties">${escapeHtml(parties)}</div>`
+                : '';
             const blocks = [
                 buildMemoBlock('⚠️ 警示備註', row.notes, 'memo-warning'),
                 buildMemoBlock('📝 其他備忘', row.pendingTasks, 'memo-pending'),
@@ -265,8 +285,12 @@ export function buildMemoSection(cases: DemoCase[]): string {
             ]
                 .filter(Boolean)
                 .join('\n');
-            return `<div class="memo-card">
-        <div class="memo-case-number">${escapeHtml(row.caseNumber)}</div>
+            return `<div class="memo-card" data-case-id="${escapeHtml(c.id)}">
+        <div class="memo-card-head">
+          <span class="memo-case-number">${escapeHtml(row.caseNumber)}</span>
+          ${nextChip}
+        </div>
+        ${partiesLine}
         ${blocks}
       </div>`;
         })
@@ -282,37 +306,144 @@ export function buildMemoSection(cases: DemoCase[]): string {
     </section>`;
 }
 
-export function buildTimelineSection(cases: DemoCase[], now: Date = new Date()): string {
-    const entries = cases
-        .map((c) => {
-            const milestone = getUpcomingMilestone(c, now);
-            if (!milestone) return null;
-            return {
-                caseNumber: c.case_number,
-                label: milestone.label,
-                date: milestone.date,
-                sortKey: new Date(milestone.date).getTime(),
-            };
-        })
-        .filter((e): e is NonNullable<typeof e> => e !== null)
-        .sort((a, b) => a.sortKey - b.sortKey);
+interface ExportTimelineEvent {
+    date: Date;
+    icon: string;
+    label: string;
+    caseNumber: string;
+    caseId: string;
+    eventId: string;
+    parties: string;
+    content: string;
+}
 
-    const items = entries
-        .map(
-            (e) =>
-                `<div class="timeline-item">
-          <span class="timeline-date">${escapeHtml(formatExportDate(e.date))}</span>
+const WEEKDAY_TC = ['日', '一', '二', '三', '四', '五', '六'];
+
+function startOfLocalDay(d: Date): Date {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+}
+
+function pushFieldEvents(
+    events: ExportTimelineEvent[],
+    fields: readonly { key: string; label: string; icon: string }[],
+    source: Record<string, unknown>,
+    caseId: string,
+    caseNumber: string,
+    parties: string,
+    withTime: boolean
+): void {
+    fields.forEach((field) => {
+        const raw = source[field.key];
+        if (typeof raw !== 'string' || !raw) return;
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return;
+        const content = withTime && raw.includes('T') ? `⏰ ${format(d, 'HH:mm')}` : '';
+        events.push({
+            date: d,
+            icon: field.icon,
+            label: field.label,
+            caseNumber,
+            caseId,
+            eventId: getExportEventId({ caseId, fieldKey: field.key }),
+            parties,
+            content,
+        });
+    });
+}
+
+export function collectTimelineEvents(cases: DemoCase[]): ExportTimelineEvent[] {
+    const events: ExportTimelineEvent[] = [];
+
+    cases.forEach((c) => {
+        const m = getMilestone(c) as unknown as Record<string, unknown>;
+        const f = getFinancial(c) as unknown as Record<string, unknown>;
+        const parties = buildParties(c.buyer_name, c.seller_name);
+
+        pushFieldEvents(events, MILESTONE_FIELDS, m, c.id, c.case_number, parties, false);
+        pushFieldEvents(events, APPOINTMENT_FIELDS, m, c.id, c.case_number, parties, true);
+        pushFieldEvents(events, TAX_DEADLINE_FIELDS, f, c.id, c.case_number, parties, false);
+
+        (c.todos_list ?? []).forEach((todo) => {
+            if (todo.is_deleted || todo.is_completed || !todo.due_date) return;
+            const d = new Date(todo.due_date);
+            if (Number.isNaN(d.getTime())) return;
+            const time = todo.due_date.includes('T') ? `⏰ ${format(d, 'HH:mm')}　` : '';
+            events.push({
+                date: d,
+                icon: '📝',
+                label: '待辦',
+                caseNumber: c.case_number,
+                caseId: c.id,
+                eventId: getExportEventId({ caseId: c.id, todoId: todo.id }),
+                parties,
+                content: `${time}${todo.content ?? ''}`.trim(),
+            });
+        });
+    });
+
+    return events;
+}
+
+function buildDayHeaderLabel(date: Date, today: Date): string {
+    const diff = Math.round((startOfLocalDay(date).getTime() - today.getTime()) / 86400000);
+    const md = `${date.getMonth() + 1}/${date.getDate()}（${WEEKDAY_TC[date.getDay()]}）`;
+    if (diff === 0) return `今天　${md}`;
+    if (diff === 1) return `明天　${md}`;
+    if (diff > 1 && diff <= 7) return `${diff}天後　${md}`;
+    return md;
+}
+
+export function buildTimelineSection(cases: DemoCase[], now: Date = new Date()): string {
+    const today = startOfLocalDay(now);
+
+    const upcoming = collectTimelineEvents(cases)
+        .filter((e) => startOfLocalDay(e.date).getTime() >= today.getTime())
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const groups = new Map<string, { date: Date; events: ExportTimelineEvent[] }>();
+    upcoming.forEach((e) => {
+        const dayStart = startOfLocalDay(e.date);
+        const key = format(dayStart, 'yyyy-MM-dd');
+        if (!groups.has(key)) groups.set(key, { date: dayStart, events: [] });
+        groups.get(key)!.events.push(e);
+    });
+
+    const todayKey = format(today, 'yyyy-MM-dd');
+    const dayBlocks = Array.from(groups.values())
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+        .map((g) => {
+            const dayKey = format(g.date, 'yyyy-MM-dd');
+            const isToday = dayKey === todayKey;
+            const header = `<div class="timeline-day${isToday ? ' timeline-day-today' : ''}" data-day="${escapeHtml(dayKey)}">${escapeHtml(buildDayHeaderLabel(g.date, today))}<span class="timeline-day-count">${g.events.length} 件</span></div>`;
+            const rows = g.events
+                .map((e) => {
+                    const partiesSpan = e.parties
+                        ? `<span class="timeline-parties">${escapeHtml(e.parties)}</span>`
+                        : '';
+                    const contentSpan = e.content
+                        ? `<span class="timeline-content">${escapeHtml(e.content)}</span>`
+                        : '';
+                    const eventDate = format(e.date, 'yyyy-MM-dd');
+                    return `<div class="timeline-item" data-event-id="${escapeHtml(e.eventId)}" data-event-date="${escapeHtml(eventDate)}" data-case-id="${escapeHtml(e.caseId)}">
+          <span class="timeline-icon">${e.icon}</span>
+          <span class="timeline-label">${escapeHtml(e.label)}</span>
           <span class="timeline-case">${escapeHtml(e.caseNumber)}</span>
-          <span class="timeline-milestone">${escapeHtml(e.label)}</span>
-        </div>`
-        )
+          ${partiesSpan}
+          ${contentSpan}
+        </div>`;
+                })
+                .join('\n');
+            return `${header}\n${rows}`;
+        })
         .join('\n');
 
     return `
     <section class="section">
       <h2>時程</h2>
       <div class="timeline-list">
-        ${items || '<p class="empty">（無即將到來的里程碑）</p>'}
+        ${dayBlocks || '<p class="empty">（無即將到來的事項）</p>'}
       </div>
     </section>`;
 }
@@ -331,14 +462,14 @@ const INLINE_CSS = `
   .section { margin-bottom: 2.5rem; }
   .section h2 {
     font-size: 1.1rem;
-    border-bottom: 2px solid #3b82f6;
+    border-bottom: 2px solid #2563eb;
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
-    color: #1e40af;
+    color: #1d4ed8;
   }
   table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: #fff; }
   th, td { border: 1px solid #e2e8f0; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
-  th { background: #f1f5f9; font-weight: 700; white-space: nowrap; }
+  th { background: #eff6ff; color: #1d4ed8; font-weight: 700; white-space: nowrap; }
   tr:nth-child(even) { background: #f8fafc; }
   .memo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
   .memo-card {
@@ -348,7 +479,30 @@ const INLINE_CSS = `
     padding: 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  .memo-case-number { font-weight: 700; color: #2563eb; margin-bottom: 0.5rem; }
+  .memo-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .memo-case-number { font-weight: 700; color: #2563eb; }
+  .memo-next {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    padding: 0.1rem 0.55rem;
+    white-space: nowrap;
+  }
+  .memo-parties {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
   .memo-block { margin-top: 0.75rem; }
   .memo-block:first-of-type { margin-top: 0; }
   .memo-label { font-size: 0.75rem; font-weight: 700; margin-bottom: 0.25rem; }
@@ -356,28 +510,191 @@ const INLINE_CSS = `
   .memo-pending .memo-label { color: #64748b; font-style: italic; }
   .memo-private .memo-label { color: #475569; }
   .memo-content { font-size: 0.9rem; white-space: pre-wrap; }
-  .timeline-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .timeline-list {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .timeline-day {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .timeline-day-today { background: #eff6ff; color: #1d4ed8; }
+  .timeline-day-count { font-weight: 400; opacity: 0.6; margin-left: 0.5rem; }
   .timeline-item {
     display: flex;
-    gap: 1rem;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+  .timeline-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
+  .timeline-label { width: 3.5rem; flex-shrink: 0; color: #64748b; font-size: 0.78rem; }
+  .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 5rem; }
+  .timeline-parties { color: #64748b; font-weight: 600; }
+  .timeline-content { color: #94a3b8; font-size: 0.8rem; }
+  .empty { color: #94a3b8; font-style: italic; padding: 0.5rem 1rem; display: block; }
+  /* ── 互動層（JS 注入後才出現）─────────────────────────── */
+  .export-toolbar {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .export-filterbar { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .export-filter-chip { display: inline-flex; align-items: center; gap: 0.15rem; }
+  .export-filter-del {
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid #fecdd3;
     background: #fff;
+    color: #e11d48;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+  .export-filter-del:hover { background: #fff1f2; }
+  .export-filter-btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid #bfdbfe;
+    background: #fff;
+    color: #1d4ed8;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+  .export-filter-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .export-people-add { display: flex; gap: 0.35rem; }
+  .export-add-input {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
+    min-width: 8rem;
   }
-  .timeline-date { font-weight: 700; color: #059669; min-width: 6rem; }
-  .timeline-case { font-weight: 700; color: #2563eb; min-width: 5rem; }
-  .timeline-milestone { color: #64748b; }
-  .empty { color: #94a3b8; font-style: italic; }
+  .export-add-btn, .export-download {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .export-download { margin-left: auto; font-weight: 700; }
+  .export-item-controls {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .export-assignee {
+    font-size: 0.78rem;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #1e293b;
+    background: #fff;
+  }
+  .export-done {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .timeline-item.export-item-done { opacity: 0.5; }
+  .timeline-item.export-item-done .timeline-case,
+  .timeline-item.export-item-done .timeline-content { text-decoration: line-through; }
+  /* 案件層級承辦人：表格指派欄與徽章（表格 + 備忘錄） */
+  .export-row-assignee-cell { white-space: nowrap; }
+  .export-row-assignee-cell .export-assignee { margin-bottom: 0.25rem; }
+  .export-assignee-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 9999px;
+    padding: 0.05rem 0.5rem;
+    white-space: nowrap;
+  }
+  .memo-card-head .export-memo-badge { margin-left: auto; }
+  /* ── 時程檢視切換 + 週曆／議程式（JS 注入後才出現）──────────── */
+  .export-view-switch { display: inline-flex; gap: 0.35rem; margin-bottom: 0.75rem; }
+  .export-view-btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.8rem;
+    border: 1px solid #bfdbfe;
+    background: #fff;
+    color: #1d4ed8;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+  .export-view-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .week-agenda {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .week-block { border-bottom: 2px solid #cbd5e1; }
+  .week-block:last-child { border-bottom: none; }
+  .week-day {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .week-day-today { background: #eff6ff; }
+  .week-day-label {
+    width: 5.5rem;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #475569;
+  }
+  .week-day-today .week-day-label { color: #1d4ed8; }
+  .week-day-events { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+  .week-day-events.week-day-empty { min-height: 1rem; }
+  .week-event {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+  .week-event .timeline-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
+  .week-event .timeline-label { width: 3.5rem; flex-shrink: 0; color: #64748b; font-size: 0.78rem; }
+  .week-event .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 5rem; }
+  .week-event .timeline-parties { color: #64748b; font-weight: 600; }
+  .week-event .timeline-content { color: #94a3b8; font-size: 0.8rem; }
+  .week-event .export-done { margin-left: auto; }
+  .week-event.export-item-done { opacity: 0.5; }
+  .week-event.export-item-done .timeline-case,
+  .week-event.export-item-done .timeline-content { text-decoration: line-through; }
 `;
 
 export function buildCasesHtml(cases: DemoCase[], exportedAt: Date = new Date()): string {
     const exportTime = format(exportedAt, 'yyyy/MM/dd HH:mm');
     const tableSection = buildTableSection(cases);
-    const memoSection = buildMemoSection(cases);
+    const memoSection = buildMemoSection(cases, exportedAt);
     const timelineSection = buildTimelineSection(cases, exportedAt);
+    const initialState = serializeInitialState();
 
     return `<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -393,6 +710,8 @@ export function buildCasesHtml(cases: DemoCase[], exportedAt: Date = new Date())
   ${tableSection}
   ${memoSection}
   ${timelineSection}
+  <script type="application/json" id="export-state">${initialState}</script>
+  ${buildInteractiveScript(initialState)}
 </body>
 </html>`;
 }

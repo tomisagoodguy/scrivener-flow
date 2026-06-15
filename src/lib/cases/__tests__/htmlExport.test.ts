@@ -123,6 +123,13 @@ describe('buildTableSection', () => {
         expect(html).toContain('陳&lt;x&gt;');
         expect(html).not.toContain('陳<x>');
     });
+
+    it('tags each row with its case id for the interactive layer', () => {
+        const html = buildTableSection([
+            makeCase({ id: 'case-xyz', case_number: 'B-002' }),
+        ]);
+        expect(html).toMatch(/<tr data-case-id="case-xyz">/);
+    });
 });
 
 describe('buildMemoSection', () => {
@@ -153,6 +160,13 @@ describe('buildMemoSection', () => {
         expect(html).toContain('PENDING-01');
         expect(html).toContain('📝 其他備忘');
         expect(html).toContain('記得追銀行');
+    });
+
+    it('tags each memo card with its case id for the interactive layer', () => {
+        const html = buildMemoSection([
+            makeCase({ id: 'case-memo', case_number: 'MEMO-01', notes: '備註' }),
+        ]);
+        expect(html).toMatch(/<div class="memo-card" data-case-id="case-memo">/);
     });
 });
 
@@ -185,6 +199,51 @@ describe('buildCasesHtml', () => {
         expect(html.toLowerCase()).toContain('charset="utf-8"');
         expect(html).toContain('<style>');
         // No external stylesheets / scripts / fonts
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
+
+    it('embeds the interactive state node and script without breaking self-containment', () => {
+        const html = buildCasesHtml([
+            makeCase({
+                id: 'INT-01',
+                case_number: 'INT-01',
+                notes: '備註',
+                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+            }),
+        ]);
+        // interactive state node + enhancement script are present
+        expect(html).toContain('<script type="application/json" id="export-state">');
+        expect(html).toContain('{"people":[],"assignments":{},"done":{}}');
+        expect(html).toMatch(/<script>[\s\S]*export-state[\s\S]*<\/script>/);
+        // timeline events carry stable data attributes for the interactive layer
+        expect(html).toContain('data-event-id="');
+        expect(html).toContain('data-event-date="');
+        expect(html).toContain('data-case-id="');
+        expect(html).toContain('data-day="');
+        // table rows and memo cards also carry case ids for cross-section sync
+        expect(html).toMatch(/<tr data-case-id="INT-01">/);
+        expect(html).toMatch(/<div class="memo-card" data-case-id="INT-01">/);
+        // still fully self-contained: no external resources pulled in
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
+
+    it('keeps the static timeline output as the list view with no injected week-agenda', () => {
+        const html = buildCasesHtml([
+            makeCase({
+                id: 'WK-01',
+                case_number: 'WK-01',
+                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+            }),
+        ]);
+        // static output is the day-grouped list, not a week-agenda container
+        expect(html).toContain('<div class="timeline-list">');
+        expect(html).not.toContain('class="export-ui week-agenda"');
+        expect(html).not.toMatch(/<button[^>]*class="[^"]*export-view-btn/);
+        // self-contained still holds
         expect(html).not.toMatch(/src="https?:/);
         expect(html).not.toMatch(/href="https?:/);
         expect(html).not.toContain('@import');

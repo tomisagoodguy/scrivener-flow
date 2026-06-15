@@ -1,0 +1,657 @@
+/**
+ * Interactive layer for the cases HTML export.
+ *
+ * Progressively enhances the otherwise-static, self-contained export with:
+ * assignment per event, a managed people list, person filtering, today-focus,
+ * completion toggling, and a "download assigned version" action that bakes the
+ * current people list + assignments back into a new self-contained `.html`.
+ *
+ * The exported document stays readable with JavaScript disabled; the controls
+ * here are injected at runtime.
+ */
+
+/** Minimal event shape needed to derive a stable interactive event id. */
+export interface InteractiveEvent {
+    caseId: string;
+    /** Milestone / appointment / tax field key, e.g. 'seal_date'. */
+    fieldKey?: string;
+    /** Todo id; when present the event is a todo event. */
+    todoId?: string;
+}
+
+export interface ExportState {
+    people: string[];
+    /**
+     * Per-case assignment: key = caseId, value = person name. A case has exactly
+     * one assignee, shared by its timeline event selectors and table row selector.
+     */
+    assignments: Record<string, string>;
+    /**
+     * Per-event completion: key = eventId (`caseId::fieldKey` or
+     * `caseId::todo::todoId`), value = done flag. Completion stays per event and
+     * is decoupled from the case-level assignment above.
+     */
+    done: Record<string, boolean>;
+}
+
+/**
+ * Stable event id used as the key for assignments and completion state.
+ * Milestone/appointment/tax events -> `caseId::fieldKey`.
+ * Todo events -> `caseId::todo::todoId`.
+ * Stable ids (not positional indexes) keep assignments mapped to the same
+ * event after the assigned version is downloaded and reopened.
+ */
+export function getExportEventId(event: InteractiveEvent): string {
+    if (event.todoId != null) return `${event.caseId}::todo::${event.todoId}`;
+    return `${event.caseId}::${event.fieldKey}`;
+}
+
+/**
+ * Serialize the initial (empty) interactive state for embedding in the
+ * `#export-state` node. Events are validated (each yields a stable id) but the
+ * initial state carries no people, assignments, or completion. Never throws —
+ * empty lists, missing events, and date-less events all return a valid state.
+ */
+export function serializeInitialState(events: InteractiveEvent[] = []): string {
+    const list = Array.isArray(events) ? events : [];
+    // Validate every event produces a non-empty stable id; date is irrelevant.
+    list.forEach((event) => {
+        getExportEventId(event);
+    });
+    const state: ExportState = { people: [], assignments: {}, done: {} };
+    return JSON.stringify(state);
+}
+
+// The runtime script is authored with string concatenation only (no template
+// literals, no ${...}) so it can be embedded verbatim without escaping.
+const SCRIPT_BODY = `(function () {
+  'use strict';
+
+  var EMBEDDED_STATE = __EMBEDDED_STATE__;
+  var STORAGE_KEY = 'sf-cases-export-done::' + (location.pathname || 'doc');
+
+  function emptyState() { return { people: [], assignments: {}, done: {} }; }
+
+  function cloneState(s) {
+    var base = emptyState();
+    if (s && typeof s === 'object') {
+      base.people = Array.isArray(s.people) ? s.people.slice() : [];
+      base.assignments = (s.assignments && typeof s.assignments === 'object')
+        ? JSON.parse(JSON.stringify(s.assignments)) : {};
+      base.done = (s.done && typeof s.done === 'object')
+        ? JSON.parse(JSON.stringify(s.done)) : {};
+    }
+    return base;
+  }
+
+  function readState() {
+    var node = document.getElementById('export-state');
+    if (node && node.textContent && node.textContent.trim()) {
+      try { return cloneState(JSON.parse(node.textContent)); }
+      catch (e) { return cloneState(EMBEDDED_STATE); }
+    }
+    return cloneState(EMBEDDED_STATE);
+  }
+
+  function loadLocalDone() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { var d = JSON.parse(raw); if (d && typeof d === 'object') return d; }
+    } catch (e) {}
+    return null;
+  }
+
+  function saveLocalDone(done) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(done)); } catch (e) {}
+  }
+
+  var WEEKDAY_TC = ['日', '一', '二', '三', '四', '五', '六'];
+
+  function todayKey() {
+    var n = new Date();
+    return dateKey(n);
+  }
+
+  function dateKey(d) {
+    var mm = String(d.getMonth() + 1); if (mm.length < 2) mm = '0' + mm;
+    var dd = String(d.getDate()); if (dd.length < 2) dd = '0' + dd;
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  // Parse a local 'yyyy-MM-dd' into a local-midnight Date (no timezone shift).
+  function parseLocalDate(s) {
+    var p = (s || '').split('-');
+    if (p.length < 3) return null;
+    var y = Number(p[0]), m = Number(p[1]), d = Number(p[2]);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
+  // Monday that starts the week containing the given date (week starts Monday).
+  function mondayOf(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var day = x.getDay(); // 0=Sun .. 6=Sat
+    var diff = (day === 0) ? -6 : (1 - day);
+    x.setDate(x.getDate() + diff);
+    return x;
+  }
+
+  function uniquePush(arr, name) {
+    name = (name || '').trim();
+    if (!name) return false;
+    for (var i = 0; i < arr.length; i++) { if (arr[i] === name) return false; }
+    arr.push(name);
+    return true;
+  }
+
+  var state = readState();
+  var localDone = loadLocalDone();
+  if (localDone) {
+    for (var k in localDone) {
+      if (Object.prototype.hasOwnProperty.call(localDone, k)) state.done[k] = localDone[k];
+    }
+  }
+
+  var items = Array.prototype.slice.call(document.querySelectorAll('.timeline-item'));
+  var tableRows = Array.prototype.slice.call(document.querySelectorAll('tr[data-case-id]'));
+  var memoCards = Array.prototype.slice.call(document.querySelectorAll('.memo-card[data-case-id]'));
+  // All assignee selectors (timeline + table) keyed by caseId.
+  var assigneeSelects = [];
+  // All "承辦：<name>" badges (table + memo) keyed by caseId.
+  var badges = [];
+  var currentFilter = '__all__';
+  var toolbar = null;
+  // Timeline view: 'list' (default static list) or 'week' (week-agenda).
+  var currentView = 'list';
+  var weekContainer = null;
+  var weekRendered = false;
+  var viewBtns = [];
+  // Completion controls keyed by eventId; both list and week events register so
+  // a single state.done[eventId] stays the single source of truth across views.
+  var doneRegistry = {};
+
+  function caseAssignee(caseId) { return (caseId && state.assignments[caseId]) || ''; }
+
+  function isCaseVisible(caseId) {
+    if (currentFilter === '__all__') return true;
+    return caseAssignee(caseId) === currentFilter;
+  }
+
+  function applyDoneStyle(item, done) {
+    if (done) item.classList.add('export-item-done');
+    else item.classList.remove('export-item-done');
+  }
+
+  // Register a completion checkbox + its node under an eventId and sync it to
+  // the current state. List and week events for the same eventId share state.
+  function registerDone(eventId, cb, item) {
+    if (!doneRegistry[eventId]) doneRegistry[eventId] = [];
+    doneRegistry[eventId].push({ cb: cb, item: item });
+    cb.checked = !!state.done[eventId];
+    applyDoneStyle(item, cb.checked);
+  }
+
+  // Single source of truth toggle: updates state, localStorage, and every
+  // registered checkbox + node for this eventId (across both timeline views).
+  function setDone(eventId, done) {
+    if (done) state.done[eventId] = true; else delete state.done[eventId];
+    saveLocalDone(state.done);
+    var arr = doneRegistry[eventId] || [];
+    for (var i = 0; i < arr.length; i++) {
+      arr[i].cb.checked = done;
+      applyDoneStyle(arr[i].item, done);
+    }
+  }
+
+  function refreshDayHeaders() {
+    var list = document.querySelector('.timeline-list');
+    if (!list) return;
+    var children = Array.prototype.slice.call(list.children);
+    var currentHeader = null, visibleCount = 0;
+    function flush() { if (currentHeader) currentHeader.style.display = visibleCount > 0 ? '' : 'none'; }
+    for (var i = 0; i < children.length; i++) {
+      var ch = children[i];
+      if (ch.classList && ch.classList.contains('timeline-day')) { flush(); currentHeader = ch; visibleCount = 0; }
+      else if (ch.classList && ch.classList.contains('timeline-item')) { if (ch.style.display !== 'none') visibleCount++; }
+    }
+    flush();
+  }
+
+  // Filter all three sections by each item's caseId + the per-case assignment.
+  function applyFilter() {
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      it.style.display = isCaseVisible(it.getAttribute('data-case-id')) ? '' : 'none';
+    }
+    for (var r = 0; r < tableRows.length; r++) {
+      var row = tableRows[r];
+      row.style.display = isCaseVisible(row.getAttribute('data-case-id')) ? '' : 'none';
+    }
+    for (var m = 0; m < memoCards.length; m++) {
+      var card = memoCards[m];
+      card.style.display = isCaseVisible(card.getAttribute('data-case-id')) ? '' : 'none';
+    }
+    // Week-agenda events share the same per-case visibility rule. Queried live
+    // because the week DOM is built lazily on first switch to the week view.
+    var weekEvents = document.querySelectorAll('.week-event');
+    for (var w = 0; w < weekEvents.length; w++) {
+      var we = weekEvents[w];
+      we.style.display = isCaseVisible(we.getAttribute('data-case-id')) ? '' : 'none';
+    }
+    refreshDayHeaders();
+  }
+
+  function applyToday() {
+    var tk = todayKey();
+    var headers = document.querySelectorAll('.timeline-day');
+    for (var i = 0; i < headers.length; i++) {
+      var h = headers[i];
+      if (h.getAttribute('data-day') === tk) h.classList.add('timeline-day-today');
+      else h.classList.remove('timeline-day-today');
+    }
+  }
+
+  function fillSelect(sel, current) {
+    sel.innerHTML = '';
+    var opt0 = document.createElement('option');
+    opt0.value = ''; opt0.textContent = '未指派';
+    sel.appendChild(opt0);
+    for (var j = 0; j < state.people.length; j++) {
+      var o = document.createElement('option');
+      o.value = state.people[j]; o.textContent = state.people[j];
+      if (state.people[j] === current) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.value = current;
+  }
+
+  function updateSelects() {
+    for (var i = 0; i < assigneeSelects.length; i++) {
+      var c = assigneeSelects[i];
+      fillSelect(c.sel, caseAssignee(c.caseId));
+    }
+  }
+
+  function updateBadges() {
+    for (var i = 0; i < badges.length; i++) {
+      var b = badges[i];
+      var name = caseAssignee(b.caseId);
+      if (name) { b.el.textContent = '承辦：' + name; b.el.style.display = ''; }
+      else { b.el.textContent = ''; b.el.style.display = 'none'; }
+    }
+  }
+
+  // Single entry point for any assignment change (timeline or table selector).
+  function applyAssignment(caseId, person) {
+    if (!caseId) return;
+    if (person) state.assignments[caseId] = person; else delete state.assignments[caseId];
+    updateSelects();
+    updateBadges();
+    applyFilter();
+  }
+
+  // Remove a person: drop from the list, unassign every case held by them,
+  // reset the filter if it pointed at them, and refresh all three sections.
+  function deletePerson(name) {
+    var idx = state.people.indexOf(name);
+    if (idx === -1) return;
+    state.people.splice(idx, 1);
+    for (var k in state.assignments) {
+      if (Object.prototype.hasOwnProperty.call(state.assignments, k) && state.assignments[k] === name) {
+        delete state.assignments[k];
+      }
+    }
+    if (currentFilter === name) currentFilter = '__all__';
+    renderPeople();
+    applyFilter();
+  }
+
+  function renderFilterBar(filterBar) {
+    filterBar.innerHTML = '';
+    var labels = ['__all__'].concat(state.people);
+    for (var i = 0; i < labels.length; i++) {
+      (function (val) {
+        var isAll = val === '__all__';
+        var chip = document.createElement('span');
+        chip.className = 'export-filter-chip';
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'export-filter-btn' + (currentFilter === val ? ' active' : '');
+        btn.textContent = isAll ? '全部' : val;
+        btn.addEventListener('click', function () { currentFilter = val; renderFilterBar(filterBar); applyFilter(); });
+        chip.appendChild(btn);
+
+        if (!isAll) {
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'export-filter-del';
+          del.textContent = '×';
+          del.title = '刪除 ' + val;
+          del.addEventListener('click', function () { deletePerson(val); });
+          chip.appendChild(del);
+        }
+
+        filterBar.appendChild(chip);
+      })(labels[i]);
+    }
+  }
+
+  function renderPeople() {
+    if (toolbar) renderFilterBar(toolbar.filterBar);
+    updateSelects();
+    updateBadges();
+  }
+
+  function makeAssigneeSelect(caseId) {
+    var sel = document.createElement('select');
+    sel.className = 'export-assignee';
+    sel.addEventListener('change', function () { applyAssignment(caseId, sel.value); });
+    assigneeSelects.push({ caseId: caseId, sel: sel });
+    return sel;
+  }
+
+  function makeBadge(caseId, extraClass) {
+    var b = document.createElement('span');
+    b.className = 'export-ui export-assignee-badge' + (extraClass ? ' ' + extraClass : '');
+    b.style.display = 'none';
+    badges.push({ caseId: caseId, el: b });
+    return b;
+  }
+
+  function downloadAssigned() {
+    var clone = document.documentElement.cloneNode(true);
+    var injected = clone.querySelectorAll('.export-ui');
+    for (var i = 0; i < injected.length; i++) {
+      if (injected[i].parentNode) injected[i].parentNode.removeChild(injected[i]);
+    }
+    var stateNode = clone.querySelector('#export-state');
+    if (stateNode) stateNode.textContent = JSON.stringify(state);
+    var html = '<!DOCTYPE html>\\n' + clone.outerHTML;
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'cases-assigned-' + todayKey() + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+  }
+
+  function buildToolbar() {
+    // Anchor above the first section so the toolbar (filter + add-person +
+    // download) sits at the very top — assignment now drives all three sections,
+    // and enhancement no longer depends on the timeline section existing.
+    var anchor = document.querySelector('.section');
+    var parent = anchor ? anchor.parentNode : null;
+    if (!anchor || !parent) return null;
+
+    var bar = document.createElement('div');
+    bar.className = 'export-ui export-toolbar';
+
+    var filterBar = document.createElement('div');
+    filterBar.className = 'export-filterbar';
+    bar.appendChild(filterBar);
+
+    var addWrap = document.createElement('div');
+    addWrap.className = 'export-people-add';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '新增承辦人…';
+    input.className = 'export-add-input';
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'export-add-btn';
+    addBtn.textContent = '新增';
+    addWrap.appendChild(input);
+    addWrap.appendChild(addBtn);
+    bar.appendChild(addWrap);
+
+    var dl = document.createElement('button');
+    dl.type = 'button';
+    dl.className = 'export-download';
+    dl.textContent = '📥 下載已指派版本';
+    bar.appendChild(dl);
+
+    parent.insertBefore(bar, anchor);
+
+    addBtn.addEventListener('click', function () {
+      if (uniquePush(state.people, input.value)) { input.value = ''; renderPeople(); }
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+    });
+    dl.addEventListener('click', downloadAssigned);
+
+    return { filterBar: filterBar };
+  }
+
+  function buildItemControls() {
+    for (var i = 0; i < items.length; i++) {
+      (function (item) {
+        var eventId = item.getAttribute('data-event-id');
+        if (!eventId) return;
+        var caseId = item.getAttribute('data-case-id');
+
+        var wrap = document.createElement('span');
+        wrap.className = 'export-ui export-item-controls';
+
+        // Assignment is per case; this selector shares state with the table row.
+        var sel = makeAssigneeSelect(caseId);
+        wrap.appendChild(sel);
+
+        var doneLabel = document.createElement('label');
+        doneLabel.className = 'export-done';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!state.done[eventId];
+        doneLabel.appendChild(cb);
+        var doneTxt = document.createElement('span');
+        doneTxt.textContent = '完成';
+        doneLabel.appendChild(doneTxt);
+        wrap.appendChild(doneLabel);
+
+        item.appendChild(wrap);
+        registerDone(eventId, cb, item);
+
+        // Completion stays per event (eventId), decoupled from assignment, and
+        // is mirrored to any week-agenda event sharing the same eventId.
+        cb.addEventListener('change', function () {
+          setDone(eventId, cb.checked);
+        });
+      })(items[i]);
+    }
+  }
+
+  // ── Week-agenda view ────────────────────────────────────────────────
+  // Rebuild a single week-agenda event from its list .timeline-item, reusing
+  // the icon/label/case/parties/content spans (but not the list-only controls).
+  function makeWeekEvent(src) {
+    var caseId = src.getAttribute('data-case-id');
+    var eventId = src.getAttribute('data-event-id');
+    var node = document.createElement('div');
+    node.className = 'export-ui week-event';
+    node.setAttribute('data-case-id', caseId);
+    node.setAttribute('data-event-id', eventId);
+
+    var spans = src.querySelectorAll('.timeline-icon, .timeline-label, .timeline-case, .timeline-parties, .timeline-content');
+    for (var i = 0; i < spans.length; i++) node.appendChild(spans[i].cloneNode(true));
+
+    var doneLabel = document.createElement('label');
+    doneLabel.className = 'export-done';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    doneLabel.appendChild(cb);
+    var doneTxt = document.createElement('span');
+    doneTxt.textContent = '完成';
+    doneLabel.appendChild(doneTxt);
+    node.appendChild(doneLabel);
+
+    registerDone(eventId, cb, node);
+    cb.addEventListener('change', function () { setDone(eventId, cb.checked); });
+    return node;
+  }
+
+  // Rebuild the week-agenda from the existing .timeline-item nodes: one row per
+  // day, grouped into weeks starting Monday, covering this week through the week
+  // of the last upcoming event. Empty days render as empty rows; today is marked.
+  function renderWeekAgenda() {
+    if (!weekContainer) return;
+    weekContainer.innerHTML = '';
+
+    var byDate = {};
+    var maxDate = null;
+    for (var i = 0; i < items.length; i++) {
+      var dk = items[i].getAttribute('data-event-date');
+      var pd = parseLocalDate(dk);
+      if (!pd) continue;
+      if (!byDate[dk]) byDate[dk] = [];
+      byDate[dk].push(items[i]);
+      if (!maxDate || pd.getTime() > maxDate.getTime()) maxDate = pd;
+    }
+
+    var tk = todayKey();
+    var startMon = mondayOf(new Date());
+    var endRef = maxDate || startMon;
+    var endMon = mondayOf(endRef);
+    var lastDay = new Date(endMon.getFullYear(), endMon.getMonth(), endMon.getDate() + 6);
+
+    var cursor = new Date(startMon.getFullYear(), startMon.getMonth(), startMon.getDate());
+    var weekEl = null;
+    while (cursor.getTime() <= lastDay.getTime()) {
+      var dow = cursor.getDay();
+      if (dow === 1 || !weekEl) {
+        weekEl = document.createElement('div');
+        weekEl.className = 'export-ui week-block';
+        weekContainer.appendChild(weekEl);
+      }
+
+      var key = dateKey(cursor);
+      var dayRow = document.createElement('div');
+      dayRow.className = 'export-ui week-day' + (key === tk ? ' week-day-today' : '');
+      dayRow.setAttribute('data-day', key);
+
+      var lbl = document.createElement('div');
+      lbl.className = 'week-day-label';
+      lbl.textContent = (cursor.getMonth() + 1) + '/' + cursor.getDate() + '（' + WEEKDAY_TC[dow] + '）';
+      dayRow.appendChild(lbl);
+
+      var eventsWrap = document.createElement('div');
+      eventsWrap.className = 'week-day-events';
+      var dayEvents = byDate[key] || [];
+      if (!dayEvents.length) {
+        eventsWrap.className += ' week-day-empty';
+      } else {
+        for (var e = 0; e < dayEvents.length; e++) eventsWrap.appendChild(makeWeekEvent(dayEvents[e]));
+      }
+      dayRow.appendChild(eventsWrap);
+      weekEl.appendChild(dayRow);
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  // Toggle between the static list and the lazily-built week-agenda container.
+  function setView(view) {
+    currentView = (view === 'week') ? 'week' : 'list';
+    var list = document.querySelector('.timeline-list');
+    if (currentView === 'week') {
+      if (!weekRendered) { renderWeekAgenda(); weekRendered = true; applyFilter(); }
+      if (list) list.style.display = 'none';
+      if (weekContainer) weekContainer.style.display = '';
+    } else {
+      if (list) list.style.display = '';
+      if (weekContainer) weekContainer.style.display = 'none';
+    }
+    for (var i = 0; i < viewBtns.length; i++) {
+      if (viewBtns[i].view === currentView) viewBtns[i].el.classList.add('active');
+      else viewBtns[i].el.classList.remove('active');
+    }
+  }
+
+  // Inject the list/week switcher and the (hidden) week-agenda container around
+  // the timeline list. All injected nodes carry export-ui so the downloaded
+  // version strips them and the script rebuilds them on reopen.
+  function buildViewSwitcher() {
+    var list = document.querySelector('.timeline-list');
+    if (!list || !list.parentNode) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'export-ui export-view-switch';
+    var defs = [{ view: 'list', label: '條列' }, { view: 'week', label: '週曆' }];
+    for (var i = 0; i < defs.length; i++) {
+      (function (def) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'export-view-btn' + (def.view === currentView ? ' active' : '');
+        btn.textContent = def.label;
+        btn.addEventListener('click', function () { setView(def.view); });
+        bar.appendChild(btn);
+        viewBtns.push({ view: def.view, el: btn });
+      })(defs[i]);
+    }
+    list.parentNode.insertBefore(bar, list);
+
+    weekContainer = document.createElement('div');
+    weekContainer.className = 'export-ui week-agenda';
+    weekContainer.style.display = 'none';
+    list.parentNode.insertBefore(weekContainer, list.nextSibling);
+  }
+
+  function buildTableControls() {
+    if (!tableRows.length) return;
+    var table = tableRows[0].closest ? tableRows[0].closest('table') : null;
+    if (table) {
+      var headRow = table.querySelector('thead tr');
+      if (headRow) {
+        var th = document.createElement('th');
+        th.className = 'export-ui';
+        th.textContent = '承辦人';
+        headRow.appendChild(th);
+      }
+    }
+    for (var i = 0; i < tableRows.length; i++) {
+      (function (row) {
+        var caseId = row.getAttribute('data-case-id');
+        var td = document.createElement('td');
+        td.className = 'export-ui export-row-assignee-cell';
+        td.appendChild(makeAssigneeSelect(caseId));
+        td.appendChild(document.createElement('br'));
+        td.appendChild(makeBadge(caseId, 'export-row-badge'));
+        row.appendChild(td);
+      })(tableRows[i]);
+    }
+  }
+
+  function buildMemoControls() {
+    for (var i = 0; i < memoCards.length; i++) {
+      (function (card) {
+        var caseId = card.getAttribute('data-case-id');
+        var head = card.querySelector('.memo-card-head') || card;
+        head.appendChild(makeBadge(caseId, 'export-memo-badge'));
+      })(memoCards[i]);
+    }
+  }
+
+  toolbar = buildToolbar();
+  if (toolbar) {
+    buildItemControls();
+    buildTableControls();
+    buildMemoControls();
+    buildViewSwitcher();
+    renderPeople();
+    applyToday();
+    applyFilter();
+  }
+})();`;
+
+/**
+ * Build the inline `<script>` (as a string) that hydrates from the embedded
+ * `#export-state` node and enhances the export. The passed state is embedded as
+ * a JS fallback used when the state node is missing or malformed.
+ */
+export function buildInteractiveScript(state: string = serializeInitialState()): string {
+    const body = SCRIPT_BODY.replace('__EMBEDDED_STATE__', () => state);
+    return `<script>\n${body}\n</script>`;
+}
