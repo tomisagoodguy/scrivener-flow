@@ -67,6 +67,12 @@ class FinancialsSync:
             if not skip_broker:
                 logger.info("--- 同步券商交易數據 ---")
                 raw_buy, raw_sell, raw_close = self.finlab.get_broker_data()
+                # 防呆：抓到空券商資料（多為 FinLab 認證/配額失敗）必須中止，
+                # 不可讓流程靜默寫 0 筆後回報「✅ 同步完成」、CI 綠燈、無告警
+                if raw_buy.empty or raw_sell.empty:
+                    raise RuntimeError(
+                        "券商資料為空，疑似 FinLab 認證或配額失敗；中止同步以避免靜默成功"
+                    )
                 broker_records = BrokerProcessor.process(raw_buy, raw_sell, raw_close, stock_list, days=days)
                 self.storage.upsert_broker_transactions(broker_records)
             else:

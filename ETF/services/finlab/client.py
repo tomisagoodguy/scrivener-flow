@@ -98,6 +98,11 @@ class FinlabClient:
             self._cache[key] = df
             return df
         except Exception as e:
+            # 認證失敗不可當成「空資料」吞掉，否則上游會靜默寫 0 筆並回報成功
+            msg = str(e)
+            if "Login failed" in msg or "SESSION_EXPIRED" in msg or "login" in msg.lower():
+                logger.error(f"Finlab 認證失敗，無法獲取 '{key}' ({finlab_cmd}): {e}")
+                raise
             logger.error(f"Failed to fetch data '{key}' ({finlab_cmd}): {e}")
             return pd.DataFrame()
     
