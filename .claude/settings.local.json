@@ -146,7 +146,16 @@
       "PowerShell(spectra status --change \"factor-ic-dashboard\" --json)",
       "Bash(spectra show *)",
       "Bash(spectra --help)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\\) for f in d.get\\('contextFiles',{}\\).values\\(\\)]\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\\) for f in d.get\\('contextFiles',{}\\).values\\(\\)]\")",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 1)",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 2)",
+      "PowerShell(yarn test --silent -- --testPathPatterns=\"exportInteractive.integration\" 2>&1)",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 3)",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 4)",
+      "PowerShell(yarn test --silent -- --testPathPatterns=\"exportInteractive.integration\" -t \"hides a whole day group\" 2>&1)",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 5)",
+      "PowerShell(spectra task done --change \"cases-export-timeline-density\" 6)",
+      "PowerShell(yarn test --silent -- --testPathPatterns=\"htmlExport\" -t \"provides a print layout\" 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\Users\\user\\Documents\\GitHub\\scrivener-flow\\openspec",

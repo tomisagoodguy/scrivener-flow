@@ -20,7 +20,12 @@ export const useWeather = () => {
         const fetchWeather = async () => {
             try {
                 const res = await fetch('/api/weather');
-                if (!res.ok) throw new Error('API fetch error');
+                if (!res.ok) {
+                    // 天氣為非必要的裝飾性 widget，上游暫時失敗時靜默降級即可，
+                    // 不丟出 error（避免 Next.js dev 將 console.error 提升為錯誤覆蓋層）。
+                    console.warn(`Weather widget unavailable (HTTP ${res.status})`);
+                    return;
+                }
 
                 const data = await res.json();
                 if (data.current_weather) {
@@ -30,7 +35,7 @@ export const useWeather = () => {
                     });
                 }
             } catch (e) {
-                console.error('Weather fetch failed', e);
+                console.warn('Weather fetch failed', e);
             }
         };
 
