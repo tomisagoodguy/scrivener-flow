@@ -387,6 +387,39 @@ describe('exported HTML interactive layer (case-level assignment sync)', () => {
         expect(memoCardByCaseId('cb').style.display).not.toBe('none');
     });
 
+    it('hides a whole day group when filtering leaves it with no visible events', () => {
+        addPerson('王助理');
+
+        // CASE-A (today) → 王助理; CASE-B (+3 days) left unassigned. The two events
+        // fall on different days, so each lives in its own .timeline-day-group.
+        const selA = rowSelect('ca');
+        selA.value = '王助理';
+        selA.dispatchEvent(new Event('change'));
+
+        const groupOf = (eventId: string): HTMLElement => {
+            const group = itemByEventId(eventId).closest('.timeline-day-group') as HTMLElement;
+            if (!group) throw new Error(`day group not found for ${eventId}`);
+            return group;
+        };
+
+        const personBtn = Array.from(
+            document.querySelectorAll<HTMLButtonElement>('.export-filter-btn')
+        ).find((b) => b.textContent === '王助理')!;
+        personBtn.click();
+
+        // CASE-A's day group stays visible; CASE-B's day group (no visible events)
+        // is hidden as a whole — not just its header — so no empty grid cell remains.
+        expect(groupOf('ca::seal_date').style.display).not.toBe('none');
+        expect(groupOf('cb::seal_date').style.display).toBe('none');
+
+        // switching back to 全部 restores the hidden day group
+        const allBtn = Array.from(
+            document.querySelectorAll<HTMLButtonElement>('.export-filter-btn')
+        ).find((b) => b.textContent === '全部')!;
+        allBtn.click();
+        expect(groupOf('cb::seal_date').style.display).not.toBe('none');
+    });
+
     it('downloads a case-level assigned version and restores all sections on reopen', async () => {
         addPerson('王助理');
         const sel = rowSelect('ca');
@@ -432,7 +465,7 @@ describe('exported HTML interactive layer (case-level assignment sync)', () => {
     });
 });
 
-describe('exported HTML interactive layer (timeline week-agenda view)', () => {
+describe('exported HTML interactive layer (timeline calendar grid view)', () => {
     beforeEach(() => {
         try {
             localStorage.clear();
@@ -443,7 +476,7 @@ describe('exported HTML interactive layer (timeline week-agenda view)', () => {
         runInteractiveScript();
     });
 
-    // Task 1.1: default list view + view switcher present; week-agenda groups by day.
+    // Default list view + view switcher present; calendar built lazily on switch.
     it('defaults to the list view and offers a list/week switcher', () => {
         const list = document.querySelector<HTMLElement>('.timeline-list')!;
         expect(list).not.toBeNull();
@@ -461,26 +494,65 @@ describe('exported HTML interactive layer (timeline week-agenda view)', () => {
         expect(week.style.display).toBe('none');
     });
 
-    it('switching to week-agenda shows day rows and tags events with case/event ids', () => {
+    // Task 2.1(a)(b): each week is a 7-column .week-grid whose direct children are
+    // exactly 7 .week-cell (Mon..Sun); each cell carries data-day; only today's
+    // cell is marked .week-cell-today.
+    it('switching to week renders a 7-column grid of week-cells with data-day', () => {
         switchToWeek();
 
         const week = document.querySelector<HTMLElement>('.week-agenda')!;
         expect(week.style.display).not.toBe('none');
         expect(document.querySelector<HTMLElement>('.timeline-list')!.style.display).toBe('none');
 
-        // one row per day on a weekly axis
-        expect(document.querySelectorAll('.week-day').length).toBeGreaterThan(0);
+        // at least one week grid; each grid has exactly 7 direct .week-cell children
+        const grids = Array.from(document.querySelectorAll<HTMLElement>('.week-grid'));
+        expect(grids.length).toBeGreaterThan(0);
+        for (const grid of grids) {
+            const directCells = Array.from(grid.children).filter((c) =>
+                c.classList.contains('week-cell')
+            );
+            expect(directCells.length).toBe(7);
+            expect(grid.children.length).toBe(7);
+        }
 
-        // week events carry the same key space as list events
+        // every cell carries a data-day; exactly the today cell is highlighted
+        const cells = Array.from(document.querySelectorAll<HTMLElement>('.week-cell'));
+        for (const cell of cells) {
+            expect(cell.getAttribute('data-day')).toBeTruthy();
+        }
+        const todayCell = document.querySelector<HTMLElement>(`.week-cell[data-day="${todayStr}"]`)!;
+        expect(todayCell).not.toBeNull();
+        expect(todayCell.classList.contains('week-cell-today')).toBe(true);
+        const otherCell = document.querySelector<HTMLElement>(`.week-cell[data-day="${plus3Str}"]`)!;
+        expect(otherCell.classList.contains('week-cell-today')).toBe(false);
+    });
+
+    // Task 2.1(c)(d): event chips keep data-case-id/data-event-id and sit inside
+    // their own date's cell; days without events are empty cells (not full rows).
+    it('places each event chip inside the cell for its own date and leaves empty days as empty cells', () => {
+        switchToWeek();
+
         const ev = weekEventByEventId('ca::seal_date');
         expect(ev.getAttribute('data-case-id')).toBe('ca');
         expect(ev.getAttribute('data-event-id')).toBe('ca::seal_date');
-        // and the same icon/label/case content as the list
-        expect(ev.querySelector('.timeline-case')!.textContent).toBe('CASE-A');
+        // chip shows the buyer/seller names (not the hard-to-read case number),
+        // while case identity is still carried via data-case-id for sync
+        expect(ev.querySelector('.timeline-parties')!.textContent).toBe('王小明 / 李大華');
+        expect(ev.querySelector('.timeline-case')).toBeNull();
+        // chip lives inside the cell whose data-day matches its event date (today)
+        const hostCell = ev.closest('.week-cell') as HTMLElement;
+        expect(hostCell).not.toBeNull();
+        expect(hostCell.getAttribute('data-day')).toBe(todayStr);
+
+        // a day known to have no events renders as a cell with no .week-event
+        const plus1Str = ymd(new Date(today.getTime() + 1 * 86400000));
+        const emptyCell = document.querySelector<HTMLElement>(`.week-cell[data-day="${plus1Str}"]`)!;
+        expect(emptyCell).not.toBeNull();
+        expect(emptyCell.querySelectorAll('.week-event').length).toBe(0);
     });
 
-    // Task 2.1: week-agenda reuses case assignment filtering.
-    it('filters week-agenda events by assigned person and restores on 全部', () => {
+    // Week calendar reuses case assignment filtering (chip-level visibility).
+    it('filters calendar event chips by assigned person and restores on 全部', () => {
         addPersonViaToolbar('王助理');
         const sel = itemByEventId('ca::seal_date').querySelector<HTMLSelectElement>(
             '.export-assignee'
@@ -506,8 +578,8 @@ describe('exported HTML interactive layer (timeline week-agenda view)', () => {
         expect(weekEventByEventId('cb::seal_date').style.display).not.toBe('none');
     });
 
-    // Task 2.2: completion in week-agenda mirrors the list (shared eventId + localStorage).
-    it('completing an event from week-agenda marks the same event in the list', () => {
+    // Completion in the calendar mirrors the list (shared eventId + localStorage).
+    it('completing an event from the calendar marks the same event in the list', () => {
         switchToWeek();
 
         const wcb = weekEventByEventId('ca::seal_date').querySelector<HTMLInputElement>(
@@ -531,22 +603,9 @@ describe('exported HTML interactive layer (timeline week-agenda view)', () => {
         // the week event itself carries the completion styling
         expect(weekEventByEventId('ca::seal_date').classList.contains('export-item-done')).toBe(true);
     });
-
-    // Task 2.3: today's day row is highlighted by the local open date.
-    it('highlights the day row matching the local open date', () => {
-        switchToWeek();
-
-        const todayRow = document.querySelector(`.week-day[data-day="${todayStr}"]`);
-        expect(todayRow).not.toBeNull();
-        expect(todayRow!.classList.contains('week-day-today')).toBe(true);
-
-        const otherRow = document.querySelector(`.week-day[data-day="${plus3Str}"]`);
-        expect(otherRow).not.toBeNull();
-        expect(otherRow!.classList.contains('week-day-today')).toBe(false);
-    });
 });
 
-// Task 4.1: with JavaScript disabled (script never runs) the timeline is the static list.
+// With JavaScript disabled (script never runs) the timeline is the static list.
 describe('exported HTML timeline without the interactive script (JS disabled)', () => {
     beforeEach(() => {
         try {
@@ -566,6 +625,7 @@ describe('exported HTML timeline without the interactive script (JS disabled)', 
         expect(document.querySelectorAll('.export-ui').length).toBe(0);
         expect(document.querySelectorAll('.export-view-btn').length).toBe(0);
         expect(document.querySelectorAll('.week-agenda').length).toBe(0);
-        expect(document.querySelectorAll('.week-day').length).toBe(0);
+        expect(document.querySelectorAll('.week-grid').length).toBe(0);
+        expect(document.querySelectorAll('.week-cell').length).toBe(0);
     });
 });

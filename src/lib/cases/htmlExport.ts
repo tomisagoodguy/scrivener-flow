@@ -435,7 +435,7 @@ export function buildTimelineSection(cases: DemoCase[], now: Date = new Date()):
         </div>`;
                 })
                 .join('\n');
-            return `${header}\n${rows}`;
+            return `<div class="timeline-day-group">\n${header}\n${rows}\n</div>`;
         })
         .join('\n');
 
@@ -512,36 +512,45 @@ const INLINE_CSS = `
   .memo-content { font-size: 0.9rem; white-space: pre-wrap; }
   /* 收合：螢幕只藏內容節點，保留標籤列與「展開」鈕可見可點（互動層注入 export-collapsed） */
   .memo-block.export-collapsed .memo-content { display: none; }
+  /* 兩欄並排日群組：橫向利用寬度、縱向高度約減半。每個日群組為一個原子
+     grid item（含邊框與圓角），break-inside: avoid 避免被切到不同欄。 */
   .timeline-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    align-items: start;
+  }
+  .timeline-day-group {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
     background: #fff;
+    break-inside: avoid;
   }
   .timeline-day {
     background: #f1f5f9;
     color: #475569;
     font-weight: 700;
-    font-size: 0.82rem;
-    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
     border-bottom: 1px solid #e2e8f0;
   }
   .timeline-day-today { background: #eff6ff; color: #1d4ed8; }
-  .timeline-day-count { font-weight: 400; opacity: 0.6; margin-left: 0.5rem; }
+  .timeline-day-count { font-weight: 400; opacity: 0.6; margin-left: 0.4rem; }
   .timeline-item {
     display: flex;
     align-items: baseline;
-    gap: 0.6rem;
-    padding: 0.4rem 1rem;
+    gap: 0.45rem;
+    padding: 0.25rem 0.7rem;
     border-bottom: 1px solid #f1f5f9;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-align: left;
   }
-  .timeline-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
-  .timeline-label { width: 3.5rem; flex-shrink: 0; color: #64748b; font-size: 0.78rem; }
-  .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 5rem; }
+  .timeline-icon { width: 1.1rem; text-align: center; flex-shrink: 0; }
+  .timeline-label { width: 3rem; flex-shrink: 0; color: #64748b; font-size: 0.74rem; }
+  .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 4.5rem; }
   .timeline-parties { color: #64748b; font-weight: 600; }
-  .timeline-content { color: #94a3b8; font-size: 0.8rem; }
+  .timeline-content { color: #94a3b8; font-size: 0.76rem; }
   .empty { color: #94a3b8; font-style: italic; padding: 0.5rem 1rem; display: block; }
   /* ── 互動層（JS 注入後才出現）─────────────────────────── */
   .export-toolbar {
@@ -594,7 +603,6 @@ const INLINE_CSS = `
   }
   .export-download { margin-left: auto; font-weight: 700; }
   .export-item-controls {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -677,51 +685,54 @@ const INLINE_CSS = `
     overflow: hidden;
     background: #fff;
   }
-  .week-block { border-bottom: 2px solid #cbd5e1; }
-  .week-block:last-child { border-bottom: none; }
-  .week-day {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.4rem 1rem;
-    border-bottom: 1px solid #f1f5f9;
+  /* 7 欄月曆方格：每週一列 .week-grid（週一～週日），每格一天 .week-cell。
+     空白日為空的小方格、不佔整列；事件以緊湊 chip 呈現。 */
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 2px solid #cbd5e1;
   }
-  .week-day-today { background: #eff6ff; }
-  .week-day-label {
-    width: 5.5rem;
-    flex-shrink: 0;
+  .week-grid:last-child { border-bottom: none; }
+  .week-cell {
+    min-height: 3.5rem;
+    padding: 0.3rem;
+    border-right: 1px solid #f1f5f9;
+    break-inside: avoid;
+  }
+  .week-cell:nth-child(7n) { border-right: none; }
+  .week-cell-today { background: #eff6ff; }
+  .week-cell-date {
+    font-size: 0.7rem;
     font-weight: 700;
-    font-size: 0.8rem;
     color: #475569;
+    margin-bottom: 0.2rem;
   }
-  .week-day-today .week-day-label { color: #1d4ed8; }
-  .week-day-events { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
-  .week-day-events.week-day-empty { min-height: 1rem; }
+  .week-cell-today .week-cell-date { color: #1d4ed8; }
   .week-event {
     display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    font-size: 0.85rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    font-size: 0.72rem;
+    margin-bottom: 0.2rem;
     text-align: left;
   }
-  .week-event .timeline-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
-  .week-event .timeline-label { width: 3.5rem; flex-shrink: 0; color: #64748b; font-size: 0.78rem; }
-  .week-event .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 5rem; }
-  .week-event .timeline-parties { color: #64748b; font-weight: 600; }
-  .week-event .timeline-content { color: #94a3b8; font-size: 0.8rem; }
-  .week-event .export-done { margin-left: auto; }
+  .week-event .timeline-icon { width: auto; flex-shrink: 0; }
+  .week-event .timeline-label { width: auto; flex-shrink: 0; color: #64748b; font-size: 0.66rem; }
+  .week-event .timeline-parties { font-weight: 700; color: #1e293b; }
+  .week-event .export-done { margin-left: auto; font-size: 0.66rem; }
   .week-event.export-item-done { opacity: 0.5; }
-  .week-event.export-item-done .timeline-case,
-  .week-event.export-item-done .timeline-content { text-decoration: line-through; }
+  .week-event.export-item-done .timeline-parties { text-decoration: line-through; }
   /* ── 紙本列印（僅列印情境生效，不影響螢幕與互動）──────────── */
   @media print {
     /* 互動層注入節點一律帶 export-ui，列印時全部隱藏 */
     .export-ui { display: none !important; }
     /* 收合區塊列印時整塊隱藏（含已空的標籤標題）；展開鈕本身為 export-ui 已隱藏 */
     .memo-block.export-collapsed { display: none; }
-    /* 週曆檢視會以 inline display:none 藏起靜態條列時程，列印時強制顯示，
-       否則切到週曆後列印整段時程會空白（週曆容器本身已被上面隱藏） */
-    .timeline-list { display: block !important; }
+    /* 週曆檢視會以 inline display:none 藏起靜態條列時程，列印時強制復原為
+       兩欄 grid（非 block），否則切到週曆後列印整段時程會空白，且高密度兩欄
+       版面也要保留於紙本（週曆容器本身已被上面隱藏） */
+    .timeline-list { display: grid !important; }
     /* 邊距交由 @page，移除螢幕用的 body padding */
     @page { margin: 1.5cm; }
     body { padding: 0; background: #fff; }
@@ -748,10 +759,13 @@ const INLINE_CSS = `
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
-    /* 避免換頁切斷 */
+    /* 避免換頁／跨欄切斷：日群組與月曆方格皆為原子單位 */
     .section,
+    .timeline-day-group,
     .timeline-day,
     .timeline-item,
+    .week-grid,
+    .week-cell,
     .memo-card,
     tr { break-inside: avoid; }
     /* 長表格跨頁重複表頭 */

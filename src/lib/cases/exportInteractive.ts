@@ -218,18 +218,20 @@ const SCRIPT_BODY = `(function () {
     }
   }
 
+  // Hide each .timeline-day-group container (header + its items) as a whole when
+  // it has no visible .timeline-item left after filtering. Hiding the container
+  // — not just the header — avoids leaving an empty cell in the two-column grid.
   function refreshDayHeaders() {
-    var list = document.querySelector('.timeline-list');
-    if (!list) return;
-    var children = Array.prototype.slice.call(list.children);
-    var currentHeader = null, visibleCount = 0;
-    function flush() { if (currentHeader) currentHeader.style.display = visibleCount > 0 ? '' : 'none'; }
-    for (var i = 0; i < children.length; i++) {
-      var ch = children[i];
-      if (ch.classList && ch.classList.contains('timeline-day')) { flush(); currentHeader = ch; visibleCount = 0; }
-      else if (ch.classList && ch.classList.contains('timeline-item')) { if (ch.style.display !== 'none') visibleCount++; }
+    var groups = document.querySelectorAll('.timeline-day-group');
+    for (var g = 0; g < groups.length; g++) {
+      var group = groups[g];
+      var groupItems = group.querySelectorAll('.timeline-item');
+      var visibleCount = 0;
+      for (var i = 0; i < groupItems.length; i++) {
+        if (groupItems[i].style.display !== 'none') visibleCount++;
+      }
+      group.style.display = visibleCount > 0 ? '' : 'none';
     }
-    flush();
   }
 
   // Filter all three sections by each item's caseId + the per-case assignment.
@@ -467,7 +469,9 @@ const SCRIPT_BODY = `(function () {
         doneLabel.appendChild(doneTxt);
         wrap.appendChild(doneLabel);
 
-        item.appendChild(wrap);
+        // Lead each row with the control group (承辦＋完成) so it aligns at the
+        // far left instead of being pushed to the right edge past short content.
+        item.insertBefore(wrap, item.firstChild);
         registerDone(eventId, cb, item);
 
         // Completion stays per event (eventId), decoupled from assignment, and
@@ -479,9 +483,12 @@ const SCRIPT_BODY = `(function () {
     }
   }
 
-  // ── Week-agenda view ────────────────────────────────────────────────
-  // Rebuild a single week-agenda event from its list .timeline-item, reusing
-  // the icon/label/case/parties/content spans (but not the list-only controls).
+  // ── Week calendar view (7-column month grid) ────────────────────────
+  // Rebuild a compact chip from its list .timeline-item, reusing the
+  // icon/label/parties spans — buyer/seller names identify the case far better
+  // than the opaque case number, which is dropped here (case identity is still
+  // carried via data-case-id for filtering/sync). The completion checkbox is
+  // kept so the chip stays in sync with the list view.
   function makeWeekEvent(src) {
     var caseId = src.getAttribute('data-case-id');
     var eventId = src.getAttribute('data-event-id');
@@ -490,7 +497,7 @@ const SCRIPT_BODY = `(function () {
     node.setAttribute('data-case-id', caseId);
     node.setAttribute('data-event-id', eventId);
 
-    var spans = src.querySelectorAll('.timeline-icon, .timeline-label, .timeline-case, .timeline-parties, .timeline-content');
+    var spans = src.querySelectorAll('.timeline-icon, .timeline-label, .timeline-parties');
     for (var i = 0; i < spans.length; i++) node.appendChild(spans[i].cloneNode(true));
 
     var doneLabel = document.createElement('label');
@@ -508,9 +515,10 @@ const SCRIPT_BODY = `(function () {
     return node;
   }
 
-  // Rebuild the week-agenda from the existing .timeline-item nodes: one row per
-  // day, grouped into weeks starting Monday, covering this week through the week
-  // of the last upcoming event. Empty days render as empty rows; today is marked.
+  // Rebuild the calendar from the existing .timeline-item nodes: each week is a
+  // 7-column .week-grid (Mon..Sun) of .week-cell, covering this week through the
+  // week of the last upcoming event. Each cell carries data-day and its date
+  // label; empty days are empty cells (preserving the grid). Today is marked.
   function renderWeekAgenda() {
     if (!weekContainer) return;
     weekContainer.innerHTML = '';
@@ -530,40 +538,32 @@ const SCRIPT_BODY = `(function () {
     var startMon = mondayOf(new Date());
     var endRef = maxDate || startMon;
     var endMon = mondayOf(endRef);
-    var lastDay = new Date(endMon.getFullYear(), endMon.getMonth(), endMon.getDate() + 6);
 
-    var cursor = new Date(startMon.getFullYear(), startMon.getMonth(), startMon.getDate());
-    var weekEl = null;
-    while (cursor.getTime() <= lastDay.getTime()) {
-      var dow = cursor.getDay();
-      if (dow === 1 || !weekEl) {
-        weekEl = document.createElement('div');
-        weekEl.className = 'export-ui week-block';
-        weekContainer.appendChild(weekEl);
+    var weekStart = new Date(startMon.getFullYear(), startMon.getMonth(), startMon.getDate());
+    while (weekStart.getTime() <= endMon.getTime()) {
+      var grid = document.createElement('div');
+      grid.className = 'export-ui week-grid';
+      weekContainer.appendChild(grid);
+
+      for (var d = 0; d < 7; d++) {
+        var cellDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + d);
+        var key = dateKey(cellDate);
+        var cell = document.createElement('div');
+        cell.className = 'week-cell' + (key === tk ? ' week-cell-today' : '');
+        cell.setAttribute('data-day', key);
+
+        var dateLbl = document.createElement('div');
+        dateLbl.className = 'week-cell-date';
+        dateLbl.textContent = (cellDate.getMonth() + 1) + '/' + cellDate.getDate() + '（' + WEEKDAY_TC[cellDate.getDay()] + '）';
+        cell.appendChild(dateLbl);
+
+        var dayEvents = byDate[key] || [];
+        for (var e = 0; e < dayEvents.length; e++) cell.appendChild(makeWeekEvent(dayEvents[e]));
+
+        grid.appendChild(cell);
       }
 
-      var key = dateKey(cursor);
-      var dayRow = document.createElement('div');
-      dayRow.className = 'export-ui week-day' + (key === tk ? ' week-day-today' : '');
-      dayRow.setAttribute('data-day', key);
-
-      var lbl = document.createElement('div');
-      lbl.className = 'week-day-label';
-      lbl.textContent = (cursor.getMonth() + 1) + '/' + cursor.getDate() + '（' + WEEKDAY_TC[dow] + '）';
-      dayRow.appendChild(lbl);
-
-      var eventsWrap = document.createElement('div');
-      eventsWrap.className = 'week-day-events';
-      var dayEvents = byDate[key] || [];
-      if (!dayEvents.length) {
-        eventsWrap.className += ' week-day-empty';
-      } else {
-        for (var e = 0; e < dayEvents.length; e++) eventsWrap.appendChild(makeWeekEvent(dayEvents[e]));
-      }
-      dayRow.appendChild(eventsWrap);
-      weekEl.appendChild(dayRow);
-
-      cursor.setDate(cursor.getDate() + 1);
+      weekStart.setDate(weekStart.getDate() + 7);
     }
   }
 

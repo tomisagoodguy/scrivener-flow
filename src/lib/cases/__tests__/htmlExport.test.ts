@@ -189,6 +189,34 @@ describe('buildTimelineSection', () => {
         );
         expect(html.indexOf('SOONER')).toBeLessThan(html.indexOf('LATER'));
     });
+
+    // High-density list: each day group (header + its items) is wrapped in a
+    // single .timeline-day-group container so it stays an unbreakable unit when
+    // the list is laid out as a two-column grid.
+    it('wraps each day group in a .timeline-day-group container, one per day header', () => {
+        const html = buildTimelineSection(
+            [
+                makeCase({
+                    id: 'g1',
+                    case_number: 'DAY-ONE',
+                    milestones: [{ seal_date: '2026-06-12' }] as DemoCase['milestones'],
+                }),
+                makeCase({
+                    id: 'g2',
+                    case_number: 'DAY-TWO',
+                    milestones: [{ seal_date: '2026-06-15' }] as DemoCase['milestones'],
+                }),
+            ],
+            now
+        );
+        // two distinct days → two day-group containers, one per day header
+        const groupCount = (html.match(/<div class="timeline-day-group">/g) ?? []).length;
+        const headerCount = (html.match(/data-day="/g) ?? []).length;
+        expect(headerCount).toBe(2);
+        expect(groupCount).toBe(headerCount);
+        // each group opens immediately with its own day header
+        expect(html).toMatch(/<div class="timeline-day-group">\s*<div class="timeline-day/);
+    });
 });
 
 describe('buildCasesHtml', () => {
@@ -226,6 +254,29 @@ describe('buildCasesHtml', () => {
         expect(html).toMatch(/<tr data-case-id="INT-01">/);
         expect(html).toMatch(/<div class="memo-card" data-case-id="INT-01">/);
         // still fully self-contained: no external resources pulled in
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
+
+    it('lays out the timeline list as a two-column grid with unbreakable day groups', () => {
+        const html = buildCasesHtml([
+            makeCase({
+                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+            }),
+        ]);
+        const printIdx = html.indexOf('@media print');
+        const screenCss = html.slice(0, printIdx);
+
+        // .timeline-list is a two-column CSS grid (utilises horizontal width)
+        expect(screenCss).toMatch(/\.timeline-list\s*\{[^}]*display:\s*grid[^}]*\}/);
+        expect(screenCss).toMatch(
+            /\.timeline-list\s*\{[^}]*grid-template-columns:\s*(repeat\(2,\s*1fr\)|1fr\s+1fr)[^}]*\}/
+        );
+        // each day group is an atomic grid item that must not split across columns
+        expect(screenCss).toMatch(/\.timeline-day-group\s*\{[^}]*break-inside:\s*avoid[^}]*\}/);
+
+        // still fully self-contained
         expect(html).not.toMatch(/src="https?:/);
         expect(html).not.toMatch(/href="https?:/);
         expect(html).not.toContain('@import');
@@ -293,10 +344,17 @@ describe('buildCasesHtml', () => {
         // long tables repeat their header on each page
         expect(printBlock).toContain('table-header-group');
 
-        // the static timeline list is forced visible for print even when the
-        // interactive week view hid it inline (otherwise the timeline section
-        // prints empty after switching to 週曆 view)
-        expect(printBlock).toMatch(/\.timeline-list[\s\S]*?display:\s*block\s*!important/);
+        // the static timeline list is forced visible for print as a two-column
+        // grid (not block) even when the interactive week view hid it inline —
+        // otherwise the timeline section prints empty after switching to 週曆 view,
+        // and the high-density two-column layout must persist on paper
+        expect(printBlock).toMatch(/\.timeline-list[\s\S]*?display:\s*grid\s*!important/);
+        expect(printBlock).not.toMatch(/\.timeline-list[\s\S]*?display:\s*block\s*!important/);
+
+        // grid units (day groups + calendar cells) must not split across pages/columns
+        expect(printBlock).toMatch(/\.timeline-day-group[\s\S]*?break-inside:\s*avoid/);
+        expect(printBlock).toMatch(/\.week-grid[\s\S]*?break-inside:\s*avoid/);
+        expect(printBlock).toMatch(/\.week-cell[\s\S]*?break-inside:\s*avoid/);
 
         // print styles do not break self-containment
         expect(html).not.toMatch(/src="https?:/);
