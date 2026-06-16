@@ -18,7 +18,9 @@ import {
     buildMemoSection,
     buildTimelineSection,
     buildCasesHtml,
+    collectCaseHighlights,
 } from '@/lib/cases/htmlExport';
+import type { CaseHighlightMap } from '@/lib/cases/htmlExport';
 import type { DemoCase } from '@/types';
 
 function makeCase(partial: Partial<DemoCase>): DemoCase {
@@ -112,6 +114,30 @@ describe('getUpcomingMilestone', () => {
     });
 });
 
+describe('collectCaseHighlights', () => {
+    it('collects the highlighted tokens per case from an injected read', () => {
+        const c = makeCase({ id: 'case-hl' });
+        const read = (key: string): string | null =>
+            key === 'highlight_case-hl_印' || key === 'highlight_case-hl_tax_type'
+                ? 'true'
+                : null;
+        const map: CaseHighlightMap = collectCaseHighlights([c], read);
+        expect(map['case-hl']).toEqual(expect.arrayContaining(['印', 'tax_type']));
+        expect(map['case-hl']).not.toContain('簽');
+        expect(map['case-hl']).not.toContain('pre_fee');
+    });
+
+    it('returns an empty map when no token is highlighted (non-browser path)', () => {
+        try {
+            localStorage.clear();
+        } catch {
+            /* ignore */
+        }
+        const c = makeCase({ id: 'case-x' });
+        expect(collectCaseHighlights([c])).toEqual({});
+    });
+});
+
 describe('buildTableSection', () => {
     it('lists each case and escapes user-provided content', () => {
         const html = buildTableSection([
@@ -129,6 +155,39 @@ describe('buildTableSection', () => {
             makeCase({ id: 'case-xyz', case_number: 'B-002' }),
         ]);
         expect(html).toMatch(/<tr data-case-id="case-xyz">/);
+    });
+
+    it('applies export-hl only to highlighted milestone/tax/pre-fee tokens', () => {
+        const c = makeCase({
+            id: 'hl-row',
+            tax_type: '自用',
+            milestones: [
+                { seal_date: '2026-06-20', transfer_date: '2026-07-01' },
+            ] as DemoCase['milestones'],
+            financials: [{ pre_collected_fee: 30000 }] as DemoCase['financials'],
+        });
+        const html = buildTableSection([c], { 'hl-row': ['印', 'tax_type', 'pre_fee'] });
+
+        // (a) milestone cell holds individual .ms-token spans; only 印 is highlighted
+        expect(html).toMatch(/<span class="ms-token export-hl">印 [^<]*<\/span>/);
+        expect(html).toMatch(/<span class="ms-token">過 [^<]*<\/span>/);
+        expect(html).not.toMatch(/<span class="ms-token export-hl">過/);
+        // (b) tax-type value is highlighted
+        expect(html).toMatch(/<span class="tax-token export-hl">自用<\/span>/);
+        // (c) pre-collected fee appears as a 預收 token and is highlighted
+        expect(html).toMatch(/<span class="tax-token export-hl">預收 [^<]*<\/span>/);
+    });
+
+    it('adds no export-hl when the highlight map is empty and still escapes values', () => {
+        const c = makeCase({
+            id: 'plain-row',
+            buyer_name: '陳<x>',
+            milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+        });
+        const html = buildTableSection([c]);
+        expect(html).not.toContain('export-hl');
+        expect(html).toContain('陳&lt;x&gt;');
+        expect(html).not.toContain('陳<x>');
     });
 });
 
@@ -216,6 +275,49 @@ describe('buildTimelineSection', () => {
         expect(groupCount).toBe(headerCount);
         // each group opens immediately with its own day header
         expect(html).toMatch(/<div class="timeline-day-group">\s*<div class="timeline-day/);
+    });
+
+    it('marks only highlighted milestone events with export-hl and data-hl', () => {
+        const html = buildTimelineSection(
+            [
+                makeCase({
+                    id: 'hl-case',
+                    case_number: 'HL-1',
+                    milestones: [
+                        { seal_date: '2026-06-12', transfer_date: '2026-06-13' },
+                    ] as DemoCase['milestones'],
+                    todos_list: [
+                        { id: 't1', content: '追銀行', due_date: '2026-06-14', is_completed: false, is_deleted: false },
+                    ] as DemoCase['todos_list'],
+                }),
+            ],
+            now,
+            { 'hl-case': ['印'] }
+        );
+        // the seal_date (印) item carries both export-hl and data-hl="1"
+        expect(html).toMatch(
+            /<div class="timeline-item export-hl"[^>]*data-event-id="hl-case::seal_date"[^>]*data-hl="1"/
+        );
+        // the non-highlighted milestone (過) item does not
+        expect(html).toMatch(
+            /<div class="timeline-item" data-event-id="hl-case::transfer_date"/
+        );
+        // the todo event is never highlighted
+        expect(html).not.toMatch(/<div class="timeline-item export-hl"[^>]*::todo::/);
+    });
+
+    it('adds no export-hl or data-hl when the highlight map is empty', () => {
+        const html = buildTimelineSection(
+            [
+                makeCase({
+                    id: 'plain',
+                    milestones: [{ seal_date: '2026-06-12' }] as DemoCase['milestones'],
+                }),
+            ],
+            now
+        );
+        expect(html).not.toContain('export-hl');
+        expect(html).not.toContain('data-hl=');
     });
 });
 
@@ -319,6 +421,29 @@ describe('buildCasesHtml', () => {
         expect(printBlock).toMatch(/\.memo-block\.export-collapsed\s*\{[^}]*display:\s*none/);
 
         // still fully self-contained
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
+
+    it('defines an amber .export-hl style that survives printing', () => {
+        const html = buildCasesHtml([
+            makeCase({
+                id: 'hl',
+                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+            })
+        ]);
+        const printIdx = html.indexOf('@media print');
+        const screenCss = html.slice(0, printIdx);
+        const printBlock = html.slice(printIdx);
+
+        // screen: amber highlight rule exists
+        expect(screenCss).toMatch(/\.export-hl\s*\{[^}]*background:\s*#fde68a/);
+        // print: .export-hl keeps its background across browsers
+        expect(printBlock).toMatch(/\.export-hl[^{}]*\{[^}]*print-color-adjust:\s*exact/);
+        expect(printBlock).toMatch(/\.export-hl[^{}]*\{[^}]*-webkit-print-color-adjust/);
+
+        // still self-contained
         expect(html).not.toMatch(/src="https?:/);
         expect(html).not.toMatch(/href="https?:/);
         expect(html).not.toContain('@import');

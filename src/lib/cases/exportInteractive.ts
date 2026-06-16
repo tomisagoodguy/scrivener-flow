@@ -493,7 +493,10 @@ const SCRIPT_BODY = `(function () {
     var caseId = src.getAttribute('data-case-id');
     var eventId = src.getAttribute('data-event-id');
     var node = document.createElement('div');
-    node.className = 'export-ui week-event';
+    // Carry the static milestone highlight (data-hl/export-hl on the list item)
+    // into the rebuilt chip so the calendar shows the same yellow markers.
+    var hl = src.getAttribute('data-hl') === '1' || src.classList.contains('export-hl');
+    node.className = 'export-ui week-event' + (hl ? ' export-hl' : '');
     node.setAttribute('data-case-id', caseId);
     node.setAttribute('data-event-id', eventId);
 

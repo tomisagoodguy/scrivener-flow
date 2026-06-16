@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { format } from 'date-fns';
 import { Download, Loader2 } from 'lucide-react';
-import { buildCasesHtml } from '@/lib/cases/htmlExport';
+import { buildCasesHtml, collectCaseHighlights } from '@/lib/cases/htmlExport';
 import type { DemoCase } from '@/types';
 
 interface ExportHtmlButtonProps {
@@ -24,7 +24,8 @@ export default function ExportHtmlButton({ cases, filename = '案件清單' }: E
         try {
             setIsExporting(true);
 
-            const html = buildCasesHtml(cases);
+            const highlights = collectCaseHighlights(cases);
+            const html = buildCasesHtml(cases, new Date(), highlights);
             const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
             const dateStr = format(new Date(), 'yyyyMMdd_HHmm');
             const fullFileName = `${filename}_${dateStr}.html`;

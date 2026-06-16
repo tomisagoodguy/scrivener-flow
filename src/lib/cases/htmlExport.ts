@@ -54,6 +54,51 @@ const MILESTONE_STEPS = [
     { label: '交', field: 'handover_date' as const },
 ];
 
+/**
+ * Highlight tokens that can be toggled per case in the `/cases` table: the five
+ * milestone steps, the tax-type value, and the pre-collected-fee value. Their
+ * localStorage keys are `highlight_<caseId>_<token>` with value `"true"`.
+ */
+const HIGHLIGHT_TOKENS = ['簽', '印', '稅', '過', '交', 'tax_type', 'pre_fee'] as const;
+
+/** caseId → list of highlighted tokens (subset of {@link HIGHLIGHT_TOKENS}). */
+export type CaseHighlightMap = Record<string, string[]>;
+
+/** Map milestone field key → its highlight token (only the five milestones). */
+const MILESTONE_FIELD_TOKEN: Record<string, string> = Object.fromEntries(
+    MILESTONE_STEPS.map(({ label, field }) => [field, label])
+);
+
+/** Read a `highlight_*` flag from localStorage, guarded for non-browser use. */
+function defaultHighlightRead(key: string): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        return window.localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Collect the per-case highlight snapshot from the exporting user's local state.
+ * Side effects (reading localStorage) are confined to the injectable `read`,
+ * keeping the `build*` functions pure and testable. In a non-browser environment
+ * the default `read` yields no flags, so the result is `{}`.
+ */
+export function collectCaseHighlights(
+    cases: DemoCase[],
+    read: (key: string) => string | null = defaultHighlightRead
+): CaseHighlightMap {
+    const map: CaseHighlightMap = {};
+    cases.forEach((c) => {
+        const tokens = HIGHLIGHT_TOKENS.filter(
+            (token) => read(`highlight_${c.id}_${token}`) === 'true'
+        );
+        if (tokens.length) map[c.id] = tokens;
+    });
+    return map;
+}
+
 export interface NormalizedCaseRow {
     caseNumber: string;
     district: string;
@@ -226,7 +271,33 @@ function cell(value: string): string {
     return `<td>${escapeHtml(value)}</td>`;
 }
 
-export function buildTableSection(cases: DemoCase[]): string {
+/** Render the milestone-dates cell as individual, individually-highlightable tokens. */
+function buildMilestoneTokens(m: Partial<Milestone>, tokens: string[]): string {
+    return MILESTONE_STEPS.map(({ label, field }) => {
+        const d = m[field];
+        if (!d) return '';
+        const hl = tokens.includes(label) ? ' export-hl' : '';
+        return `<span class="ms-token${hl}">${escapeHtml(`${label} ${formatExportDate(d)}`)}</span>`;
+    })
+        .filter(Boolean)
+        .join(' ');
+}
+
+/** Render the tax cell: the tax-type value plus an optional pre-collected-fee token. */
+function buildTaxTokens(row: NormalizedCaseRow, tokens: string[]): string {
+    const parts: string[] = [];
+    const taxHl = tokens.includes('tax_type') ? ' export-hl' : '';
+    parts.push(`<span class="tax-token${taxHl}">${escapeHtml(row.taxType)}</span>`);
+    if (row.preCollectedFee) {
+        const feeHl = tokens.includes('pre_fee') ? ' export-hl' : '';
+        parts.push(
+            `<span class="tax-token${feeHl}">${escapeHtml(`預收 ${row.preCollectedFee}萬`)}</span>`
+        );
+    }
+    return parts.join(' ');
+}
+
+export function buildTableSection(cases: DemoCase[], highlights: CaseHighlightMap = {}): string {
     const header = `
     <section class="section">
       <h2>承辦中表格</h2>
@@ -249,14 +320,17 @@ export function buildTableSection(cases: DemoCase[]): string {
     const rows = cases
         .map((c) => {
             const row = normalizeCaseRow(c);
+            const tokens = highlights[c.id] ?? [];
+            const taxCell = buildTaxTokens(row, tokens);
+            const milestoneCell = buildMilestoneTokens(getMilestone(c), tokens);
             return `<tr data-case-id="${escapeHtml(c.id)}">
         ${cell(row.caseNumber)}
         ${cell(row.district)}
         ${cell(row.buyerName)}
         ${cell(row.sellerName)}
         ${cell(row.priceBank)}
-        ${cell(row.taxType)}
-        ${cell(row.milestoneDates)}
+        <td>${taxCell}</td>
+        <td>${milestoneCell}</td>
         ${cell(row.todos)}
       </tr>`;
         })
@@ -313,6 +387,8 @@ interface ExportTimelineEvent {
     caseNumber: string;
     caseId: string;
     eventId: string;
+    /** Source field key (e.g. 'seal_date'); absent for todo events. */
+    fieldKey?: string;
     parties: string;
     content: string;
 }
@@ -347,6 +423,7 @@ function pushFieldEvents(
             caseNumber,
             caseId,
             eventId: getExportEventId({ caseId, fieldKey: field.key }),
+            fieldKey: field.key,
             parties,
             content,
         });
@@ -395,7 +472,11 @@ function buildDayHeaderLabel(date: Date, today: Date): string {
     return md;
 }
 
-export function buildTimelineSection(cases: DemoCase[], now: Date = new Date()): string {
+export function buildTimelineSection(
+    cases: DemoCase[],
+    now: Date = new Date(),
+    highlights: CaseHighlightMap = {}
+): string {
     const today = startOfLocalDay(now);
 
     const upcoming = collectTimelineEvents(cases)
@@ -426,7 +507,11 @@ export function buildTimelineSection(cases: DemoCase[], now: Date = new Date()):
                         ? `<span class="timeline-content">${escapeHtml(e.content)}</span>`
                         : '';
                     const eventDate = format(e.date, 'yyyy-MM-dd');
-                    return `<div class="timeline-item" data-event-id="${escapeHtml(e.eventId)}" data-event-date="${escapeHtml(eventDate)}" data-case-id="${escapeHtml(e.caseId)}">
+                    const token = e.fieldKey ? MILESTONE_FIELD_TOKEN[e.fieldKey] : undefined;
+                    const isHl = !!token && (highlights[e.caseId] ?? []).includes(token);
+                    const hlClass = isHl ? ' export-hl' : '';
+                    const hlAttr = isHl ? ' data-hl="1"' : '';
+                    return `<div class="timeline-item${hlClass}" data-event-id="${escapeHtml(e.eventId)}" data-event-date="${escapeHtml(eventDate)}" data-case-id="${escapeHtml(e.caseId)}"${hlAttr}>
           <span class="timeline-icon">${e.icon}</span>
           <span class="timeline-label">${escapeHtml(e.label)}</span>
           <span class="timeline-case">${escapeHtml(e.caseNumber)}</span>
@@ -551,6 +636,15 @@ const INLINE_CSS = `
   .timeline-case { font-weight: 700; color: #2563eb; flex-shrink: 0; min-width: 4.5rem; }
   .timeline-parties { color: #64748b; font-weight: 600; }
   .timeline-content { color: #94a3b8; font-size: 0.76rem; }
+  /* 里程碑 / 稅單 / 預收 token：行內標籤，未高亮時不佔額外視覺重量 */
+  .ms-token, .tax-token {
+    display: inline-block;
+    padding: 0 0.25rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+  }
+  /* 匯出黃底高亮（對應主 App amber-200/900/300），表格 token 與時程事件共用 */
+  .export-hl { background: #fde68a; color: #78350f; border-color: #fcd34d; }
   .empty { color: #94a3b8; font-style: italic; padding: 0.5rem 1rem; display: block; }
   /* ── 互動層（JS 注入後才出現）─────────────────────────── */
   .export-toolbar {
@@ -755,7 +849,8 @@ const INLINE_CSS = `
     }
     /* 關鍵小標示保留底色（強制套用，跨瀏覽器） */
     .timeline-day-today,
-    .memo-warning {
+    .memo-warning,
+    .export-hl {
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
@@ -773,11 +868,15 @@ const INLINE_CSS = `
   }
 `;
 
-export function buildCasesHtml(cases: DemoCase[], exportedAt: Date = new Date()): string {
+export function buildCasesHtml(
+    cases: DemoCase[],
+    exportedAt: Date = new Date(),
+    highlights: CaseHighlightMap = {}
+): string {
     const exportTime = format(exportedAt, 'yyyy/MM/dd HH:mm');
-    const tableSection = buildTableSection(cases);
+    const tableSection = buildTableSection(cases, highlights);
     const memoSection = buildMemoSection(cases, exportedAt);
-    const timelineSection = buildTimelineSection(cases, exportedAt);
+    const timelineSection = buildTimelineSection(cases, exportedAt, highlights);
     const initialState = serializeInitialState();
 
     return `<!DOCTYPE html>

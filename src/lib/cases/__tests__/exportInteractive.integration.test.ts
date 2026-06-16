@@ -605,6 +605,40 @@ describe('exported HTML interactive layer (timeline calendar grid view)', () => 
     });
 });
 
+// Milestone highlight (data-hl="1" on the list item) is carried to the calendar
+// chip as an export-hl class when the week view is built.
+describe('exported HTML interactive layer (milestone highlight in calendar)', () => {
+    const HL_CASES: DemoCase[] = [
+        makeCase({
+            id: 'ca',
+            case_number: 'CASE-A',
+            milestones: [{ seal_date: todayStr }] as DemoCase['milestones'],
+        }),
+        makeCase({
+            id: 'cb',
+            case_number: 'CASE-B',
+            milestones: [{ seal_date: plus3Str }] as DemoCase['milestones'],
+        }),
+    ];
+
+    beforeEach(() => {
+        try {
+            localStorage.clear();
+        } catch {
+            /* ignore */
+        }
+        // only CASE-A's 印 (seal_date) milestone is highlighted
+        loadDocument(buildCasesHtml(HL_CASES, new Date(), { ca: ['印'] }));
+        runInteractiveScript();
+    });
+
+    it('carries the milestone highlight to the calendar chip for highlighted events only', () => {
+        switchToWeek();
+        expect(weekEventByEventId('ca::seal_date').classList.contains('export-hl')).toBe(true);
+        expect(weekEventByEventId('cb::seal_date').classList.contains('export-hl')).toBe(false);
+    });
+});
+
 // With JavaScript disabled (script never runs) the timeline is the static list.
 describe('exported HTML timeline without the interactive script (JS disabled)', () => {
     beforeEach(() => {
