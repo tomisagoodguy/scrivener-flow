@@ -510,6 +510,8 @@ const INLINE_CSS = `
   .memo-pending .memo-label { color: #64748b; font-style: italic; }
   .memo-private .memo-label { color: #475569; }
   .memo-content { font-size: 0.9rem; white-space: pre-wrap; }
+  /* 收合：螢幕只藏內容節點，保留標籤列與「展開」鈕可見可點（互動層注入 export-collapsed） */
+  .memo-block.export-collapsed .memo-content { display: none; }
   .timeline-list {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -633,6 +635,30 @@ const INLINE_CSS = `
     white-space: nowrap;
   }
   .memo-card-head .export-memo-badge { margin-left: auto; }
+  /* 備忘錄收合：逐張切換鈕 + 頂部分類全域開關（JS 注入後才出現） */
+  .memo-label .export-memo-collapse {
+    margin-left: 0.4rem;
+    font-size: 0.68rem;
+    padding: 0.02rem 0.4rem;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    border-radius: 9999px;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .memo-label .export-memo-collapse:hover { background: #f1f5f9; }
+  .export-memo-switch { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+  .export-memo-collapse-all {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid #bfdbfe;
+    background: #fff;
+    color: #1d4ed8;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+  .export-memo-collapse-all:hover { background: #eff6ff; }
   /* ── 時程檢視切換 + 週曆／議程式（JS 注入後才出現）──────────── */
   .export-view-switch { display: inline-flex; gap: 0.35rem; margin-bottom: 0.75rem; }
   .export-view-btn {
@@ -687,6 +713,50 @@ const INLINE_CSS = `
   .week-event.export-item-done { opacity: 0.5; }
   .week-event.export-item-done .timeline-case,
   .week-event.export-item-done .timeline-content { text-decoration: line-through; }
+  /* ── 紙本列印（僅列印情境生效，不影響螢幕與互動）──────────── */
+  @media print {
+    /* 互動層注入節點一律帶 export-ui，列印時全部隱藏 */
+    .export-ui { display: none !important; }
+    /* 收合區塊列印時整塊隱藏（含已空的標籤標題）；展開鈕本身為 export-ui 已隱藏 */
+    .memo-block.export-collapsed { display: none; }
+    /* 週曆檢視會以 inline display:none 藏起靜態條列時程，列印時強制顯示，
+       否則切到週曆後列印整段時程會空白（週曆容器本身已被上面隱藏） */
+    .timeline-list { display: block !important; }
+    /* 邊距交由 @page，移除螢幕用的 body padding */
+    @page { margin: 1.5cm; }
+    body { padding: 0; background: #fff; }
+    /* 大面積底色改邊框+粗體，避免去背景後界線消失、並省墨 */
+    th {
+      background: #fff;
+      border: 1px solid #94a3b8;
+      font-weight: 700;
+    }
+    tr:nth-child(even) { background: #fff; }
+    .memo-card,
+    .timeline-list {
+      box-shadow: none;
+      border: 1px solid #94a3b8;
+    }
+    .timeline-day {
+      background: #fff;
+      border-bottom: 1px solid #94a3b8;
+      font-weight: 700;
+    }
+    /* 關鍵小標示保留底色（強制套用，跨瀏覽器） */
+    .timeline-day-today,
+    .memo-warning {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    /* 避免換頁切斷 */
+    .section,
+    .timeline-day,
+    .timeline-item,
+    .memo-card,
+    tr { break-inside: avoid; }
+    /* 長表格跨頁重複表頭 */
+    thead { display: table-header-group; }
+  }
 `;
 
 export function buildCasesHtml(cases: DemoCase[], exportedAt: Date = new Date()): string {

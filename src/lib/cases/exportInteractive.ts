@@ -32,6 +32,13 @@ export interface ExportState {
      * is decoupled from the case-level assignment above.
      */
     done: Record<string, boolean>;
+    /**
+     * Per-card memo-block collapse: key = `caseId|blockType`
+     * (blockType ∈ warning | pending | private), value = true when collapsed.
+     * Collapsed blocks are hidden on screen and in print. Optional so older
+     * exports without this field are treated as "all expanded".
+     */
+    collapsed?: Record<string, boolean>;
 }
 
 /**
@@ -70,7 +77,7 @@ const SCRIPT_BODY = `(function () {
   var EMBEDDED_STATE = __EMBEDDED_STATE__;
   var STORAGE_KEY = 'sf-cases-export-done::' + (location.pathname || 'doc');
 
-  function emptyState() { return { people: [], assignments: {}, done: {} }; }
+  function emptyState() { return { people: [], assignments: {}, done: {}, collapsed: {} }; }
 
   function cloneState(s) {
     var base = emptyState();
@@ -80,6 +87,9 @@ const SCRIPT_BODY = `(function () {
         ? JSON.parse(JSON.stringify(s.assignments)) : {};
       base.done = (s.done && typeof s.done === 'object')
         ? JSON.parse(JSON.stringify(s.done)) : {};
+      // Older exports may lack collapsed → treated as "all expanded".
+      base.collapsed = (s.collapsed && typeof s.collapsed === 'object')
+        ? JSON.parse(JSON.stringify(s.collapsed)) : {};
     }
     return base;
   }
@@ -169,6 +179,11 @@ const SCRIPT_BODY = `(function () {
   // Completion controls keyed by eventId; both list and week events register so
   // a single state.done[eventId] stays the single source of truth across views.
   var doneRegistry = {};
+  // Per-card memo-block collapse buttons; one entry per .memo-block so both
+  // per-card toggles and the global category switches redraw from state.collapsed.
+  var memoCollapseBtns = [];
+  // Global per-category switches (warning/pending/private); redrawn from state.
+  var memoGlobalBtns = [];
 
   function caseAssignee(caseId) { return (caseId && state.assignments[caseId]) || ''; }
 
@@ -634,11 +649,135 @@ const SCRIPT_BODY = `(function () {
     }
   }
 
+  // ── Memo-block collapse ─────────────────────────────────────────────
+  // Map a .memo-block to its blockType from its category class.
+  function memoBlockType(block) {
+    if (block.classList.contains('memo-warning')) return 'warning';
+    if (block.classList.contains('memo-pending')) return 'pending';
+    if (block.classList.contains('memo-private')) return 'private';
+    return '';
+  }
+
+  function collapseKey(caseId, blockType) { return caseId + '|' + blockType; }
+
+  // Apply collapse to one block: the class hides the actual content node on
+  // screen and in print; the button label flips between 收合 / 展開.
+  function applyCollapse(block, btn, collapsed) {
+    if (collapsed) block.classList.add('export-collapsed');
+    else block.classList.remove('export-collapsed');
+    if (btn) btn.textContent = collapsed ? '展開' : '收合';
+  }
+
+  // Single source of truth write: per-card key in state.collapsed.
+  function setCollapsed(caseId, blockType, collapsed) {
+    if (collapsed) state.collapsed[collapseKey(caseId, blockType)] = true;
+    else delete state.collapsed[collapseKey(caseId, blockType)];
+  }
+
+  // A category is "all collapsed" only when it has blocks and every one is
+  // collapsed; an empty category counts as not-all-collapsed.
+  function categoryAllCollapsed(blockType) {
+    var any = false, all = true;
+    for (var i = 0; i < memoCollapseBtns.length; i++) {
+      var c = memoCollapseBtns[i];
+      if (c.blockType !== blockType) continue;
+      any = true;
+      if (!state.collapsed[collapseKey(c.caseId, c.blockType)]) all = false;
+    }
+    return any && all;
+  }
+
+  // Redraw every per-card button + block AND the global switch labels from
+  // state.collapsed (single source of truth for both init and global actions).
+  function refreshCollapse() {
+    for (var i = 0; i < memoCollapseBtns.length; i++) {
+      var c = memoCollapseBtns[i];
+      applyCollapse(c.block, c.btn, !!state.collapsed[collapseKey(c.caseId, c.blockType)]);
+    }
+    for (var g = 0; g < memoGlobalBtns.length; g++) {
+      var gb = memoGlobalBtns[g];
+      gb.btn.textContent = (categoryAllCollapsed(gb.type) ? '展開' : '收合') + gb.label;
+    }
+  }
+
+  // Inject an export-ui collapse toggle into each memo block, then restore the
+  // collapsed state from state.collapsed (so reopened downloads stay collapsed).
+  function buildMemoCollapse() {
+    for (var i = 0; i < memoCards.length; i++) {
+      (function (card) {
+        var caseId = card.getAttribute('data-case-id');
+        var blocks = card.querySelectorAll('.memo-block');
+        for (var j = 0; j < blocks.length; j++) {
+          (function (block) {
+            var blockType = memoBlockType(block);
+            if (!blockType) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'export-ui export-memo-collapse';
+            btn.textContent = '收合';
+            var label = block.querySelector('.memo-label') || block;
+            label.appendChild(btn);
+            memoCollapseBtns.push({ caseId: caseId, blockType: blockType, block: block, btn: btn });
+            btn.addEventListener('click', function () {
+              var next = !block.classList.contains('export-collapsed');
+              setCollapsed(caseId, blockType, next);
+              applyCollapse(block, btn, next);
+            });
+          })(blocks[j]);
+        }
+      })(memoCards[i]);
+    }
+    refreshCollapse();
+  }
+
+  // Batch-apply per-card collapse to a whole category. Direction is derived
+  // from current state: any expanded card → collapse all; else expand all.
+  // No second-level state is introduced — only per-card state.collapsed keys.
+  function toggleCategory(blockType) {
+    var target = !categoryAllCollapsed(blockType); // true → collapse all
+    for (var i = 0; i < memoCollapseBtns.length; i++) {
+      var c = memoCollapseBtns[i];
+      if (c.blockType !== blockType) continue;
+      setCollapsed(c.caseId, blockType, target);
+    }
+    refreshCollapse();
+  }
+
+  // Inject one export-ui category switch per block type at the top of the memo
+  // section. Each batch-applies per-card collapse; labels redraw from state.
+  function buildMemoCategorySwitch() {
+    var grid = document.querySelector('.memo-grid');
+    if (!grid || !grid.parentNode) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'export-ui export-memo-switch';
+    var defs = [
+      { type: 'warning', label: '警示' },
+      { type: 'pending', label: '其他' },
+      { type: 'private', label: '私密' }
+    ];
+    for (var i = 0; i < defs.length; i++) {
+      (function (def) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'export-ui export-memo-collapse-all';
+        btn.setAttribute('data-block-type', def.type);
+        bar.appendChild(btn);
+        memoGlobalBtns.push({ type: def.type, label: def.label, btn: btn });
+        btn.addEventListener('click', function () { toggleCategory(def.type); });
+      })(defs[i]);
+    }
+    grid.parentNode.insertBefore(bar, grid);
+    refreshCollapse();
+  }
+
   toolbar = buildToolbar();
   if (toolbar) {
     buildItemControls();
     buildTableControls();
     buildMemoControls();
+    buildMemoCollapse();
+    buildMemoCategorySwitch();
     buildViewSwitcher();
     renderPeople();
     applyToday();

@@ -248,4 +248,59 @@ describe('buildCasesHtml', () => {
         expect(html).not.toMatch(/href="https?:/);
         expect(html).not.toContain('@import');
     });
+
+    it('hides collapsed memo content on screen but keeps the toggle reachable, and hides the whole block in print', () => {
+        const html = buildCasesHtml([makeCase({ notes: '備註' })]);
+        const printIdx = html.indexOf('@media print');
+        const screenCss = html.slice(0, printIdx);
+        const printBlock = html.slice(printIdx);
+
+        // Screen: collapse hides only the .memo-content node, so the label row
+        // (which carries the export-ui 展開 toggle) stays visible and clickable.
+        expect(screenCss).toMatch(
+            /\.memo-block\.export-collapsed\s+\.memo-content\s*\{[^}]*display:\s*none/
+        );
+        // Screen must NOT hide the whole .memo-block (that would bury the toggle).
+        expect(screenCss).not.toMatch(/\.memo-block\.export-collapsed\s*\{[^}]*display:\s*none/);
+
+        // Print: the whole collapsed block (incl. its now-empty header) is hidden;
+        // the toggle is export-ui so it is hidden when printing regardless.
+        expect(printBlock).toMatch(/\.memo-block\.export-collapsed\s*\{[^}]*display:\s*none/);
+
+        // still fully self-contained
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
+
+    it('provides a print layout for paper', () => {
+        const html = buildCasesHtml([makeCase({ notes: '備註' })]);
+
+        // a @media print block exists
+        expect(html).toContain('@media print');
+
+        // isolate the @media print block content for targeted assertions
+        const printIdx = html.indexOf('@media print');
+        const printBlock = html.slice(printIdx);
+
+        // interactive layer is hidden when printing
+        expect(printBlock).toMatch(/\.export-ui[\s\S]*?display:\s*none/);
+        // page breaks are controlled
+        expect(printBlock).toContain('break-inside: avoid');
+        // key markers preserve background color across browsers
+        expect(printBlock).toContain('print-color-adjust');
+        expect(printBlock).toContain('-webkit-print-color-adjust');
+        // long tables repeat their header on each page
+        expect(printBlock).toContain('table-header-group');
+
+        // the static timeline list is forced visible for print even when the
+        // interactive week view hid it inline (otherwise the timeline section
+        // prints empty after switching to 週曆 view)
+        expect(printBlock).toMatch(/\.timeline-list[\s\S]*?display:\s*block\s*!important/);
+
+        // print styles do not break self-containment
+        expect(html).not.toMatch(/src="https?:/);
+        expect(html).not.toMatch(/href="https?:/);
+        expect(html).not.toContain('@import');
+    });
 });
