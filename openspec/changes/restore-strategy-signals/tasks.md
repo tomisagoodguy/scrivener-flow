@@ -10,8 +10,8 @@
 
 > 對應 spec 需求「配額耗盡事件記入 Pipeline Context」與 design 決策三：`StrategySignalStep` 全空時發告警。
 
-- [ ] [P] 2.1 實作需求「配額耗盡事件記入 Pipeline Context」（擴充全空告警）：在 `ETF/pipeline/steps/strategy_signal_step.py` 的 `execute()`，當所有現役策略跑完後 `all_rows` 為空時，於回傳前 append 一筆指明「策略訊號全空」與 `ctx.date_str` 的繁體中文告警至 `ctx.validation_warnings`；維持不 raise。個別單一策略回空/例外仍只 log + continue，不升級告警。驗證：見 2.2 測試。
-- [ ] [P] 2.2 於 `ETF/tests/test_strategy_signal_step.py` 新增測試：所有策略回空時 `ctx.validation_warnings` 新增一筆告警；至少一支策略有輸出時不因「全空」新增告警。驗證：`uv run pytest ETF/tests/test_strategy_signal_step.py` 通過。
+- [x] [P] 2.1 實作需求「配額耗盡事件記入 Pipeline Context」（擴充全空告警）：在 `ETF/pipeline/steps/strategy_signal_step.py` 的 `execute()`，當所有現役策略跑完後 `all_rows` 為空時，於回傳前 append 一筆指明「策略訊號全空」與 `ctx.date_str` 的繁體中文告警至 `ctx.validation_warnings`；維持不 raise。個別單一策略回空/例外仍只 log + continue，不升級告警。驗證：見 2.2 測試。
+- [x] [P] 2.2 於 `ETF/tests/test_strategy_signal_step.py` 新增測試：所有策略回空時 `ctx.validation_warnings` 新增一筆告警；至少一支策略有輸出時不因「全空」新增告警。驗證：`uv run pytest ETF/tests/test_strategy_signal_step.py` 通過。
 
 ## 3. CI：移除每日重複的策略執行
 
