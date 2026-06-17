@@ -37,6 +37,10 @@ class PipelineContext:
     shareholder_signals: Dict[str, str] = field(default_factory=dict)
     news_context: List[Dict[str, Any]] = field(default_factory=list)
 
+    # SectorStrengthStep 寫入、FlowComputeStep 消費：股票 → FinLab security_industry_themes
+    # 完整 category 字串清單（一股多題材）。供下游計算 by_sector 共用，避免重複呼叫 FinLab。
+    stock_industry_map: Dict[str, List[str]] = field(default_factory=dict)
+
     # 驗證警告（DataValidationStep 寫入，NotifyStep 讀取）
     validation_warnings: List[str] = field(default_factory=list)
 

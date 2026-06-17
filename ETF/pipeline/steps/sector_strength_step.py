@@ -42,7 +42,9 @@ class SectorStrengthStep(BaseStep):
     def name(self) -> str:
         return "Sector Strength"
 
-    def execute(self, ctx: PipelineContext, services: "PipelineServices") -> PipelineContext:
+    def execute(
+        self, ctx: PipelineContext, services: "PipelineServices"
+    ) -> PipelineContext:
         try:
             self._run(ctx, services)
         except Exception as e:
@@ -80,6 +82,10 @@ class SectorStrengthStep(BaseStep):
         exploded = themes.explode("category").dropna(subset=["category"])
         exploded = exploded[exploded["category"].str.strip() != ""]
 
+        # 把 stock_id → [category...] 對照寫入 context，供下游 FlowComputeStep 計算
+        # by_sector 共用，避免重複呼叫 FinLab security_industry_themes（VIP 配額）。
+        ctx.stock_industry_map = self._build_industry_map(exploded)
+
         # 2. 取收盤價 + 成交金額，計算日/週/月漲幅 + 策略均線條件
         self.logger.info("Fetching price data...")
         close = fd.get("price:收盤價")
@@ -111,7 +117,9 @@ class SectorStrengthStep(BaseStep):
                 vol = fd.get("price:成交股數")
                 if vol is not None and not vol.empty:
                     amount = vol.multiply(close)
-                    self.logger.info("Trading amount estimated from shares × close (fallback)")
+                    self.logger.info(
+                        "Trading amount estimated from shares × close (fallback)"
+                    )
             if amount is not None and not amount.empty:
                 last_amount = amount.iloc[-1]
                 avg_5d_by_stock = amount.iloc[-6:-1].mean()
@@ -123,17 +131,12 @@ class SectorStrengthStep(BaseStep):
 
         # 均線多頭排列：股價 > MA5 > MA20 > MA60，且 MA20 近 5 日向上
         _ma20_df = close.rolling(20).mean()
-        ma5  = close.rolling(5).mean().iloc[-1]
+        ma5 = close.rolling(5).mean().iloc[-1]
         ma20 = _ma20_df.iloc[-1]
         ma60 = close.rolling(60).mean().iloc[-1]
         last_close = close.iloc[-1]
         ma20_rising = (_ma20_df > _ma20_df.shift(5)).iloc[-1]
-        above_ma = (
-            (last_close > ma5)
-            & (ma5 > ma20)
-            & (ma20 > ma60)
-            & ma20_rising
-        )
+        above_ma = (last_close > ma5) & (ma5 > ma20) & (ma20 > ma60) & ma20_rising
 
         # 月營收短期 > 長期
         self.logger.info("Fetching monthly revenue data...")
@@ -141,20 +144,30 @@ class SectorStrengthStep(BaseStep):
             rev = fd.get("monthly_revenue:當月營收")
             rev_cond = rev.rolling(3).mean().iloc[-1] > rev.rolling(12).mean().iloc[-1]
         except Exception as e:
-            self.logger.warning(f"Failed to fetch monthly revenue, strategy hit will be False: {e}")
+            self.logger.warning(
+                f"Failed to fetch monthly revenue, strategy hit will be False: {e}"
+            )
             rev_cond = pd.Series(False, index=last_close.index)
 
         # 蠟燭波動率 <= 12%：濾除高波動股（candle path ÷ close，20 日均值）
         low_volatility = pd.Series(True, index=last_close.index)
         try:
-            high  = fd.get("price:最高價")
+            high = fd.get("price:最高價")
             low_p = fd.get("price:最低價")
             open_ = fd.get("price:開盤價")
             bullish = close >= open_
-            bull_path = (abs(close.shift() - open_) + abs(open_ - low_p)
-                         + abs(low_p - high) + abs(high - close))
-            bear_path = (abs(close.shift() - open_) + abs(open_ - high)
-                         + abs(high - low_p) + abs(low_p - close))
+            bull_path = (
+                abs(close.shift() - open_)
+                + abs(open_ - low_p)
+                + abs(low_p - high)
+                + abs(high - close)
+            )
+            bear_path = (
+                abs(close.shift() - open_)
+                + abs(open_ - high)
+                + abs(high - low_p)
+                + abs(low_p - close)
+            )
             candle_path = pd.DataFrame(
                 np.where(bullish, bull_path, bear_path),
                 index=close.index,
@@ -163,18 +176,22 @@ class SectorStrengthStep(BaseStep):
             volatility = candle_path.rolling(20).mean() / close.rolling(20).mean() * 100
             low_volatility = volatility.iloc[-1] <= 12
         except Exception as e:
-            self.logger.warning(f"Failed to compute candle volatility, skipping filter: {e}")
+            self.logger.warning(
+                f"Failed to compute candle volatility, skipping filter: {e}"
+            )
 
         # 合併策略命中
         strategy_hit = above_ma & rev_cond & low_volatility  # NaN → False 自動排除
 
         # 3. 合併漲幅 + 策略欄位到 exploded DataFrame
         df = exploded.copy()
-        df["ret_1d"]         = df["stock_id"].map(ret_1d)
-        df["ret_5d"]         = df["stock_id"].map(ret_5d)
-        df["ret_20d"]        = df["stock_id"].map(ret_20d)
+        df["ret_1d"] = df["stock_id"].map(ret_1d)
+        df["ret_5d"] = df["stock_id"].map(ret_5d)
+        df["ret_20d"] = df["stock_id"].map(ret_20d)
         df["momentum_score"] = df["stock_id"].map(momentum_score)
-        df["is_strategy_hit"] = df["stock_id"].map(strategy_hit).fillna(False).astype(bool)
+        df["is_strategy_hit"] = (
+            df["stock_id"].map(strategy_hit).fillna(False).astype(bool)
+        )
         if last_amount is not None:
             df["amount"] = df["stock_id"].map(last_amount)
         else:
@@ -215,14 +232,20 @@ class SectorStrengthStep(BaseStep):
         )
 
         if valid_df["avg_5d"].notna().any():
-            avg_amount_5d_by_cat = valid_df.groupby("category")["avg_5d"].sum(min_count=1)
+            avg_amount_5d_by_cat = valid_df.groupby("category")["avg_5d"].sum(
+                min_count=1
+            )
             sector_df["avg_amount_5d"] = sector_df["category"].map(avg_amount_5d_by_cat)
         else:
             sector_df["avg_amount_5d"] = None
 
         hit_ratio = valid_df.groupby("category")["is_strategy_hit"].mean()
         sector_df["hit_ratio"] = sector_df["category"].map(hit_ratio).fillna(0)
-        sector_df["strength_score"] = sector_df["ret_1d"] * sector_df["breadth"] * (1 + sector_df["hit_ratio"] * 2)
+        sector_df["strength_score"] = (
+            sector_df["ret_1d"]
+            * sector_df["breadth"]
+            * (1 + sector_df["hit_ratio"] * 2)
+        )
 
         self.logger.info(f"Computed {len(sector_df)} sectors for {target_date}")
 
@@ -235,7 +258,9 @@ class SectorStrengthStep(BaseStep):
         # 6. 把全市場族群個股 + 最近 30 天曾命中的股票加進 ctx.secondary_stock_codes，供 SyncOHLCVStep 同步 K 線
         tracked_codes = services.sql_storage.get_strategy_hit_stocks()
         all_sector_codes = valid_df["stock_id"].unique().tolist()
-        ctx.secondary_stock_codes = list(set(ctx.secondary_stock_codes + tracked_codes + all_sector_codes))
+        ctx.secondary_stock_codes = list(
+            set(ctx.secondary_stock_codes + tracked_codes + all_sector_codes)
+        )
         today_hit = int(valid_df["is_strategy_hit"].sum())
         self.logger.info(
             f"SectorStrengthStep done: {len(sector_df)} sectors upserted for {target_date}, "
@@ -248,6 +273,23 @@ class SectorStrengthStep(BaseStep):
             self._backfill_missing_chips(hit_codes, services)
         except Exception as e:
             self.logger.error(f"補充集保資料失敗（不影響主流程）：{e}")
+
+    @staticmethod
+    def _build_industry_map(exploded) -> dict[str, list[str]]:
+        """從 explode 後的 themes（stock_id / category）聚合 stock_code → [category...]。
+
+        去重並略過空白 category；保留原始出現順序。
+        """
+        result: dict[str, list[str]] = {}
+        for stock_id, cat in zip(exploded["stock_id"], exploded["category"]):
+            code = str(stock_id)
+            c = str(cat).strip()
+            if not c:
+                continue
+            cats = result.setdefault(code, [])
+            if c not in cats:
+                cats.append(c)
+        return result
 
     @staticmethod
     def _f(v) -> float | None:
@@ -280,18 +322,20 @@ class SectorStrengthStep(BaseStep):
 
         params = []
         for _, row in sector_df.iterrows():
-            params.append({
-                "date":           target_date,
-                "category":       row["category"],
-                "ret_1d":         self._f(row["ret_1d"]),
-                "ret_5d":         self._f(row["ret_5d"]),
-                "ret_20d":        self._f(row["ret_20d"]),
-                "stock_count":    int(row["stock_count"]),
-                "total_amount":   self._int_or_none(row.get("total_amount")),
-                "breadth":        self._f(row.get("breadth")),
-                "avg_amount_5d":  self._int_or_none(row.get("avg_amount_5d")),
-                "strength_score": self._f(row.get("strength_score")),
-            })
+            params.append(
+                {
+                    "date": target_date,
+                    "category": row["category"],
+                    "ret_1d": self._f(row["ret_1d"]),
+                    "ret_5d": self._f(row["ret_5d"]),
+                    "ret_20d": self._f(row["ret_20d"]),
+                    "stock_count": int(row["stock_count"]),
+                    "total_amount": self._int_or_none(row.get("total_amount")),
+                    "breadth": self._f(row.get("breadth")),
+                    "avg_amount_5d": self._int_or_none(row.get("avg_amount_5d")),
+                    "strength_score": self._f(row.get("strength_score")),
+                }
+            )
         conn.execute(upsert_sql, params)
 
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
@@ -317,22 +361,24 @@ class SectorStrengthStep(BaseStep):
 
         params = [
             {
-                "date":            target_date,
-                "category":        row["category"],
-                "stock_id":        row["stock_id"],
-                "stock_name":      row[name_col] if name_col else None,
-                "ret_1d":          self._f(row.get("ret_1d")),
-                "ret_5d":          self._f(row.get("ret_5d")),
-                "ret_20d":         self._f(row.get("ret_20d")),
+                "date": target_date,
+                "category": row["category"],
+                "stock_id": row["stock_id"],
+                "stock_name": row[name_col] if name_col else None,
+                "ret_1d": self._f(row.get("ret_1d")),
+                "ret_5d": self._f(row.get("ret_5d")),
+                "ret_20d": self._f(row.get("ret_20d")),
                 "is_strategy_hit": bool(row.get("is_strategy_hit", False)),
-                "momentum_score":  self._f(row.get("momentum_score")),
-                "amount":          self._int_or_none(row.get("amount")),
+                "momentum_score": self._f(row.get("momentum_score")),
+                "amount": self._int_or_none(row.get("amount")),
             }
             for _, row in df.iterrows()
         ]
         conn.execute(upsert_sql, params)
 
-    def _backfill_missing_chips(self, hit_codes: list[str], services: "PipelineServices") -> None:
+    def _backfill_missing_chips(
+        self, hit_codes: list[str], services: "PipelineServices"
+    ) -> None:
         """
         補充策略命中股票在 equity_distribution_stats 中缺失的集保籌碼資料。
         只補缺失的股票，避免重複拉取 FinLab 配額。
@@ -346,19 +392,24 @@ class SectorStrengthStep(BaseStep):
 
         # 1. 找最新 snapshot_date，確認哪些股票缺失
         with services.sql_storage.engine.connect() as conn:
-            row = conn.execute(text(
-                "SELECT snapshot_date FROM equity_distribution_stats "
-                "ORDER BY snapshot_date DESC LIMIT 1"
-            )).fetchone()
+            row = conn.execute(
+                text(
+                    "SELECT snapshot_date FROM equity_distribution_stats "
+                    "ORDER BY snapshot_date DESC LIMIT 1"
+                )
+            ).fetchone()
             if not row:
                 self.logger.info("equity_distribution_stats 無資料，跳過補充")
                 return
             latest_snapshot = str(row[0])
 
-            existing_rows = conn.execute(text(
-                "SELECT stock_code FROM equity_distribution_stats "
-                "WHERE snapshot_date = :d AND stock_code = ANY(:codes)"
-            ), {"d": latest_snapshot, "codes": hit_codes}).fetchall()
+            existing_rows = conn.execute(
+                text(
+                    "SELECT stock_code FROM equity_distribution_stats "
+                    "WHERE snapshot_date = :d AND stock_code = ANY(:codes)"
+                ),
+                {"d": latest_snapshot, "codes": hit_codes},
+            ).fetchall()
 
         existing_codes = {r[0] for r in existing_rows}
         missing_codes = [c for c in hit_codes if c not in existing_codes]
@@ -380,12 +431,14 @@ class SectorStrengthStep(BaseStep):
 
         # 欄位依位置重命名（FinLab 欄位名稱在不同環境可能有亂碼）
         cols = list(inv.columns)
-        inv = inv.rename(columns={
-            cols[2]: "tier",
-            cols[3]: "holder_count",
-            cols[4]: "shares_held",
-            cols[5]: "custody_ratio",
-        })
+        inv = inv.rename(
+            columns={
+                cols[2]: "tier",
+                cols[3]: "holder_count",
+                cols[4]: "shares_held",
+                cols[5]: "custody_ratio",
+            }
+        )
         inv = inv[inv["stock_id"].isin(hit_codes)].copy()  # 寫入全部命中股票
         if inv.empty:
             self.logger.warning("FinLab inventory 中找不到缺失股票的資料")
@@ -409,13 +462,20 @@ class SectorStrengthStep(BaseStep):
 
         def _summarise(period_df: pd.DataFrame) -> pd.DataFrame:
             agg = period_df[period_df["tier"] == AGGREGATE_TIER]
-            total_sh = agg.groupby("stock_id")["holder_count"].first().rename("total_shareholders")
-            return pd.concat([
-                total_sh,
-                _tier_pct(period_df, 11).rename("mid_holder_pct"),
-                _tier_pct(period_df, 12).rename("big_holder_pct"),
-                _tier_pct(period_df, 15).rename("whale_holder_pct"),
-            ], axis=1)
+            total_sh = (
+                agg.groupby("stock_id")["holder_count"]
+                .first()
+                .rename("total_shareholders")
+            )
+            return pd.concat(
+                [
+                    total_sh,
+                    _tier_pct(period_df, 11).rename("mid_holder_pct"),
+                    _tier_pct(period_df, 12).rename("big_holder_pct"),
+                    _tier_pct(period_df, 15).rename("whale_holder_pct"),
+                ],
+                axis=1,
+            )
 
         latest_s = _summarise(inv[inv["date"] == latest_date])
         prev_s = _summarise(inv[inv["date"] == prev_date])
@@ -425,32 +485,45 @@ class SectorStrengthStep(BaseStep):
             merged["big_holder_pct"] - merged["big_holder_pct_prev"]
         ).round(3)
         merged["mid_holder_pct_change"] = (
-            merged["mid_holder_pct"].fillna(0.0) - merged["mid_holder_pct_prev"].fillna(0.0)
+            merged["mid_holder_pct"].fillna(0.0)
+            - merged["mid_holder_pct_prev"].fillna(0.0)
         ).round(3)
         merged["whale_holder_pct_change"] = (
-            merged["whale_holder_pct"].fillna(0.0) - merged["whale_holder_pct_prev"].fillna(0.0)
+            merged["whale_holder_pct"].fillna(0.0)
+            - merged["whale_holder_pct_prev"].fillna(0.0)
         ).round(3)
         merged["shareholders_change_rate"] = (
             (merged["total_shareholders"] - merged["total_shareholders_prev"])
-            / merged["total_shareholders_prev"] * 100
+            / merged["total_shareholders_prev"]
+            * 100
         ).round(4)
 
         snapshot_date = latest_date.strftime("%Y-%m-%d")
         records = []
         for stock_code, r in merged.iterrows():
-            records.append({
-                "stock_code":              str(stock_code),
-                "snapshot_date":           snapshot_date,
-                "total_shareholders":      int(r["total_shareholders"]) if pd.notna(r.get("total_shareholders")) else None,
-                "big_holder_pct":          self._f(r.get("big_holder_pct")),
-                "big_holder_pct_change":   self._f(r.get("big_holder_pct_change")),
-                "mid_holder_pct":          self._f(r.get("mid_holder_pct")),
-                "mid_holder_pct_change":   self._f(r.get("mid_holder_pct_change")),
-                "whale_holder_pct":        self._f(r.get("whale_holder_pct")),
-                "whale_holder_pct_change": self._f(r.get("whale_holder_pct_change")),
-                "shareholders_change_rate": round(float(r["shareholders_change_rate"]), 4) if pd.notna(r.get("shareholders_change_rate")) else None,
-                "stock_name":              None,
-            })
+            records.append(
+                {
+                    "stock_code": str(stock_code),
+                    "snapshot_date": snapshot_date,
+                    "total_shareholders": int(r["total_shareholders"])
+                    if pd.notna(r.get("total_shareholders"))
+                    else None,
+                    "big_holder_pct": self._f(r.get("big_holder_pct")),
+                    "big_holder_pct_change": self._f(r.get("big_holder_pct_change")),
+                    "mid_holder_pct": self._f(r.get("mid_holder_pct")),
+                    "mid_holder_pct_change": self._f(r.get("mid_holder_pct_change")),
+                    "whale_holder_pct": self._f(r.get("whale_holder_pct")),
+                    "whale_holder_pct_change": self._f(
+                        r.get("whale_holder_pct_change")
+                    ),
+                    "shareholders_change_rate": round(
+                        float(r["shareholders_change_rate"]), 4
+                    )
+                    if pd.notna(r.get("shareholders_change_rate"))
+                    else None,
+                    "stock_name": None,
+                }
+            )
 
         if not records:
             return

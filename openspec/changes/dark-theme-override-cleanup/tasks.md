@@ -6,14 +6,13 @@
 
 ## 1. 結構性背景規則加 `:not([style*="background"])` 豁免（Phase 1，修正後做法）✅
 
-> Phase 0 後改採此法取代「先補後刪 200+ 元件」：規則自動跳過自帶 inline 背景的元件，零元件改動、近乎零回歸。
 
 - [x] 1.1 `.rounded-lg/.rounded-xl/.rounded-2xl`（圓角卡片）加豁免
 - [x] 1.2 `button:not(...)` 與 `:hover`（按鈕）加豁免
 - [x] 1.3 `.shadow/.shadow-sm/md/lg/xl` 加豁免
 - [x] 1.4 `[class*="card"]/[class*="Card"]`、`[class*="container"]/[class*="Container"]`、`[class*="panel/Panel/section/Section"]` 加豁免
 - [x] 1.5 `.bg-white`、`.bg-slate-50..300`、`.bg-gray-50..300`（含半透明）加豁免
-- [ ] 1.6 深色模式逐頁 sweep：`/cases`、`/cases/[id]`、`/investment`、`/investment/sectors`（含主題視圖）、`/investment/[etf]`、`/investment/strategy`、`/investment/equity`、`/todo`、`/knowledge`、`/login`、`/calculator` → 確認無回歸（自帶 inline 背景的元件恢復原色、其餘維持深色）
+- [x] 1.6 深色模式逐頁 sweep：`/cases`、`/cases/[id]`、`/investment`、`/investment/sectors`（含主題視圖）、`/investment/[etf]`、`/investment/strategy`、`/investment/equity`、`/todo`、`/knowledge`、`/login`、`/calculator` → 確認無回歸（自帶 inline 背景的元件恢復原色、其餘維持深色）
 
 ## 2. 文件（Phase 1 收尾）✅
 

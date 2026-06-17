@@ -20,7 +20,7 @@ class _ConstantStrategy(BaseStrategy):
     strategy_id = "constant_test"
     description = "Test strategy"
 
-    def get_positions(self):
+    def get_positions(self, cache=None):
         return pd.DataFrame(
             {
                 "2330": [True, True],
@@ -36,8 +36,18 @@ class _ErrorStrategy(BaseStrategy):
     strategy_id = "error_test"
     description = "Always broken"
 
-    def get_positions(self):
+    def get_positions(self, cache=None):
         raise RuntimeError("FinLab quota exceeded")
+
+
+class _EmptyStrategy(BaseStrategy):
+    """Strategy that returns an empty DataFrame (no selections)."""
+
+    strategy_id = "empty_test"
+    description = "No selections"
+
+    def get_positions(self, cache=None):
+        return pd.DataFrame()
 
 
 # ---------------------------------------------------------------------------

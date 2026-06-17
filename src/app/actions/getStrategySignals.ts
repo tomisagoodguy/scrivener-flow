@@ -9,11 +9,34 @@ import type { DiffEvent, StrategyStock, StrategyEntry, StrategySignalsResult } f
 
 const PORTFOLIO_ETF = '00981A';
 
+/**
+ * 近期視窗（日曆天）：未指定 date 時，於此窗內取各策略自身最新日期的訊號。
+ * 不同更新節奏的策略（如季頻 fundamental_momentum 與日頻 fund_momentum）
+ * 不再因彼此日期差異被單一最新日期過濾掉。
+ */
+const STRATEGY_WINDOW_DAYS = 14;
+
+interface SignalRow { strategy_id: string; stock_id: string; score: number | null; date: string }
+
 async function _getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
     const supabase = getPublicClient();
 
-    let targetDate = date;
-    if (!targetDate) {
+    let typedSignals: SignalRow[];
+    let headerDate: string;
+
+    if (date) {
+        // 顯式日期：精確比對該日期（維持既有行為）
+        const { data: signals, error: sigErr } = await supabase
+            .from('strategy_signals')
+            .select('strategy_id, stock_id, score, date')
+            .eq('date', date)
+            .eq('is_selected', true);
+
+        if (sigErr || !signals || signals.length === 0) return null;
+        typedSignals = signals as SignalRow[];
+        headerDate = date;
+    } else {
+        // 未指定日期：取近期視窗內所有 is_selected，依 strategy_id 各取自身最新日期
         const { data: latestRow, error: dateErr } = await supabase
             .from('strategy_signals')
             .select('date')
@@ -22,26 +45,41 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
             .single();
 
         if (dateErr || !latestRow) return null;
-        targetDate = (latestRow as unknown as { date: string }).date;
+        const maxDate = (latestRow as unknown as { date: string }).date;
+
+        const windowStart = new Date(maxDate);
+        windowStart.setDate(windowStart.getDate() - STRATEGY_WINDOW_DAYS);
+        const windowStartStr = windowStart.toISOString().split('T')[0];
+
+        const { data: signals, error: sigErr } = await supabase
+            .from('strategy_signals')
+            .select('strategy_id, stock_id, score, date')
+            .eq('is_selected', true)
+            .gte('date', windowStartStr)
+            .lte('date', maxDate);
+
+        if (sigErr || !signals || signals.length === 0) return null;
+
+        const allRows = signals as SignalRow[];
+
+        // 依 strategy_id 取各自在視窗內的最新日期
+        const latestByStrategy = new Map<string, string>();
+        for (const r of allRows) {
+            const cur = latestByStrategy.get(r.strategy_id);
+            if (!cur || r.date > cur) latestByStrategy.set(r.strategy_id, r.date);
+        }
+        typedSignals = allRows.filter((r) => r.date === latestByStrategy.get(r.strategy_id));
+        // 頂層 date 取入選策略中的最新日期
+        headerDate = maxDate;
     }
 
-    const { data: signals, error: sigErr } = await supabase
-        .from('strategy_signals')
-        .select('strategy_id, stock_id, score')
-        .eq('date', targetDate)
-        .eq('is_selected', true);
-
-    if (sigErr || !signals || signals.length === 0) return null;
-
-    interface SignalRow { strategy_id: string; stock_id: string; score: number | null }
     interface HoldingRow { stock_code: string; etf_code: string; stock_name?: string | null }
     interface DiffRow { stock_code: string; change_type: string; diff_weight: number | null }
     interface StockInfoRow { stock_code: string; name_short: string | null; industry: string | null }
 
-    const typedSignals = signals as SignalRow[];
     const allStockIds = [...new Set(typedSignals.map((s) => s.stock_id))];
 
-    const sevenDaysAgo = new Date(targetDate);
+    const sevenDaysAgo = new Date(headerDate);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
@@ -56,7 +94,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
             .select('stock_code, change_type, diff_weight')
             .eq('etf_code', PORTFOLIO_ETF)
             .gte('data_date', sevenDaysAgoStr)
-            .lte('data_date', targetDate)
+            .lte('data_date', headerDate)
             .in('stock_code', allStockIds),
         supabase
             .from('stock_basic_info')
@@ -133,7 +171,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
         stocks,
     }));
 
-    return { date: targetDate, strategies };
+    return { date: headerDate, strategies };
 }
 
 export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {

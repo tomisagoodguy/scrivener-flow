@@ -88,5 +88,11 @@ class StrategySignalStep(BaseStep):
             if new_codes:
                 ctx.secondary_stock_codes = ctx.secondary_stock_codes + new_codes
                 logger.info(f"[StrategySignalStep] 新增 {len(new_codes)} 支策略股至 secondary_stock_codes")
+        else:
+            # 所有現役策略皆無輸出（含配額耗盡、例外或全數無選股）視為異常停更訊號，
+            # 升級為告警讓既有 LINE 通知管道一併通知管理員；維持不 raise。
+            msg = f"策略訊號全空：{date_str} 所有現役策略皆無 is_selected 輸出"
+            logger.warning("[StrategySignalStep] %s", msg)
+            ctx.validation_warnings.append(msg)
 
         return ctx

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { SignalBadge } from './SignalBadge';
 
 // ── 型別 ──────────────────────────────────────────────────────────────────────
 
@@ -28,6 +27,19 @@ interface FlowTotals {
     stocks_count: number;
 }
 
+export interface SectorChild {
+    sector: string;
+    net_nt: number;
+    in_nt: number;
+    out_nt: number;
+    in_count: number;
+    out_count: number;
+}
+
+export interface SectorEntry extends SectorChild {
+    children: SectorChild[];
+}
+
 interface FlowData {
     data_date: string;
     etfs_covered: string[];
@@ -36,6 +48,7 @@ interface FlowData {
     outflow: FlowStock[];
     by_etf: Record<string, ByEtfEntry>;
     totals: FlowTotals;
+    by_sector: SectorEntry[] | null;
 }
 
 // ── 工具 ──────────────────────────────────────────────────────────────────────
@@ -200,6 +213,80 @@ function ByEtfView({ byEtf }: { byEtf: Record<string, ByEtfEntry> }) {
     );
 }
 
+function netClass(net: number): string {
+    return net >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+}
+
+function SectorChildRow({ child }: { child: SectorChild }) {
+    return (
+        <div className="flex items-center gap-3 text-xs py-1.5">
+            <span className="text-slate-600 dark:text-slate-300 flex-1">{child.sector}</span>
+            <span className={`font-medium ${netClass(child.net_nt)}`}>
+                {child.net_nt >= 0 ? '+' : ''}{nt2yi(child.net_nt)} 億
+            </span>
+            <span className="text-rose-500 w-20 text-right">流入 {nt2yi(child.in_nt)}</span>
+            <span className="text-emerald-500 w-20 text-right">流出 {nt2yi(child.out_nt)}</span>
+        </div>
+    );
+}
+
+function SectorRow({ entry }: { entry: SectorEntry }) {
+    const [expanded, setExpanded] = useState(false);
+    const hasChildren = entry.children.length > 0;
+    return (
+        <>
+            <tr
+                className="border-t border-slate-100 dark:border-slate-700/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 cursor-pointer transition-colors"
+                onClick={() => setExpanded(e => !e)}
+            >
+                <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300 text-sm font-medium">{entry.sector}</td>
+                <td className={`px-3 py-2.5 text-right font-medium ${netClass(entry.net_nt)}`}>
+                    {entry.net_nt >= 0 ? '+' : ''}{nt2yi(entry.net_nt)} 億
+                </td>
+                <td className="px-3 py-2.5 text-right text-rose-500 text-xs">{entry.in_count} 檔</td>
+                <td className="px-3 py-2.5 text-right text-emerald-500 text-xs">{entry.out_count} 檔</td>
+                <td className="px-3 py-2.5 text-center text-slate-400 text-xs">
+                    {hasChildren ? (expanded ? '▲' : '▼') : ''}
+                </td>
+            </tr>
+            {expanded && hasChildren && (
+                <tr className="bg-slate-50/60 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-700/50">
+                    <td colSpan={5} className="px-6 py-2">
+                        {entry.children.map((c, i) => <SectorChildRow key={i} child={c} />)}
+                    </td>
+                </tr>
+            )}
+        </>
+    );
+}
+
+export function SectorOverviewView({ bySector }: { bySector: SectorEntry[] | null }) {
+    if (!bySector || bySector.length === 0) {
+        return <p className="text-slate-400 text-sm py-8 text-center">無產業資料</p>;
+    }
+    return (
+        <div className="space-y-2">
+            <p className="text-xs text-slate-400">依題材歸類，個股可重複計入（母題材加總會大於實際總額，僅供輪動參考）</p>
+            <div className="glass-card rounded-2xl overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                            <th className="px-3 py-2.5 text-left">母題材</th>
+                            <th className="px-3 py-2.5 text-right">淨流向（億）</th>
+                            <th className="px-3 py-2.5 text-right">流入檔數</th>
+                            <th className="px-3 py-2.5 text-right">流出檔數</th>
+                            <th className="px-3 py-2.5 w-8" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {bySector.map(s => <SectorRow key={s.sector} entry={s} />)}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 
 interface DailyFlowPanelProps {
@@ -211,25 +298,31 @@ export function DailyFlowPanel({ totalEtfs, availableDates = [] }: DailyFlowPane
     const [data, setData] = useState<FlowData | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<string>('');
-    const [viewMode, setViewMode] = useState<'stock' | 'etf'>('stock');
+    const [viewMode, setViewMode] = useState<'stock' | 'etf' | 'sector'>('stock');
 
     useEffect(() => {
-        const supabase = createClient();
+        let cancelled = false;
         const targetDate = selectedDate || undefined;
 
-        setLoading(true);
-        const query = supabase
-            .from('etf_flow_daily')
-            .select('data_date, etfs_covered, etfs_lagging, inflow, outflow, by_etf, totals')
-            .order('data_date', { ascending: false })
-            .limit(1);
+        async function load() {
+            setLoading(true);
+            const supabase = createClient();
+            const query = supabase
+                .from('etf_flow_daily')
+                .select('data_date, etfs_covered, etfs_lagging, inflow, outflow, by_etf, totals, by_sector')
+                .order('data_date', { ascending: false })
+                .limit(1);
 
-        if (targetDate) query.eq('data_date', targetDate);
+            if (targetDate) query.eq('data_date', targetDate);
 
-        query.then(({ data: rows }) => {
+            const { data: rows } = await query;
+            if (cancelled) return;
             setData((rows?.[0] ?? null) as FlowData | null);
             setLoading(false);
-        });
+        }
+
+        load();
+        return () => { cancelled = true; };
     }, [selectedDate]);
 
     if (loading) return (
@@ -262,13 +355,13 @@ export function DailyFlowPanel({ totalEtfs, availableDates = [] }: DailyFlowPane
                         </select>
                     )}
                     <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                        {(['stock', 'etf'] as const).map(mode => (
+                        {(['stock', 'etf', 'sector'] as const).map(mode => (
                             <button
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
                                 className={`px-3 py-1 text-xs rounded transition-colors ${viewMode === mode ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm font-medium' : 'text-slate-500'}`}
                             >
-                                {mode === 'stock' ? '個股維度' : '分 ETF 小計'}
+                                {mode === 'stock' ? '個股維度' : mode === 'etf' ? '分 ETF 小計' : '產業總覽'}
                             </button>
                         ))}
                     </div>
@@ -283,8 +376,10 @@ export function DailyFlowPanel({ totalEtfs, availableDates = [] }: DailyFlowPane
                     <FlowTable stocks={data.inflow} isInflow={true} title="資金流入排行" />
                     <FlowTable stocks={data.outflow} isInflow={false} title="資金流出排行" />
                 </div>
-            ) : (
+            ) : viewMode === 'etf' ? (
                 <ByEtfView byEtf={data.by_etf} />
+            ) : (
+                <SectorOverviewView bySector={data.by_sector} />
             )}
         </div>
     );
