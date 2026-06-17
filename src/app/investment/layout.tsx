@@ -12,6 +12,7 @@ const primaryNavItems = [
     { name: '策略選股', href: '/investment/strategy' },
     { name: '族群強弱', href: '/investment/sectors' },
     { name: '同步加碼', href: '/investment/momentum' },
+    { name: '連續加減碼', href: '/investment/streaks' },
 ];
 
 const moreGroup = [

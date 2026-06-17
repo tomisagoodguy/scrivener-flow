@@ -313,6 +313,25 @@ export default async function InvestmentPoolPage() {
                 ))}
             </div>
 
+            {/* 連續加減碼入口 */}
+            <Link
+                href="/investment/streaks"
+                className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:scale-[1.01] transition-transform group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+                        🔥
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white">連續加減碼</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            個股被主動 ETF 連續同向加減碼了幾個回報日 — 持續性買賣意圖
+                        </p>
+                    </div>
+                </div>
+                <span className="text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+
             <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <PreMarketGuidePair />
             </React.Suspense>
