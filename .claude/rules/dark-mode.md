@@ -1,5 +1,26 @@
 # 深色模式規則
 
+## 首選做法：變數驅動深色表面（`html.dark` CSS 變數）
+
+`globals.css` 在 `html.dark` 區塊覆寫表面色設計 token，深色背景由變數驅動，**不需要任何 `!important`**：
+
+```css
+/* globals.css */
+html.dark {
+    --card-bg: #1e293b;      /* slate-900 */
+    --card-border: #475569;  /* slate-600 */
+    --background: #020617;   /* slate-950 */
+    --surface: rgba(30, 41, 59, 0.85);
+    /* ... */
+}
+```
+
+`.glass-card`、`.glass`、`body` 及 `@theme inline` 對應的 `bg-card` / `border` utility 都讀這些變數，深色模式自帶正確背景。
+
+**新增共用表面元件時：優先用 `.glass-card`（變數驅動，自帶深色），其次元件層級 `dark:` variant。不要再依賴地毯式 `!important`。**
+
+> 📌 已移除（dark-theme-token-migration）：`html.dark [class*="card"]/[class*="Card"]/[class*="panel"]/[class*="Panel"]/[class*="section"]/[class*="Section"]` 六條萬用結構背景規則，以及 `[class*="bg-slate-50/"]` 萬用 substring 匹配（改為具名列舉透明度）。`.glass-card` 的深色背景現由上述變數提供。
+
 ## 核心陷阱：`!important` 覆蓋問題
 
 `dark-theme.css` 對結構性 class 套用 `!important`，會蓋掉 Tailwind `dark:` variants：

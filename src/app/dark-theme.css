@@ -169,11 +169,16 @@ html.dark .bg-white:not([style*="background"]) {
     /* slate-900 深灰卡片 */
 }
 
-/* 半透明背景 */
-html.dark .bg-slate-50\/50:not([style*="background"]),
+/* 半透明背景：具名列舉所有實際使用的 bg-slate-50/<opacity> 變體
+   （取代 [class*="bg-slate-50/"] 萬用 substring 匹配，dark-theme-token-migration）。
+   清單依 codebase 用量：/30 /50 /60 /70 /80 /90。新增其他透明度時於此補上。 */
 html.dark .bg-slate-50\/30:not([style*="background"]),
-html.dark .bg-white\/50:not([style*="background"]),
-html.dark [class*="bg-slate-50/"]:not([style*="background"]) {
+html.dark .bg-slate-50\/50:not([style*="background"]),
+html.dark .bg-slate-50\/60:not([style*="background"]),
+html.dark .bg-slate-50\/70:not([style*="background"]),
+html.dark .bg-slate-50\/80:not([style*="background"]),
+html.dark .bg-slate-50\/90:not([style*="background"]),
+html.dark .bg-white\/50:not([style*="background"]) {
     background-color: rgba(30, 41, 59, 0.5) !important;
     /* slate-900 半透明 */
 }
@@ -206,29 +211,20 @@ html.dark .shadow-xl:not([style*="background"]) {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3) !important;
 }
 
-/* 通用卡片 class（:not([style*="background"]) → 不蓋掉 inline 背景色） */
-html.dark [class*="card"]:not([style*="background"]),
-html.dark [class*="Card"]:not([style*="background"]) {
-    background-color: #1e293b !important;
-    /* slate-900 */
-    color: #f8fafc !important;
-    /* slate-50 */
-}
+/* 通用卡片 class 已移除（dark-theme-token-migration）：
+   .glass-card 等卡片表面改由 globals.css 的 html.dark 變數（--card-bg / --card-border）
+   驅動深色背景，不再需要 [class*="card"] 地毯式 !important。 */
 
-/* 通用容器 */
+/* 通用容器：保留。
+   [class*="container"] 強制 transparent 是為了防止帶 .rounded- / .shadow- 的容器
+   被那些結構規則加上 slate-900 背景而產生雙層底色；移除會造成回歸，故保留。 */
 html.dark [class*="container"]:not([style*="background"]),
 html.dark [class*="Container"]:not([style*="background"]) {
     background-color: transparent !important;
 }
 
-/* 通用 panel/section（:not([style*="background"]) → 不蓋掉 inline 背景色） */
-html.dark [class*="panel"]:not([style*="background"]),
-html.dark [class*="Panel"]:not([style*="background"]),
-html.dark [class*="section"]:not([style*="background"]),
-html.dark [class*="Section"]:not([style*="background"]) {
-    background-color: #1e293b !important;
-    /* slate-900 */
-}
+/* 通用 panel/section 已移除（dark-theme-token-migration）：
+   panel/section 表面若需深色背景，改用 .glass-card 或元件層級 dark: variant。 */
 
 /* Header/Footer */
 html.dark header,
