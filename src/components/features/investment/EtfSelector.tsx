@@ -8,6 +8,12 @@ import { ArrowLeftIcon } from 'lucide-react';
 interface EtfSelectorProps {
     currentEtf: string;
     mode?: 'drilldown' | 'pool';
+    /**
+     * 有資料的 ETF code 清單。提供時，drilldown switcher 只渲染這些 code 的按鈕；
+     * 省略（undefined）時渲染全部 registry 項目（維持舊行為）。空陣列代表「無 active」，
+     * 會渲染零顆按鈕——不等同於省略。
+     */
+    activeCodes?: string[];
 }
 
 const ETF_TAILWIND_COLORS: Record<string, string> = {
@@ -18,7 +24,7 @@ const ETF_TAILWIND_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600';
 
-export function EtfSelector({ currentEtf, mode = 'drilldown' }: EtfSelectorProps) {
+export function EtfSelector({ currentEtf, mode = 'drilldown', activeCodes }: EtfSelectorProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -40,9 +46,12 @@ export function EtfSelector({ currentEtf, mode = 'drilldown' }: EtfSelectorProps
         router.push(`/investment/${etfCode}${tabSuffix}`);
     };
 
+    const activeSet = activeCodes !== undefined ? new Set(activeCodes) : null;
+    const visibleEntries = activeSet ? ETF_REGISTRY.filter(etf => activeSet.has(etf.code)) : ETF_REGISTRY;
+
     return (
         <div className="flex items-center gap-2 flex-wrap">
-            {ETF_REGISTRY.map((etf) => {
+            {visibleEntries.map((etf) => {
                 const isActive = currentEtf === etf.code;
                 const colorClass = ETF_TAILWIND_COLORS[etf.code] ?? DEFAULT_COLOR;
                 return (

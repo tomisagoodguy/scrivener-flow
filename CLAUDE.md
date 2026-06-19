@@ -272,7 +272,10 @@ discuss?（可選）→ /spectra-propose → /spectra-apply ⇄ /spectra-ingest 
 
 Specs 在 `openspec/specs/`，change proposals 在 `openspec/changes/`，artifact 順序 `proposal → design → specs → tasks`。
 
-> **Spectra CLI 陷阱**：無 `spectra sync` 子指令。`spectra archive <name>`（不加 `--skip-specs`）預設即把 delta specs 同步進主 `openspec/specs/`（ADDED/MODIFIED 一併套用），不需另外手動 sync。
+> **Spectra CLI 陷阱**：
+>
+> - 無 `spectra sync` 子指令。`spectra archive <name>`（不加 `--skip-specs`）預設即把 delta specs 同步進主 `openspec/specs/`（ADDED/MODIFIED 一併套用），不需另外手動 sync。
+> - `spectra task done <change> <id>` 的 `<id>` 是**數字流水號**（1, 2, 3…），不是 `tasks.md` 的 `1.1`/`2.1` 標籤。傳 `1.1` 會報 `Invalid task ID: must be a number`。先用 `spectra instructions apply --change <name> --json` 取得每個 task 的數字 `id`。
 
 ---
 

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { ConsensusPanel, type ConsensusRow } from '@/components/features/investment/ConsensusPanel';
 import { getAllHoldings, buildUnionHoldings } from '@/lib/investment/holdingsUtils';
 import { getEtfOverviewStats } from '@/lib/investment/etfOverviewStats';
+import { getActiveEtfCodes } from '@/lib/investment/activeEtfs';
 import { EtfOverviewGrid } from '@/components/features/investment/EtfOverviewGrid';
 import { fetchQuantFiltersBatched } from '@/lib/investment/quantFilters';
 import { fetchSectorCategoryMap } from '@/lib/investment/sectorUtils';
@@ -220,7 +221,7 @@ export default async function InvestmentPoolPage() {
     const unionHoldings = buildUnionHoldings(byEtf);
     const allCodes = unionHoldings.map(h => h.stock_code);
 
-    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals, industryMap, rawConsensus, overviewStats] = await Promise.all([
+    const [quantFilters, allLogs, goldenZoneStats, compareData, consensusResult, signals, industryMap, rawConsensus, overviewStats, activeCodeList] = await Promise.all([
         fetchQuantFiltersBatched(allCodes),
         getAllDiffLogs(),
         getGoldenZoneStats(),
@@ -230,7 +231,11 @@ export default async function InvestmentPoolPage() {
         fetchSectorCategoryMap(allCodes),
         getConsensusSignals().catch(() => ({ signals: [], date: null })),
         getEtfOverviewStats(),
+        getActiveEtfCodes(),
     ]);
+
+    // 只在 listing / 導覽介面隱藏無資料 ETF；registry 與 pipeline 不受影響。
+    const activeCodes = new Set(activeCodeList);
 
     const fundConsensusMap: Record<string, { consensus_count: number; fund_consec_days: number }> = {};
     for (const s of rawConsensus.signals) {
@@ -245,8 +250,8 @@ export default async function InvestmentPoolPage() {
         ...quantFilters[h.stock_code],
     })) as Holding[];
 
-    // 為 StockPickerHub 準備 etfs 格式（含 revenue_yoy）
-    const etfsForPicker = ETF_REGISTRY.map(entry => ({
+    // 為 StockPickerHub 準備 etfs 格式（含 revenue_yoy）；排除無資料 ETF
+    const etfsForPicker = ETF_REGISTRY.filter(entry => activeCodes.has(entry.code)).map(entry => ({
         etf_code: entry.code,
         name: entry.name,
         color: entry.color,
@@ -297,7 +302,7 @@ export default async function InvestmentPoolPage() {
             {/* ETF 深潛快速入口 */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-slate-500 dark:text-slate-400">深潛明細：</span>
-                {ETF_REGISTRY.map(etf => (
+                {ETF_REGISTRY.filter(etf => activeCodes.has(etf.code)).map(etf => (
                     <Link
                         key={etf.code}
                         href={`/investment/${etf.code}`}

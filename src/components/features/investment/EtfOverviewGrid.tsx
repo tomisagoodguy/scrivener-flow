@@ -29,7 +29,8 @@ export function sortOverviewStats(stats: EtfOverviewStat[]): EtfOverviewStat[] {
 }
 
 export function EtfOverviewGrid({ stats }: EtfOverviewGridProps) {
-    const sorted = sortOverviewStats(stats);
+    // 隱藏無資料的 ETF（holdingsCount === 0 / dataDate === null），不顯示空卡片。
+    const sorted = sortOverviewStats(stats.filter(s => s.holdingsCount > 0));
     const maxDate = sorted[0]?.dataDate ?? null;
 
     return (

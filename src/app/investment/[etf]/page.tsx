@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { ArrowLeftIcon } from 'lucide-react';
 import { getHoldings, fetchQuantFilters, getRankingHistory, getEtfNews, getDiffLogs, getEtfDrilldownPageData } from '@/lib/investment/etfPageData';
 import { getHoldings5DayTrend } from '@/app/actions/getHoldings5DayTrend';
+import { getActiveEtfCodes } from '@/lib/investment/activeEtfs';
 import { Holdings5DayTrend } from '@/components/features/Holdings5DayTrend';
 
 export default async function InvestmentEtfDrilldownPage({
@@ -38,13 +39,14 @@ export default async function InvestmentEtfDrilldownPage({
     const etfMeta = getEtfMeta(etfCode);
     const { holdings, updatedAt, dataDate, meta } = await getHoldings(etfCode, topic ?? null);
 
-    const [logs, rankingHistory, quantFilters, news, drilldown, trendData] = await Promise.all([
+    const [logs, rankingHistory, quantFilters, news, drilldown, trendData, activeCodes] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
         getEtfNews(etfCode),
         getEtfDrilldownPageData(etfCode, dataDate),
         getHoldings5DayTrend(etfCode),
+        getActiveEtfCodes(),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({ ...h, ...quantFilters[h.stock_code] })) as Holding[];
@@ -67,7 +69,7 @@ export default async function InvestmentEtfDrilldownPage({
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{etfMeta?.shortCode ?? etfCode} 持股明細</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">{etfMeta?.name} · {etfMeta?.manager} · 持股明細與異動紀錄</p>
-                    <div className="mt-3"><EtfSelector currentEtf={etfCode} mode="drilldown" /></div>
+                    <div className="mt-3"><EtfSelector currentEtf={etfCode} mode="drilldown" activeCodes={activeCodes} /></div>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full text-sm font-medium text-slate-700 dark:text-white">
