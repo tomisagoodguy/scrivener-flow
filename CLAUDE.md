@@ -108,7 +108,7 @@ scrivener-flow/
 yarn dev              # 啟動 Next.js dev server（port 3000，被占用則 3001）
 yarn build            # Production 建置
 yarn test             # 執行所有 Jest 單元測試
-yarn test -- --testPathPattern=src/path/to/test  # 執行單一測試檔
+yarn test --testPathPatterns src/path/to/test  # 執行單一測試檔（旗標為 --testPathPatterns，複數）
 yarn lint             # ESLint 靜態分析
 ```
 
@@ -272,6 +272,8 @@ discuss?（可選）→ /spectra-propose → /spectra-apply ⇄ /spectra-ingest 
 
 Specs 在 `openspec/specs/`，change proposals 在 `openspec/changes/`，artifact 順序 `proposal → design → specs → tasks`。
 
+> **Spectra CLI 陷阱**：無 `spectra sync` 子指令。`spectra archive <name>`（不加 `--skip-specs`）預設即把 delta specs 同步進主 `openspec/specs/`（ADDED/MODIFIED 一併套用），不需另外手動 sync。
+
 ---
 
 ## 測試策略
@@ -280,7 +282,7 @@ Specs 在 `openspec/specs/`，change proposals 在 `openspec/changes/`，artifac
 
 ```bash
 yarn test                                        # 執行所有測試
-yarn test -- --testPathPattern=useHoldings       # 執行含關鍵字的測試
+yarn test --testPathPatterns useHoldings         # 執行含關鍵字的測試
 yarn test -- --coverage                          # 產生覆蓋率報告
 ```
 
