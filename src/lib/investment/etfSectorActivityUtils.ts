@@ -11,6 +11,9 @@ export type DiffLogRow = {
     change_type: string;
 };
 
+// 顯著性門檻：abs(diff_weight) < 0.05pp 的微幅異動不計入族群活躍度。
+const SIGNIFICANCE_THRESHOLD = 0.05;
+
 // Pure function exported for testing. Filters and groups diff logs by sector category.
 export function buildEtfSectorActivityMap(
     stockToCategory: Map<string, string>,
@@ -23,6 +26,7 @@ export function buildEtfSectorActivityMap(
     }> = {};
 
     for (const row of diffLogs) {
+        if (Math.abs(row.diff_weight) < SIGNIFICANCE_THRESHOLD) continue;
         const category = stockToCategory.get(row.stock_code);
         if (!category) continue;
 

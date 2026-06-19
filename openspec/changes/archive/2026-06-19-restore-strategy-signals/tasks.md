@@ -17,9 +17,9 @@
 
 > 對應 spec 需求「每日策略訊號單一執行者」與 design 決策一：保留 `StrategySignalStep`，自每日 CI 移除 `run_strategies.py` 呼叫。
 
-- [ ] [P] 3.1 實作需求「每日策略訊號單一執行者」：自 `.github/workflows/etf_daily.yml` 的 "Run ETF Tracker" step 移除 `uv run python ETF/run_strategies.py --days 5` 該行，保留 `main.py --days 30`；`run_strategies.py` 檔案保留不刪。驗證：`grep run_strategies .github/workflows/etf_daily.yml` 無輸出。
+- [x] [P] 3.1 實作需求「每日策略訊號單一執行者」：自 `.github/workflows/etf_daily.yml` 的 "Run ETF Tracker" step 移除 `uv run python ETF/run_strategies.py --days 5` 該行，保留 `main.py --days 30`；`run_strategies.py` 檔案保留不刪。驗證：`grep run_strategies .github/workflows/etf_daily.yml` 無輸出。
 
 ## 4. 驗證與收尾
 
-- [ ] 4.1 全測試綠燈：`yarn test` 與 `uv run pytest ETF/` 通過，`yarn lint` 與 `uv run ruff check` 無新增錯誤。
-- [ ] 4.2 手動驗證：本機開啟 `/investment/strategy`（或對著現有 `strategy_signals` 資料），確認 6/10 的 8 支現役策略卡片與 `fund_momentum` 同時顯示。驗證：頁面策略視角顯示多於一支策略卡片。
+- [x] 4.1 全測試綠燈：`yarn test` 與 `uv run pytest ETF/` 通過，`yarn lint` 與 `uv run ruff check` 無新增錯誤。
+- [x] 4.2 手動驗證：本機開啟 `/investment/strategy`（或對著現有 `strategy_signals` 資料），確認 6/10 的 8 支現役策略卡片與 `fund_momentum` 同時顯示。驗證：頁面策略視角顯示多於一支策略卡片。

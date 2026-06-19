@@ -28,6 +28,8 @@ const config = {
     testPathIgnorePatterns: [
         '<rootDir>/node_modules/',
         '<rootDir>/.next/',
+        // setup.ts 為 setupFilesAfterEnv 設定檔，非測試套件，避免被當成空測試套件而失敗
+        '<rootDir>/src/__tests__/setup.ts',
     ],
 
     // 覆蓋率設定

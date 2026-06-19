@@ -77,15 +77,15 @@ describe('useHoldingsFilter', () => {
   it('should toggle sort order on same field', () => {
     const { result } = renderHook(() => useHoldingsFilter(mockHoldings));
 
-    // 先排序
+    // 用非預設欄位（預設為 weight/desc）：首次點擊應為 desc
     act(() => {
-      result.current.handleSort('weight');
+      result.current.handleSort('price');
     });
     expect(result.current.sortOrder).toBe('desc');
 
     // 再次點擊同一欄位，切換順序
     act(() => {
-      result.current.handleSort('weight');
+      result.current.handleSort('price');
     });
     expect(result.current.sortOrder).toBe('asc');
   });

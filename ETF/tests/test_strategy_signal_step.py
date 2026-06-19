@@ -113,7 +113,8 @@ def test_strategy_signal_step_skips_on_dry_run():
     """Dry run should not write to DB."""
     from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
     from ETF.pipeline.context import PipelineContext
-    import argparse, pathlib
+    import argparse
+    import pathlib
 
     ctx = PipelineContext(
         args=argparse.Namespace(days=30, dry_run=True),
@@ -132,7 +133,8 @@ def test_strategy_signal_step_upserts_selected_stocks():
     """
     from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
     from ETF.pipeline.context import PipelineContext
-    import argparse, pathlib
+    import argparse
+    import pathlib
 
     ctx = PipelineContext(
         args=argparse.Namespace(days=30, dry_run=False),
