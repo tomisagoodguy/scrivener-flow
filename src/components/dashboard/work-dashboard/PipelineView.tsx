@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { format, addDays, isSameDay } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { TrendingUp, Gift, AlertTriangle, Calendar } from 'lucide-react';
@@ -15,6 +16,7 @@ interface PipelineViewProps {
  * 未來 7 日預告（Pipeline 時間軸）
  */
 export function PipelineView({ tasks }: PipelineViewProps) {
+    const router = useRouter();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -74,7 +76,14 @@ export function PipelineView({ tasks }: PipelineViewProps) {
                             {dayTasks.length > 0 ? (
                                 <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto custom-scrollbar">
                                 {dayTasks.map(t => (
-                                    <div key={t.id} className="p-2.5 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-md hover:border-blue-100 transition-all duration-200 cursor-pointer">
+                                    <div
+                                        key={t.id}
+                                        role={t.caseId ? 'button' : undefined}
+                                        tabIndex={t.caseId ? 0 : undefined}
+                                        onClick={t.caseId ? () => router.push(`/cases/${t.caseId}`) : undefined}
+                                        onKeyDown={t.caseId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/cases/${t.caseId}`); } } : undefined}
+                                        className={`p-2.5 rounded-xl bg-slate-50/50 border border-slate-100 transition-all duration-200 ${t.caseId ? 'hover:bg-white hover:shadow-md hover:border-blue-100 cursor-pointer' : 'cursor-default'}`}
+                                    >
                                         <div className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{t.title}</div>
                                         <div className="mt-1.5">
                                             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest
