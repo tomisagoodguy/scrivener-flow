@@ -234,3 +234,84 @@ def test_strategy_signal_step_partial_output_no_empty_warning():
     services.sql_storage.upsert_strategy_signals.assert_called_once()
     # 不應有「全空」告警
     assert not any("全空" in w for w in ctx.validation_warnings)
+
+
+# ---------------------------------------------------------------------------
+# StrategySignalStep — 連續停更升級告警（spec「策略訊號連續停更升級告警」）
+# ---------------------------------------------------------------------------
+
+from datetime import date  # noqa: E402
+
+
+def test_strategy_signal_step_stale_beyond_threshold_appends_warning():
+    """
+    Scenario: 連續停更超過門檻時升級告警
+    GIVEN server 當日 2026-07-01；系列策略最新成功寫入日期 2026-06-10（距當日 21 天），
+          本次因配額 skip 未寫入
+    THEN ctx.validation_warnings 含一筆指明停更天數與最後成功日期的告警，
+         且與既有「當次全空」告警可並存
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-07-01")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    services.sql_storage.get_latest_strategy_signal_date.return_value = date(2026, 6, 10)
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [_EmptyStrategy()],
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+        result = StrategySignalStep().execute(ctx, services)
+
+    assert result is ctx
+    stale_warnings = [w for w in ctx.validation_warnings if "停更" in w]
+    assert len(stale_warnings) == 1
+    assert "21" in stale_warnings[0]
+    assert "2026-06-10" in stale_warnings[0]
+    # 與「當次全空」告警並存（本次無輸出且非配額 skip）
+    assert any("全空" in w for w in ctx.validation_warnings)
+
+
+def test_strategy_signal_step_stale_within_threshold_no_warning():
+    """
+    Scenario: 停更在門檻內不告警
+    GIVEN server 當日 2026-07-01；系列策略最新成功寫入日期 2026-06-29（距當日 2 天，門檻內）
+    THEN ctx.validation_warnings 不因「連續停更」原因新增告警
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-07-01")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    services.sql_storage.get_latest_strategy_signal_date.return_value = date(2026, 6, 29)
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [_ConstantStrategy()],
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+        StrategySignalStep().execute(ctx, services)
+
+    assert not any("停更" in w for w in ctx.validation_warnings)
+
+
+def test_strategy_signal_step_fresh_write_no_stale_warning():
+    """
+    Scenario: 本次正常寫入不告警
+    GIVEN 本次成功寫入使系列策略最新日期即為當日 2026-07-01
+    THEN ctx.validation_warnings 不因「連續停更」原因新增告警
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-07-01")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    services.sql_storage.get_latest_strategy_signal_date.return_value = date(2026, 7, 1)
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [_ConstantStrategy()],
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+        StrategySignalStep().execute(ctx, services)
+
+    assert not any("停更" in w for w in ctx.validation_warnings)

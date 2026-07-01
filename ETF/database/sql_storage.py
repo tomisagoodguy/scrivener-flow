@@ -363,6 +363,26 @@ class SQLStorage:
             conn.commit()
         logger.info("✅ 策略訊號寫入完成")
 
+    def get_latest_strategy_signal_date(self, strategy_ids: list):
+        """取得指定策略在 strategy_signals 的最新（成功寫入）日期。
+
+        Args:
+            strategy_ids: 欲檢查的 strategy_id 清單。
+
+        Returns:
+            datetime.date | None：最新日期；若無任何資料則回傳 None。
+        """
+        if not strategy_ids:
+            return None
+        with self.engine.connect() as conn:
+            query = text("""
+                SELECT MAX(date)
+                FROM strategy_signals
+                WHERE strategy_id = ANY(:strategy_ids)
+            """)
+            result = conn.execute(query, {"strategy_ids": list(strategy_ids)}).fetchone()
+            return result[0] if result else None
+
     def _get_stock_name(self, stock_code: str) -> str:
         """從 stock_basic_info 取得股票名稱"""
         try:

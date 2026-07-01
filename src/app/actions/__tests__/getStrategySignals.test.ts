@@ -1,10 +1,10 @@
 /**
  * Tests for getStrategySignals server action.
  *
- * 涵蓋 spec「策略選股頁以 per-strategy 最新日期聚合呈現」三情境：
- *  1. 多策略不同日期皆顯示（各取自身最新日期）
- *  2. 視窗外策略不顯示（gte 視窗邊界）
- *  3. 顯式日期精確比對
+ * 涵蓋 spec「策略選股頁以 per-strategy 最新日期聚合呈現」情境：
+ *  1. 不同更新節奏的策略皆顯示（各取自身最新日期；更新較慢者在 30 天保留期內仍顯示）
+ *  2. 視窗外（> 30 天）策略不顯示，且視窗以 server 當日為錨（gte = 當日 − 30 天）
+ *  3. 顯式日期精確比對不變
  */
 
 // unstable_cache 直接執行包裝函式（不快取）
@@ -21,14 +21,17 @@ import { getStrategySignals } from '../getStrategySignals';
 
 interface SignalRow { strategy_id: string; stock_id: string; score: number | null; date: string }
 
-/** strategy_signals 的 builder：date-lookup 以 .single() 終結，signals 以 await 終結並套用 eq/gte/lte 過濾。 */
-function makeSignalsBuilder(allSignals: SignalRow[], maxDate: string) {
+/**
+ * strategy_signals 的 builder：signals 以 await 終結並套用 eq/gte/lte 過濾。
+ * 未指定日期時，程式以 server 當日為錨計算視窗，不再查全表最新日期（.single 不應被呼叫）。
+ */
+function makeSignalsBuilder(allSignals: SignalRow[]) {
     const filters: { eqDate?: string; gte?: string; lte?: string } = {};
     const builder = {
         select: jest.fn(() => builder),
         order: jest.fn(() => builder),
         limit: jest.fn(() => builder),
-        single: jest.fn(() => Promise.resolve({ data: { date: maxDate }, error: null })),
+        single: jest.fn(() => Promise.resolve({ data: null, error: null })),
         eq: jest.fn((col: string, val: unknown) => {
             if (col === 'date') filters.eqDate = val as string;
             return builder;
@@ -81,22 +84,29 @@ function wireTables(signalsBuilder: unknown) {
 }
 
 describe('getStrategySignals', () => {
-    beforeEach(() => jest.clearAllMocks());
+    // 固定 server 當日為 2026-07-01，使視窗為 [2026-06-01, 2026-07-01]
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-07-01T00:00:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
 
-    it('多策略不同日期皆顯示，各取自身最新日期；頂層 date 為最新者', async () => {
-        // GIVEN fund_momentum 最新 2026-06-16；capital_layer / htf_gvi 最新 2026-06-10，皆在近 14 日視窗內
+    it('不同更新節奏的策略皆顯示：更新較慢者在 30 天保留期內仍顯示，頂層 date 為最新者', async () => {
+        // GIVEN server 當日 2026-07-01；fund_momentum 最新 2026-06-30；
+        // capital_layer / htf_gvi 最新 2026-06-10（距當日 21 天，落在 14 天外但在 30 天保留期內）
         const signals: SignalRow[] = [
-            { strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-16' },
+            { strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-30' },
             { strategy_id: 'capital_layer', stock_id: '2317', score: 1, date: '2026-06-10' },
             { strategy_id: 'capital_layer', stock_id: '9999', score: 1, date: '2026-06-04' }, // 同策略較舊日期，應被略過
             { strategy_id: 'htf_gvi', stock_id: '2454', score: 1, date: '2026-06-10' },
         ];
-        wireTables(makeSignalsBuilder(signals, '2026-06-16'));
+        wireTables(makeSignalsBuilder(signals));
 
         const result = await getStrategySignals();
 
         expect(result).not.toBeNull();
-        expect(result!.date).toBe('2026-06-16');
+        expect(result!.date).toBe('2026-06-30');
         const ids = result!.strategies.map((s) => s.id).sort();
         expect(ids).toEqual(['capital_layer', 'fund_momentum', 'htf_gvi']);
 
@@ -106,30 +116,32 @@ describe('getStrategySignals', () => {
         expect(capitalStocks).not.toContain('9999'); // 2026-06-04 較舊，不顯示
     });
 
-    it('視窗外策略不顯示：gte 套用 maxDate − 14 天為視窗起點', async () => {
-        const signalsBuilder = makeSignalsBuilder(
-            [{ strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-16' }],
-            '2026-06-16',
-        );
+    it('視窗外（> 30 天）策略不顯示；視窗以當日為錨（gte = 當日 − 30 天）', async () => {
+        const signalsBuilder = makeSignalsBuilder([
+            { strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-30' },
+            { strategy_id: 'capital_layer', stock_id: '2317', score: 1, date: '2026-05-15' }, // 距當日 47 天，視窗外
+        ]);
         wireTables(signalsBuilder);
 
-        await getStrategySignals();
+        const result = await getStrategySignals();
 
-        // maxDate 2026-06-16 − 14 天 = 2026-06-02
-        expect(signalsBuilder.gte).toHaveBeenCalledWith('date', '2026-06-02');
+        // 當日 2026-07-01 − 30 天 = 2026-06-01
+        expect(signalsBuilder.gte).toHaveBeenCalledWith('date', '2026-06-01');
+        expect(signalsBuilder.lte).toHaveBeenCalledWith('date', '2026-07-01');
+        // 未指定日期時不查全表最新日期（不以 maxDate 為錨）
+        expect(signalsBuilder.single).not.toHaveBeenCalled();
         // 未指定日期時不得用精確 eq('date', ...) 過濾
         const eqCalls = signalsBuilder.eq.mock.calls;
         expect(eqCalls.some((c) => c[0] === 'date')).toBe(false);
+        // 視窗外的 capital_layer 不顯示
+        expect(result!.strategies.map((s) => s.id)).toEqual(['fund_momentum']);
     });
 
-    it('顯式日期維持精確比對：以 eq(date) 查詢且不套用視窗 gte', async () => {
-        const signalsBuilder = makeSignalsBuilder(
-            [
-                { strategy_id: 'capital_layer', stock_id: '2317', score: 1, date: '2026-06-10' },
-                { strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-16' },
-            ],
-            '2026-06-16',
-        );
+    it('顯式日期維持精確比對：以 eq(date) 查詢且不套用視窗 gte／不查全表最新日期', async () => {
+        const signalsBuilder = makeSignalsBuilder([
+            { strategy_id: 'capital_layer', stock_id: '2317', score: 1, date: '2026-06-10' },
+            { strategy_id: 'fund_momentum', stock_id: '2330', score: 1, date: '2026-06-30' },
+        ]);
         wireTables(signalsBuilder);
 
         const result = await getStrategySignals('2026-06-10');

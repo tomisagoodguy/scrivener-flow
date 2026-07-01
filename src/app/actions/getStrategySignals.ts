@@ -10,11 +10,12 @@ import type { DiffEvent, StrategyStock, StrategyEntry, StrategySignalsResult } f
 const PORTFOLIO_ETF = '00981A';
 
 /**
- * 近期視窗（日曆天）：未指定 date 時，於此窗內取各策略自身最新日期的訊號。
- * 不同更新節奏的策略（如季頻 fundamental_momentum 與日頻 fund_momentum）
- * 不再因彼此日期差異被單一最新日期過濾掉。
+ * 近期視窗（日曆天）：未指定 date 時，以「server 當日」為錨往前取此窗內各策略自身最新日期的訊號。
+ * 對齊 strategy_signals 的 DB 保留期（sql_storage 的 cleanup：30 天），
+ * 使更新較慢的策略只要仍在保留期內就會顯示，不因日頻策略（fund_momentum）
+ * 把全域最新日期推前而被擠出視窗。
  */
-const STRATEGY_WINDOW_DAYS = 14;
+const STRATEGY_WINDOW_DAYS = 30;
 
 interface SignalRow { strategy_id: string; stock_id: string; score: number | null; date: string }
 
@@ -36,18 +37,12 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
         typedSignals = signals as SignalRow[];
         headerDate = date;
     } else {
-        // 未指定日期：取近期視窗內所有 is_selected，依 strategy_id 各取自身最新日期
-        const { data: latestRow, error: dateErr } = await supabase
-            .from('strategy_signals')
-            .select('date')
-            .order('date', { ascending: false })
-            .limit(1)
-            .single();
+        // 未指定日期：以 server 當日為錨、往前對齊 DB 保留期的近期視窗，
+        // 取窗內所有 is_selected，依 strategy_id 各取自身最新日期。
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
 
-        if (dateErr || !latestRow) return null;
-        const maxDate = (latestRow as unknown as { date: string }).date;
-
-        const windowStart = new Date(maxDate);
+        const windowStart = new Date(today);
         windowStart.setDate(windowStart.getDate() - STRATEGY_WINDOW_DAYS);
         const windowStartStr = windowStart.toISOString().split('T')[0];
 
@@ -56,7 +51,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
             .select('strategy_id, stock_id, score, date')
             .eq('is_selected', true)
             .gte('date', windowStartStr)
-            .lte('date', maxDate);
+            .lte('date', todayStr);
 
         if (sigErr || !signals || signals.length === 0) return null;
 
@@ -69,8 +64,8 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
             if (!cur || r.date > cur) latestByStrategy.set(r.strategy_id, r.date);
         }
         typedSignals = allRows.filter((r) => r.date === latestByStrategy.get(r.strategy_id));
-        // 頂層 date 取入選策略中的最新日期
-        headerDate = maxDate;
+        // 頂層 date 取所有入選策略中的最新日期
+        headerDate = [...latestByStrategy.values()].reduce((a, b) => (a > b ? a : b));
     }
 
     interface HoldingRow { stock_code: string; etf_code: string; stock_name?: string | null }
@@ -177,7 +172,9 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
 export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
     const cached = unstable_cache(
         () => _getStrategySignals(date),
-        ['strategy-signals', date ?? 'latest'],
+        // v2：視窗改以 server 當日為錨、寬度 30 天（fix-strategy-signals-staleness）。
+        // 版本號用於手動失效舊視窗邏輯算出的快取結果。
+        ['strategy-signals-v2', date ?? 'latest'],
         { revalidate: 3600 },
     );
     return cached();

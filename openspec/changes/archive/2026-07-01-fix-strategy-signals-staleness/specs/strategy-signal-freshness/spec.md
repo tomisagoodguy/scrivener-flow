@@ -1,10 +1,4 @@
-# strategy-signal-freshness Specification
-
-## Purpose
-
-TBD - created by archiving change 'restore-strategy-signals'. Update Purpose after archive.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 策略選股頁以 per-strategy 最新日期聚合呈現
 
@@ -38,56 +32,3 @@ TBD - created by archiving change 'restore-strategy-signals'. Update Purpose aft
 - **WHEN** 呼叫 `getStrategySignals(date)` 並傳入特定日期
 - **THEN** 僅回傳該日期的訊號，行為與既有一致
 
-
-<!-- @trace
-source: fix-strategy-signals-staleness
-updated: 2026-07-01
-code:
-  - ETF/pipeline/steps/strategy_signal_step.py
-  - ETF/database/sql_storage.py
-  - src/app/actions/getStrategySignals.ts
-  - next-env.d.ts
-tests:
-  - src/app/actions/__tests__/getStrategySignals.test.ts
-  - ETF/tests/test_strategy_signal_step.py
--->
-
----
-### Requirement: 每日策略訊號單一執行者
-
-每日 CI SHALL 對每支現役策略每日只執行一次完整 `get_positions()` 運算（單次 `StrategyDataCache` 建立），由 `main.py` 的 `StrategySignalStep` 擔任唯一寫入者。每日 CI 工作流 SHALL NOT 再額外呼叫 `run_strategies.py`。`run_strategies.py` 檔案 SHALL 保留供手動補跑歷史訊號之用。
-
-#### Scenario: 每日 CI 不重複執行策略運算
-
-- **WHEN** daily ETF workflow 執行
-- **THEN** 工作流的執行指令不含 `run_strategies.py` 呼叫，現役策略僅由 `main.py` 的 `StrategySignalStep` 執行並寫入 `strategy_signals`
-
-#### Scenario: 策略股 K 線同步副作用保留
-
-- **WHEN** `StrategySignalStep` 選出股票
-- **THEN** 這些股票被加入 `ctx.secondary_stock_codes`，由後續的 `SyncOHLCVStep` 於同一次 pipeline 內同步其 K 線/股價
-
-<!-- @trace
-source: restore-strategy-signals
-updated: 2026-06-19
-code:
-  - src/app/actions/getStrategySignals.ts
-  - ETF/pipeline/context.py
-  - jest.config.js
-  - next-env.d.ts
-  - src/components/features/investment/DailyFlowPanel.tsx
-  - src/lib/investment/etfSectorActivityUtils.ts
-  - supabase/migrations/20260617120000_add_etf_flow_by_sector.sql
-  - ETF/database/__pycache__/connection.cpython-313.pyc
-  - ETF/pipeline/steps/flow_compute_step.py
-  - ETF/pipeline/steps/sector_strength_step.py
-  - ETF/pipeline/steps/strategy_signal_step.py
-  - .github/workflows/etf_daily.yml
-tests:
-  - src/app/actions/__tests__/getStrategySignals.test.ts
-  - ETF/tests/test_sector_fund_flow.py
-  - src/__tests__/hooks/useHoldingsFilter.test.ts
-  - ETF/tests/test_strategy_signal_step.py
-  - ETF/test_strategy_simple.py
-  - src/components/features/investment/__tests__/SectorOverviewView.test.tsx
--->
