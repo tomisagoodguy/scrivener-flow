@@ -106,6 +106,17 @@ class SyncTreemapStep(BaseStep):
         except Exception as e:
             self.logger.warning(f"Failed to fetch etl:market_cap: {e}")
 
+        # 3.5 取成交值（price:成交金額，單位元），對齊 last_close 日期
+        last_turnover = pd.Series(dtype=float)
+        try:
+            turnover_df = fd.get("price:成交金額")
+            if turnover_df is not None and not turnover_df.empty:
+                last_turnover = turnover_df.iloc[-1]
+            else:
+                self.logger.warning("price:成交金額 returned empty, turnover will be null in treemap rows.")
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch price:成交金額: {e}")
+
         # 4. 取股票名稱
         stock_names: dict[str, str] = {}
         try:
@@ -124,6 +135,7 @@ class SyncTreemapStep(BaseStep):
             if close_val is None or pd.isna(close_val) or close_val <= 0:
                 continue
             mktcap_val = last_mktcap.get(code)
+            turnover_val = last_turnover.get(code)
             rows.append({
                 "date": target_date,
                 "stock_code": str(code),
@@ -132,6 +144,7 @@ class SyncTreemapStep(BaseStep):
                 "market_cap": int(mktcap_val) if mktcap_val is not None and not pd.isna(mktcap_val) else None,
                 "close": float(round(close_val, 4)),
                 "change_pct": float(round(change_pct.get(code, 0) or 0, 6)),
+                "turnover": int(turnover_val) if turnover_val is not None and not pd.isna(turnover_val) else None,
             })
 
         if not rows:
@@ -148,15 +161,16 @@ class SyncTreemapStep(BaseStep):
     def _upsert(self, rows: list[dict], services: "PipelineServices") -> None:
         sql = text("""
             INSERT INTO market_treemap_daily
-                (date, stock_code, stock_name, industry, market_cap, close, change_pct)
+                (date, stock_code, stock_name, industry, market_cap, close, change_pct, turnover)
             VALUES
-                (:date, :stock_code, :stock_name, :industry, :market_cap, :close, :change_pct)
+                (:date, :stock_code, :stock_name, :industry, :market_cap, :close, :change_pct, :turnover)
             ON CONFLICT (date, stock_code) DO UPDATE SET
                 stock_name = EXCLUDED.stock_name,
                 industry   = EXCLUDED.industry,
                 market_cap = EXCLUDED.market_cap,
                 close      = EXCLUDED.close,
-                change_pct = EXCLUDED.change_pct
+                change_pct = EXCLUDED.change_pct,
+                turnover   = EXCLUDED.turnover
         """)
         try:
             with services.sql_storage.engine.connect() as conn:

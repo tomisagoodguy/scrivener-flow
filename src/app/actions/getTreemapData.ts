@@ -10,6 +10,7 @@ export interface TreemapStock {
     market_cap: number | null;
     close: number | null;
     change_pct: number | null;
+    turnover: number | null;
 }
 
 export interface TreemapData {
@@ -33,7 +34,7 @@ const _getTreemapData = unstable_cache(
 
         const { data: rawStocks } = await supabase
             .from('market_treemap_daily')
-            .select('stock_code, stock_name, industry, market_cap, close, change_pct')
+            .select('stock_code, stock_name, industry, market_cap, close, change_pct, turnover')
             .eq('date', latestDate)
             .gt('close', 0);
 
@@ -44,7 +45,7 @@ const _getTreemapData = unstable_cache(
             .filter((s) => !s.stock_name)
             .map((s) => s.stock_code);
 
-        let nameMap: Record<string, string> = {};
+        const nameMap: Record<string, string> = {};
         if (nullNameCodes.length > 0) {
             const { data: basicRows } = await supabase
                 .from('stock_basic_info')

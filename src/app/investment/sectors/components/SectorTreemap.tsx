@@ -37,6 +37,8 @@ function getSectorFill(avg: number): string {
     return 'rgba(6,95,70,0.18)';
 }
 
+type SizeMode = 'market_cap' | 'money_heat';
+
 interface StockEntry {
     name: string;
     size: number;
@@ -49,7 +51,16 @@ interface SectorGroup {
     children: StockEntry[];
 }
 
-function buildTreemapData(stocks: TreemapStock[]): SectorGroup[] {
+// 方塊大小：市值 = market_cap；資金熱度 = |漲跌幅| × 成交值（缺值/0 退回極小正值 1，避免方塊消失或 NaN）
+function stockSize(s: TreemapStock, sizeMode: SizeMode): number {
+    if (sizeMode === 'money_heat') {
+        const heat = Math.abs(s.change_pct ?? 0) * (s.turnover ?? 0);
+        return heat > 0 ? heat : 1;
+    }
+    return s.market_cap ?? 1;
+}
+
+function buildTreemapData(stocks: TreemapStock[], sizeMode: SizeMode): SectorGroup[] {
     const groups = new Map<string, TreemapStock[]>();
 
     for (const s of stocks) {
@@ -61,6 +72,7 @@ function buildTreemapData(stocks: TreemapStock[]): SectorGroup[] {
 
     return Array.from(groups.entries())
         .map(([name, groupStocks]) => {
+            // 顏色維持市值加權平均漲跌幅（台股慣例），與 sizeMode 無關
             const totalCap = groupStocks.reduce((sum, s) => sum + (s.market_cap ?? 1), 0);
             const avgChangePct =
                 groupStocks.reduce((sum, s) => sum + (s.change_pct ?? 0) * (s.market_cap ?? 1), 0) /
@@ -70,12 +82,12 @@ function buildTreemapData(stocks: TreemapStock[]): SectorGroup[] {
                 name,
                 avgChangePct,
                 children: groupStocks
-                    .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
                     .map((s) => ({
                         name: s.stock_name ?? s.stock_code,
-                        size: s.market_cap ?? 1,
+                        size: stockSize(s, sizeMode),
                         stock: s,
-                    })),
+                    }))
+                    .sort((a, b) => b.size - a.size),
             };
         })
         .sort(
@@ -262,6 +274,7 @@ const TOP_N_OPTIONS: { label: string; value: number | null }[] = [
 export default function SectorTreemap({ stocks, date }: Props) {
     const [topN, setTopN] = useState<number | null>(200);
     const [selectedSector, setSelectedSector] = useState<string | null>(null);
+    const [sizeMode, setSizeMode] = useState<SizeMode>('market_cap');
 
     const filteredStocks = useMemo(() => {
         if (selectedSector) {
@@ -275,7 +288,7 @@ export default function SectorTreemap({ stocks, date }: Props) {
         return stocks;
     }, [stocks, topN, selectedSector]);
 
-    const data = useMemo(() => buildTreemapData(filteredStocks), [filteredStocks]);
+    const data = useMemo(() => buildTreemapData(filteredStocks, sizeMode), [filteredStocks, sizeMode]);
 
     const stats = useMemo(() => {
         const valid = filteredStocks.filter((s) => s.change_pct !== null);
@@ -328,6 +341,26 @@ export default function SectorTreemap({ stocks, date }: Props) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* 顯示維度切換：市值 / 資金熱度 */}
+                    <div className="flex rounded-lg overflow-hidden border border-gray-200/50 dark:border-white/10">
+                        {([
+                            { label: '市值', value: 'market_cap' as SizeMode },
+                            { label: '資金熱度', value: 'money_heat' as SizeMode },
+                        ]).map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setSizeMode(opt.value)}
+                                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                    sizeMode === opt.value
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-500 hover:bg-gray-100/50 dark:hover:bg-white/10'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Top-N filter（放大族群時隱藏） */}
                     {!selectedSector && (
                         <div className="flex rounded-lg overflow-hidden border border-gray-200/50 dark:border-white/10">
@@ -366,9 +399,11 @@ export default function SectorTreemap({ stocks, date }: Props) {
 
             {/* Hint */}
             <div className="px-4 py-1.5 text-xs text-gray-400 bg-white/10">
-                {selectedSector
-                    ? '點族群邊框切換族群 · 點「← 全市場」返回 · 滑鼠停留顯示股票詳情'
-                    : '方塊大小 = 市值 · 顏色 = 漲跌幅 · 點族群邊框放大該族群 · 滑鼠停留顯示詳情'}
+                {sizeMode === 'money_heat'
+                    ? '方塊大小 = |漲跌幅| × 成交值（當日量能估算，非法人資金流向） · 顏色 = 漲跌幅 · 點族群邊框放大該族群'
+                    : selectedSector
+                        ? '點族群邊框切換族群 · 點「← 全市場」返回 · 滑鼠停留顯示股票詳情'
+                        : '方塊大小 = 市值 · 顏色 = 漲跌幅 · 點族群邊框放大該族群 · 滑鼠停留顯示詳情'}
             </div>
 
             {/* Treemap */}

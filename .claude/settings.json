@@ -136,7 +136,13 @@
       "mcp__exa__web_search_exa",
       "PowerShell(npx eslint src/lib/cases/htmlExport.ts src/lib/cases/exportInteractive.ts src/lib/cases/__tests__/exportInteractive.test.ts src/lib/cases/__tests__/htmlExport.test.ts 2>&1)",
       "Bash(cat jest.config.js)",
-      "Bash(cat jest.config.*)"
+      "Bash(cat jest.config.*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OUT:',d.get\\('outputPath'\\)\\); print\\('LOCALE:',d.get\\('locale'\\)\\); print\\('---INSTR---'\\); print\\(d.get\\('instruction',''\\)[:1200]\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OUT:',d.get\\('outputPath'\\)\\); print\\('LOCALE:',d.get\\('locale'\\)\\); print\\('---TEMPLATE---'\\); print\\(d.get\\('template',''\\)[:800]\\)\")",
+      "Bash(python -c 'import sys,json *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('findings',d.get\\('issues',[]\\)\\), ensure_ascii=False, indent=1\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); fs=d.get\\('findings',[]\\); crit=[f for f in fs if str\\(f.get\\('severity',''\\)\\).lower\\(\\) in \\('critical','warning'\\)]; print\\('crit/warn:',len\\(crit\\)\\); [print\\('-',f.get\\('severity'\\),f.get\\('summary'\\)\\) for f in crit]\")",
+      "mcp__claude_ai_Supabase__apply_migration"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\.claude"
