@@ -335,14 +335,17 @@ describe('buildCasesHtml', () => {
     });
 
     it('embeds the interactive state node and script without breaking self-containment', () => {
-        const html = buildCasesHtml([
-            makeCase({
-                id: 'INT-01',
-                case_number: 'INT-01',
-                notes: '備註',
-                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
-            }),
-        ]);
+        const html = buildCasesHtml(
+            [
+                makeCase({
+                    id: 'INT-01',
+                    case_number: 'INT-01',
+                    notes: '備註',
+                    milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+                }),
+            ],
+            new Date('2026-06-10T00:00:00')
+        );
         // interactive state node + enhancement script are present
         expect(html).toContain('<script type="application/json" id="export-state">');
         expect(html).toContain('{"people":[],"assignments":{},"done":{}}');
@@ -362,11 +365,14 @@ describe('buildCasesHtml', () => {
     });
 
     it('lays out the timeline list as a two-column grid with unbreakable day groups', () => {
-        const html = buildCasesHtml([
-            makeCase({
-                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
-            }),
-        ]);
+        const html = buildCasesHtml(
+            [
+                makeCase({
+                    milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+                }),
+            ],
+            new Date('2026-06-10T00:00:00')
+        );
         const printIdx = html.indexOf('@media print');
         const screenCss = html.slice(0, printIdx);
 
@@ -385,13 +391,16 @@ describe('buildCasesHtml', () => {
     });
 
     it('keeps the static timeline output as the list view with no injected week-agenda', () => {
-        const html = buildCasesHtml([
-            makeCase({
-                id: 'WK-01',
-                case_number: 'WK-01',
-                milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
-            }),
-        ]);
+        const html = buildCasesHtml(
+            [
+                makeCase({
+                    id: 'WK-01',
+                    case_number: 'WK-01',
+                    milestones: [{ seal_date: '2026-06-20' }] as DemoCase['milestones'],
+                }),
+            ],
+            new Date('2026-06-10T00:00:00')
+        );
         // static output is the day-grouped list, not a week-agenda container
         expect(html).toContain('<div class="timeline-list">');
         expect(html).not.toContain('class="export-ui week-agenda"');
