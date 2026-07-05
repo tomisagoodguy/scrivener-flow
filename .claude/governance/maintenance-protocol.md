@@ -10,9 +10,10 @@
 
 | 檔 | 層級 | 何時載入 | 內容 |
 |----|------|---------|------|
-| `CLAUDE.md`（專案） | always-on | 每 session | 三大原則、技術棧、目錄、指向 rules 的索引 |
-| `.claude/rules/*.md` | always-on | 每 session | 高頻操作規則 + 高頻 trap（含 model-dispatch、judgment-rubrics） |
-| `.claude/governance/*.md` | on-demand | 用時 Read | 診斷、範本、本協議、給未來的信 |
+| `CLAUDE.md`（專案） | always-on | 每 session | 索引 + 高頻陷阱一句話版（**≤150 行硬上限**） |
+| `.claude/rules/` **常載檔**（無 frontmatter：`model-dispatch`、`judgment-rubrics`、`workflow`） | always-on | 每 session | 調度、判斷力、SDD 流程（**合計 ≤500 行硬上限**） |
+| `.claude/rules/` **paths-scoped 檔**（frontmatter 有 `paths:` globs） | 條件載入 | 觸碰匹配檔案時 | 領域規則與 trap（components / database / etf-pipeline / dark-mode / ai / indexes / line-bot / ci-cd） |
+| `.claude/governance/*.md` | on-demand | 用時 Read | 診斷、範本、本協議、給未來的信、project-reference |
 | `~/.claude/CLAUDE.md`（global） | always-on | 每 session（跨專案） | 跨專案通則 + 濃縮版調度/判斷守則 |
 | `.claude/backups/` | 不載入、不進 git | — | 改動前的備份副本 |
 
@@ -82,11 +83,13 @@
 
 always-on 檔有硬上限，**超過就精簡或下沉到 on-demand**：
 
-| 檔 | 軟上限 | 超過怎麼辦 |
+| 檔 | 上限 | 超過怎麼辦 |
 |----|-------|-----------|
+| 專案 CLAUDE.md | **150 行（硬上限，使用者 2026-07-05 指定）** | 領域細節下沉到 paths-scoped rules 或 governance，主檔只留索引 |
+| `.claude/rules/` 常載檔合計（無 frontmatter 者） | **500 行（硬上限，使用者 2026-07-05 指定）** | 新內容優先加 `paths:` frontmatter 變條件載入，或下沉 governance |
 | `.claude/rules/` 單檔 | ~200 行 | 把「特定情境才用」的段落移到 `.claude/governance/`，rules 檔留指向 |
-| `.claude/rules/` 總量 | ~8 個檔 | 合併同主題檔；砍過時 trap（先問使用者） |
-| 專案 CLAUDE.md | ~340 行 | 領域細節下沉到 rules，主檔只留原則+索引 |
+
+**新增 rules 檔的預設**：一律加 `paths:` frontmatter（YAML list of glob patterns，官方機制，來源 code.claude.com/docs/en/memory.md「Path-specific rules」；只有 `paths` 這個欄位名被文件確認，別用 `globs`/`alwaysApply` 等編造欄位）。只有「跨領域、每 session 都可能用到」的內容才允許無 frontmatter（常載），且加入前必檢查：`wc -l .claude/rules/model-dispatch.md .claude/rules/judgment-rubrics.md .claude/rules/workflow.md`（加上你的新檔）合計仍 ≤500。
 
 精簡的判準（§ harness-diagnosis 一.2）：**「這條規則，新 session 平均每 3 次會用到 1 次以上嗎？」** 否 → 移到 on-demand。
 

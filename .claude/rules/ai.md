@@ -1,3 +1,9 @@
+---
+paths:
+  - "src/lib/ai/**"
+  - "src/app/actions/**"
+---
+
 # AI 功能規則
 
 ## Gemini 架構

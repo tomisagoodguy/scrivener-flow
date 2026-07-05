@@ -1,3 +1,13 @@
+---
+paths:
+  - "ETF/**"
+  - "src/app/investment/**"
+  - "src/hooks/investment/**"
+  - "src/repositories/**"
+  - "src/lib/investment/**"
+  - "src/app/actions/**"
+---
+
 # ETF Pipeline 規則
 
 ## 管理員監控
@@ -252,3 +262,21 @@ close = FinlabDataFrame(cache.close)  # 仍然報錯
 ```
 
 適用範圍：`ETF/strategies/` 下所有策略檔案，凡呼叫 FinLab 擴展方法皆適用。
+
+## ETF 日期一致性
+
+`getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 `ETF_REGISTRY` 全部 ETF 並行使用同一日期。
+Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fallback。
+
+## etf_diff_logs 查詢補充
+
+查詢 `etf_diff_logs` 時需明確 select `diff_weight`、`is_significant`、`prev_shares`（舊程式碼只取了子集）。
+`amount_亿` 在 DB 無此欄，需 Server 端用 holdings `price` 計算後傳入前端。
+
+## 量化策略模組架構
+
+`ETF/strategies/` 存放 5 種 FinLab 量化選股策略，所有策略繼承 `BaseStrategy`（實作 `strategy_id`、`description`、`get_positions(cache)`）。
+每日 CI 執行後結果寫入 `strategy_signals`（`strategy_id, stock_id, date, score, is_selected`）。
+前端透過 `getStrategySignals()` Server Action 讀取，並用 `computeMovement()` 標記 00981A 的增減碼狀態（`adding / reducing / holding / none`）。
+新增策略：繼承 `BaseStrategy`，在 `ETF/strategies/__init__.py` 註冊，並在 `strategyRegistry.ts` 新增 `strategy_id` → 描述對照。
+策略選股型別在 `src/lib/investment/strategyUtils.ts`（`StrategySignalsResult`、`computeMovement()`）。

@@ -15,7 +15,7 @@
 ### 1. CLAUDE.md 與 `.claude/rules/*.md` 內容重複（每 session 都付雙倍）
 **證據**：`.claude/rules/*.md` **每個 session 自動載入**（CLAUDE.md 沒有 `@import`，但 7 個 rules 檔全在 context 裡，標記為 "project instructions"）。固定 markdown 稅：
 - 專案 CLAUDE.md：17,120 bytes（≈4.3K tokens）
-- rules 檔：30,085 bytes（≈7.5K tokens）※此為診斷當下的 7 檔數字；本次交付新增 model-dispatch.md、judgment-rubrics.md 後為 9 檔，always-on 稅已上升——正說明「一.2 分層」的必要
+- rules 檔：30,085 bytes（≈7.5K tokens）※此為診斷當下的 7 檔數字；本次交付新增 model-dispatch.md、judgment-rubrics.md 後為 9 檔，always-on 稅一度上升——**已於同日第二段分層落地，常載降至 375 行，本節數字僅存歷史，見檔末追記**
 - global CLAUDE.md：7,086 bytes（≈1.8K tokens）
 - 合計 ≈ **13.5K tokens／session，還沒開始做事就付掉了**。
 
@@ -101,3 +101,16 @@ global CLAUDE.md 的模型表寫 `claude-opus-4-6 / claude-sonnet-4-6 / claude-h
 | 三.1 模型 ID | C + B | `model-dispatch.md`、global CLAUDE.md |
 | 三.2 Spectra/openspec | B | `workflow.md` |
 | 三.3 Windows shell/編碼 | D | `judgment-rubrics.md` |
+
+---
+
+## 追記（2026-07-05 第二段，Fable 5 session）
+
+一.1／一.2 的修法已**完整落地到使用者指定的硬上限（150/500）**：
+
+- CLAUDE.md 重寫為 121 行純索引（原 339 行）。
+- `.claude/rules/` 分兩層：**常載**僅 `model-dispatch` + `judgment-rubrics` + `workflow`（合計 254 行）；其餘 8 檔（components/database/etf-pipeline/dark-mode/ai/indexes/line-bot/ci-cd）加 `paths:` frontmatter **條件載入**——只在觸碰匹配檔案時載入（官方機制，code.claude.com/docs/en/memory.md「Path-specific rules」）。
+- always-on 稅：~1,213 行 → 375 行。
+- 內容零刪除：CLAUDE.md 移出的段落全數遷入對應 rules 檔或 `governance/project-reference.md`。
+
+**驗證方式（下個 session 可自查）**：沒觸碰 ETF 檔時，context 裡不該出現 etf-pipeline.md。若所有 rules 仍全量載入 → 該版本不支援 `paths`，最壞情況等同舊狀態（安全降級），屆時把 paths-scoped 檔移出 `.claude/rules/`（如 `.claude/refs/`）改為純 on-demand，CLAUDE.md 索引照舊指路。

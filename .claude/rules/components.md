@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/**/*.{ts,tsx}"
+---
+
 # 元件規則
 
 ## 大小限制
@@ -81,3 +86,10 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 登入表單已拆至 `src/app/login/components/`（`MfaTotpForm`、`PasswordLoginForm` 等子元件）。  
 修改登入邏輯時，直接修改對應子元件，不要在 `ModernLogin.tsx` 主檔寫表單邏輯。
+
+## 案件列表排序（`/cases` 頁面）——**禁止改動預設排序行為**
+
+`src/app/cases/page.tsx` 預設以里程碑優先順序排序：**印（seal_date）→ 稅（tax_payment_date）→ 過（transfer_date）→ 交（handover_date）**。
+排序邏輯：每個案件取第一個「尚未過期」的里程碑日期，最近者排最上方；無未來日期的案件沉底。
+Table 上方提供五個排序按鈕（`sort` URL param）：`milestone`（預設優先序）、`seal`、`tax`、`transfer`、`handover`。
+代書最常需要看下一個「用印」進度，此為使用者明確保護的行為。

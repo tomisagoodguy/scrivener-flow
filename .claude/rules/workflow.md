@@ -1,5 +1,6 @@
 # 開發流程規則
 
+> **always-on**：每 session 自動載入（常載三檔之一，受 maintenance-protocol §4 的 500 行合計上限約束）。
 > ⚠️ **現行流程是 Spectra（`/spectra-*`），非 openspec。** 本專案已從 openspec 遷移到 Spectra（見專案 CLAUDE.md 頂部「Spectra Instructions」）。下方 openspec 指令為**歷史遺留**，對照使用：
 > `openspec new change` → `/spectra-propose`；`openspec apply` → `/spectra-apply`；archive → `/spectra-archive`。`openspec/specs/` 與 `openspec/changes/` 目錄名沿用，但指令一律走 Spectra。
 
@@ -35,3 +36,9 @@ Artifact 順序：`proposal → design → specs → tasks`
 | `npm install` | `yarn add` |
 | `pip install` | `uv add` |
 | 建立 `_v2.ts` 備份檔 | 直接修改原檔，版本交 git 管理 |
+
+## Spectra CLI 陷阱
+
+- 無 `spectra sync` 子指令。`spectra archive <name>`（不加 `--skip-specs`）預設即把 delta specs 同步進主 `openspec/specs/`（ADDED/MODIFIED 一併套用），不需另外手動 sync。
+- `spectra task done <change> <id>` 的 `<id>` 是**數字流水號**（1, 2, 3…），不是 `tasks.md` 的 `1.1`/`2.1` 標籤。傳 `1.1` 會報 `Invalid task ID: must be a number`。先用 `spectra instructions apply --change <name> --json` 取得每個 task 的數字 `id`。
+- Parked changes：`spectra list --parked` 查看、`spectra unpark <name>` 還原；`/spectra-apply` 與 `/spectra-ingest` 會自動處理。
