@@ -195,10 +195,23 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 | `etf-pipeline.md` | Pipeline 步驟錯誤處理（關鍵 vs 輔助步驟）、日期來源規則（`ctx.date_str` 優先）、SQL `CAST()` vs `::` 語法、自選股名稱查詢三表優先序、`diff_shares` 單位（股→張÷1000） |
 | `ai.md` | Gemini fallback 鏈、`ALLOWED_EMAIL` 功能閘門、AI Server Action 限制 |
 | `dark-mode.md` | `dark-theme.css !important` 覆蓋問題與正確的深色模式做法 |
-| `workflow.md` | openspec 流程、登入重導向處理、套件管理禁令 |
+| `workflow.md` | 功能變更流程（現行 Spectra，openspec 為歷史遺留）、登入重導向處理、套件管理禁令 |
 | `indexes.md` | 路由、Services、Repositories、Hooks、工具庫完整索引 |
+| `model-dispatch.md` | **調度守則**：指揮官不下場、派工三件套、真實 model enum（`sonnet\|opus\|haiku\|fable`）、升降級路徑、驗證不自驗 |
+| `judgment-rubrics.md` | **判斷力 rubric**：何時升級模型/算完成/該問使用者/方向錯了；Windows shell 與編碼 checklist；同類工具選哪個 |
 
 > ETF Pipeline 有獨立的 `ETF/CLAUDE.md`，涵蓋步驟架構、資料來源差異、常見錯誤等，修改 Python 端前必讀。
+
+## Harness 治理（on-demand，`.claude/governance/`，用時才 Read）
+
+主對話（指揮官）的運作制度。**大量讀取/掃 repo/查網頁/批次改檔一律派 subagent**，主對話只進結論（詳見 `.claude/rules/model-dispatch.md`）。
+
+| 觸發時機 | Read 此檔 |
+| :--- | :--- |
+| 想了解本 harness 的 token/失焦/出錯弱點 | `.claude/governance/harness-diagnosis.md` |
+| **要派 subagent** | `.claude/governance/delegation-templates.md`（搜尋/實作/重構/研究/審查範本） |
+| **要新增/修改治理檔或 CLAUDE.md/rules** | `.claude/governance/maintenance-protocol.md`（可自改 vs 先問、精簡上限） |
+| 新 session 想了解此環境的注意事項 | `.claude/governance/letter-to-future-session.md` |
 
 ---
 
@@ -212,18 +225,7 @@ BARE_K_OWNER_USER_ID=           # 未登入者顯示此 user 的自選股（唯�
 
 ## 關鍵架構陷阱
 
-### Supabase Client 選擇
-
-三種 client 用途不同，用錯會導致 RLS 繞不過或 Server/Client 邊界錯誤：
-
-- `src/lib/supabase/client.ts` — Client Component（受 RLS）
-- `src/lib/supabase/server.ts` — Server Component / Server Action（受 RLS）
-- `src/lib/supabase/service.ts` — 管理員，bypass RLS（**僅 Server 端**）
-
-### 台股色彩慣例（投資模組禁止違反）
-
-台股與歐美**相反**：**紅色 = 上漲**，**綠色 = 下跌**。
-所有漲跌顯示使用 `text-rose-600`（漲）和 `text-emerald-600`（跌）。
+> Supabase Client 三選一（client/server/service，用錯 RLS 繞不過）與**台股色彩慣例（紅漲綠跌，`text-rose-600` 漲／`text-emerald-600` 跌，投資模組禁止違反）**的完整說明在 `.claude/rules/components.md`——此處不重複，改動投資模組色彩或查詢層前先讀該檔。
 
 ### `etf_diff_logs.diff_shares` 單位（當日加減碼）
 

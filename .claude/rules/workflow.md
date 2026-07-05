@@ -1,8 +1,11 @@
 # 開發流程規則
 
-## 功能變更：必須走 openspec 流程
+> ⚠️ **現行流程是 Spectra（`/spectra-*`），非 openspec。** 本專案已從 openspec 遷移到 Spectra（見專案 CLAUDE.md 頂部「Spectra Instructions」）。下方 openspec 指令為**歷史遺留**，對照使用：
+> `openspec new change` → `/spectra-propose`；`openspec apply` → `/spectra-apply`；archive → `/spectra-archive`。`openspec/specs/` 與 `openspec/changes/` 目錄名沿用，但指令一律走 Spectra。
 
-**所有功能開發 / 修改必須走 openspec 流程**，禁止直接用 `/plan`。
+## 功能變更：必須走結構化 SDD 流程（現為 Spectra）
+
+**所有功能開發 / 修改必須走 SDD 流程**，禁止直接用 `/plan`。（以下 openspec 指令為歷史參考，實際用上方 Spectra 對照。）
 
 ```bash
 openspec new change "<name>"                         # 建立新 change

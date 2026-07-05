@@ -4,6 +4,9 @@ reference/etf_scratch/
 # Claude Code agent worktrees (temporary, should not be committed)
 .claude/worktrees/
 
+# Claude Code local backups of CLAUDE.md / rules (git history already versions originals)
+.claude/backups/
+
 # Python
 __pycache__/
 *.py[cod]
