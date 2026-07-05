@@ -152,6 +152,18 @@
     "etfedge"
   ],
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONUTF8=1 python \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify_gate.py\"",
+            "timeout": 15,
+            "statusMessage": "驗證 gate：檢查本輪改碼是否有跑測試"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
