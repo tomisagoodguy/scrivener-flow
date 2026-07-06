@@ -55,7 +55,7 @@
 - [x] 5.3 建立 `ETF/pipeline/steps/position_summary_step.py`，實作現金流法：CFt = −Δshares × close，遍歷 `etf_diff_logs` 累加 cost_basis；每日重算 mv_now / pnl / pnl_pct；末段彙總寫入 `etf_pnl_series`
 - [x] 5.4 在 `orchestrator.py` 的 `SignalDetectStep` 之後插入 `PositionSummaryStep`；確認為輔助步驟
 - [x] 5.5 建立 backfill 腳本 `ETF/scripts/backfill_positions.py`，從既有 `etf_diff_logs` + `stock_prices_daily` 重算所有歷史 position_summary 與 pnl_series
-- [ ] 5.6 執行 backfill，驗證各 ETF 的 pnl / cost_basis / pnl_series 數字與 `reference/tw-active/site/preview/*.json` 的 pnl 欄位一致
+- [x] 5.6 執行 backfill，驗證各 ETF 的 pnl / cost_basis / pnl_series 數字與 `reference/tw-active/site/preview/*.json` 的 pnl 欄位一致
 - [x] 5.7 重構 `/investment/[etf]` 頁面：頂部加入損益摘要 Hero Section（4 KPI 卡片 + 三軸走勢圖），6 Tab 架構置於其下
 - [x] 5.8 實作 Hero Section 的 4 KPI 卡片（總損益 NT$/報酬率/目前市值/累計買入成本），正負值套用台股色彩慣例
 - [x] 5.9 實作累計損益走勢圖：左軸總張數（面積/柱狀）、右軸累計損益折線、標記峰值與谷值日期及金額
@@ -91,8 +91,8 @@
 - [x] 7.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit（480c91a）
 - [x] 7.2 更新 `ETF/CLAUDE.md`，新增官網 API 備援、AumSyncStep、PositionSummaryStep、FlowComputeStep 架構說明
 - [x] 7.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制（新 ETF 用 official_api/pocket，非 FinLab）
-- [ ] 7.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
+- [x] 7.4 線上驗證：deploy 後確認 `/investment`、`/investment/[etf]`、`/investment/compare` 三頁面正常
 
-- [ ] 5.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
-- [ ] 5.2 更新 `ETF/CLAUDE.md`，新增「官網 API 備援」和「AumSyncStep」架構說明
-- [ ] 5.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
+- [x] 5.1 commit `.gitmodules` 的 submodule pin 更新，確保 reference/tw-active 鎖在穩定 commit
+- [x] 5.2 更新 `ETF/CLAUDE.md`，新增「官網 API 備援」和「AumSyncStep」架構說明
+- [x] 5.3 CI workflow (`etf_daily.yml`) 確認 21 支 ETF 不超過 FinLab 5GB/天配額限制
