@@ -337,6 +337,25 @@ export default async function InvestmentPoolPage() {
                 <span className="text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
             </Link>
 
+            {/* 經理人視角入口 */}
+            <Link
+                href="/investment/manager"
+                className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:scale-[1.01] transition-transform group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-lg">
+                        🧑‍💼
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white">經理人視角</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            同一位經理人的 ETF（日頻）vs 共同基金（月頻）雙軌持股對照與訊號
+                        </p>
+                    </div>
+                </div>
+                <span className="text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
+
             <React.Suspense fallback={<div className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <PreMarketGuidePair />
             </React.Suspense>

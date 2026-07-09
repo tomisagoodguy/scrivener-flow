@@ -25,9 +25,20 @@ interface SignalRow { strategy_id: string; stock_id: string; score: number | nul
  * strategy_signals 的 builder：signals 以 await 終結並套用 eq/gte/lte 過濾。
  * 未指定日期時，程式以 server 當日為錨計算視窗，不再查全表最新日期（.single 不應被呼叫）。
  */
+interface SignalsBuilder {
+    select: jest.Mock;
+    order: jest.Mock;
+    limit: jest.Mock;
+    single: jest.Mock;
+    eq: jest.Mock;
+    gte: jest.Mock;
+    lte: jest.Mock;
+    then: (onF: (v: unknown) => unknown, onR?: (e: unknown) => unknown) => Promise<unknown>;
+}
+
 function makeSignalsBuilder(allSignals: SignalRow[]) {
     const filters: { eqDate?: string; gte?: string; lte?: string } = {};
-    const builder = {
+    const builder: SignalsBuilder = {
         select: jest.fn(() => builder),
         order: jest.fn(() => builder),
         limit: jest.fn(() => builder),
@@ -132,7 +143,7 @@ describe('getStrategySignals', () => {
         expect(signalsBuilder.single).not.toHaveBeenCalled();
         // 未指定日期時不得用精確 eq('date', ...) 過濾
         const eqCalls = signalsBuilder.eq.mock.calls;
-        expect(eqCalls.some((c) => c[0] === 'date')).toBe(false);
+        expect(eqCalls.some((c: unknown[]) => c[0] === 'date')).toBe(false);
         // 視窗外的 capital_layer 不顯示
         expect(result!.strategies.map((s) => s.id)).toEqual(['fund_momentum']);
     });

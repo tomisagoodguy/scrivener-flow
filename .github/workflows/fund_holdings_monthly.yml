@@ -1,0 +1,55 @@
+name: Monthly Fund Holdings Sync
+
+on:
+  schedule:
+    # 每月 12、15 日台北時間 09:00（UTC 01:00）；基金月報約每月 10 日後公佈上月資料
+    - cron: '0 1 12,15 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只抓取解析、不寫 DB（true/false）'
+        required: false
+        default: 'false'
+
+jobs:
+  sync-fund-holdings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Sync Fund Holdings (SITCA monthly + quarterly)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then DRY_RUN_FLAG="--dry-run"; fi
+          uv run python ETF/run_fund_holdings_sync.py $DRY_RUN_FLAG
+
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 基金月報同步失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: sync-fund-holdings\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"

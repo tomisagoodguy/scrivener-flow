@@ -388,6 +388,49 @@ else:              signal = "持平"
 
 ---
 
+## 基金持股同步線（manager-fund-dual-track）
+
+**與每日 ETF pipeline 完全獨立的月頻資料線**：抓「經理人共同基金」的月報/季報持股，支撐 `/investment/manager` 經理人雙軌視角與 `fund_signals` 訊號。
+
+### 資料來源與流向
+
+| 來源 | 端點 | 內容 | 限制 |
+| :--- | :--- | :--- | :--- |
+| SITCA IN2629 | `www.sitca.org.tw/ROC/Industry`（ASP.NET 表單 POST） | 基金月報 Top 10 | **只能查最新一期**（歷史期 server filter 失效，`sitca_scraper` 對非最新期 raise ValueError） |
+| SITCA IN2630 | 同上 | 基金季報 ≥1% 持股 | 同上 |
+| MOPS t78sb39_q3 | `mopsov.twse.com.tw/mops/web`（POST 民國年+月） | 月報 Top 5 | 歷史期可查，用於回補；只有前五大 |
+
+兩站憑證鏈都缺 Subject Key Identifier，requests 需 `verify=False`（與 fhtrust/official_api scraper 同模式）。
+
+### 檔案與資料表
+
+| 檔案 | 職責 |
+| :--- | :--- |
+| `scrapers/sitca_scraper.py` | `fetch_monthly/fetch_quarterly/get_latest_*_period`（dropdown 判定最新期） |
+| `scrapers/mops_fund_scraper.py` | `fetch_monthly(ym)`，內建基金名正規化 + unmatched 收集 |
+| `utils/fund_name_normalizer.py` | raw 全名 → canonical `fund_short`（白名單比對，對不上回 None） |
+| `config/fund_manager_map.py` | 19 檔 seed（6 ETF + 13 基金）；**DB `fund_manager_map` 為準**，此檔僅 dry-run fallback |
+| `analysis/fund_signals.py` | 6 種訊號偵測（純函式，閾值常數置頂） |
+| `run_fund_holdings_sync.py` | 月頻同步主腳本（支援 `--dry-run`） |
+| `scripts/backfill_fund_holdings_mops.py` | `--from/--to YYYYMM` 歷史回補（source='mops'） |
+
+資料表：`fund_holdings_monthly`（PK 含 source，sitca/mops 同鍵共存、讀取時 sitca 優先）、`fund_holdings_quarterly`、`fund_manager_map`（經理人對照，含 valid_from/valid_to）、`fund_signals`（UNIQUE (signal_type, stock_code, period)）。
+
+### CI 排程
+
+`.github/workflows/fund_holdings_monthly.yml`：每月 **12、15 日**台北 09:00（月報約 10 日後公佈）跑 `run_fund_holdings_sync.py`；單一 comid 失敗不中斷其餘，但整體 exit 非 0 → LINE 失敗通知。
+
+### 與 etf_signals 的口徑差異（前端已標示，勿混用）
+
+| | `etf_signals` | `fund_signals` |
+| :--- | :--- | :--- |
+| 頻率 | 日頻 | 月頻 |
+| 主體 | ETF 代號（etf_codes TEXT[]） | 基金短名（fund_names JSONB） |
+| 本質 | ETF 每日持股**近似**共識 | 基金月報/季報**真雙軌**（基金先買、ETF 後買） |
+| 期間欄 | `data_date` DATE | `period` TEXT（YYYYMM） |
+
+unmatched 基金（白名單外）是**正常現象**（元大/台新等大投信旗下非觀測基金），只記 log 不寫 DB；要納入觀測 → 補 `fund_manager_map` 一列（DB + seed 檔同步）。
+
 ## CI/CD 已知陷阱
 
 ### Self-hosted Runner 切換指南（月配額不足時）
