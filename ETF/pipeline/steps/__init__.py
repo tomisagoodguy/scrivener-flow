@@ -33,6 +33,7 @@ from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
 from ETF.pipeline.steps.sync_treemap_step import SyncTreemapStep
 from ETF.pipeline.steps.sync_adl_step import SyncAdlStep
 from ETF.pipeline.steps.retail_sentiment_step import RetailSentimentStep
+from ETF.pipeline.steps.market_chips_step import MarketChipsStep
 from ETF.pipeline.steps.disposal_detect_step import DisposalDetectStep
 from ETF.pipeline.steps.fund_momentum_step import FundMomentumStep
 from ETF.pipeline.steps.sync_topics_step import SyncTopicsStep
@@ -67,6 +68,7 @@ __all__ = [
     "SyncTreemapStep",
     "SyncAdlStep",
     "RetailSentimentStep",
+    "MarketChipsStep",
     "DisposalDetectStep",
     "FundMomentumStep",
     "SyncTopicsStep",

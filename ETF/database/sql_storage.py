@@ -269,6 +269,10 @@ class SQLStorage:
                 sql_overlap = text("DELETE FROM etf_stock_overlap WHERE data_date < CURRENT_DATE - INTERVAL '180 days'")
                 res_overlap = conn.execute(sql_overlap)
 
+                # 12. 個股三大法人日淨額（保留 90 天；institutional_signals 訊號結果長存不清理）
+                sql_inst_stock = text("DELETE FROM institutional_stock_daily WHERE data_date < CURRENT_DATE - INTERVAL '90 days'")
+                res_inst_stock = conn.execute(sql_inst_stock)
+
                 conn.commit()
                 logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
@@ -283,6 +287,7 @@ class SQLStorage:
                 logger.info(f"   - ETF 持股異動已清理: {res_diff_logs.rowcount} 筆")
                 logger.info(f"   - ETF 買進模式已清理: {res_buying.rowcount} 筆")
                 logger.info(f"   - ETF 共識持股已清理: {res_overlap.rowcount} 筆")
+                logger.info(f"   - 個股法人日淨額已清理: {res_inst_stock.rowcount} 筆")
 
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")

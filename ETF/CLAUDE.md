@@ -388,6 +388,43 @@ else:              signal = "持平"
 
 ---
 
+## 市場籌碼資料線（market-chips-dashboard）
+
+`MarketChipsStep`（掛於 RetailSentimentStep 之後、NotifyStep 之前，輔助步驟）每日同步四段市場籌碼，全走**免費公開端點**（不吃 FinLab 配額），段錯誤獨立 try 續跑、全段失敗才標 step 失敗。
+
+### 端點與資料表
+
+| 段 | 來源端點 | 資料表 | 保留 |
+| :--- | :--- | :--- | :--- |
+| 期貨籌碼 | TAIFEX `cht/3/futContractsDate`（POST HTML，大台 commodityId=`TXF` 正規化為 `TX`）＋ `cht/3/futDataDown`（big5 CSV，欄名「未沖銷契約數」，MXF 行情代碼為 `MTX`） | `futures_institutional_daily` | 長存 |
+| 融資融券 | TWSE `rwd/zh/marginTrading/MI_MARGN?selectType=MS`（市場合計） | `market_margin_daily` | 長存 |
+| 個股法人 | TWSE `rwd/zh/fund/T86`（上市）＋ TPEx `insti/dailyTrade`（上櫃，民國年日期） | `institutional_stock_daily` | **90 天滾動**（cleanup_step） |
+| 訊號 | 由 `institutional_stock_daily` 計算 + JOIN 當日 `etf_diff_logs` BUY/IN 設 `etf_cross` | `institutional_signals` | 長存不清理 |
+
+### 散戶多空比（只算 MXF/TMF，大台無意義）
+
+```text
+散戶未平倉 = 全市場 OI − 三大法人 OI（多、空分別計）
+retail_ls_ratio = (散戶多單 − 散戶空單) / 全市場 OI × 100
+```
+
+存於 `futures_institutional_daily` 的 `institution='retail_summary'` 彙總列（long_oi/short_oi 為推導散戶值，market_oi/retail_ls_ratio 只在此列有值）。
+
+### 三種訊號定義（`market_chips_step.py` 純函式，可單測）
+
+- `dual_buy`：同日 foreign_net > 0 且 trust_net > 0
+- `consecutive_buy`：(foreign_net + trust_net) 連續 ≥3 **交易日** > 0（跨週末不中斷）
+- `divergence`：外資/投信一正一負，且兩者絕對值**各自**進當日前 50 大
+
+metadata 記錄判定用淨額（＋etf_codes），可稽核不需回查來源列。前端頁：`/investment/market-chips`（Server Action `getMarketChips()`）。
+
+### 陷阱
+
+- TPEx/TWSE 憑證鏈缺 Subject Key Identifier，本機偶發 `SSL: CERTIFICATE_VERIFY_FAILED`；scraper 已用 certifi context，且單來源失敗只寫另一來源（段級容錯，正常行為）
+- `futures_institutional_daily` 的 `TMF/trust` 常為 0/0/0 — 投信無微台部位，是真實數據非解析錯誤
+
+---
+
 ## 基金持股同步線（manager-fund-dual-track）
 
 **與每日 ETF pipeline 完全獨立的月頻資料線**：抓「經理人共同基金」的月報/季報持股，支撐 `/investment/manager` 經理人雙軌視角與 `fund_signals` 訊號。

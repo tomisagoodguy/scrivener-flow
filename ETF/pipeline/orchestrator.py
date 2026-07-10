@@ -36,6 +36,7 @@ from ETF.pipeline.steps import (
     SyncTreemapStep,
     SyncAdlStep,
     RetailSentimentStep,
+    MarketChipsStep,
     NotifyStep,
     CleanupStep,
     FrontrunningStep,
@@ -95,6 +96,7 @@ class PipelineOrchestrator:
         SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
         RetailSentimentStep,    # [輔助] 週頻集保散戶指標 → market_breadth_daily
+        MarketChipsStep,        # [輔助] 期貨籌碼/融資融券/個股法人/訊號 → 市場籌碼四表
         NotifyStep,
         CleanupStep,
     ]
