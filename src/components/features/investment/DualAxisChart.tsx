@@ -24,6 +24,7 @@ const EVENT_COLORS: Record<ChangeType, string> = {
     IN:    '#94a3b8', // grey — 建倉
     BUY:   '#e11d48', // rose — 加碼
     SELL:  '#059669', // emerald — 減碼
+    TRIM:  'rgba(5,150,105,0.35)', // muted emerald — 微調（不顯著減碼）
     OUT:   'rgba(5,150,105,0.5)', // emerald hollow-ish — 出清
     CLOSE: '#f59e0b', // amber — 大幅縮減
 };

@@ -43,6 +43,7 @@ function EventTimeline({ events }: { events: StockPnlResult['events'] }) {
         IN:    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
         BUY:   'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
         SELL:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+        TRIM:  'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
         OUT:   'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
         CLOSE: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
     };

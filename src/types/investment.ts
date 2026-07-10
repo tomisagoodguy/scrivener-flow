@@ -1,9 +1,10 @@
-export type ChangeType = 'IN' | 'BUY' | 'SELL' | 'OUT' | 'CLOSE';
+export type ChangeType = 'IN' | 'BUY' | 'SELL' | 'TRIM' | 'OUT' | 'CLOSE';
 
 export const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
     IN:    '首次建倉',
     BUY:   '加碼',
     SELL:  '減碼',
+    TRIM:  '微調',
     OUT:   '出清',
     CLOSE: '大幅縮減',
 };

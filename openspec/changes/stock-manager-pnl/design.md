@@ -31,6 +31,8 @@ Reference 實作（`tw-active/tools/preview_build.py`）在本地 JSON 上算損
 
 **替代方案**：Supabase RPC — 彈性差，schema 改動需 migration。
 
+> **實作演進（2026-05）**：`computeStockPnl`（ETF 頁單股進出場 tab）維持即時 CF 計算（含已實現損益）；但個股頁的 `getStockManagerPnl` 已改讀 `etf_position_summary` 預計算表（PositionSummaryStep 產出，以現有部位平均成本計算未實現損益），兩者口徑不同屬刻意設計。個股頁驗證比對對象為 `etf_position_summary`，非 CF 公式。
+
 ---
 
 ### 2. 資料查詢策略：兩次查詢合併
