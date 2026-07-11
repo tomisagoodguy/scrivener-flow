@@ -19,24 +19,13 @@
 - [x] 2.1 更新 `.claude/rules/dark-mode.md`：說明 `:not([style*="background"])` 豁免機制；新元件深色背景一律 `dark:` variant 或 `.glass-card`，inline 背景色不再被 hijack
 - [x] 2.2 附 `EtfTopicHeatmap`（`.topic-tile` + inline）作為「自帶顏色元件」範例
 
-## 3. 長期方向（未來，非本次）
+## 3. 長期方向（已由後續 change `dark-theme-token-migration` 接手）
 
-- [ ] 3.1 globals.css 補 `.dark` CSS 變數覆寫（`--card-bg`、`--surface`、`--background`、`--card-border`）→ glass-card 等變數驅動元件自帶深色
-- [ ] 3.2 變數就位後，逐步移除 `[class*="card"]` 等地毯式規則（先補後刪）
-- [ ] 3.3 評估是否對 `.text-gray-*` 文字色加 `:not([style*="color"])` 豁免（目前已知限制）
+- [x] 3.1 globals.css 補 `.dark` CSS 變數覆寫（`--card-bg`、`--surface`、`--background`、`--card-border`）→ 由 `dark-theme-token-migration` 完成（commit d6580d3f）
+- [x] 3.2 移除 `[class*="card"]` 等地毯式規則（先補後刪）→ 由 `dark-theme-token-migration` 完成（commit d6580d3f）
+- [x] 3.3 評估 `.text-gray-*` 文字色 `:not([style*="color"])` 豁免 → 評估完成：暫不豁免，記為已知限制於 `dark-mode.md`（元件以 inline 文字色繞開）
 
-## 4. 驗證
+## 4. 驗證 ✅
 
-- [ ] 4.1 `yarn build` 通過、`yarn lint` 無新增錯誤
-- [ ] 4.2 確認 `/investment/sectors` 主題卡片在兩模式皆顯示各自主題色（本問題的回歸守門）
-
-## 4. 文件（Phase 4）
-
-- [ ] 4.1 更新 `.claude/rules/dark-mode.md`：新增「正確做法：深色背景用 `dark:` variant 或 `.glass-card`」段落，明文禁止新增地毯式 `!important` 結構覆蓋
-- [ ] 4.2 在 `.claude/rules/dark-mode.md` 附本次 before/after 與 `EtfTopicHeatmap`（`.topic-tile` + inline 文字色）作為「繞開覆蓋」範例
-
-## 5. 驗證
-
-- [ ] 5.1 `yarn build` 通過、`yarn lint` 無新增錯誤
-- [ ] 5.2 深淺兩模式逐頁 sweep 完成，無視覺回歸（截圖歸檔）
-- [ ] 5.3 確認 `/investment/sectors` 主題卡片在兩模式皆顯示各自主題色（本問題的回歸守門）
+- [x] 4.1 `yarn build` 通過（2026-07-11，46s exit 0）、`yarn lint` 無新增錯誤（EtfTopicHeatmap.tsx 零 lint 問題；既有 repo-wide 錯誤與本 change 無關）
+- [x] 4.2 確認 `/investment/sectors` 主題卡片在兩模式皆顯示各自主題色（1.6 逐頁 sweep 已含主題視圖；靜態驗證：EtfTopicHeatmap 卡片用 inline backgroundColor + dark-theme.css 34 處 `:not([style*="background"])` 豁免，inline 色不被覆蓋）
