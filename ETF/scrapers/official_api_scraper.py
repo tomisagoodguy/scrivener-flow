@@ -376,8 +376,12 @@ def _fetch_nomura(
 ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     search_date = _ymd_to_dash(date_ymd) if date_ymd else _last_weekday_dash()
     payload = {"FundID": fund_id, "SearchDate": search_date}
+    # 野村憑證鏈缺 Subject Key Identifier（2026-04-22 起），嚴格驗證必失敗
+    # （certifi 也無效），比照 taishin/ctbc/fubon 停用驗證
     raw = _post_json(
-        "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets", payload
+        "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets",
+        payload,
+        verify_ssl=False,
     )
     js: dict[str, Any] = json.loads(raw.decode("utf-8"))
     data = (js.get("Entries") or {}).get("Data") or {}

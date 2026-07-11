@@ -37,6 +37,7 @@ from sqlalchemy import create_engine, text  # noqa: E402
 from ETF.pipeline.steps.aum_sync_step import (  # noqa: E402
     compute_decomposition,
     compute_premium_pct,
+    is_prev_row_stale,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -77,9 +78,12 @@ def build_updates(rows: list, close_df: pd.DataFrame) -> list[dict]:
             close = round(float(v), 4) if pd.notna(v) else None
 
         prev = prev_by_etf.get(etf_code) or {}
-        inflow, market_pnl = compute_decomposition(
-            r.units, r.nav, prev.get("units"), prev.get("nav")
-        )
+        if is_prev_row_stale(prev.get("data_date"), data_date):
+            inflow, market_pnl = None, None
+        else:
+            inflow, market_pnl = compute_decomposition(
+                r.units, r.nav, prev.get("units"), prev.get("nav")
+            )
         updates.append(
             {
                 "etf_code": etf_code,
@@ -90,7 +94,11 @@ def build_updates(rows: list, close_df: pd.DataFrame) -> list[dict]:
                 "market_pnl": market_pnl,
             }
         )
-        prev_by_etf[etf_code] = {"units": r.units, "nav": r.nav}
+        prev_by_etf[etf_code] = {
+            "data_date": str(data_date),
+            "units": r.units,
+            "nav": r.nav,
+        }
     return updates
 
 

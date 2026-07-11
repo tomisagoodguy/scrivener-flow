@@ -213,6 +213,31 @@ class TestEnrichMechanics(unittest.TestCase):
         self.assertAlmostEqual(r["inflow"], 5.10, places=6)
         self.assertAlmostEqual(r["market_pnl"], 2.00, places=6)
 
+    def test_stale_prev_row_skips_decomposition(self) -> None:
+        """前值距當日超過 7 天（資料缺口）→ 拆解 None，避免跨缺口的假申購量。"""
+        records = self.step._enrich_mechanics(
+            [self._record()],  # data_date 2026-07-11
+            closes={"00981A": 10.25},
+            prev_rows={
+                "00981A": {"nav": 10.00, "units": 10.0, "data_date": "2026-04-22"}
+            },
+        )
+        r = records[0]
+        self.assertIsNone(r["inflow"])
+        self.assertIsNone(r["market_pnl"])
+        self.assertIsNotNone(r["premium_pct"])  # 折溢價只看當日，不受缺口影響
+
+    def test_recent_prev_row_within_gap_computes(self) -> None:
+        """前值在 7 天內（含跨週末）→ 正常計算。"""
+        records = self.step._enrich_mechanics(
+            [self._record()],
+            closes={"00981A": 10.25},
+            prev_rows={
+                "00981A": {"nav": 10.00, "units": 10.0, "data_date": "2026-07-08"}
+            },
+        )
+        self.assertAlmostEqual(records[0]["inflow"], 5.10, places=6)
+
     def test_decimal_prev_row_from_db(self) -> None:
         """DB NUMERIC 回傳 Decimal → 需 float() 轉型後計算（本專案既知陷阱）。"""
         from decimal import Decimal

@@ -62,6 +62,26 @@ def compute_decomposition(
     return (inflow, market_pnl)
 
 
+# 拆解計算允許的最大前值距離（曆日）。超過視為資料缺口：
+# Δunits 會涵蓋整段缺口的申贖，寫進單日 inflow 會產生假申購量 → 不計算。
+_DECOMPOSITION_MAX_GAP_DAYS = 7
+
+
+def is_prev_row_stale(prev_date: object, cur_date: object) -> bool:
+    """前值日期距當日超過 _DECOMPOSITION_MAX_GAP_DAYS → True（拆解應跳過）。
+
+    任一日期缺失或無法解析時回 False（維持既有行為，不誤殺）。
+    """
+    if prev_date is None or cur_date is None:
+        return False
+    try:
+        prev = date.fromisoformat(str(prev_date)[:10])
+        cur = date.fromisoformat(str(cur_date)[:10])
+    except ValueError:
+        return False
+    return (cur - prev).days > _DECOMPOSITION_MAX_GAP_DAYS
+
+
 class AumSyncStep(BaseStep):
     """同步全部 ETF 每日 AUM 到 etf_aum_series（輔助步驟）"""
 
@@ -172,9 +192,12 @@ class AumSyncStep(BaseStep):
             r["close"] = round(float(close), 4) if close is not None else None
             r["premium_pct"] = compute_premium_pct(close, r["nav"])
             prev = prev_rows.get(code) or {}
-            r["inflow"], r["market_pnl"] = compute_decomposition(
-                r["units"], r["nav"], prev.get("units"), prev.get("nav")
-            )
+            if is_prev_row_stale(prev.get("data_date"), r.get("data_date")):
+                r["inflow"], r["market_pnl"] = None, None
+            else:
+                r["inflow"], r["market_pnl"] = compute_decomposition(
+                    r["units"], r["nav"], prev.get("units"), prev.get("nav")
+                )
         return records
 
     @staticmethod
@@ -208,7 +231,7 @@ class AumSyncStep(BaseStep):
     ) -> dict:
         """取各 ETF 在 target_date 之前最近一列的 nav/units（拆解用前值）。"""
         sql = text("""
-            SELECT DISTINCT ON (etf_code) etf_code, nav, units
+            SELECT DISTINCT ON (etf_code) etf_code, data_date, nav, units
             FROM etf_aum_series
             WHERE etf_code = ANY(:codes)
               AND data_date < :target_date
@@ -218,7 +241,10 @@ class AumSyncStep(BaseStep):
             rows = conn.execute(
                 sql, {"codes": codes, "target_date": target_date}
             ).fetchall()
-        return {r.etf_code: {"nav": r.nav, "units": r.units} for r in rows}
+        return {
+            r.etf_code: {"data_date": str(r.data_date), "nav": r.nav, "units": r.units}
+            for r in rows
+        }
 
     @staticmethod
     def _upsert(services: "PipelineServices", records: list[dict]) -> None:
