@@ -7,6 +7,7 @@ import { UrgentAlerts } from './work-dashboard/UrgentAlerts';
 import { TaxWatch } from './work-dashboard/TaxWatch';
 import { PipelineView } from './work-dashboard/PipelineView';
 import TodoContainer from '@/components/todo/TodoContainer';
+import EisenhowerMatrix from './eisenhower/EisenhowerMatrix';
 
 interface WorkDashboardProps {
     className?: string;
@@ -38,6 +39,8 @@ export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
                 </div>
 
                 <PipelineView tasks={pipelineTasks} />
+
+                <EisenhowerMatrix />
 
                 <TodoContainer />
         </div>

@@ -2118,6 +2118,7 @@ export type Database = {
           created_at: string | null
           custom_quick_notes: Json | null
           dashboard_notes: Json | null
+          eisenhower_matrix: Json | null
           message_templates: Json | null
           scratchpad_content: string | null
           updated_at: string | null
@@ -2127,6 +2128,7 @@ export type Database = {
           created_at?: string | null
           custom_quick_notes?: Json | null
           dashboard_notes?: Json | null
+          eisenhower_matrix?: Json | null
           message_templates?: Json | null
           scratchpad_content?: string | null
           updated_at?: string | null
@@ -2136,6 +2138,7 @@ export type Database = {
           created_at?: string | null
           custom_quick_notes?: Json | null
           dashboard_notes?: Json | null
+          eisenhower_matrix?: Json | null
           message_templates?: Json | null
           scratchpad_content?: string | null
           updated_at?: string | null
