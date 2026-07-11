@@ -14,6 +14,7 @@ interface DrilldownTabsProps {
     holdingsContent: React.ReactNode;
     ledgerContent: React.ReactNode;
     stockTradeContent?: React.ReactNode;
+    mechanicsContent?: React.ReactNode;
     todayDiffs?: DiffLogRow[];
     todayBuyChartContent?: React.ReactNode;
     positions?: PositionRow[];
@@ -26,6 +27,7 @@ export function DrilldownTabs({
     holdingsContent,
     ledgerContent,
     stockTradeContent,
+    mechanicsContent,
     todayDiffs = [],
     todayBuyChartContent,
     positions = [],
@@ -73,6 +75,9 @@ export function DrilldownTabs({
             <TabsContent value="ledger">{ledgerContent}</TabsContent>
             <TabsContent value="stock-trade">
                 {stockTradeContent ?? <EmptyState message="損益追蹤資料載入中" />}
+            </TabsContent>
+            <TabsContent value="mechanics">
+                {mechanicsContent ?? <EmptyState message="市場機制資料載入中" />}
             </TabsContent>
         </Tabs>
     );

@@ -2,7 +2,7 @@
 
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export const VALID_TABS = ['holdings', 'today', 'history', 'entry', 'pnl', 'exited', 'ledger', 'stock-trade'] as const;
+export const VALID_TABS = ['holdings', 'today', 'history', 'entry', 'pnl', 'exited', 'ledger', 'stock-trade', 'mechanics'] as const;
 export type TabId = typeof VALID_TABS[number];
 
 export const TAB_LABELS: Record<TabId, string> = {
@@ -14,6 +14,7 @@ export const TAB_LABELS: Record<TabId, string> = {
     exited:        '已出清',
     ledger:        '異動紀錄',
     'stock-trade': '📈 損益追蹤',
+    mechanics:     '市場機制',
 };
 
 const triggerClass = 'rounded-lg py-1.5 px-2 text-xs transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm';

@@ -10,8 +10,6 @@ import json
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -132,7 +130,8 @@ class TestFetchJpm(unittest.TestCase):
             mock_resp.__enter__ = lambda s: s
             mock_resp.__exit__ = MagicMock(return_value=False)
             mock_urlopen.return_value = mock_resp
-            return _fetch_jpm("https://am.jpmorgan.com/fake.xlsx")
+            holdings, _assets = _fetch_jpm("https://am.jpmorgan.com/fake.xlsx")
+            return holdings
 
     def test_parses_detail_rows(self) -> None:
         """D 行應解析成 code/name/shares/weight_pct 字典。"""
@@ -172,7 +171,7 @@ class TestFetchJpm(unittest.TestCase):
 
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
             result = _fetch_jpm("https://am.jpmorgan.com/fake.xlsx")
-        self.assertEqual(result, [])
+        self.assertEqual(result, ([], None))
 
 
 # ── _fetch_cathay() tests ──────────────────────────────────────────────────────
@@ -238,7 +237,8 @@ class TestFetchCtbcHtml(unittest.TestCase):
         from ETF.scrapers.official_api_scraper import _fetch_ctbc_html
 
         with patch("ETF.scrapers.official_api_scraper._get", return_value=html_bytes):
-            return _fetch_ctbc_html(etf_code)
+            holdings, _assets = _fetch_ctbc_html(etf_code)
+            return holdings
 
     def test_parses_holdings_table(self) -> None:
         """4 欄 <tr> 行を正しく解析する。"""
@@ -309,7 +309,7 @@ class TestDispatchRouting(unittest.TestCase):
         """issuer='jpm' → _fetch_jpm() が呼ばれる。"""
         from ETF.scrapers import official_api_scraper
 
-        with patch.object(official_api_scraper, "_fetch_jpm", return_value=[]) as mock_fn:
+        with patch.object(official_api_scraper, "_fetch_jpm", return_value=([], None)) as mock_fn:
             official_api_scraper._dispatch(
                 "jpm", "00401A", None,
                 {"issuer": "jpm", "xlsx_url": "https://am.jpmorgan.com/fake.xlsx"}
@@ -328,7 +328,7 @@ class TestDispatchRouting(unittest.TestCase):
         """issuer='ctbc_html' → _fetch_ctbc_html() が呼ばれる（_fetch_ctbc() ではない）。"""
         from ETF.scrapers import official_api_scraper
 
-        with patch.object(official_api_scraper, "_fetch_ctbc_html", return_value=[]) as mock_fn, \
+        with patch.object(official_api_scraper, "_fetch_ctbc_html", return_value=([], None)) as mock_fn, \
              patch.object(official_api_scraper, "_fetch_ctbc", return_value=[]) as mock_old:
             official_api_scraper._dispatch(
                 "ctbc_html", "00983A", None,

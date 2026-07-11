@@ -49,7 +49,8 @@ ETF/
 │       ├── shareholder_signal_step.py  # 讀 stock-data-main JSON，計算大戶積累訊號 → ctx.shareholder_signals
 │       ├── weight_history_step.py # 聚合持股比重走勢
 │       ├── multi_etf_step.py      # 處理所有 official_api/pocket 來源 ETF
-│       ├── aum_sync_step.py       # [輔助] 計算 AUM 時序 → etf_aum_series
+│       ├── aum_sync_step.py       # [輔助] AUM 時序 + 折溢價/成長拆解 → etf_aum_series
+│       ├── dividend_sync_step.py  # [輔助] 同步配息記錄（TWSE etfDiv）→ etf_dividend_records
 │       ├── sync_company_step.py   # 同步公司基本資料
 │       ├── sync_ohlcv_step.py     # 同步 stock_prices_daily（含次要 ETF 成分股）
 │       ├── overlap_compute_step.py # 聚合跨 ETF 共識持股 → etf_stock_overlap
@@ -65,6 +66,7 @@ ETF/
 ├── scrapers/
 │   ├── fhtrust_scraper.py     # 00981A 來源：復華投信持股 Excel 下載
 │   ├── official_api_scraper.py # 6 家投信官方 API（統一/野村/復華/安聯/群益），備援入口
+│   ├── etf_dividend_scraper.py # TWSE ETF 分配收益 API：fetch_dividends(etf_code)
 │   ├── pocket_scraper.py      # 次要 ETF 統一來源：Pocket.tw（data_source='pocket' 的 ETF）
 │   └── unified_scraper.py     # 統一爬蟲介面，price 空缺率 > 30% 時呼叫 official_api_scraper
 │
@@ -198,6 +200,7 @@ ScrapeStep
   → PositionSummaryStep     ← [輔助] 現金流法：CFt=−Δshares×close → etf_position_summary + etf_pnl_series
   → SyncBareKStep           ← 同步 watch_list 裸K快照
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
+  → DividendSyncStep        ← [輔助] 全 ETF 配息記錄冪等 upsert → etf_dividend_records
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
 ```
@@ -325,7 +328,8 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 - `stock_prices_daily` — 前端顯示個股現價（`SyncOHLCVStep` 維護）
 - `etf_stock_overlap` — 前端跨 ETF 共識持股頁（`OverlapComputeStep` 維護）
 - `etf_weight_history` — 前端持股比重走勢圖
-- `etf_aum_series` — 前端 AUM 規模儀表板（`AumSyncStep` 維護）
+- `etf_aum_series` — 前端 AUM 規模儀表板 + 深潛頁市場機制 Tab（`AumSyncStep` 維護，含 close/premium_pct/inflow/market_pnl）
+- `etf_dividend_records` — 前端配息時間軸（`DividendSyncStep` 維護；深潛頁市場機制 Tab）
 - `etf_signals` — 前端訊號標記（`SignalDetectStep` + `FlowComputeStep` 維護）
 - `etf_buying_patterns` — 買進模式 + 前瞻報酬（`BuyingPatternStep` 維護）；前端 `/investment/buying-patterns` 頁面讀取
 - `etf_flow_daily` — 前端每日資金流向儀表板（`FlowComputeStep` 維護）
@@ -424,6 +428,44 @@ metadata 記錄判定用淨額（＋etf_codes），可稽核不需回查來源�
 - `futures_institutional_daily` 的 `TMF/trust` 常為 0/0/0 — 投信無微台部位，是真實數據非解析錯誤
 
 ---
+
+## 市場機制資料線（etf-market-mechanics）
+
+### etf_aum_series 市場機制欄位（`AumSyncStep` 計算，缺輸入一律 NULL 不估計）
+
+| 欄位 | 公式 / 來源 | NULL 語義 |
+| :--- | :--- | :--- |
+| `close` | FinLab `price:收盤價`，**只取與 data_date 同日**的價格 | 該日 FinLab 無價 |
+| `premium_pct` | `(close − nav) / nav × 100` | close 或 nav 任一缺（**禁止用估計 NAV**） |
+| `inflow` | `(units_t − units_{t−1}) × nav_t`（億元，近似式） | 前一日無列、或當日 units/nav 缺 |
+| `market_pnl` | `units_{t−1} × (nav_t − nav_{t−1})`（億元，近似式） | 同上 |
+
+- 近似值成因：units 由 AUM/NAV 推算（與 tw-active 同限制），前端 tooltip 已註明
+- 聚合指標（growth_mult、inflow_share_of_growth、top flow days）由 Server Action `getEtfMechanics()` / `getAumGrowthRanking()` **讀時計算，不預存**
+- 純函式 `compute_premium_pct` / `compute_decomposition` 在 `aum_sync_step.py`，回補腳本重用同一實作
+- 一次性回補：`uv run python ETF/scripts/backfill_aum_mechanics.py`（`--dry-run` / `--etf CODE` / `--skip-dividends`）
+
+### etf_dividend_records 配息表（`DividendSyncStep` 每日冪等 upsert）
+
+- 來源：TWSE ETF 分配收益 API `GET https://www.twse.com.tw/rwd/zh/ETF/etfDiv?stkNo={code}&startDate=&endDate=&response=json`（民國年日期需轉換；憑證鏈缺 SKI，用 certifi context）
+- 欄位：`(etf_code, period)` UNIQUE、cash_per_unit、ex_date、pay_date（可 NULL）、yield_pct（來源未提供恆 NULL）、source
+- **period 由 ex_date 推導（YYYY-MM）**，來源無期別欄；金額 null（除息日已公告、金額未定）→ 跳過該筆，下次同步自動補
+- 查詢窗口固定從 2024-01-01 全量抓，冪等 upsert 使連跑筆數不變；無配息 ETF 不寫列不報錯
+
+### NAV 覆蓋現況（fund_assets 來源）
+
+已接 **11 家 issuer**：nomura / allianz / capital（JSON 原生）＋ uni、fhtrust（XLSX 表頭列）、yuanta（靜態 HTML）、taishin（PartialHistoryFundNav，僅 nav）、mega（#asset_div）、ctbc_html（Label_AUM02/03/04）、jpm（XLSX summary，nav_date 恆 None）、fubon（li 清單）。
+
+**NAV 未接清單**（premium_pct 無法計算，前端顯示「NAV 來源未接」）：
+
+| issuer | ETF | 原因 |
+| :--- | :--- | :--- |
+| first_financial | 00994A | 已知端點無 NAV 揭露管道 |
+| cathay | 00400A | REST 無 NAV；Angular SPA 需 Playwright 另行探查 |
+| ctbc（REST） | 00995A | token 驗證本機失敗，回應內容未確認 |
+| alliance_bernstein | 00984D | 端點故障（302 → 不可達的內部 port 81） |
+
+> 抽取資產摘要失敗**不影響持股解析**（包 try/except，assets=None）；`aum ≈ nav × units` 合理性檢查誤差 >5% 只留 nav。
 
 ## 基金持股同步線（manager-fund-dual-track）
 

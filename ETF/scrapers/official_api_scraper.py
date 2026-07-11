@@ -226,10 +226,111 @@ def _fund_assets(
     }
 
 
+def _fund_assets_or_none(
+    aum: Any = None, nav: Any = None, units: Any = None, nav_date: Any = None
+) -> dict[str, Any] | None:
+    """同 `_fund_assets`，但 aum/nav/units 全為 None 時回傳 None（無摘要可用）。"""
+    assets = _fund_assets(aum=aum, nav=nav, units=units, nav_date=nav_date)
+    if assets["aum"] is None and assets["nav"] is None and assets["units"] is None:
+        return None
+    return assets
+
+
+def _check_aum_nav_units_consistency(
+    assets: dict[str, Any] | None, tolerance: float = 0.05
+) -> dict[str, Any] | None:
+    """aum ≈ nav × units 合理性檢查（誤差 >5% 時只留 nav，其餘設 None）。
+
+    aum/nav/units 任一缺就跳過檢查（無法驗證，原樣回傳）。
+    """
+    if not assets:
+        return assets
+    aum, nav, units = assets.get("aum"), assets.get("nav"), assets.get("units")
+    if aum is None or nav is None or units is None:
+        return assets
+    expected = nav * units
+    if expected == 0:
+        return assets
+    err = abs(aum - expected) / abs(expected)
+    if err > tolerance:
+        logger.warning(
+            "[FUND_ASSETS] aum(%.2f) 與 nav*units(%.2f) 誤差 %.1f%% > %.0f%%，"
+            "僅保留 nav，aum/units 設 None",
+            aum,
+            expected,
+            err * 100,
+            tolerance * 100,
+        )
+        return {**assets, "aum": None, "units": None}
+    return assets
+
+
+def _xlsx_rows_to_text(rows: list[tuple[Any, ...]]) -> str:
+    """把 XLSX rows 攤平成純文字（每列 cell 以空白相接），供 regex 抽取標籤數值。"""
+    lines: list[str] = []
+    for row in rows:
+        if not row:
+            continue
+        cells = [str(c).strip() for c in row if c is not None and str(c).strip()]
+        if cells:
+            lines.append(" ".join(cells))
+    return "\n".join(lines)
+
+
+def _parse_uni_assets(rows: list[tuple[Any, ...]]) -> dict[str, Any] | None:
+    """統一 ezmoney XLSX 資產摘要：淨資產 / 流通在外單位數 / 每單位淨值 / 資料日期（民國年）。"""
+    text = _xlsx_rows_to_text(rows)
+    aum_m = re.search(r"淨資產\s*[:：]?\s*(?:NTD)?\s*([\d,]+)", text)
+    units_m = re.search(r"流通在外單位數\s*[:：]?\s*([\d,]+)", text)
+    nav_m = re.search(r"每單位淨值\s*[:：]?\s*(?:NTD)?\s*\$?\s*([\d,.]+)", text)
+    date_m = re.search(r"資料日期\s*[:：]\s*(\d{2,3})/(\d{2})/(\d{2})", text)
+    nav_date = None
+    if date_m:
+        year = int(date_m.group(1)) + 1911  # ROC → 西元
+        nav_date = f"{year}-{date_m.group(2)}-{date_m.group(3)}"
+    return _fund_assets_or_none(
+        aum=aum_m.group(1) if aum_m else None,
+        nav=nav_m.group(1) if nav_m else None,
+        units=units_m.group(1) if units_m else None,
+        nav_date=nav_date,
+    )
+
+
+def _parse_fhtrust_assets(rows: list[tuple[Any, ...]]) -> dict[str, Any] | None:
+    """復華 XLSX 資產摘要：基金資產淨值 / 基金在外流通單位數 / 基金每單位淨值 / 日期（西元年）。"""
+    text = _xlsx_rows_to_text(rows)
+    aum_m = re.search(r"基金資產淨值\s*[:：]?\s*([\d,]+)", text)
+    units_m = re.search(r"基金在外流通單位數\s*[:：]?\s*([\d,]+)", text)
+    nav_m = re.search(r"基金每單位淨值\s*[:：]?\s*([\d,.]+)", text)
+    date_m = re.search(r"日期\s*[:：]\s*(\d{4})/(\d{2})/(\d{2})", text)
+    nav_date = (
+        f"{date_m.group(1)}-{date_m.group(2)}-{date_m.group(3)}" if date_m else None
+    )
+    return _fund_assets_or_none(
+        aum=aum_m.group(1) if aum_m else None,
+        nav=nav_m.group(1) if nav_m else None,
+        units=units_m.group(1) if units_m else None,
+        nav_date=nav_date,
+    )
+
+
 # ── Per-issuer fetchers ───────────────────────────────────────────────────────
 
 
-def _fetch_uni(fund_code: str) -> list[dict[str, Any]]:
+def _xlsx_raw_rows(raw: bytes) -> list[tuple[Any, ...]]:
+    """讀 XLSX bytes，回傳 active sheet 的所有 rows（供持股+資產摘要共用一次解析）。"""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
+    ws = wb.active
+    if ws is None:
+        return []
+    return list(ws.iter_rows(values_only=True))
+
+
+def _fetch_uni(
+    fund_code: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     jar = CookieJar()
     url = f"https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode={fund_code}"
     raw = _get(url, cookie_jar=jar)
@@ -242,17 +343,32 @@ def _fetch_uni(fund_code: str) -> list[dict[str, Any]]:
     for h in holdings:
         if h.get("shares") is not None:
             h["shares"] = int(h["shares"] * 1000)
-    return holdings
+    assets = None
+    try:
+        rows = _xlsx_raw_rows(raw)
+        assets = _check_aum_nav_units_consistency(_parse_uni_assets(rows))
+    except Exception as exc:
+        logger.error("[UNI] %s 資產摘要解析失敗（不影響持股）：%s", fund_code, exc)
+    return holdings, assets
 
 
-def _fetch_fhtrust(fund_code: str, date_ymd: str) -> list[dict[str, Any]]:
+def _fetch_fhtrust(
+    fund_code: str, date_ymd: str
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     url = f"https://www.fhtrust.com.tw/api/assetsExcel/{fund_code}/{date_ymd}"
     raw = _get(url)
     if raw.startswith(b"\xef\xbb\xbf") or b"\xe6\x9f\xa5" in raw[:20]:
         raise RuntimeError(f"復華 {date_ymd}：查無資料（非交易日或未發布）")
     if not raw.startswith(b"PK"):
         raise RuntimeError(f"復華未回傳 XLSX：{raw[:60]!r}")
-    return _parse_xlsx(raw)
+    holdings = _parse_xlsx(raw)
+    assets = None
+    try:
+        rows = _xlsx_raw_rows(raw)
+        assets = _check_aum_nav_units_consistency(_parse_fhtrust_assets(rows))
+    except Exception as exc:
+        logger.error("[FHTRUST] %s 資產摘要解析失敗（不影響持股）：%s", fund_code, exc)
+    return holdings, assets
 
 
 def _fetch_nomura(
@@ -382,6 +498,45 @@ def _fetch_capital(
     return holdings, assets
 
 
+# ── 元大 (00990A) 資產摘要 — 輕量 requests，不需 Playwright ──────────────────────
+
+
+def _fetch_yuanta_assets(fund_code: str) -> dict[str, Any] | None:
+    """元大 ETF 資產摘要：伺服器端渲染 HTML 內即含 NAV，不需 Playwright/JS 執行。
+
+    僅補資產摘要，持股解析仍走既有 yuanta_scraper（Playwright）。
+    失敗回 None，不影響持股。
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        url = f"https://www.yuantaetfs.com/tradeInfo/pcf/{fund_code}"
+        raw = _get(url, verify_ssl=False)
+        html = raw.decode("utf-8", errors="replace")
+        soup = BeautifulSoup(html, "lxml")
+        text = soup.get_text(" ", strip=True)
+
+        aum_m = re.search(r"基金淨資產價值\s*NTD\s*\$?\s*([\d,]+(?:\.\d+)?)", text)
+        nav_m = re.search(
+            r"每受益權單位淨資產價值\(元\)\s*NTD\s*\$?\s*([\d,]+(?:\.\d+)?)", text
+        )
+        units_m = re.search(r"已發行受益權單位總數\s*([\d,]+)", text)
+        date_m = re.search(r"公告日期\s*[:：]?\s*(\d{4}/\d{2}/\d{2})", text)
+        nav_date = date_m.group(1).replace("/", "-") if date_m else None
+
+        return _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=aum_m.group(1) if aum_m else None,
+                nav=nav_m.group(1) if nav_m else None,
+                units=units_m.group(1) if units_m else None,
+                nav_date=nav_date,
+            )
+        )
+    except Exception as exc:
+        logger.error("[Yuanta] %s 資產摘要抓取失敗（不影響持股）：%s", fund_code, exc)
+        return None
+
+
 # ── 台新 (00987A) ─────────────────────────────────────────────────────────────
 
 
@@ -450,6 +605,53 @@ def _fetch_taishin(etf_code: str) -> list[dict[str, Any]]:
     except Exception as exc:
         logger.error("[Taishin] %s 抓取失敗：%s", etf_code, exc)
         return []
+
+
+def _fetch_taishin_assets(etf_code: str, date_ymd: str | None) -> dict[str, Any] | None:
+    """台新 ETF 資產摘要：AJAX 端點 PartialHistoryFundNav（頁面「歷史淨值」分頁資料來源）。
+
+    回傳最新一筆 {淨值, nav_date}；台新未揭露 aum/units，故 aum/units 恆 None。
+    失敗回 None，不影響持股。
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        eday = _ymd_to_dash(date_ymd) if date_ymd else _last_weekday_dash()
+        from datetime import datetime, timedelta
+
+        sday = (datetime.fromisoformat(eday) - timedelta(days=10)).date().isoformat()
+        url = "https://www.tsit.com.tw/ETF/Home/PartialHistoryFundNav"
+        payload = f"equal=0&id={etf_code}&sday={sday}&eday={eday}"
+        req = urllib.request.Request(
+            url,
+            data=payload.encode("utf-8"),
+            headers={
+                "User-Agent": UA,
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30, context=_SSL_NO_VERIFY) as resp:
+            raw = resp.read()
+        html = raw.decode("utf-8", errors="replace")
+        soup = BeautifulSoup(html, "lxml")
+        table = soup.find("table")
+        if table is None:
+            return None
+        rows = table.find_all("tr")
+        for tr in rows:
+            tds = tr.find_all("td")
+            if len(tds) < 2:
+                continue
+            date_txt = tds[0].get_text(strip=True)
+            nav_txt = tds[1].get_text(strip=True)
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_txt):
+                continue
+            return _fund_assets_or_none(nav=nav_txt, nav_date=date_txt)
+        return None
+    except Exception as exc:
+        logger.error("[Taishin] %s 資產摘要抓取失敗（不影響持股）：%s", etf_code, exc)
+        return None
 
 
 # ── 第一金 (00994A) ────────────────────────────────────────────────────────────
@@ -531,7 +733,46 @@ def _fetch_ctbc(fid: str) -> list[dict[str, Any]]:
 # ── 兆豐 (00996A) ──────────────────────────────────────────────────────────────
 
 
-def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
+def _parse_mega_assets(html: str) -> dict[str, Any] | None:
+    """兆豐 `#asset_div`「基金資產」區塊解析。
+
+    頁面含一段結構相同的 HTML 註解（範例假資料），必須先剝除註解再解析，
+    否則會誤抓到假資料。失敗回 None，不影響持股。
+    """
+    from bs4 import BeautifulSoup, Comment
+
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        # 剝除所有 HTML 註解（含註解內可能藏的假資料 asset_div）
+        for c in soup.find_all(string=lambda s: isinstance(s, Comment)):
+            c.extract()
+        asset_div = soup.find(id="asset_div")
+        if asset_div is None:
+            return None
+        text = asset_div.get_text(" ", strip=True)
+        aum_m = re.search(r"淨資產價值\s*([\d,]+)", text)
+        units_m = re.search(r"在外流通單位數\s*([\d,]+)", text)
+        nav_m = re.search(r"每單位淨值\s*([\d,.]+)", text)
+        date_m = re.search(r"(\d{4})/(\d{2})/(\d{2})", text)
+        nav_date = (
+            f"{date_m.group(1)}-{date_m.group(2)}-{date_m.group(3)}" if date_m else None
+        )
+        return _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=aum_m.group(1) if aum_m else None,
+                nav=nav_m.group(1) if nav_m else None,
+                units=units_m.group(1) if units_m else None,
+                nav_date=nav_date,
+            )
+        )
+    except Exception as exc:
+        logger.error("[MEGA] 資產摘要解析失敗（不影響持股）：%s", exc)
+        return None
+
+
+def _fetch_mega(
+    fund_id: str | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Fetch 兆豐 ETF holdings via Mega Funds official HTML page.
 
     fund_id must be confirmed by browsing https://www.megafunds.com.tw/MEGA/etf/.
@@ -542,7 +783,7 @@ def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
 
     if not fund_id:
         logger.warning("[MEGA] fund_id not configured for 00986A")
-        return []
+        return [], None
     try:
         url = f"https://www.megafunds.com.tw/MEGA/etf/etf_product.aspx?id={fund_id}"
         raw = _get(url)
@@ -557,10 +798,12 @@ def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
             else ""
         )
 
+        assets = _parse_mega_assets(html)
+
         content_div = soup.find("div", id="fund_content_list_1")
         if content_div is None:
             logger.warning("[MEGA] 找不到 fund_content_list_1 容器")
-            return []
+            return [], assets
 
         code_re = re.compile(r"^\d{4,6}$")
         holdings: list[dict[str, Any]] = []
@@ -586,22 +829,28 @@ def _fetch_mega(fund_id: str | None) -> list[dict[str, Any]]:
             )
 
         logger.info("[MEGA] 取得 %d 筆持股（資料日期：%s）", len(holdings), data_date)
-        return holdings
+        return holdings, assets
     except Exception as exc:
         logger.error("[MEGA] 抓取失敗：%s", exc)
-        return []
+        return [], None
 
 
 # ── 摩根 JPM (00401A, 00989A) ─────────────────────────────────────────────────
 
 
-def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
+def _fetch_jpm(
+    xlsx_url: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Fetch JPM ETF holdings from a fixed XLSX URL.
 
     The XLSX uses a two-section layout:
     - Summary section: header row with 'Fund Ticker' + 'Estimated Total Market Value'
     - Detail section: header row with 'Constituent Ticker', then 'D' rows
     weight = Market Value Base / Estimated Total Market Value * 100
+
+    資產摘要另從 summary 'S' row 讀 'Estimated NAV per Share' / 'Outstanding Shares'。
+    'Valuation Date' 欄位經人工複核發現可能是未來結算日（非 NAV 揭露日），
+    不可靠，故 nav_date 恆留 None（DB 寫入日期另由 pipeline ctx.date_str 決定）。
     """
     import openpyxl
 
@@ -618,17 +867,17 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
             raw = resp.read()
     except Exception as exc:
         logger.error("[JPM] XLSX 下載失敗：%s", exc)
-        return []
+        return [], None
 
     try:
         wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
         ws = wb.active
         if ws is None:
-            return []
+            return [], None
         rows = list(ws.iter_rows(values_only=True))
     except Exception as exc:
         logger.error("[JPM] XLSX 解析失敗：%s", exc)
-        return []
+        return [], None
 
     def cells(row: tuple[Any, ...]) -> list[str]:
         return [str(c).strip() if c is not None else "" for c in row]
@@ -647,14 +896,23 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
 
     if summary_hdr_idx == -1 or detail_hdr_idx == -1:
         logger.warning("[JPM] XLSX 結構未識別（找不到 header rows），URL=%s", xlsx_url)
-        return []
+        return [], None
 
-    # Extract Estimated Total Market Value from summary "S" row
+    # Extract Estimated Total Market Value / NAV per Share / Outstanding Shares
+    # from summary "S" row
     s_headers = cells(rows[summary_hdr_idx])
     etmv_col = next(
         (i for i, h in enumerate(s_headers) if "Estimated Total Market Value" in h), -1
     )
+    aum_col = next((i for i, h in enumerate(s_headers) if h == "Estimated NAV"), -1)
+    nav_col = next(
+        (i for i, h in enumerate(s_headers) if "Estimated NAV per Share" in h), -1
+    )
+    shares_out_col = next(
+        (i for i, h in enumerate(s_headers) if "Outstanding Shares" in h), -1
+    )
     total_market_value = 0.0
+    assets: dict[str, Any] | None = None
     if etmv_col >= 0:
         for row in rows[summary_hdr_idx + 1 : detail_hdr_idx]:
             if not row or all(c is None for c in row):
@@ -662,6 +920,26 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
             v = _to_num(row[etmv_col]) if etmv_col < len(row) else None
             if v is not None and v > 0:
                 total_market_value = v
+            aum_val = (
+                _to_num(row[aum_col]) if aum_col >= 0 and aum_col < len(row) else None
+            )
+            nav_val = (
+                _to_num(row[nav_col]) if nav_col >= 0 and nav_col < len(row) else None
+            )
+            units_val = (
+                _to_num(row[shares_out_col])
+                if shares_out_col >= 0 and shares_out_col < len(row)
+                else None
+            )
+            if aum_val is not None or nav_val is not None or units_val is not None:
+                # 'Valuation Date' 欄位經人工複核發現可能是未來結算日，不可靠，
+                # nav_date 恆留 None（見函式 docstring）。
+                assets = _check_aum_nav_units_consistency(
+                    _fund_assets_or_none(
+                        aum=aum_val, nav=nav_val, units=units_val, nav_date=None
+                    )
+                )
+            if v is not None and v > 0:
                 break
 
     # Parse detail rows
@@ -680,7 +958,7 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
         logger.warning(
             "[JPM] XLSX 缺少必要欄位（Constituent Ticker / Market Value Base）"
         )
-        return []
+        return [], assets
 
     holdings: list[dict[str, Any]] = []
     for row in rows[detail_hdr_idx + 1 :]:
@@ -729,7 +1007,7 @@ def _fetch_jpm(xlsx_url: str) -> list[dict[str, Any]]:
         )
 
     logger.info("[JPM] %s 取得 %d 筆持股", xlsx_url.split("/")[-1], len(holdings))
-    return holdings
+    return holdings, assets
 
 
 # ── 國泰 Cathay (00400A) ───────────────────────────────────────────────────────
@@ -818,22 +1096,57 @@ def _fetch_alliance_bernstein(fund_code: str) -> list[dict[str, Any]]:
 # ── 富邦 Fubon (00982D, 00983D) ────────────────────────────────────────────────
 
 
-def _fetch_fubon(fund_code: str) -> list[dict[str, Any]]:
+def _parse_fubon_assets(soup: Any) -> dict[str, Any] | None:
+    """富邦 `<div class="fund_box p2">` 內 `<ul><li>` 資產摘要解析，與持股明細段落無關。"""
+    try:
+        box = soup.find("div", class_="fund_box")
+        text = box.get_text(" ", strip=True) if box else soup.get_text(" ", strip=True)
+        aum_m = re.search(r"基金淨資產\(新台幣\)\s*([\d,]+)", text)
+        units_m = re.search(r"基金在外流通單位數\(單位\)\s*([\d,]+)", text)
+        nav_m = re.search(r"基金每單位淨值\(新台幣\)\s*([\d,.]+)", text)
+        # 資料日期緊接在 fund_box 之後（非 box 內），box 內找不到就搜全頁
+        date_m = re.search(r"資料日期\s*[:：]\s*(\d{4}/\d{2}/\d{2})", text)
+        if date_m is None and box is not None:
+            date_m = re.search(
+                r"資料日期\s*[:：]\s*(\d{4}/\d{2}/\d{2})",
+                soup.get_text(" ", strip=True),
+            )
+        nav_date = date_m.group(1).replace("/", "-") if date_m else None
+        return _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=aum_m.group(1) if aum_m else None,
+                nav=nav_m.group(1) if nav_m else None,
+                units=units_m.group(1) if units_m else None,
+                nav_date=nav_date,
+            )
+        )
+    except Exception as exc:
+        logger.error("[Fubon] 資產摘要解析失敗（不影響持股）：%s", exc)
+        return None
+
+
+def _fetch_fubon(
+    fund_code: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Fetch 富邦 ETF holdings via official HTML page.
 
     Locates <h6> containing "持股明細" and reads subsequent <tbody>.
     Bond ETFs (00982D, 00983D) have no equity section → returns [] gracefully.
+    NAV 資產摘要位於同頁 <ul><li> 區塊，與持股明細段落無關，不受無持股影響。
     """
     from bs4 import BeautifulSoup
 
     try:
         url = f"https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?lan=TW&stkId={fund_code}"
-        raw = _get(url)
+        # 富邦憑證鏈缺 Subject Key Identifier，同 taishin/ctbc 需停用驗證
+        raw = _get(url, verify_ssl=False)
         html = raw.decode("utf-8", errors="replace")
         soup = BeautifulSoup(html, "lxml")
     except Exception as exc:
         logger.error("[Fubon] %s 抓取失敗：%s", fund_code, exc)
-        return []
+        return [], None
+
+    assets = _parse_fubon_assets(soup)
 
     h6 = next(
         (tag for tag in soup.find_all("h6") if "持股明細" in tag.get_text(strip=True)),
@@ -841,12 +1154,12 @@ def _fetch_fubon(fund_code: str) -> list[dict[str, Any]]:
     )
     if h6 is None:
         logger.warning("[Fubon] %s 找不到 <h6>持股明細（可能為債券型 ETF）", fund_code)
-        return []
+        return [], assets
 
     tbody = h6.find_next("tbody")
     if tbody is None:
         logger.warning("[Fubon] %s 找不到持股 <tbody>", fund_code)
-        return []
+        return [], assets
 
     code_re = re.compile(r"^\d{4,6}$")
     holdings: list[dict[str, Any]] = []
@@ -868,17 +1181,20 @@ def _fetch_fubon(fund_code: str) -> list[dict[str, Any]]:
         holdings.append({"code": code, "name": name, "shares": shares, "weight_pct": w})
 
     logger.info("[Fubon] %s 取得 %d 筆持股", fund_code, len(holdings))
-    return holdings
+    return holdings, assets
 
 
 # ── 中信 HTML (00983A) ─────────────────────────────────────────────────────────
 
 
-def _fetch_ctbc_html(etf_code: str) -> list[dict[str, Any]]:
+def _fetch_ctbc_html(
+    etf_code: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Fetch 中信 ARK ETF holdings via legacy ASP.NET HTML page.
 
     Uses pcd.aspx (not the auth-token REST API used for 00995A).
     SSL verification disabled for consistency with other CTBC calls.
+    資產摘要：Label_AUM01(日期)/02(淨資產)/03(流通單位)/04(每單位淨值) 既有頁面 selector。
     """
     from bs4 import BeautifulSoup
 
@@ -889,12 +1205,28 @@ def _fetch_ctbc_html(etf_code: str) -> list[dict[str, Any]]:
         soup = BeautifulSoup(html, "lxml")
     except Exception as exc:
         logger.error("[CTBC_HTML] %s 抓取失敗：%s", etf_code, exc)
-        return []
+        return [], None
 
     # Log disclosure date (Label_AUM01)
     aum_label = soup.find(id="Label_AUM01")
     data_date = aum_label.get_text(strip=True) if aum_label else ""
     logger.info("[CTBC_HTML] %s 揭露日期：%s", etf_code, data_date)
+
+    assets: dict[str, Any] | None = None
+    try:
+        aum02 = soup.find(id="Label_AUM02")
+        aum03 = soup.find(id="Label_AUM03")
+        aum04 = soup.find(id="Label_AUM04")
+        assets = _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=aum02.get_text(strip=True) if aum02 else None,
+                units=aum03.get_text(strip=True) if aum03 else None,
+                nav=aum04.get_text(strip=True) if aum04 else None,
+                nav_date=data_date or None,
+            )
+        )
+    except Exception as exc:
+        logger.error("[CTBC_HTML] %s 資產摘要解析失敗（不影響持股）：%s", etf_code, exc)
 
     # 支援台股 4 位數代號（2330）與美股代號（TSLA US, AMD US）
     code_re = re.compile(r"^\d{4,6}$|^[A-Z0-9]{2,10}(\s+[A-Z]{2,3})?$")
@@ -917,7 +1249,7 @@ def _fetch_ctbc_html(etf_code: str) -> list[dict[str, Any]]:
         holdings.append({"code": code, "name": name, "shares": shares, "weight_pct": w})
 
     logger.info("[CTBC_HTML] %s 取得 %d 筆持股", etf_code, len(holdings))
-    return holdings
+    return holdings, assets
 
 
 # ── Date utils ────────────────────────────────────────────────────────────────
@@ -983,7 +1315,12 @@ def fetch_holdings(etf_code: str, date_str: str | None = None) -> pd.DataFrame:
         raw_holdings, fund_assets = _dispatch(issuer, fund_code, date_ymd, cat)
         if not raw_holdings:
             logger.warning("[OFFICIAL_API] %s 回傳空持股", etf_code)
-            return pd.DataFrame(columns=["code", "name", "weight", "shares"])
+            empty = pd.DataFrame(columns=["code", "name", "weight", "shares"])
+            # 債券型 ETF（如富邦 00982D/00983D）無股票持股但仍有資產摘要，
+            # 一併附上供 MultiEtfStep 取用，不因空持股而遺失 NAV。
+            if fund_assets:
+                empty.attrs["fund_assets"] = fund_assets
+            return empty
 
         rows = [
             {
@@ -1027,38 +1364,44 @@ def _dispatch(
     if issuer == "capital":
         return _fetch_capital(fund_code, date_ymd)
 
-    # ── 僅持股、無資產摘要的來源 ──
+    # ── 現已補資產摘要（XLSX / HTML 同頁擴充解析）──
     if issuer == "uni":
         if date_ymd:
             logger.warning("[OFFICIAL_API] 統一 ezmoney 不支援指定日期，改抓最新")
-        return _fetch_uni(fund_code), None
+        return _fetch_uni(fund_code)
     if issuer == "fhtrust":
         ymd = date_ymd or _last_weekday_ymd()
-        return _fetch_fhtrust(fund_code, ymd), None
+        return _fetch_fhtrust(fund_code, ymd)
     if issuer == "yuanta":
         from ETF.scrapers import yuanta_scraper
 
         df = yuanta_scraper.fetch_holdings(fund_code)
         records = df.rename(columns={"weight": "weight_pct"}).to_dict("records")
-        return (cast(list[dict[str, Any]], records) if not df.empty else []), None
+        holdings = cast(list[dict[str, Any]], records) if not df.empty else []
+        assets = _fetch_yuanta_assets(fund_code)
+        return holdings, assets
     if issuer == "taishin":
-        return _fetch_taishin(fund_code), None
+        holdings = _fetch_taishin(fund_code)
+        assets = _fetch_taishin_assets(fund_code, date_ymd)
+        return holdings, assets
+    if issuer == "mega":
+        fund_id: str | None = (cat_entry or {}).get("fund_id")
+        return _fetch_mega(fund_id)
+    if issuer == "jpm":
+        xlsx_url: str = (cat_entry or {}).get("xlsx_url", "")
+        return _fetch_jpm(xlsx_url)
+    if issuer == "ctbc_html":
+        return _fetch_ctbc_html(fund_code)
+    if issuer == "fubon":
+        return _fetch_fubon(fund_code)
+
+    # ── 僅持股、無資產摘要的來源 ──
     if issuer == "first_financial":
         return _fetch_first_financial(fund_code), None
     if issuer == "ctbc":
         return _fetch_ctbc(fund_code), None
-    if issuer == "mega":
-        fund_id: str | None = (cat_entry or {}).get("fund_id")
-        return _fetch_mega(fund_id), None
-    if issuer == "jpm":
-        xlsx_url: str = (cat_entry or {}).get("xlsx_url", "")
-        return _fetch_jpm(xlsx_url), None
     if issuer == "cathay":
         return _fetch_cathay(fund_code), None
-    if issuer == "ctbc_html":
-        return _fetch_ctbc_html(fund_code), None
     if issuer == "alliance_bernstein":
         return _fetch_alliance_bernstein(fund_code), None
-    if issuer == "fubon":
-        return _fetch_fubon(fund_code), None
     raise RuntimeError(f"未知 issuer: {issuer}")

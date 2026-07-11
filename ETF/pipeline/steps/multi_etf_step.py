@@ -195,19 +195,22 @@ class MultiEtfStep(BaseStep):
         from ETF.scrapers import official_api_scraper, moneydj_scraper, pocket_scraper
 
         layer_errors: dict[str, str] = {}
+        # 債券型 ETF（如富邦 00982D/00983D）持股為空但仍可能有資產摘要；
+        # 空持股走 fallback 時保留 official_api 的 fund_assets，避免 NAV 遺失。
+        official_assets: dict | None = None
 
         # Layer 1: official_api
         try:
             df = official_api_scraper.fetch_holdings(etf_code, ctx.date_str)
+            official_assets = df.attrs.get("fund_assets") if df is not None else None
             if df is not None and not df.empty:
                 self.logger.info(f"[{etf_code}] official_api succeeded")
-                fund_assets = df.attrs.get("fund_assets")
                 return (
                     df,
                     ctx.date_str or fallback_date,
                     "official_api",
                     False,
-                    fund_assets,
+                    official_assets,
                 )
             layer_errors["official_api"] = "empty DataFrame"
         except Exception as e:
@@ -226,7 +229,7 @@ class MultiEtfStep(BaseStep):
                 self.logger.info(
                     f"[{etf_code}] moneydj fallback succeeded (data_date={data_date})"
                 )
-                return moneydj_df, data_date, "moneydj", True, None
+                return moneydj_df, data_date, "moneydj", True, official_assets
             layer_errors["moneydj"] = "None or empty DataFrame"
         except Exception as e:
             layer_errors["moneydj"] = str(e)
@@ -239,17 +242,23 @@ class MultiEtfStep(BaseStep):
                 self.logger.info(
                     f"[{etf_code}] pocket fallback succeeded (data_date={pocket_date})"
                 )
-                return pocket_df, pocket_date or fallback_date, "pocket", True, None
+                return (
+                    pocket_df,
+                    pocket_date or fallback_date,
+                    "pocket",
+                    True,
+                    official_assets,
+                )
             layer_errors["pocket"] = "None or empty DataFrame"
         except Exception as e:
             layer_errors["pocket"] = str(e)
             self.logger.warning(f"[{etf_code}] pocket raised: {e}")
 
-        # All three layers failed
+        # All three layers failed（仍回傳 official_assets，AUM sync 可用）
         for layer_name, err in layer_errors.items():
             self.logger.error(f"[{etf_code}] {layer_name} failed: {err}")
         self.logger.error(f"[{etf_code}] All three layers failed, skipping this ETF")
-        return None, None, "none", False, None
+        return None, None, "none", False, official_assets
 
     # ------------------------------------------------------------------ helpers
 

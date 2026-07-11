@@ -1,6 +1,9 @@
 import { AumScalePanel } from '@/components/features/investment/AumScalePanel';
+import { AumGrowthRankingTable } from '@/components/features/investment/AumGrowthRankingTable';
+import { getAumGrowthRanking } from '@/app/actions/getEtfMechanics';
 
-export default function EtfComparePage() {
+export default async function EtfComparePage() {
+    const ranking = await getAumGrowthRanking();
     return (
         <div className="container mx-auto py-8 space-y-6">
             <div>
@@ -11,6 +14,7 @@ export default function EtfComparePage() {
                     各主動 ETF 資產規模、申購流向與成長來源
                 </p>
             </div>
+            <AumGrowthRankingTable rows={ranking} />
             <AumScalePanel />
         </div>
     );

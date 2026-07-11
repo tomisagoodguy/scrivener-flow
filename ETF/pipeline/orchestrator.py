@@ -23,6 +23,7 @@ from ETF.pipeline.steps import (
     WeightHistoryStep,
     MultiEtfStep,
     AumSyncStep,
+    DividendSyncStep,
     OverlapComputeStep,
     DivergenceDetectStep,
     FlowComputeStep,
@@ -97,6 +98,7 @@ class PipelineOrchestrator:
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
         RetailSentimentStep,    # [輔助] 週頻集保散戶指標 → market_breadth_daily
         MarketChipsStep,        # [輔助] 期貨籌碼/融資融券/個股法人/訊號 → 市場籌碼四表
+        DividendSyncStep,       # [輔助] 同步 ETF 配息記錄（TWSE etfDiv）→ etf_dividend_records
         NotifyStep,
         CleanupStep,
     ]

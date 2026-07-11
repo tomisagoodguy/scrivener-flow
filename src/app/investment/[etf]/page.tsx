@@ -22,6 +22,8 @@ import Link from 'next/link';
 import { ArrowLeftIcon } from 'lucide-react';
 import { getHoldings, fetchQuantFilters, getRankingHistory, getEtfNews, getDiffLogs, getEtfDrilldownPageData } from '@/lib/investment/etfPageData';
 import { getHoldings5DayTrend } from '@/app/actions/getHoldings5DayTrend';
+import { getEtfMechanics } from '@/app/actions/getEtfMechanics';
+import { EtfMechanicsTab } from '@/components/features/investment/EtfMechanicsTab';
 import { getActiveEtfCodes } from '@/lib/investment/activeEtfs';
 import { Holdings5DayTrend } from '@/components/features/Holdings5DayTrend';
 
@@ -39,7 +41,7 @@ export default async function InvestmentEtfDrilldownPage({
     const etfMeta = getEtfMeta(etfCode);
     const { holdings, updatedAt, dataDate, meta } = await getHoldings(etfCode, topic ?? null);
 
-    const [logs, rankingHistory, quantFilters, news, drilldown, trendData, activeCodes] = await Promise.all([
+    const [logs, rankingHistory, quantFilters, news, drilldown, trendData, activeCodes, mechanics] = await Promise.all([
         getDiffLogs(etfCode),
         getRankingHistory(etfCode),
         fetchQuantFilters(holdings.map(h => h.stock_code)),
@@ -47,6 +49,7 @@ export default async function InvestmentEtfDrilldownPage({
         getEtfDrilldownPageData(etfCode, dataDate),
         getHoldings5DayTrend(etfCode),
         getActiveEtfCodes(),
+        getEtfMechanics(etfCode),
     ]);
 
     const holdingsWithFilters = holdings.map(h => ({ ...h, ...quantFilters[h.stock_code] })) as Holding[];
@@ -89,6 +92,7 @@ export default async function InvestmentEtfDrilldownPage({
                     historyData={rankingHistory}
                     ledgerContent={<div className="w-full space-y-8"><ChangeImpactChart logs={logs} /><div><div className="flex items-center gap-2 mb-4"><ClockIcon className="w-5 h-5 text-indigo-500" /><h3 className="text-xl font-bold text-slate-900 dark:text-white">近期異動紀錄</h3></div><DiffLedger logs={logs} /></div></div>}
                     stockTradeContent={<EtfStockTradeView etfCode={etfCode} holdings={stockTradeHoldings} />}
+                    mechanicsContent={<EtfMechanicsTab data={mechanics} />}
                     todayDiffs={todayDiffs as Parameters<typeof DrilldownTabs>[0]['todayDiffs']}
                     todayBuyChartContent={<EtfBuyDonutChart key="today-buy-chart" diffLogs={todayBuyDiffLogs} holdings={holdingsWithFilters} prevDiffLogs={drilldown.prevDiffsForChart} dataDate={dataDate ?? undefined} prevDataDate={drilldown.prevDate ?? undefined} />}
                     dataDate={dataDate ?? undefined}
