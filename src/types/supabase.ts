@@ -355,18 +355,21 @@ export type Database = {
       conversation_members: {
         Row: {
           conversation_id: string
+          hidden_at: string | null
           joined_at: string
           last_read_at: string
           user_id: string
         }
         Insert: {
           conversation_id: string
+          hidden_at?: string | null
           joined_at?: string
           last_read_at?: string
           user_id: string
         }
         Update: {
           conversation_id?: string
+          hidden_at?: string | null
           joined_at?: string
           last_read_at?: string
           user_id?: string

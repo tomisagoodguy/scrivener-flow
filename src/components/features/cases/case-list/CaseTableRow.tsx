@@ -60,8 +60,13 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                     {caseData.case_number}
                 </Link>
                 {caseData.isOwnedByCurrentUser === false && (
-                    <div className="text-[10px] font-bold text-slate-400 text-center mt-0.5">
-                        他人分享
+                    <div className="text-[10px] font-bold text-blue-500 text-center mt-0.5">
+                        {caseData.sharedByName}
+                    </div>
+                )}
+                {caseData.isOwnedByCurrentUser !== false && caseData.sharedWithLabel && (
+                    <div className="text-[10px] font-bold text-slate-400 text-center mt-0.5 truncate" title={caseData.sharedWithLabel}>
+                        {caseData.sharedWithLabel}
                     </div>
                 )}
             </td>
@@ -195,6 +200,7 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                     todos={filteredTodos as Record<string, boolean>}
                     allTasks={allTasks}
                     hideCompleted={true}
+                    readOnly={caseData.isOwnedByCurrentUser === false}
                 />
                 {(caseData.pending_tasks || caseData.notes) && (
                     <div className="mt-2 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-1.5">

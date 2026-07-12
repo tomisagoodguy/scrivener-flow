@@ -147,6 +147,7 @@ export default function CasesPendingView({ cases }: CasesPendingViewProps) {
                                                     todos={filteredTodos as Record<string, boolean>}
                                                     allTasks={ALL_TASKS}
                                                     hideCompleted={true}
+                                                    readOnly={caseData.isOwnedByCurrentUser === false}
                                                 />
                                             </td>
                                         </tr>

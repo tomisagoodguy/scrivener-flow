@@ -80,3 +80,34 @@ export async function searchShareableUsers(supabase: Client, query: string): Pro
 export function computeIsOwnedByCurrentUser(caseUserId: string | null | undefined, currentUserId: string): boolean {
     return caseUserId === currentUserId;
 }
+
+/** 姓名無法解析時的通用文字。刻意不落回 email（前綴亦不用），避免對被分享者暴露分享者帳號資訊。 */
+export const UNRESOLVED_SHARER_LABEL = '同事分享給你';
+
+/**
+ * 把分享者 user id 解析成「OO 分享給你」文字，只使用 `full_name`，不使用 email
+ * （即使 email 可解析也不當 fallback，與 `chatDisplayName()` 的聊天室情境刻意不同）。
+ * 找不到對應使用者，或使用者沒有設定 `full_name`，一律回傳通用 fallback 文字。
+ */
+export function resolveSharedByLabel(sharedByUserId: string | undefined, users: ChatUser[]): string {
+    if (!sharedByUserId) return UNRESOLVED_SHARER_LABEL;
+    const matched = users.find((u) => u.id === sharedByUserId);
+    if (!matched?.full_name) return UNRESOLVED_SHARER_LABEL;
+    return `${matched.full_name} 分享給你`;
+}
+
+/** 單一被分享者姓名無法解析時的通用文字（不落回 email）。 */
+export const UNRESOLVED_RECIPIENT_NAME = '同事';
+
+/**
+ * 把案件擁有者端的分享名單解析成「已分享給：A、B」文字，只使用 `full_name`，
+ * 不使用 email；名單為空時回傳空字串（呼叫端應以空字串代表不顯示標記）。
+ */
+export function resolveSharedWithLabel(sharedWithUserIds: string[], users: ChatUser[]): string {
+    if (sharedWithUserIds.length === 0) return '';
+    const names = sharedWithUserIds.map((id) => {
+        const matched = users.find((u) => u.id === id);
+        return matched?.full_name || UNRESOLVED_RECIPIENT_NAME;
+    });
+    return `已分享給：${names.join('、')}`;
+}

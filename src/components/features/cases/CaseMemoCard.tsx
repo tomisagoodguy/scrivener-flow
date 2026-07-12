@@ -174,9 +174,11 @@ interface EditableNoteProps {
     textClassName: string;
     bgClassName: string;
     onSave: (value: string) => Promise<void>;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：點擊進入編輯模式的入口停用。 */
+    readOnly?: boolean;
 }
 
-function EditableNote({ icon, value, placeholder, textClassName, bgClassName, onSave }: EditableNoteProps) {
+function EditableNote({ icon, value, placeholder, textClassName, bgClassName, onSave, readOnly = false }: EditableNoteProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
     const [status, setStatus] = useState<SaveStatus>('idle');
@@ -226,7 +228,7 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
         setEditing(false);
     };
 
-    if (editing) {
+    if (editing && !readOnly) {
         return (
             <div className={`w-full rounded-xl border px-2.5 py-2 transition-all ${bgClassName}`}>
                 <div className="flex items-center justify-between mb-1">
@@ -254,12 +256,13 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
         );
     }
 
-    // read mode — click to edit
+    // read mode — click to edit（唯讀分享情境下不可點擊進入編輯）
     return (
         <button
             type="button"
-            onClick={() => setEditing(true)}
-            className={`w-full text-left flex items-start gap-1.5 rounded-xl px-2.5 py-2 border transition-all group/note ${bgClassName} hover:brightness-95`}
+            onClick={() => !readOnly && setEditing(true)}
+            disabled={readOnly}
+            className={`w-full text-left flex items-start gap-1.5 rounded-xl px-2.5 py-2 border transition-all group/note ${bgClassName} ${readOnly ? '' : 'hover:brightness-95'}`}
         >
             <span className="text-[14px] shrink-0 mt-px">{icon}</span>
             {draft ? (
@@ -269,9 +272,11 @@ function EditableNote({ icon, value, placeholder, textClassName, bgClassName, on
             ) : (
                 <p className="text-[13px] text-slate-300 italic leading-relaxed flex-1">{placeholder}</p>
             )}
-            <span className="text-[11px] text-slate-300 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-px">
-                編輯
-            </span>
+            {!readOnly && (
+                <span className="text-[11px] text-slate-300 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-px">
+                    編輯
+                </span>
+            )}
         </button>
     );
 }
@@ -464,6 +469,7 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex, view = 
                     textClassName="text-rose-600 dark:text-rose-400 font-bold"
                     bgClassName="bg-rose-50 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-800/40"
                     onSave={(v) => save('notes', v)}
+                    readOnly={caseData.isOwnedByCurrentUser === false}
                 />
             )}
 
@@ -476,6 +482,7 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex, view = 
                     textClassName="text-slate-600 dark:text-slate-400 italic"
                     bgClassName="bg-slate-50 dark:bg-slate-800/50 border-slate-200/60 dark:border-slate-700/40"
                     onSave={(v) => save('pending_tasks', v)}
+                    readOnly={caseData.isOwnedByCurrentUser === false}
                 />
             )}
 
@@ -488,6 +495,7 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex, view = 
                     textClassName="text-slate-600 dark:text-slate-400"
                     bgClassName="bg-slate-100/80 dark:bg-slate-800/70 border-slate-300/60 dark:border-slate-600/40"
                     onSave={(v) => save('private_notes', v)}
+                    readOnly={caseData.isOwnedByCurrentUser === false}
                 />
             )}
 
@@ -496,6 +504,7 @@ export default function CaseMemoCard({ caseData, allCases, currentIndex, view = 
                 <ChatGroupsEditor
                     caseId={caseData.id}
                     initialGroups={caseData.chat_groups ?? {}}
+                    readOnly={caseData.isOwnedByCurrentUser === false}
                 />
             )}
 

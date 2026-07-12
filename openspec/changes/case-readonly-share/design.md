@@ -55,12 +55,25 @@ CREATE TABLE case_shares (
 
 `src/services/caseService.ts`（實際案件 service 檔案，非 `src/lib/case/`）既有查詢（`SELECT * FROM cases WHERE user_id = auth.uid()`）在 RLS 擴充後，改為 `SELECT * FROM cases`（交由 RLS 過濾）即可自動納入被分享案件，不需要額外的 UNION 查詢。UI 需額外判斷 `cases.user_id === currentUserId` 來決定是否為「自己的案件」或「他人分享」，據此顯示分享來源標籤與是否顯示編輯操作。
 
+### 案件列表的分享者姓名解析與擁有者端「已分享」標記
+
+`src/app/cases/page.tsx` 的查詢在既有 `milestones (*)`、`financials (*)` 之外，加入 `case_shares (shared_by, shared_with)` embedded join。`case_shares` 的 SELECT RLS（`shared_with = auth.uid() OR is_case_owner(...)`）讓這個 join 天生依角色回傳不同範圍，不需要額外的權限判斷邏輯：
+- 案件擁有者查自己的案件：RLS 讓其看到該案件**全部**的 `case_shares` 列，前端把每一列的 `shared_with` 解析成姓名（同樣只用 `full_name`，不顯示 email），組成「已分享給：A、B」文字；名單為空時不顯示任何標記。
+- 被分享者查被分享給自己的案件：RLS 只回傳 `shared_with = auth.uid()` 那一列（看不到別人的分享列），`case_shares[0].shared_by` 即為分享者的 user id。
+
+分享者的 user id 需要解析成可讀姓名顯示。呼叫 `listChatUsers(supabase)`（沿用既有 `list_chat_users()` RPC）建立 `id → ChatUser` 對照表，用來把 `shared_by` 轉成顯示名稱。**刻意只用 `full_name`，不對被分享者暴露 email**：被分享者不需要知道分享者的帳號 email，只需要知道「是誰分享的」。若對照表中 `full_name` 為空（使用者未設定 Google OAuth 姓名）或整個 id 無法解析（分享者名下該案件已結案或超過 30 天未更新，落在 `list_chat_users()` 的「近 30 天有承辦中案件」篩選範圍外），一律顯示通用 fallback 文字「同事分享給你」，不落回 email 前綴（不同於 `chatDisplayName()` 在聊天室情境會用 email 前綴當 fallback；此處刻意不重用該 fallback 邏輯）。
+
+### 被分享案件在案件列表置頂排序
+
+`src/app/cases/page.tsx` 既有排序邏輯（預設印→稅→過→交優先序，或使用者選擇的單一里程碑排序）維持不變，在其**之後**加一個穩定的二次排序：`isOwnedByCurrentUser === false` 的案件一律排到 `isOwnedByCurrentUser !== false` 的案件之前。JavaScript `Array.prototype.sort` 自 ES2019 起保證穩定排序，因此這個二次排序只調整「擁有 vs. 被分享」兩個分區的相對順序，不影響同分區內既有的排序結果。
+
 ## Implementation Contract
 
 **行為（Behavior）**：
 - 案件擁有者在案件詳情畫面點擊「分享」按鈕，開啟分享管理面板，可搜尋使用者、加入分享名單、從分享名單移除任一人。
-- 被分享者登入後，在案件列表能看到該案件（標示為「OO 分享給你」），點入詳情頁可看到完整資料（基本資料、里程碑、財務、代償步驟），但所有編輯用的輸入框、按鈕（新增里程碑、修改金額、新增代償步驟等）皆為停用或隱藏狀態。
-- 案件擁有者移除某人的分享後，該使用者再次載入案件列表/詳情頁時，該案件即消失（下次查詢即生效，不需要對方登出再登入）。
+- 被分享者登入後，在案件列表能看到該案件，**排在列表最上方**（優先於既有里程碑排序），標示為「OO 分享給你」（OO 僅顯示分享者姓名，不顯示 email；姓名無法取得時退回「同事分享給你」），點入詳情頁可看到完整資料（基本資料、里程碑、財務、代償步驟），但所有編輯用的輸入框、按鈕（新增里程碑、修改金額、新增代償步驟等）皆為停用或隱藏狀態。
+- 案件擁有者在自己的案件列表中，若某案件已分享出去，該案件列示會顯示「已分享給：A、B」（列出所有被分享者姓名，不顯示 email）。
+- 案件擁有者移除某人的分享後，該使用者再次載入案件列表/詳情頁時，該案件即消失（下次查詢即生效，不需要對方登出再登入），擁有者端的「已分享給」名單也會同步移除該人。
 
 **資料形狀（Interface / Data Shape）**：
 - `case_shares` 表如上定義；`src/types/caseShare.ts` 匯出 `CaseShare` 介面（`id`、`case_id`、`shared_with`、`shared_by`、`created_at`）與 `CaseShareWithUser`（含被分享者的 email/顯示名稱，供 UI 呈現）。
@@ -73,9 +86,10 @@ CREATE TABLE case_shares (
 - 重複分享同一人：`UNIQUE (case_id, shared_with)` 觸發 DB 錯誤，`addShare` 需捕捉並視為成功（idempotent，不噴錯誤給使用者）。
 
 **驗收條件（Acceptance Criteria）**：
-- 手動驗證：使用者 A 分享案件給使用者 B → B 登入後案件列表出現該案件、詳情頁可讀取里程碑/財務/代償步驟資料、所有編輯按鈕不可互動。
+- 手動驗證：使用者 A 分享案件給使用者 B → B 登入後案件列表出現該案件、排在列表最上方、標示「A 分享給你」、詳情頁可讀取里程碑/財務/代償步驟資料、所有編輯按鈕不可互動。
+- 手動驗證：A 的案件列表中，該案件顯示「已分享給：B」；A 再分享給第三人 C 後變成「已分享給：B、C」，畫面上不出現任何 email。
 - 手動驗證：B 嘗試直接呼叫 `updateMilestone`（例如透過瀏覽器 console 呼叫 service 方法）→ 被 RLS 拒絕，非 200 成功。
-- 手動驗證：A 移除 B 的分享 → B 重新整理案件列表後看不到該案件。
+- 手動驗證：A 移除 B 的分享 → B 重新整理案件列表後看不到該案件，A 的「已分享給」名單同步移除 B。
 - `supabase/migrations/<timestamp>_add_case_shares.sql` 可透過 Supabase CLI/Dashboard 成功套用，且 `get_advisors`（security）沒有新增高風險項目。
 
 **範圍邊界（Scope Boundaries）**：

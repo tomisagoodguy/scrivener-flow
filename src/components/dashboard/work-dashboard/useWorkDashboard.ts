@@ -144,7 +144,8 @@ export function useWorkDashboard() {
             }
 
         } catch (err) {
-            console.error('Dashboard Fetch Error:', err);
+            const message = err instanceof Error ? err.message : JSON.stringify(err);
+            console.error('Dashboard Fetch Error:', message, err);
         } finally {
             setLoading(false);
         }
@@ -186,7 +187,8 @@ export function useWorkDashboard() {
             // 觸發跨元件同步
             window.dispatchEvent(new CustomEvent('todo-updated'));
         } catch (err) {
-            console.error('Failed to complete task:', err);
+            const message = err instanceof Error ? err.message : JSON.stringify(err);
+            console.error('Failed to complete task:', message, err);
         }
     };
 

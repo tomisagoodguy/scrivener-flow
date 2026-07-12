@@ -10,6 +10,8 @@ interface CaseCompactTodoListProps {
     todos: Record<string, boolean>;
     allTasks: string[];
     hideCompleted?: boolean;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：勾選、新增、刪除待辦事項的操作入口皆停用/隱藏。 */
+    readOnly?: boolean;
 }
 
 export default function CaseCompactTodoList({
@@ -17,6 +19,7 @@ export default function CaseCompactTodoList({
     todos = {},
     allTasks,
     hideCompleted = false,
+    readOnly = false,
 }: CaseCompactTodoListProps) {
     // const router = useRouter();
     const { todos: localTodos, loadingItem: updating, toggleTodo, addTodo, deleteTodo } = useCaseTodos(caseId, todos, '');
@@ -78,7 +81,7 @@ export default function CaseCompactTodoList({
                                     e.stopPropagation();
                                     onToggle(task);
                                 }}
-                                disabled={!!updating}
+                                disabled={!!updating || readOnly}
                                 className={`
                                     px-3 py-1 rounded-md text-[12px] font-medium border transition-all whitespace-normal text-left
                                     leading-tight
@@ -93,7 +96,7 @@ export default function CaseCompactTodoList({
                                 {isCompleted ? '✓ ' : ''}
                                 <span dangerouslySetInnerHTML={{ __html: task.replace(/^(SIG_|SEAL_|LOAN_|TAX_|HO_|S_|T_)/, '') }} />
                             </button>
-                            {isCustom && (
+                            {isCustom && !readOnly && (
                                 <button
                                     type="button"
                                     onClick={(e) => handleDeleteTask(e, task)}
@@ -107,7 +110,7 @@ export default function CaseCompactTodoList({
                     );
                 })}
 
-            {isAdding ? (
+            {!readOnly && (isAdding ? (
                 <div className="flex items-center gap-1 border border-blue-200 rounded px-1 py-0.5 bg-blue-50">
                     <input
                         autoFocus
@@ -152,7 +155,7 @@ export default function CaseCompactTodoList({
                     <Plus size={12} />
                     <span className="text-[10px]">新增</span>
                 </button>
-            )}
+            ))}
         </div>
     );
 }

@@ -56,9 +56,11 @@ interface InlineNoteProps {
     placeholder: string;
     textClass: string;
     onSave: (v: string) => Promise<void>;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：點擊進入編輯模式的入口停用。 */
+    readOnly?: boolean;
 }
 
-function InlineNote({ icon, value, placeholder, textClass, onSave }: InlineNoteProps) {
+function InlineNote({ icon, value, placeholder, textClass, onSave, readOnly = false }: InlineNoteProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
     const [status, setStatus] = useState<SaveStatus>('idle');
@@ -85,7 +87,7 @@ function InlineNote({ icon, value, placeholder, textClass, onSave }: InlineNoteP
         }, 700);
     }, [onSave]);
 
-    if (editing) {
+    if (editing && !readOnly) {
         return (
             <div className="flex items-start gap-1 w-full">
                 <span className="text-[11px] shrink-0 mt-0.5 opacity-60">{icon}</span>
@@ -115,8 +117,9 @@ function InlineNote({ icon, value, placeholder, textClass, onSave }: InlineNoteP
     return (
         <button
             type="button"
-            onClick={() => setEditing(true)}
-            className="flex items-start gap-1 w-full text-left group/note hover:opacity-80 transition-opacity"
+            onClick={() => !readOnly && setEditing(true)}
+            disabled={readOnly}
+            className={`flex items-start gap-1 w-full text-left group/note transition-opacity ${readOnly ? '' : 'hover:opacity-80'}`}
         >
             <span className="text-[11px] shrink-0 mt-0.5 opacity-60">{icon}</span>
             {draft ? (
@@ -185,6 +188,7 @@ function CaseMemoListRow({ c }: { c: DemoCase }) {
                     placeholder="應注意備註…"
                     textClass="text-rose-600 dark:text-rose-400 font-medium"
                     onSave={(v) => save('notes', v)}
+                    readOnly={c.isOwnedByCurrentUser === false}
                 />
                 <InlineNote
                     icon="📝"
@@ -192,6 +196,7 @@ function CaseMemoListRow({ c }: { c: DemoCase }) {
                     placeholder="其他代辦…"
                     textClass="text-slate-500 dark:text-slate-400"
                     onSave={(v) => save('pending_tasks', v)}
+                    readOnly={c.isOwnedByCurrentUser === false}
                 />
                 <InlineNote
                     icon="🔒"
@@ -199,6 +204,7 @@ function CaseMemoListRow({ c }: { c: DemoCase }) {
                     placeholder="私密備註…"
                     textClass="text-slate-400 dark:text-slate-500"
                     onSave={(v) => save('private_notes', v)}
+                    readOnly={c.isOwnedByCurrentUser === false}
                 />
             </div>
         </div>

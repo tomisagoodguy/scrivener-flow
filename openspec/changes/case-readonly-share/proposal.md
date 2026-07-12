@@ -7,7 +7,9 @@
 - 案件編輯畫面（`EditCaseForm` 及其 `edit-case/` 子區塊）新增「分享」按鈕，開啟分享管理面板。
 - 分享面板可搜尋公司內已登入使用者（比照 `in-app-chat` 的使用者選擇器），將其加入該案件的分享名單，或從名單移除。
 - 新增 `case_shares` 資料表記錄「哪個案件」分享給「哪個使用者」，記錄分享者與分享時間。
-- 被分享的使用者登入後，可在案件列表 / 詳情頁看到該案件（標示「他人分享」來源），並可檢視案件全部資訊：基本資料、里程碑、財務、待辦、備忘錄、聊天記錄等。
+- 被分享的使用者登入後，可在案件列表 / 詳情頁看到該案件，並可檢視案件全部資訊：基本資料、里程碑、財務、待辦、備忘錄、聊天記錄等。
+- 被分享的案件在被分享者的案件列表中**排序至最上方**（優先於既有的里程碑排序），並標示「OO 分享給你」（顯示分享者姓名，非泛用的「他人分享」文字）。
+- 案件擁有者在自己的案件列表中，若某案件已分享給至少一人，該案件列示要顯示「已分享」標記（含分享人數），讓擁有者一眼看出哪些案件目前有開放給同事。
 - 新增 RLS Policy：被分享者對 `cases` 及其關聯表（`milestones`、`financials`、`todos` 等）僅有 `SELECT` 權限，沒有 `INSERT`/`UPDATE`/`DELETE` 權限；只有案件擁有者（`user_id = auth.uid()`）保留完整讀寫權限。
 - 被分享者在 UI 上所有編輯欄位、操作按鈕（新增里程碑、修改財務、刪除待辦等）皆隱藏或停用，避免誤觸後才被資料庫拒絕。
 - 案件擁有者可隨時在分享面板移除某位同事的存取權，移除後對方立即無法再讀取（RLS 即時生效）。
@@ -38,5 +40,6 @@
     - `src/services/caseService.ts`（查詢案件清單時納入被分享案件）
     - `src/components/features/cases/EditCaseForm.tsx` 與 `edit-case/`（MilestonesSection、TaxDeadlinesSection 等）（加入分享按鈕、依唯讀狀態隱藏編輯操作）
     - `src/components/features/redemptions/RedemptionProgressTracker.tsx`（依唯讀狀態隱藏編輯操作）
-    - `src/app/cases/page.tsx`（案件列表納入被分享案件，並標示分享來源）
+    - `src/app/cases/page.tsx`（案件列表納入被分享案件，加入 `case_shares` join、分享者姓名解析、被分享案件置頂排序）
     - `src/app/cases/[id]/page.tsx`（掛載分享按鈕進入點）
+    - `src/components/features/cases/case-list/CaseTableRow.tsx`（顯示「OO 分享給你」與擁有者端「已分享」標記）

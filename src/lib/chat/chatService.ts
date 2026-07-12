@@ -155,6 +155,32 @@ export async function markConversationRead(
     if (error) throw toError(error, '標記已讀失敗');
 }
 
+export async function hideConversation(supabase: Client, conversationId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+        .from('conversation_members')
+        .update({ hidden_at: new Date().toISOString() } satisfies Partial<ConversationMember>)
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId);
+
+    if (error) throw toError(error, '刪除對話失敗');
+}
+
+/**
+ * 只從本人清單隱藏對話（比照 Gmail 刪除信件語意）：隱藏後若有新訊息
+ * （lastMessageAt 或無訊息時的 conversationCreatedAt 晚於 hiddenAt），
+ * 視為對話重新活躍，自動恢復顯示。
+ */
+export function isConversationHidden(
+    hiddenAt: string | null,
+    lastMessageAt: string | null,
+    conversationCreatedAt?: string
+): boolean {
+    if (!hiddenAt) return false;
+    const latestActivity = lastMessageAt ?? conversationCreatedAt;
+    if (!latestActivity) return true;
+    return new Date(hiddenAt).getTime() >= new Date(latestActivity).getTime();
+}
+
 export async function listChatUsers(supabase: Client): Promise<ChatUser[]> {
     const { data, error } = await supabase.rpc('list_chat_users');
     if (error) throw toError(error, '取得使用者清單失敗');

@@ -51,28 +51,71 @@ A user with an active `case_shares` row for a case (`shared_with = auth.uid()`) 
 - **THEN** the query returns no rows
 
 ### Requirement: Case list surfaces owned and shared cases with a distinguishing source
-The case list view SHALL include both cases owned by the current user and cases shared with the current user, and SHALL indicate for each case whether it is owned or shared.
 
-#### Scenario: Case list includes a shared case
-- **WHEN** a user who has been granted a share for a case loads the case list
-- **THEN** the shared case appears in the list labeled as shared (not owned)
+The case list view SHALL include both cases owned by the current user and cases shared with the current user. Shared cases SHALL be labeled with the sharer's display name only (never the sharer's email address), falling back to a generic "colleague" label if the name cannot be resolved, and SHALL be sorted before owned cases, regardless of the active sort option. Cases owned by the current user that have at least one active `case_shares` row SHALL display the display names of everyone the case is shared with (never their email addresses), not merely a count.
+
+#### Scenario: Case list includes a shared case labeled with the sharer's name
+
+- **WHEN** a user who has been granted a share for a case (shared by "王小明") loads the case list
+- **THEN** the shared case appears in the list labeled "王小明 分享給你"
+
+#### Scenario: Sharer label never exposes the sharer's email
+
+- **WHEN** the sharer's display name is resolved for a shared case
+- **THEN** only the name is shown; the sharer's email address SHALL NOT appear anywhere in the label
+
+#### Scenario: Sharer name falls back to generic label when unresolvable
+
+- **WHEN** a shared case's `case_shares.shared_by` user id cannot be resolved to a name (the id is not found, or is found with no `full_name` set)
+- **THEN** the case is labeled with a generic fallback (e.g. "同事分享給你") instead of failing to render or falling back to an email-derived label
 
 #### Scenario: Case list excludes cases neither owned nor shared
+
 - **WHEN** a user loads the case list
 - **THEN** cases they neither own nor have been shared SHALL NOT appear in the list
 
+#### Scenario: Shared cases are sorted above owned cases
+
+- **WHEN** a user's case list contains both owned cases and cases shared with them, under any sort option (default milestone priority, or a single milestone field)
+- **THEN** all shared cases appear before all owned cases, and the relative order within each group matches the selected sort
+
+##### Example: shared case pinned above owned cases under milestone sort
+
+- **GIVEN** owned case A (seal_date in 3 days), owned case B (seal_date in 1 day), and a case C shared with the user (seal_date in 10 days)
+- **WHEN** the user loads the case list with the default milestone sort
+- **THEN** the list order is: C (shared), B (owned, nearer seal_date), A (owned, farther seal_date)
+
+#### Scenario: Owner sees the names of everyone a case is shared with
+
+- **WHEN** the case owner has shared a case with colleagues "小明" and "小美"
+- **THEN** that case's row in the owner's case list displays "已分享給：小明、小美"
+
+#### Scenario: Owner-side share indicator never shows email addresses
+
+- **WHEN** the case owner's case list renders the share indicator for a case shared with one or more colleagues
+- **THEN** only display names appear in the indicator; no colleague's email address appears anywhere in it
+
+#### Scenario: Owner sees no share indicator on a case with no shares
+
+- **WHEN** a case owned by the current user has no `case_shares` rows
+- **THEN** no share indicator is shown for that case
+
 ### Requirement: Case detail view hides edit controls for shared users
+
 When a shared user (not the owner) views a case's detail page, all controls that create, update, or delete case data (milestones, financials, redemption steps, or case fields) SHALL be hidden or disabled.
 
 #### Scenario: Shared user views case detail
+
 - **WHEN** a shared user opens the detail page of a case shared with them
 - **THEN** all input fields and action buttons for editing milestones, financials, redemption steps, and case fields are disabled or not rendered
 
 #### Scenario: Owner views own case detail
+
 - **WHEN** the case owner opens the detail page of their own case
 - **THEN** all edit controls are rendered and enabled as before this change
 
 ### Requirement: Share panel accessible from case detail view
+
 The case detail view SHALL provide a share entry point, visible only to the case owner, that opens a panel listing current shares and allowing the owner to add or remove shared users.
 
 #### Scenario: Owner opens share panel

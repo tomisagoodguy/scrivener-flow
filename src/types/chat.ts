@@ -11,6 +11,7 @@ export interface ConversationMember {
   user_id: string;
   last_read_at: string;
   joined_at: string;
+  hidden_at: string | null;
 }
 
 export interface ChatMessage {

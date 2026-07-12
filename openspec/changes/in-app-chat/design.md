@@ -100,7 +100,10 @@ Realtime 既有用法僅限 `supabase.channel(name).on('postgres_changes', ...)`
   - **現版**（`supabase/migrations/20260712180000_relax_list_chat_users_activity.sql`）：使用者名下有**承辦中**案件（`cases.status NOT IN ('Closed', 'Cancelled')`，比照 `CASE_INACTIVE_STATUSES` 用排除法而非只認 `'Processing'`，因 `CaseStatus` 中英文值混用），且該案件近 **30 天**內有編輯（`cases.updated_at`）。
   - → 若之後有使用者完全沒有案件但仍需要聊天（例如純協作角色），需另開 change 重新設計「活躍」定義。
 - [範圍擴充，使用者實測後要求] 新增「在線狀態」綠燈指示：新增 `src/components/chat/hooks/useOnlinePresence.ts`，用 Supabase Realtime **Presence**（channel `chat-online-presence`，`config.presence.key = currentUserId`，`track()` 自己上線、監聽 `sync` 事件取得目前線上使用者 id 集合）；`NewConversationPicker`（每位使用者旁）與 `ConversationList`（1 對 1 對話的對方名稱旁）顯示 `OnlineDot`（綠＝在線、灰＝離線）。群組對話不顯示（多人在線狀態意義不明確，暫不處理）。此為本次唯一使用 `presence` 的地方，Realtime 決策原本排除 presence 是針對「已讀回條」，不影響在線狀態這個獨立用途。
-- [已確認非新增工作] 未讀訊息數在 `ChatFab` 上的角標本來就是即時的（`useUnreadCount` 訂閱 `messages`/`conversation_members` 的 `postgres_changes` 全域頻道，任何新訊息都會觸發重新計算），使用者詢問「有訊息會不會顯示數字」時已是既有行為，未額外開發。
+- [已確認非新增工作] 未讀訊息數在聊天入口上的角標本來就是即時的（`useUnreadCount` 訂閱 `messages`/`conversation_members` 的 `postgres_changes` 全域頻道，任何新訊息都會觸發重新計算），使用者詢問「有訊息會不會顯示數字」時已是既有行為，未額外開發。
+- [範圍擴充，使用者實測後要求] 新增「刪除對話」：只從本人清單隱藏，比照 Gmail 刪除信件語意，不影響其他成員、不刪除訊息紀錄。`conversation_members` 加 `hidden_at` 欄位；`isConversationHidden(hiddenAt, lastMessageAt, conversationCreatedAt)`（`chatService.ts`，純函式，有單元測試）判斷「隱藏後若有新訊息（含自己再次發言）則自動恢復顯示」；沿用既有「本人可更新自己的已讀時間」UPDATE RLS 政策（未限制欄位），不需新增政策。UI 在 `ConversationList` 每列 hover 顯示垃圾桶圖示。
+- [風險，實作階段發現] `ChatPanel` 原本以一般子元件方式渲染在 `ChatHeaderButton` 內、`ChatHeaderButton` 又渲染在 `<header>` 內；`<header>` 的 `backdrop-blur-xl`（`backdrop-filter`）在 Chromium 會讓該 header 成為其 `position: fixed`子孫元素的新 containing block，導致「fixed 定位」的 `ChatPanel` 實際上被限制在 header 的堆疊層內、視覺上卡在其他 header 內容（如「新增案件」按鈕）後方，而非真正浮在整個頁面最上層。 → 緩解：`ChatPanel` 改用 `createPortal` 直接掛載到 `document.body`（`mounted` state 處理 SSR 階段 `document` 不存在的情況），不受任何祖先元素的 filter/transform 堆疊context 影響。
+- [範圍擴充，使用者實測後要求] 聊天入口從右下角浮動按鈕（`ChatFab`）改為 Header 右上角圖示按鈕（`ChatHeaderButton`，跟主題切換同一列）。因主系統 `Header.tsx` 與 `/investment` 模組有各自獨立的 header（`src/app/investment/layout.tsx`），`ChatHeaderButton` 需同時掛在兩處才能維持「所有頁面皆可見」；`ChatFab.tsx` 已刪除。
 
 ## Migration Plan
 

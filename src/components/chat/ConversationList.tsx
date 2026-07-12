@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { OnlineDot } from './OnlineDot';
 import type { ConversationListItem } from './hooks/useConversationList';
 
@@ -11,6 +12,7 @@ interface Props {
     userNameById: Record<string, string>;
     onlineUserIds: Set<string>;
     onSelect: (id: string) => void;
+    onHide: (id: string) => void;
 }
 
 function otherMemberId(conv: ConversationListItem, currentUserId: string): string | undefined {
@@ -31,6 +33,7 @@ export function ConversationList({
     userNameById,
     onlineUserIds,
     onSelect,
+    onHide,
 }: Props) {
     if (conversations.length === 0) {
         return <p className="text-sm text-slate-400 p-4">尚無對話，點擊右上角開始聊天</p>;
@@ -42,11 +45,8 @@ export function ConversationList({
                 const unread = unreadByConversation[conv.id] ?? 0;
                 const otherId = otherMemberId(conv, currentUserId);
                 return (
-                    <li key={conv.id}>
-                        <button
-                            onClick={() => onSelect(conv.id)}
-                            className={`w-full text-left p-3 rounded-2xl glass-card transition-shadow ${selectedId === conv.id ? 'ring-2 ring-blue-500/40' : ''}`}
-                        >
+                    <li key={conv.id} className={`group flex items-center gap-1 rounded-2xl glass-card ${selectedId === conv.id ? 'ring-2 ring-blue-500/40' : ''}`}>
+                        <button onClick={() => onSelect(conv.id)} className="flex-1 min-w-0 text-left p-3">
                             <div className="flex items-center justify-between gap-2">
                                 <span className="flex items-center gap-1.5 min-w-0">
                                     {!conv.is_group && otherId && <OnlineDot online={onlineUserIds.has(otherId)} />}
@@ -58,6 +58,14 @@ export function ConversationList({
                                     </span>
                                 )}
                             </div>
+                        </button>
+                        <button
+                            onClick={() => onHide(conv.id)}
+                            aria-label="刪除對話"
+                            title="刪除對話（僅從你的清單移除）"
+                            className="shrink-0 p-2 mr-1 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                        >
+                            <Trash2 size={14} />
                         </button>
                     </li>
                 );

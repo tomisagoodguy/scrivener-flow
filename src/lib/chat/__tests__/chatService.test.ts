@@ -13,6 +13,8 @@ import {
     listChatUsers,
     chatDisplayName,
     recallMessage,
+    hideConversation,
+    isConversationHidden,
 } from '@/lib/chat/chatService';
 
 type Row = Record<string, unknown>;
@@ -185,6 +187,43 @@ describe('markConversationRead', () => {
 
         const members = await (supabase.from('conversation_members').select('*').eq('conversation_id', 'conv_1').eq('user_id', 'userA') as unknown as Promise<{ data: Row[] }>);
         expect(members.data[0].last_read_at).not.toBe('2026-07-01T00:00:00Z');
+    });
+});
+
+describe('hideConversation', () => {
+    it('標記指定成員列的 hidden_at，只影響本人', async () => {
+        const supabase = makeSupabase({
+            conversation_members: [
+                { conversation_id: 'conv_1', user_id: 'userA', last_read_at: '2026-07-01T00:00:00Z', joined_at: '2026-07-01T00:00:00Z', hidden_at: null },
+                { conversation_id: 'conv_1', user_id: 'userB', last_read_at: '2026-07-01T00:00:00Z', joined_at: '2026-07-01T00:00:00Z', hidden_at: null },
+            ],
+        });
+
+        await hideConversation(supabase, 'conv_1', 'userA');
+
+        const members = await (supabase.from('conversation_members').select('*').eq('conversation_id', 'conv_1') as unknown as Promise<{ data: Row[] }>);
+        const a = members.data.find((m) => m.user_id === 'userA');
+        const b = members.data.find((m) => m.user_id === 'userB');
+        expect(a?.hidden_at).not.toBeNull();
+        expect(b?.hidden_at).toBeNull();
+    });
+});
+
+describe('isConversationHidden', () => {
+    it('hidden_at 為 null 時未隱藏', () => {
+        expect(isConversationHidden(null, '2026-07-01T00:00:00Z')).toBe(false);
+    });
+
+    it('隱藏後沒有更新訊息則維持隱藏', () => {
+        expect(isConversationHidden('2026-07-05T00:00:00Z', '2026-07-01T00:00:00Z')).toBe(true);
+    });
+
+    it('隱藏後有新訊息（含自己再次發言）則自動恢復顯示', () => {
+        expect(isConversationHidden('2026-07-01T00:00:00Z', '2026-07-05T00:00:00Z')).toBe(false);
+    });
+
+    it('沒有任何訊息時以對話建立時間比較', () => {
+        expect(isConversationHidden('2026-07-05T00:00:00Z', null, '2026-07-01T00:00:00Z')).toBe(true);
     });
 });
 

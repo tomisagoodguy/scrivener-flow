@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, UserPlus } from 'lucide-react';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { createClient } from '@/lib/supabase/client';
-import { listChatUsers, markConversationRead, chatDisplayName } from '@/lib/chat/chatService';
+import { listChatUsers, markConversationRead, hideConversation, chatDisplayName } from '@/lib/chat/chatService';
 import { useConversationList } from './hooks/useConversationList';
 import { useUnreadCount } from './hooks/useUnreadCount';
 import { useOnlinePresence } from './hooks/useOnlinePresence';
@@ -65,6 +65,20 @@ export function ChatPanel({ onClose }: Props) {
         handleSelect(conversationId);
     };
 
+    const handleHide = useCallback(
+        async (conversationId: string) => {
+            if (!currentUserId) return;
+            try {
+                await hideConversation(createClient(), conversationId, currentUserId);
+                if (selectedId === conversationId) setSelectedId(null);
+                refreshConversations();
+            } catch (err) {
+                console.error('刪除對話失敗:', err instanceof Error ? err.message : err);
+            }
+        },
+        [currentUserId, selectedId, refreshConversations]
+    );
+
     if (!currentUserId || !mounted) return null;
 
     // 傳送門到 document.body：header 的 backdrop-blur-xl 會讓 fixed 定位的子元素
@@ -110,6 +124,7 @@ export function ChatPanel({ onClose }: Props) {
                             userNameById={userNameById}
                             onlineUserIds={onlineUserIds}
                             onSelect={handleSelect}
+                            onHide={handleHide}
                         />
                     )}
                 </div>

@@ -9,6 +9,10 @@ import {
     listShares,
     searchShareableUsers,
     computeIsOwnedByCurrentUser,
+    resolveSharedByLabel,
+    UNRESOLVED_SHARER_LABEL,
+    resolveSharedWithLabel,
+    UNRESOLVED_RECIPIENT_NAME,
 } from '@/services/caseShareService';
 import * as chatService from '@/lib/chat/chatService';
 
@@ -157,5 +161,61 @@ describe('computeIsOwnedByCurrentUser', () => {
     it('returns false when the case user_id is null or undefined', () => {
         expect(computeIsOwnedByCurrentUser(null, 'user_b')).toBe(false);
         expect(computeIsOwnedByCurrentUser(undefined, 'user_b')).toBe(false);
+    });
+});
+
+describe('resolveSharedByLabel', () => {
+    it('returns "<full_name> 分享給你" when the sharer has a full_name', () => {
+        const users = [{ id: 'u1', email: 'alice@example.com', full_name: '愛麗絲' }];
+        expect(resolveSharedByLabel('u1', users)).toBe('愛麗絲 分享給你');
+    });
+
+    it('never includes the sharer email in the label', () => {
+        const users = [{ id: 'u1', email: 'alice@example.com', full_name: '愛麗絲' }];
+        const label = resolveSharedByLabel('u1', users);
+        expect(label).not.toContain('@');
+        expect(label).not.toContain('alice@example.com');
+    });
+
+    it('falls back to the generic label when the sharer has no full_name (does not use email prefix)', () => {
+        const users = [{ id: 'u1', email: 'alice@example.com', full_name: null }];
+        expect(resolveSharedByLabel('u1', users)).toBe(UNRESOLVED_SHARER_LABEL);
+    });
+
+    it('falls back to the generic label when the sharer id is not found', () => {
+        const users = [{ id: 'u1', email: 'alice@example.com', full_name: '愛麗絲' }];
+        expect(resolveSharedByLabel('u_unknown', users)).toBe(UNRESOLVED_SHARER_LABEL);
+    });
+
+    it('falls back to the generic label when sharedByUserId is undefined', () => {
+        expect(resolveSharedByLabel(undefined, [])).toBe(UNRESOLVED_SHARER_LABEL);
+    });
+});
+
+describe('resolveSharedWithLabel', () => {
+    const users = [
+        { id: 'u1', email: 'alice@example.com', full_name: '愛麗絲' },
+        { id: 'u2', email: 'bob@example.com', full_name: '鮑伯' },
+    ];
+
+    it('returns "已分享給：<name>" for a single recipient', () => {
+        expect(resolveSharedWithLabel(['u1'], users)).toBe('已分享給：愛麗絲');
+    });
+
+    it('joins multiple recipient names with 、', () => {
+        expect(resolveSharedWithLabel(['u1', 'u2'], users)).toBe('已分享給：愛麗絲、鮑伯');
+    });
+
+    it('never includes any recipient email in the label', () => {
+        const label = resolveSharedWithLabel(['u1', 'u2'], users);
+        expect(label).not.toContain('@');
+    });
+
+    it('falls back to the generic recipient name for an unresolved id', () => {
+        expect(resolveSharedWithLabel(['u_unknown'], users)).toBe(`已分享給：${UNRESOLVED_RECIPIENT_NAME}`);
+    });
+
+    it('returns an empty string when the recipient list is empty', () => {
+        expect(resolveSharedWithLabel([], users)).toBe('');
     });
 });

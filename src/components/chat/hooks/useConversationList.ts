@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { isConversationHidden } from '@/lib/chat/chatService';
 import type { Conversation } from '@/types/chat';
 
 export interface ConversationListItem extends Conversation {
@@ -24,7 +25,7 @@ export function useConversationList(currentUserId: string | null) {
 
         const { data: myMemberships, error: memberError } = await supabase
             .from('conversation_members')
-            .select('conversation_id')
+            .select('conversation_id, hidden_at')
             .eq('user_id', currentUserId);
 
         if (memberError) {
@@ -39,6 +40,10 @@ export function useConversationList(currentUserId: string | null) {
             setLoading(false);
             return;
         }
+
+        const hiddenAtByConversation = new Map<string, string | null>(
+            (myMemberships ?? []).map((m) => [m.conversation_id, m.hidden_at])
+        );
 
         const [{ data: convs, error: convError }, { data: allMembers, error: allMembersError }] = await Promise.all([
             supabase.from('conversations').select('*').in('id', ids),
@@ -76,13 +81,17 @@ export function useConversationList(currentUserId: string | null) {
             })
         );
 
-        withDetails.sort((a, b) => {
+        const visible = withDetails.filter(
+            (conv) => !isConversationHidden(hiddenAtByConversation.get(conv.id) ?? null, conv.lastMessageAt, conv.created_at)
+        );
+
+        visible.sort((a, b) => {
             const at = a.lastMessageAt ?? a.created_at;
             const bt = b.lastMessageAt ?? b.created_at;
             return new Date(bt).getTime() - new Date(at).getTime();
         });
 
-        setConversations(withDetails);
+        setConversations(visible);
         setLoading(false);
     }, [currentUserId, supabase]);
 

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
-import { computeIsOwnedByCurrentUser } from '@/services/caseShareService';
+import { computeIsOwnedByCurrentUser, resolveSharedByLabel, resolveSharedWithLabel } from '@/services/caseShareService';
+import { listChatUsers } from '@/lib/chat/chatService';
 
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
 import EisenhowerMatrix from '@/components/dashboard/eisenhower/EisenhowerMatrix';
@@ -46,7 +47,8 @@ export default async function CasesPage({
       *,
       milestones (*),
       financials (*),
-      todos_list:todos(*)
+      todos_list:todos(*),
+      case_shares (shared_by, shared_with)
     `
         )
         .order('created_at', { ascending: false });
@@ -69,10 +71,20 @@ export default async function CasesPage({
     }
 
     const { data, error } = await query;
-    const rawCases = ((data || []) as unknown as DemoCase[]).map((c) => ({
-        ...c,
-        isOwnedByCurrentUser: computeIsOwnedByCurrentUser(c.user_id, user?.id ?? ''),
-    }));
+    const fetchedCases = (data || []) as unknown as DemoCase[];
+    const hasAnyShare = fetchedCases.some((c) => (c.case_shares?.length ?? 0) > 0);
+    const chatUsers = hasAnyShare ? await listChatUsers(supabase) : [];
+    const rawCases = fetchedCases.map((c) => {
+        const isOwnedByCurrentUser = computeIsOwnedByCurrentUser(c.user_id, user?.id ?? '');
+        return {
+            ...c,
+            isOwnedByCurrentUser,
+            sharedByName: !isOwnedByCurrentUser ? resolveSharedByLabel(c.case_shares?.[0]?.shared_by, chatUsers) : undefined,
+            sharedWithLabel: isOwnedByCurrentUser
+                ? resolveSharedWithLabel((c.case_shares ?? []).map((s) => s.shared_with), chatUsers)
+                : undefined,
+        };
+    });
     const monitoringCases = rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled');
 
     let cases = rawCases;
@@ -116,6 +128,10 @@ export default async function CasesPage({
         // Default: 印→稅→過→交 priority
         cases = [...cases].sort((a, b) => getMilestoneSortKey(a) - getMilestoneSortKey(b));
     }
+
+    // 二次穩定排序：被分享案件一律置頂，不影響同分區內原本的排序結果
+    // （Array.prototype.sort 自 ES2019 起保證穩定，見 design.md「被分享案件在案件列表置頂排序」）
+    cases = [...cases].sort((a, b) => (a.isOwnedByCurrentUser === false ? 0 : 1) - (b.isOwnedByCurrentUser === false ? 0 : 1));
 
     return (
         <div className="space-y-8 pb-20 animate-fade-in px-4 lg:px-0">

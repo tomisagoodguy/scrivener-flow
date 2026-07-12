@@ -18,9 +18,11 @@ interface RowProps {
     placeholder: string;
     value: string;
     onSave: (v: string) => void;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：點擊進入編輯模式的入口停用。 */
+    readOnly?: boolean;
 }
 
-function AppRow({ icon, label, placeholder, value, onSave }: RowProps) {
+function AppRow({ icon, label, placeholder, value, onSave, readOnly = false }: RowProps) {
     const [draft, setDraft] = useState(value);
     const [editing, setEditing] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,7 +32,7 @@ function AppRow({ icon, label, placeholder, value, onSave }: RowProps) {
         timerRef.current = setTimeout(() => onSave(v), 800);
     }, [onSave]);
 
-    if (editing) {
+    if (editing && !readOnly) {
         return (
             <div className="flex items-center gap-2">
                 <span className="text-[13px] w-5 shrink-0">{icon}</span>
@@ -51,8 +53,9 @@ function AppRow({ icon, label, placeholder, value, onSave }: RowProps) {
     return (
         <button
             type="button"
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 w-full text-left group/row hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg px-1 py-0.5 transition-colors"
+            onClick={() => !readOnly && setEditing(true)}
+            disabled={readOnly}
+            className={`flex items-center gap-2 w-full text-left group/row rounded-lg px-1 py-0.5 transition-colors ${readOnly ? '' : 'hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}
         >
             <span className="text-[13px] w-5 shrink-0">{icon}</span>
             <span className="text-[11px] text-slate-400 w-16 shrink-0">{label}</span>
@@ -61,7 +64,9 @@ function AppRow({ icon, label, placeholder, value, onSave }: RowProps) {
             ) : (
                 <span className="text-[13px] text-slate-300 italic flex-1">{placeholder}</span>
             )}
-            <span className="text-[11px] text-slate-300 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0">編輯</span>
+            {!readOnly && (
+                <span className="text-[11px] text-slate-300 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0">編輯</span>
+            )}
         </button>
     );
 }
@@ -69,9 +74,11 @@ function AppRow({ icon, label, placeholder, value, onSave }: RowProps) {
 interface ChatGroupsEditorProps {
     caseId: string;
     initialGroups?: ChatGroups;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：所有欄位停用編輯。 */
+    readOnly?: boolean;
 }
 
-export default function ChatGroupsEditor({ caseId, initialGroups = {} }: ChatGroupsEditorProps) {
+export default function ChatGroupsEditor({ caseId, initialGroups = {}, readOnly = false }: ChatGroupsEditorProps) {
     const supabase = createClient();
     const [groups, setGroups] = useState<ChatGroups>(initialGroups);
     const [open, setOpen] = useState(false);
@@ -129,6 +136,7 @@ export default function ChatGroupsEditor({ caseId, initialGroups = {} }: ChatGro
                             placeholder={app.placeholder}
                             value={groups[app.key] ?? ''}
                             onSave={(v) => handleSave(app.key, v)}
+                            readOnly={readOnly}
                         />
                     ))}
                 </div>

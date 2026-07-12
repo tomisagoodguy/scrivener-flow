@@ -73,6 +73,15 @@ export interface DemoCase {
      */
     isOwnedByCurrentUser?: boolean;
 
+    /** 衍生欄位：被分享給目前使用者時，分享者的姓名（僅姓名，不含 email）；無法解析時為 fallback 文字。 */
+    sharedByName?: string;
+
+    /** 衍生欄位：目前使用者擁有的案件，已分享給誰的文字（如「已分享給：小明、小美」），空字串表示未分享。 */
+    sharedWithLabel?: string;
+
+    /** 原始 case_shares embedded join 結果，供頁面計算 sharedByName/sharedWithLabel 使用。 */
+    case_shares?: { shared_by: string; shared_with: string }[];
+
     // 1.2 People
     buyer_name: string;
     buyer_phone?: string;
