@@ -691,16 +691,52 @@ def _fetch_first_financial(fund_id: str) -> list[dict[str, Any]]:
 # ── 中信 (00995A) ──────────────────────────────────────────────────────────────
 
 
-def _fetch_ctbc(fid: str) -> list[dict[str, Any]]:
-    """Fetch 00995A holdings via CTBC two-step authenticated REST API.
+def _parse_ctbc_fund_assets(data: dict[str, Any]) -> dict[str, Any] | None:
+    """中信 ETFHoldingWeight 回應 Data.FundAssets[0] 資產摘要解析。
+
+    中文 key（基金淨資產/基金每單位淨值/基金在外流通單位數）與 NAV_DT
+    格式（ISO 含 T，截前段）均為 2026-07-12 實測回應。失敗回 None，不影響持股。
+    """
+    try:
+        fund_assets_list: list[dict[str, Any]] = data.get("FundAssets") or []
+        if not fund_assets_list:
+            return None
+        fa = fund_assets_list[0]
+        nav_dt = str(fa.get("NAV_DT") or "")
+        nav_date = nav_dt.split("T")[0] if nav_dt else None
+        return _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=fa.get("基金淨資產"),
+                nav=fa.get("基金每單位淨值"),
+                units=fa.get("基金在外流通單位數"),
+                nav_date=nav_date,
+            )
+        )
+    except Exception as exc:
+        logger.error("[CTBC] 資產摘要解析失敗（不影響持股）：%s", exc)
+        return None
+
+
+def _fetch_ctbc(
+    fid: str, date_ymd: str | None = None
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Fetch 00995A holdings + 資產摘要 via CTBC two-step authenticated REST API.
 
     Step 1: POST AuthToken to obtain a short-lived token (never cached).
-    Step 2: POST ETFHoldingWeight, filter to assetCode == "STOCK".
+    Step 2: POST ETFHoldingWeight — StartDate 必須帶 dash 格式日期，
+        空字串會使 API 回 ResultCode 1 且無資料（2026-07-12 實測）。
+    持股取 Data.FundAssetsDetail 中 Code == "STOCK" section 的 Data 清單，
+    欄位 code_/name_/weights_/qty_（qty_ 含千分位逗號）；資產摘要取同回應
+    的 Data.FundAssets[0]，零額外請求。
     """
-    # Step 1 — get auth token
+    # Step 1 — get auth token。
+    # token 必須「同時」帶於 URL query string 與 JSON body：僅放 body 會被 API
+    # 回 ResultCode 1「Token 無效或過期」；seed 為含 .tw 的完整網域（2026-07-12 實測）。
+    seed = "www.ctbcinvestments.com.tw"
     auth_raw = _post_json(
-        "https://www.ctbcinvestments.com.tw/API/home/AuthToken",
-        {"token": "www.ctbcinvestments.com"},
+        "https://www.ctbcinvestments.com.tw/API/home/AuthToken?token="
+        + urllib.parse.quote(seed),
+        {"token": seed},
         verify_ssl=False,
     )
     auth_js: dict[str, Any] = json.loads(auth_raw.decode("utf-8"))
@@ -708,30 +744,41 @@ def _fetch_ctbc(fid: str) -> list[dict[str, Any]]:
     if not token:
         raise RuntimeError(f"中信 AuthToken 未取得 token，回應：{auth_js}")
 
-    # Step 2 — fetch holdings
+    # Step 2 — fetch holdings + fund assets
+    start_date = _ymd_to_dash(date_ymd) if date_ymd else _last_weekday_dash()
     holdings_raw = _post_json(
-        "https://www.ctbcinvestments.com.tw/API/etf/ETFHoldingWeight",
-        {"token": token, "FID": fid, "StartDate": ""},
+        "https://www.ctbcinvestments.com.tw/API/etf/ETFHoldingWeight?token="
+        + urllib.parse.quote(token),
+        {"token": token, "FID": fid, "StartDate": start_date},
         verify_ssl=False,
     )
     holdings_js: dict[str, Any] = json.loads(holdings_raw.decode("utf-8"))
-    assets: list[dict[str, Any]] = (holdings_js.get("Data") or {}).get(
-        "FundAssetsDetail"
-    ) or []
+    if holdings_js.get("ResultCode") != 0:
+        logger.warning(
+            "[CTBC] %s ETFHoldingWeight ResultCode=%s（StartDate=%s），回空持股走 fallback",
+            fid,
+            holdings_js.get("ResultCode"),
+            start_date,
+        )
+        return [], None
+    data: dict[str, Any] = holdings_js.get("Data") or {}
 
+    sections: list[dict[str, Any]] = data.get("FundAssetsDetail") or []
+    stock_section = next((s for s in sections if s.get("Code") == "STOCK"), None)
     holdings: list[dict[str, Any]] = []
-    for asset in assets:
-        if asset.get("assetCode") != "STOCK":
-            continue
-        code = str(asset.get("stockCode") or asset.get("StockCode") or "").strip()
-        name = str(asset.get("stockName") or asset.get("StockName") or "").strip()
-        shares = _to_num(asset.get("shares") or asset.get("Shares"))
-        weight = _to_num(asset.get("weight") or asset.get("Weight"))
+    for item in (stock_section or {}).get("Data") or []:
+        code = str(item.get("code_") or "").strip()
+        name = str(item.get("name_") or "").strip()
+        shares = _to_num(item.get("qty_"))
+        weight = _to_num(item.get("weights_"))
         if code and weight is not None:
             holdings.append(
                 {"code": code, "name": name, "shares": shares, "weight_pct": weight}
             )
-    return holdings
+    if not holdings:
+        logger.warning("[CTBC] %s 回應無 STOCK section 或無有效持股", fid)
+
+    return holdings, _parse_ctbc_fund_assets(data)
 
 
 # ── 兆豐 (00996A) ──────────────────────────────────────────────────────────────
@@ -1049,6 +1096,39 @@ def _fetch_cathay(fund_code: str) -> list[dict[str, Any]]:
 
     logger.info("[Cathay] %s 取得 %d 筆持股", fund_code, len(holdings))
     return holdings
+
+
+def _fetch_cathay_assets(fund_code: str) -> dict[str, Any] | None:
+    """國泰 GetETFAssets 資產摘要（持股端點不含摘要，允許的一次補充請求）。
+
+    命名陷阱（2026-07-12 實測）：`fundNav` 是基金「總淨資產」（aum，~257 億），
+    每單位淨值是 `fundPerNav`（nav，~14.2），不可對調。
+    任何失敗（HTTP 錯誤、success != true、欄位缺漏）只 log 回 None，不影響持股。
+    """
+    url = f"https://cwapi.cathaysite.com.tw/api/ETF/GetETFAssets?fundCode={fund_code}"
+    try:
+        raw = _get(url)
+        js: dict[str, Any] = json.loads(raw.decode("utf-8"))
+        if not js.get("success"):
+            logger.error(
+                "[Cathay] %s GetETFAssets success != true（不影響持股）", fund_code
+            )
+            return None
+        result: dict[str, Any] = js.get("result") or {}
+        pre_date = str(result.get("preDate") or "").strip().replace("/", "-")
+        return _check_aum_nav_units_consistency(
+            _fund_assets_or_none(
+                aum=result.get("fundNav"),
+                nav=result.get("fundPerNav"),
+                units=result.get("fundOutstandingShares"),
+                nav_date=pre_date or None,
+            )
+        )
+    except Exception as exc:
+        logger.error(
+            "[Cathay] %s GetETFAssets 抓取失敗（不影響持股）：%s", fund_code, exc
+        )
+        return None
 
 
 # ── 聯博 AllianceBernstein (00984D) ───────────────────────────────────────────
@@ -1398,14 +1478,14 @@ def _dispatch(
         return _fetch_ctbc_html(fund_code)
     if issuer == "fubon":
         return _fetch_fubon(fund_code)
+    if issuer == "ctbc":
+        return _fetch_ctbc(fund_code, date_ymd)
+    if issuer == "cathay":
+        return _fetch_cathay(fund_code), _fetch_cathay_assets(fund_code)
 
     # ── 僅持股、無資產摘要的來源 ──
     if issuer == "first_financial":
         return _fetch_first_financial(fund_code), None
-    if issuer == "ctbc":
-        return _fetch_ctbc(fund_code), None
-    if issuer == "cathay":
-        return _fetch_cathay(fund_code), None
     if issuer == "alliance_bernstein":
         return _fetch_alliance_bernstein(fund_code), None
     raise RuntimeError(f"未知 issuer: {issuer}")

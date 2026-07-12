@@ -454,15 +454,13 @@ metadata 記錄判定用淨額（＋etf_codes），可稽核不需回查來源�
 
 ### NAV 覆蓋現況（fund_assets 來源）
 
-已接 **11 家 issuer**：nomura / allianz / capital（JSON 原生）＋ uni、fhtrust（XLSX 表頭列）、yuanta（靜態 HTML）、taishin（PartialHistoryFundNav，僅 nav）、mega（#asset_div）、ctbc_html（Label_AUM02/03/04）、jpm（XLSX summary，nav_date 恆 None）、fubon（li 清單）。
+已接 **13 家 issuer**：nomura / allianz / capital（JSON 原生）＋ uni、fhtrust（XLSX 表頭列）、yuanta（靜態 HTML）、taishin（PartialHistoryFundNav，僅 nav）、mega（#asset_div）、ctbc_html（Label_AUM02/03/04）、jpm（XLSX summary，nav_date 恆 None）、fubon（li 清單）、ctbc（REST：ETFHoldingWeight 同回應 `FundAssets[0]` 中文 key `基金淨資產/基金每單位淨值/基金在外流通單位數`＋`NAV_DT`；token 必須同帶 URL query string，僅 body 會回 ResultCode 1）、cathay（GetETFAssets：`fundNav`=**總淨資產**→aum、`fundPerNav`→nav、`fundOutstandingShares`→units、`preDate`→nav_date，命名陷阱勿對調）。
 
 **NAV 未接清單**（premium_pct 無法計算，前端顯示「NAV 來源未接」）：
 
 | issuer | ETF | 原因 |
 | :--- | :--- | :--- |
-| first_financial | 00994A | 已知端點無 NAV 揭露管道 |
-| cathay | 00400A | REST 無 NAV；Angular SPA 需 Playwright 另行探查 |
-| ctbc（REST） | 00995A | token 驗證本機失敗，回應內容未確認 |
+| first_financial | 00994A | 實測 Get_hd 僅 group=4 現金與 group=5 資產配置比例，無基金總資產欄位 |
 | alliance_bernstein | 00984D | 端點故障（302 → 不可達的內部 port 81） |
 
 > 抽取資產摘要失敗**不影響持股解析**（包 try/except，assets=None）；`aum ≈ nav × units` 合理性檢查誤差 >5% 只留 nav。
