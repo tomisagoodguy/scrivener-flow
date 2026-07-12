@@ -514,7 +514,7 @@ unmatched 基金（白名單外）是**正常現象**（元大/台新等大投�
 
 ### Self-hosted Runner 切換指南（月配額不足時）
 
-**切換時機：** GitHub Actions 月度配額超過 80%（1600/2000 分鐘）。每週日的 `quota_monitor.yml` 會自動警告；或直接查看 GitHub → Settings → Billing → Actions。
+**切換時機：** GitHub Actions 月度配額超過 80%（1600/2000 分鐘）。目前無自動配額監控 workflow，需手動查看 GitHub → Settings → Billing → Actions。
 
 **確認 PCFIX8749 runner 在線：**
 

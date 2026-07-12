@@ -19,6 +19,10 @@ jobs:
       run:
         shell: bash
 
+    env:
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,3 +46,11 @@ jobs:
           MONTH_FLAG=""
           if [ -n "${{ github.event.inputs.month }}" ]; then MONTH_FLAG="--month ${{ github.event.inputs.month }}"; fi
           uv run python ETF/compute_factor_ic.py $MONTH_FLAG
+
+      - name: Notify LINE on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 Factor IC 計算失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: compute-ic\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"

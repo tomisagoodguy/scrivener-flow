@@ -11,8 +11,12 @@ paths:
 
 | Workflow | 排程 | 執行內容 |
 | :--- | :--- | :--- |
-| `etf_daily.yml` | 每日 UTC 14:00（台灣 22:00） | `main.py --days 30` → `sync_stock_financials.py --days 60 --skip-shareholder` → `daily_ai_report.py` |
-| `equity_weekly.yml` | 每週六 UTC 14:00 | `sync_equity_distribution.py` → `sync_stock_financials.py --days 14`（含股東結構） |
+| `etf_daily.yml` | 每日 UTC 12:00（台灣 20:00） | `validate_registry_sync.py` → `main.py --days 30` |
+| `etf_financials.yml` | 每日 UTC 13:00（台灣 21:00） | `sync_stock_financials.py --days 60 --skip-shareholder`（券商+月營收） |
+| `etf_equity_daily.yml` | 每日 UTC 15:00（台灣 23:00） | `sync_equity_distribution.py`（補當日新增成分股的大戶籌碼） |
+| `equity_weekly.yml` | 每週六 UTC 14:00 | `sync_equity_distribution.py` → `sync_stock_financials.py --days 14 --skip-broker --skip-revenue`（集保週排程） |
+| `factor_ic_monthly.yml` | 每月 1–5 日週一 UTC 15:00 | `compute_factor_ic.py` |
+| `fund_holdings_monthly.yml` | 每月 12、15 日 UTC 01:00 | `run_fund_holdings_sync.py`（SITCA 月報/季報） |
 
 Pipeline 需要的 GitHub Secrets：`SUPABASE_DB_URL`、`FINLAB_API_TOKEN`、`GOOGLE_GEMINI_API_KEY`、`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`。
 
