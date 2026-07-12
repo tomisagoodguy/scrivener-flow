@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'; // Use server client for R
 import EditCaseForm from '@/components/features/cases/EditCaseForm';
 import CaseNavigation from '@/components/features/cases/CaseNavigation';
 import { CaseDetailRapidInput } from '@/components/features/cases/CaseDetailRapidInput';
+import { ShareCaseButton } from '@/components/features/cases/ShareCaseButton';
+import { computeIsOwnedByCurrentUser } from '@/services/caseShareService';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,10 @@ export default async function CaseDetailPage({ params }: PageProps) {
 
     // Initialize authenticated Supabase client for Server Component
     const supabase = await createClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
     // 1. Fetch current case full details
     const { data: caseData, error } = await supabase
@@ -45,6 +51,8 @@ export default async function CaseDetailPage({ params }: PageProps) {
         .neq('status', 'Cancelled')
         .order('created_at', { ascending: false });
 
+    const isOwnedByCurrentUser = computeIsOwnedByCurrentUser(caseData.user_id, user?.id ?? '');
+
     return (
         <div className="min-h-screen p-6 md:p-12 max-w-[1600px] mx-auto font-sans">
             <main className="mt-8 transition-all">
@@ -55,6 +63,7 @@ export default async function CaseDetailPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <ShareCaseButton caseId={caseData.id} isOwnedByCurrentUser={isOwnedByCurrentUser} />
                         <CaseNavigation
                             cases={casesList || []}
                             currentCaseId={caseData.id}
@@ -71,7 +80,12 @@ export default async function CaseDetailPage({ params }: PageProps) {
                     />
                 </div>
 
-                <EditCaseForm initialData={caseData as any} />
+                <EditCaseForm
+                    initialData={{
+                        ...(caseData as any),
+                        isOwnedByCurrentUser,
+                    }}
+                />
             </main>
         </div>
     );

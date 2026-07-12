@@ -59,6 +59,11 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
                 >
                     {caseData.case_number}
                 </Link>
+                {caseData.isOwnedByCurrentUser === false && (
+                    <div className="text-[10px] font-bold text-slate-400 text-center mt-0.5">
+                        他人分享
+                    </div>
+                )}
             </td>
 
             {/* 地區 */}

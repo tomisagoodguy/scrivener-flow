@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
+import { computeIsOwnedByCurrentUser } from '@/services/caseShareService';
 
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
 import EisenhowerMatrix from '@/components/dashboard/eisenhower/EisenhowerMatrix';
@@ -50,9 +51,8 @@ export default async function CasesPage({
         )
         .order('created_at', { ascending: false });
 
-    if (user) {
-        query = query.eq('user_id', user.id);
-    }
+    // 不再硬編碼 user_id 過濾：RLS（含 case_shares 唯讀分享擴充）已負責過濾出
+    // 「本人擁有」與「他人分享給本人」的案件，前端只需依 user_id 判斷來源標籤。
 
     if (activeStatus === 'Closed') {
         query = query.eq('status', 'Closed');
@@ -69,7 +69,10 @@ export default async function CasesPage({
     }
 
     const { data, error } = await query;
-    const rawCases = (data || []) as unknown as DemoCase[];
+    const rawCases = ((data || []) as unknown as DemoCase[]).map((c) => ({
+        ...c,
+        isOwnedByCurrentUser: computeIsOwnedByCurrentUser(c.user_id, user?.id ?? ''),
+    }));
     const monitoringCases = rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled');
 
     let cases = rawCases;

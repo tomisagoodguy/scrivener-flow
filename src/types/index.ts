@@ -63,8 +63,15 @@ export interface DemoCase {
     // 1.1 Identity
     case_number: string;
     legacy_id?: string;
+    user_id?: string;
     status: CaseStatus;
     handler?: string;
+
+    /**
+     * 衍生欄位（非資料庫欄位），由前端依 `user_id === currentUserId` 計算。
+     * `false` 代表案件是透過 case_shares 唯讀分享給目前使用者，而非本人擁有。
+     */
+    isOwnedByCurrentUser?: boolean;
 
     // 1.2 People
     buyer_name: string;

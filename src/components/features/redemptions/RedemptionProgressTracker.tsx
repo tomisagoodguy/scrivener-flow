@@ -12,9 +12,11 @@ import type { RedemptionStep } from '@/types';
 
 interface Props {
     caseId: string;
+    /** 被分享者（非案件擁有者）唯讀檢視時傳入 true：可展開查看步驟，但勾選框與備註輸入停用。 */
+    readOnly?: boolean;
 }
 
-export function RedemptionProgressTracker({ caseId }: Props) {
+export function RedemptionProgressTracker({ caseId, readOnly = false }: Props) {
     const [steps, setSteps] = useState<RedemptionStep[]>([]);
     const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState(false);
@@ -109,7 +111,7 @@ export function RedemptionProgressTracker({ caseId }: Props) {
                                         type="button"
                                         onClick={() => step && handleToggle(step)}
                                         className="shrink-0"
-                                        disabled={!step}
+                                        disabled={!step || readOnly}
                                     >
                                         {isDone ? (
                                             <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -136,7 +138,7 @@ export function RedemptionProgressTracker({ caseId }: Props) {
                                         onBlur={e => step && handleNoteBlur(step, e.target.value)}
                                         onChange={e => step && handleNoteChange(step, e.target.value)}
                                         className="flex-1 text-sm bg-white/50 backdrop-blur-sm border border-gray-200 focus:bg-white rounded px-2 py-1 outline-none placeholder:text-foreground/30"
-                                        disabled={!step}
+                                        disabled={!step || readOnly}
                                     />
                                 </div>
                             );
