@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { DemoCase } from '@/types';
 
 import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
+import EisenhowerMatrix from '@/components/dashboard/eisenhower/EisenhowerMatrix';
 
 import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
 import ExportHtmlButton from '@/components/features/cases/ExportHtmlButton';
@@ -215,6 +216,7 @@ export default async function CasesPage({
                         cases={monitoringCases}
                         currentStage={typeof stageParam === 'string' ? stageParam : undefined}
                     />
+                    <EisenhowerMatrix collapsible defaultCollapsed />
                 </div>
             )}
 
