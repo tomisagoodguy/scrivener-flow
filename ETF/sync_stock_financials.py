@@ -28,25 +28,102 @@ from ETF.database.sql_storage import SQLStorage
 from ETF.processors.revenue_processor import RevenueProcessor
 from ETF.processors.shareholder_processor import ShareholderProcessor
 from ETF.processors.broker_processor import BrokerProcessor
+from ETF.utils.tdcc_schedule import (
+    expected_tdcc_friday,
+    format_staleness_error,
+    is_tdcc_data_fresh,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def _check_shareholder_freshness(upsert_result: dict, *, is_retry_run: bool = False) -> None:
+    """週排程專用：FinLab 未提供新一期時中止，避免 CI 誤判成功。"""
+    source_dates = upsert_result.get("source_dates") or []
+    if not source_dates:
+        return
+
+    finlab_max = source_dates[-1]
+    db_max = upsert_result.get("db_max_date")
+    expected = expected_tdcc_friday().isoformat()
+
+    if finlab_max >= expected:
+        logger.info(
+            "✅ 集保數據已同步至 FinLab 最新期 %s（TDCC 預期截止 %s）",
+            finlab_max,
+            expected,
+        )
+        return
+
+    if upsert_result.get("written", 0) > 0:
+        logger.info(
+            "集保寫入 %d 筆（FinLab 最新 %s，TDCC 預期 %s；FinLab 尚未更新至預期期數）",
+            upsert_result["written"],
+            finlab_max,
+            expected,
+        )
+        return
+
+    retry_hint = (
+        "週一重試仍失敗，請人工確認 FinLab 是否已更新 inventory。"
+        if is_retry_run
+        else "FinLab 上游延遲，週一 09:00 將自動重試 equity_weekly。"
+    )
+    raise RuntimeError(
+        format_staleness_error(
+            finlab_max=finlab_max,
+            db_max=db_max,
+            expected=expected,
+            retry_hint=retry_hint,
+        )
+    )
 
 class FinancialsSync:
     def __init__(self):
         self.finlab = FinlabService()
         self.storage = SQLStorage()
     
-    def run(self, days=300, skip_shareholder=False, skip_broker=False, skip_revenue=False):
+    def run(
+        self,
+        days=300,
+        skip_shareholder=False,
+        skip_broker=False,
+        skip_revenue=False,
+        skip_if_fresh=False,
+        is_retry_run=False,
+    ):
         """執行完整同步流程"""
         logger.info("=" * 60)
-        logger.info(f"開始同步個股財務與籌碼數據 (Days: {days}, skip_shareholder={skip_shareholder}, skip_broker={skip_broker}, skip_revenue={skip_revenue})")
+        logger.info(
+            "開始同步個股財務與籌碼數據 (Days: %d, skip_shareholder=%s, skip_broker=%s, "
+            "skip_revenue=%s, skip_if_fresh=%s, is_retry_run=%s)",
+            days,
+            skip_shareholder,
+            skip_broker,
+            skip_revenue,
+            skip_if_fresh,
+            is_retry_run,
+        )
         logger.info("=" * 60)
 
         try:
-            # 0. Login
+            expected = expected_tdcc_friday().isoformat()
+
+            if not skip_shareholder and skip_if_fresh:
+                db_max = self.storage.get_max_shareholder_date()
+                if is_tdcc_data_fresh(db_max):
+                    logger.info(
+                        "✅ 集保 DB 已至 %s（>= TDCC 預期 %s），略過 FinLab 同步",
+                        db_max,
+                        expected,
+                    )
+                    logger.info("=" * 60)
+                    logger.info("✅ 所有數據同步完成（無需更新）")
+                    logger.info("=" * 60)
+                    return
+
             if not self.finlab.login():
-                # 防呆：登入失敗不可靜默結束後回報 CI 綠燈
                 raise RuntimeError("Finlab 登入失敗，中止同步以避免靜默成功")
 
             # 1. 取得目標股票（ETF 成分股 + 策略命中強勢股）
@@ -99,7 +176,8 @@ class FinancialsSync:
                     )
                 weeks = max(4, days // 7)
                 inv_records = ShareholderProcessor.process(raw_inv, stock_list, weeks=weeks)
-                self.storage.upsert_shareholder_data(inv_records)
+                upsert_result = self.storage.upsert_shareholder_data(inv_records)
+                _check_shareholder_freshness(upsert_result, is_retry_run=is_retry_run)
             else:
                 logger.info("--- 跳過股權分散數據（skip_shareholder=True）---")
 
@@ -120,7 +198,24 @@ if __name__ == "__main__":
     parser.add_argument("--skip-shareholder", action="store_true", help="Skip raw shareholder sync (TDCC weekly data, handled by equity_weekly.yml)")
     parser.add_argument("--skip-broker", action="store_true", help="Skip broker transaction sync (large dataset, already synced by daily workflow)")
     parser.add_argument("--skip-revenue", action="store_true", help="Skip revenue sync (already synced by daily workflow, use in weekly shareholder-only runs)")
+    parser.add_argument(
+        "--skip-if-fresh",
+        action="store_true",
+        help="Skip shareholder sync when DB already has expected TDCC week (Monday retry mode)",
+    )
+    parser.add_argument(
+        "--retry-run",
+        action="store_true",
+        help="Mark as Monday auto-retry run (stricter failure message if FinLab still lags)",
+    )
     args = parser.parse_args()
 
     sync = FinancialsSync()
-    sync.run(days=args.days, skip_shareholder=args.skip_shareholder, skip_broker=args.skip_broker, skip_revenue=args.skip_revenue)
+    sync.run(
+        days=args.days,
+        skip_shareholder=args.skip_shareholder,
+        skip_broker=args.skip_broker,
+        skip_revenue=args.skip_revenue,
+        skip_if_fresh=args.skip_if_fresh,
+        is_retry_run=args.retry_run,
+    )

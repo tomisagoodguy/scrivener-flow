@@ -24,7 +24,16 @@ class ShareholderProcessor:
         
         # Last N weeks
         inv_df['date'] = pd.to_datetime(inv_df['date'])
-        recent_dates = sorted(inv_df['date'].unique())[-weeks:]
+        all_dates = sorted(inv_df['date'].unique())
+        recent_dates = all_dates[-weeks:]
+        logger.info(
+            "FinLab inventory 日期範圍：%s → %s（本次取最近 %d 週：%s → %s）",
+            all_dates[0].strftime('%Y-%m-%d'),
+            all_dates[-1].strftime('%Y-%m-%d'),
+            weeks,
+            recent_dates[0].strftime('%Y-%m-%d'),
+            recent_dates[-1].strftime('%Y-%m-%d'),
+        )
         inv_df = inv_df[inv_df['date'].isin(recent_dates)]
         
         records = []

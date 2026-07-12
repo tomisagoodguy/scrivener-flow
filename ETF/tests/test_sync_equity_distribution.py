@@ -22,6 +22,9 @@ class FakeStorage:
     def get_all_target_stocks(self):
         return self._stock_list
 
+    def get_max_equity_snapshot_date(self):
+        return "2026-07-03"
+
 
 @pytest.fixture
 def fake_records():
@@ -94,6 +97,55 @@ def test_main_raises_when_inventory_empty(monkeypatch):
 
     with pytest.raises(RuntimeError, match="inventory 資料為空"):
         mod.main()
+
+
+def test_main_raises_when_snapshot_already_synced_but_finlab_lags(monkeypatch):
+    """FinLab 仍停在舊期、且該期股票都已同步時，不可靜默 return。"""
+    stock_list = ["1101", "2330"]
+    storage = FakeStorage(stock_list)
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+    monkeypatch.setattr(mod, "_login_finlab", lambda: True)
+    monkeypatch.setattr(
+        mod,
+        "_fetch_inventory",
+        lambda: pd.DataFrame({"stock_id": ["1101"], "date": ["2026-07-03"]}),
+    )
+    monkeypatch.setattr(
+        mod,
+        "_compute_stats",
+        lambda inv_df, sl: [
+            {"stock_code": "1101", "snapshot_date": "2026-07-03"},
+            {"stock_code": "2330", "snapshot_date": "2026-07-03"},
+        ],
+    )
+    monkeypatch.setattr(mod, "_get_synced_codes", lambda snapshot_date, storage: set(stock_list))
+    monkeypatch.setattr(
+        mod,
+        "expected_tdcc_friday",
+        lambda today=None: __import__("datetime").date(2026, 7, 10),
+    )
+
+    with pytest.raises(RuntimeError, match="FinLab inventory 尚未提供 TDCC 新一期"):
+        mod.main()
+
+
+def test_main_skips_when_skip_if_fresh_and_db_current(monkeypatch):
+    storage = FakeStorage(["1101"])
+    storage.get_max_equity_snapshot_date = lambda: "2026-07-10"
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py", "--skip-if-fresh"])
+    monkeypatch.setattr(
+        mod,
+        "expected_tdcc_friday",
+        lambda today=None: __import__("datetime").date(2026, 7, 10),
+    )
+    login_mock = pytest.importorskip("unittest.mock").MagicMock(return_value=True)
+    monkeypatch.setattr(mod, "_login_finlab", login_mock)
+
+    mod.main()
+
+    login_mock.assert_not_called()
 
 
 def test_main_raises_when_no_records_computed(monkeypatch):

@@ -2,8 +2,10 @@ name: Weekly Equity Distribution Sync
 
 on:
   schedule:
-    # 每週六 14:00 UTC（台灣時間 22:00），TDCC 週五公告，週六晚上資料已可用
+    # 每週六 14:00 UTC（台灣時間 22:00），TDCC 週五公告，週六晚上資料通常已可用
     - cron: '0 14 * * 6'
+    # 每週一 01:00 UTC（台灣時間 09:00），FinLab 上游延遲時自動補跑
+    - cron: '0 1 * * 1'
   workflow_dispatch:
     inputs:
       force:
@@ -39,6 +41,7 @@ jobs:
       LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
       LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
       TZ: 'Asia/Taipei'
+      IS_MONDAY_RETRY: ${{ github.event.schedule == '0 1 * * 1' && 'true' || 'false' }}
 
     steps:
       - name: Checkout repository
@@ -69,18 +72,27 @@ jobs:
           if [ "${{ github.event.inputs.force_backfill }}" = "true" ]; then
             uv run python ETF/sync_equity_distribution.py --force-backfill
           else
+            EXTRA=""
+            if [ "$IS_MONDAY_RETRY" = "true" ]; then
+              EXTRA="--skip-if-fresh --retry-run"
+            fi
             FORCE_FLAG=""
             if [ "${{ github.event.inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
-            uv run python ETF/sync_equity_distribution.py $FORCE_FLAG
+            uv run python ETF/sync_equity_distribution.py $FORCE_FLAG $EXTRA
           fi
 
       - name: Notify LINE on failure
         if: failure()
         run: |
+          if [ "$IS_MONDAY_RETRY" = "true" ]; then
+            MSG="🚨 equity_weekly 週一重試仍失敗（FinLab 可能仍未更新 inventory）"
+          else
+            MSG="⚠️ equity_weekly 週六同步失敗（FinLab 上游延遲，週一 09:00 自動重試）"
+          fi
           curl -s -X POST https://api.line.me/v2/bot/message/push \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
-            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 equity_weekly 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: equity-distribution\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"${MSG}\n📅 $(date +%Y-%m-%d)\n🔧 Job: equity-distribution\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
 
   shareholder-weekly:
     name: Sync Shareholder Weekly Data
@@ -101,6 +113,7 @@ jobs:
       LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
       LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
       TZ: 'Asia/Taipei'
+      IS_MONDAY_RETRY: ${{ github.event.schedule == '0 1 * * 1' && 'true' || 'false' }}
 
     steps:
       - name: Checkout repository
@@ -131,12 +144,21 @@ jobs:
           # 週排程同步 stock_shareholder_weekly（原始集保分層數據）
           # --skip-broker：broker 資料日排程已同步
           # --skip-revenue：月營收日排程已同步，週排程只跑集保避免 timeout
-          uv run python ETF/sync_stock_financials.py --days 14 --skip-broker --skip-revenue
+          FLAGS="--days 14 --skip-broker --skip-revenue"
+          if [ "$IS_MONDAY_RETRY" = "true" ]; then
+            FLAGS="$FLAGS --skip-if-fresh --retry-run"
+          fi
+          uv run python ETF/sync_stock_financials.py $FLAGS
 
       - name: Notify LINE on failure
         if: failure()
         run: |
+          if [ "$IS_MONDAY_RETRY" = "true" ]; then
+            MSG="🚨 equity_weekly 週一重試仍失敗（FinLab 可能仍未更新 inventory）"
+          else
+            MSG="⚠️ equity_weekly 週六同步失敗（FinLab 上游延遲，週一 09:00 自動重試）"
+          fi
           curl -s -X POST https://api.line.me/v2/bot/message/push \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
-            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"🚨 equity_weekly 失敗\n📅 $(date +%Y-%m-%d)\n🔧 Job: shareholder-weekly\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"${MSG}\n📅 $(date +%Y-%m-%d)\n🔧 Job: shareholder-weekly\n🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}"

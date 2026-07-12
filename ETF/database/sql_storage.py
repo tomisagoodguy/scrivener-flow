@@ -146,10 +146,37 @@ class SQLStorage:
             conn.commit()
         logger.info("✅ 營收數據寫入完成")
 
-    def upsert_shareholder_data(self, records: list):
-        """批次更新集保數據，跳過 DB 已存在的日期（TDCC 週更，舊資料不變）"""
+    def get_max_shareholder_date(self) -> str | None:
+        """回傳 stock_shareholder_weekly 最新 data_date（YYYY-MM-DD），無資料則 None。"""
+        with self.engine.connect() as conn:
+            return conn.execute(
+                text("SELECT MAX(data_date)::text FROM stock_shareholder_weekly")
+            ).scalar()
+
+    def get_max_equity_snapshot_date(self) -> str | None:
+        """回傳 equity_distribution_stats 最新 snapshot_date（YYYY-MM-DD），無資料則 None。"""
+        with self.engine.connect() as conn:
+            return conn.execute(
+                text("SELECT MAX(snapshot_date)::text FROM equity_distribution_stats")
+            ).scalar()
+
+    def upsert_shareholder_data(self, records: list) -> dict:
+        """批次更新集保數據，跳過 DB 已存在的日期（TDCC 週更，舊資料不變）
+
+        Returns:
+            dict: written, skipped, source_dates, new_dates, db_max_date
+        """
         if not records:
-            return
+            return {
+                "written": 0,
+                "skipped": 0,
+                "source_dates": [],
+                "new_dates": [],
+                "db_max_date": self.get_max_shareholder_date(),
+            }
+
+        source_dates = sorted({r["data_date"] for r in records})
+        db_max_date = self.get_max_shareholder_date()
 
         # 查 DB 已有哪些 (stock_code, data_date) 組合
         # 用組合判斷而非只看日期，避免新進選股池的股票遺漏歷史資料
@@ -162,8 +189,19 @@ class SQLStorage:
 
         new_records = [r for r in records if (r['stock_code'], r['data_date']) not in existing]
         if not new_records:
-            logger.info("✅ 集保數據已是最新，無需寫入")
-            return
+            logger.info(
+                "集保數據 0 筆新寫入（FinLab 來源期數 %s → %s；DB 最新期 %s）",
+                source_dates[0],
+                source_dates[-1],
+                db_max_date or "（無）",
+            )
+            return {
+                "written": 0,
+                "skipped": len(records),
+                "source_dates": source_dates,
+                "new_dates": [],
+                "db_max_date": db_max_date,
+            }
 
         new_dates = sorted({r['data_date'] for r in new_records})
         logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（涉及日期：{new_dates}）...")
@@ -184,6 +222,13 @@ class SQLStorage:
                 conn.execute(upsert_sql, new_records[i:i+chunk_size])
             conn.commit()
         logger.info("✅ 集保數據寫入完成")
+        return {
+            "written": len(new_records),
+            "skipped": len(records) - len(new_records),
+            "source_dates": source_dates,
+            "new_dates": new_dates,
+            "db_max_date": db_max_date,
+        }
 
     def upsert_broker_transactions(self, records: list):
         """批次更新券商買賣超數據"""

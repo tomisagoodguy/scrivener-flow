@@ -25,6 +25,11 @@ from finlab import data
 from sqlalchemy import text
 
 from ETF.database.sql_storage import SQLStorage
+from ETF.utils.tdcc_schedule import (
+    expected_tdcc_friday,
+    format_staleness_error,
+    is_tdcc_data_fresh,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -410,9 +415,30 @@ def main() -> None:
     parser.add_argument("--backfill-history", action="store_true", help="補存 FinLab 所有歷史快照（冪等，跳過已存在的期數）")
     parser.add_argument("--force-backfill", action="store_true", help="強制重算所有歷史期數並 upsert（用於新增欄位後回填，如 mid/whale_holder_pct）")
     parser.add_argument("--force", action="store_true", help="強制重寫（跳過已存在的 snapshot_date 保護，用於補欄位）")
+    parser.add_argument(
+        "--skip-if-fresh",
+        action="store_true",
+        help="DB 已達 TDCC 預期期數時略過（週一重試模式）",
+    )
+    parser.add_argument(
+        "--retry-run",
+        action="store_true",
+        help="標記為週一自動重試（FinLab 仍延遲時使用更嚴格錯誤訊息）",
+    )
     args = parser.parse_args()
 
     storage = SQLStorage()
+
+    if args.skip_if_fresh and not args.force and not args.force_backfill:
+        db_max = storage.get_max_equity_snapshot_date()
+        expected = expected_tdcc_friday().isoformat()
+        if is_tdcc_data_fresh(db_max):
+            logger.info(
+                "✅ equity_distribution_stats 已至 %s（>= TDCC 預期 %s），略過同步",
+                db_max,
+                expected,
+            )
+            return
 
     if args.backfill_names:
         backfill_names(storage)
@@ -455,10 +481,26 @@ def main() -> None:
 
     # 5. 只補缺的股票（冪等保護：新成分股出現時也能即時補入）
     snapshot_date = records[0]["snapshot_date"]
+    expected = expected_tdcc_friday().isoformat()
     if not args.force:
         synced_codes = _get_synced_codes(snapshot_date, storage)
         records = [r for r in records if r["stock_code"] not in synced_codes]
         if not records:
+            db_max = storage.get_max_equity_snapshot_date()
+            if snapshot_date < expected:
+                retry_hint = (
+                    "週一重試仍失敗，請人工確認 FinLab 是否已更新 inventory。"
+                    if args.retry_run
+                    else "FinLab 上游延遲，週一 09:00 將自動重試 equity_weekly。"
+                )
+                raise RuntimeError(
+                    format_staleness_error(
+                        finlab_max=snapshot_date,
+                        db_max=db_max,
+                        expected=expected,
+                        retry_hint=retry_hint,
+                    )
+                )
             logger.info(f"本期資料 ({snapshot_date}) 所有目標股票已同步，略過寫入")
             return
         logger.info(f"本期新增待補充：{len(records)} 支（已有 {len(synced_codes)} 支）")
