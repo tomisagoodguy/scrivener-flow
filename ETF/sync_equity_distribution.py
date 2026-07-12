@@ -437,21 +437,7 @@ def main() -> None:
         return
     logger.info(f"成分股池：{len(stock_list)} 支")
 
-    # 2. 快速預檢：純 DB 查詢，確認是否有新成分股需要補入（不呼叫 FinLab，節省配額）
-    if not args.force:
-        with storage.engine.connect() as conn:
-            latest_row = conn.execute(
-                text("SELECT snapshot_date FROM equity_distribution_stats ORDER BY snapshot_date DESC LIMIT 1")
-            ).fetchone()
-        if latest_row:
-            synced_codes = _get_synced_codes(str(latest_row[0]), storage)
-            missing = set(stock_list) - synced_codes
-            if not missing:
-                logger.info(f"目標股票已全數同步 ({latest_row[0]})，無需 FinLab 請求，略過")
-                return
-            logger.info(f"發現 {len(missing)} 支新成分股待補充，繼續同步...")
-
-    # 3. FinLab 登入
+    # 2. FinLab 登入
     if not _login_finlab():
         return
 

@@ -1,0 +1,61 @@
+"""
+迴歸測試：main() 不應在「舊 snapshot_date 已涵蓋全部目標股票」時
+就略過整個同步、完全不呼叫 FinLab。
+
+背景：sync_equity_distribution.py 曾有一段「快速預檢」，只要 DB 既有的
+最新 snapshot_date 已涵蓋全部目標股票，就直接 return，從不確認 FinLab
+是否已有更新一期資料，導致集保統計永久卡在同一期不再更新。
+"""
+import sys
+
+import pandas as pd
+import pytest
+
+from ETF import sync_equity_distribution as mod
+
+
+class FakeStorage:
+    def __init__(self, stock_list):
+        self._stock_list = stock_list
+        self.engine = None
+
+    def get_all_target_stocks(self):
+        return self._stock_list
+
+
+@pytest.fixture
+def fake_records():
+    return [
+        {"stock_code": "1101", "snapshot_date": "2026-07-11"},
+        {"stock_code": "2330", "snapshot_date": "2026-07-11"},
+    ]
+
+
+def test_main_always_calls_finlab_even_if_previous_snapshot_fully_synced(
+    monkeypatch, fake_records
+):
+    stock_list = ["1101", "2330"]
+    storage = FakeStorage(stock_list)
+
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+
+    login_mock = pytest.importorskip("unittest.mock").MagicMock(return_value=True)
+    fetch_inventory_mock = pytest.importorskip("unittest.mock").MagicMock(
+        return_value=pd.DataFrame({"stock_id": ["1101"], "date": ["2026-07-11"]})
+    )
+    monkeypatch.setattr(mod, "_login_finlab", login_mock)
+    monkeypatch.setattr(mod, "_fetch_inventory", fetch_inventory_mock)
+    monkeypatch.setattr(mod, "_compute_stats", lambda inv_df, sl: fake_records)
+    # 模擬「本期新一期資料所有股票都已同步過」——這是唯一允許略過寫入的合法冪等保護
+    monkeypatch.setattr(mod, "_get_synced_codes", lambda snapshot_date, storage: set(stock_list))
+    monkeypatch.setattr(mod, "_enrich_stock_names", lambda records, storage: records)
+    upsert_mock = pytest.importorskip("unittest.mock").MagicMock()
+    monkeypatch.setattr(mod, "_upsert", upsert_mock)
+
+    mod.main()
+
+    # 修復前：這段「舊 snapshot 已全涵蓋」的情境會讓 main() 提早 return，
+    # _login_finlab / _fetch_inventory 永遠不會被呼叫。
+    login_mock.assert_called_once()
+    fetch_inventory_mock.assert_called_once()
