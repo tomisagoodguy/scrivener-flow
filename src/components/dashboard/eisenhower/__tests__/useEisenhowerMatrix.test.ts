@@ -165,6 +165,40 @@ describe('useEisenhowerMatrix', () => {
         expect(result.current.matrix.zones).toHaveLength(MAX_ZONES);
     });
 
+    it('reorderZone 把拖曳格搬到目標格位置，placements 不變並防抖保存', async () => {
+        const { result } = renderHook(() => useEisenhowerMatrix());
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(result.current.matrix.zones.map((z) => z.id)).toEqual(['q1', 'q2', 'q3', 'q4']);
+
+        act(() => {
+            result.current.toggleZone('A', 'q1');
+        });
+
+        jest.useFakeTimers();
+        act(() => result.current.reorderZone('q1', 'q3'));
+
+        // 樂觀更新：q1 搬到 q3 的位置
+        expect(result.current.matrix.zones.map((z) => z.id)).toEqual(['q2', 'q3', 'q1', 'q4']);
+        // 順序調整不影響名片歸屬
+        expect(result.current.matrix.placements['A']).toEqual(['q1']);
+
+        await act(async () => {
+            jest.advanceTimersByTime(800);
+        });
+        jest.useRealTimers();
+
+        await waitFor(() => expect(mockSaveMatrix).toHaveBeenCalled());
+    });
+
+    it('reorderZone 拖到自己身上不變動、不觸發保存', async () => {
+        const { result } = renderHook(() => useEisenhowerMatrix());
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        act(() => result.current.reorderZone('q2', 'q2'));
+        expect(result.current.matrix.zones.map((z) => z.id)).toEqual(['q1', 'q2', 'q3', 'q4']);
+        expect(mockSaveMatrix).not.toHaveBeenCalled();
+    });
+
     it('removeZone 移除象限並讓該格名片退回待分類；剩 MIN_ZONES 時拒絕', async () => {
         mockGetMatrix.mockResolvedValue({
             zones: DEFAULT_ZONES,

@@ -149,6 +149,24 @@ export function useEisenhowerMatrix() {
         [scheduleSave]
     );
 
+    /** 拖曳排序象限卡片：把 draggedId 所在項目搬到 targetId 的位置，僅改順序不動歸屬 */
+    const reorderZone = useCallback(
+        (draggedId: string, targetId: string) => {
+            if (draggedId === targetId) return;
+            setMatrix((prev) => {
+                const fromIndex = prev.zones.findIndex((z) => z.id === draggedId);
+                const toIndex = prev.zones.findIndex((z) => z.id === targetId);
+                if (fromIndex < 0 || toIndex < 0) return prev;
+                const zones = [...prev.zones];
+                const [moved] = zones.splice(fromIndex, 1);
+                zones.splice(toIndex, 0, moved);
+                return { ...prev, zones };
+            });
+            scheduleSave();
+        },
+        [scheduleSave]
+    );
+
     /** 新增象限（達 MAX_ZONES 拒絕） */
     const addZone = useCallback(() => {
         setMatrix((prev) => {
@@ -194,6 +212,7 @@ export function useEisenhowerMatrix() {
         toggleZone,
         clearZones,
         renameZone,
+        reorderZone,
         addZone,
         removeZone,
     };

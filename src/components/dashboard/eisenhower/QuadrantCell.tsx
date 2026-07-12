@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import PersonChip from './PersonChip';
-import { decodeDragPayload, zoneDisplayLabel } from './chipUtils';
+import { decodeDragPayload, zoneDisplayLabel, ZONE_DRAG_TYPE } from './chipUtils';
 import type { EisenhowerZone, PersonChipData } from './types';
 
 /** accent 色依象限索引循環（非投資漲跌語意，僅視覺區隔） */
@@ -32,11 +32,12 @@ interface QuadrantCellProps {
     onToggleZone: (chipKey: string, zoneId: string) => void;
     onClearZones: (chipKey: string) => void;
     onRename: (zoneId: string, title: string) => void;
+    onReorder: (draggedZoneId: string, targetZoneId: string) => void;
     onDelete: (zoneId: string) => void;
 }
 
-/** 單一象限：drop target（搬家語意）+ 可就地編輯的標題（清空回預設）+ 刪除控制 */
-export default function QuadrantCell({ zone, index, zones, chips, placements, canDelete, menuChipKey, onOpenMenu, onCloseMenu, onMove, onToggleZone, onClearZones, onRename, onDelete }: QuadrantCellProps) {
+/** 單一象限：drop target（名片搬家 + 象限拖曳排序）+ 可就地編輯的標題（清空回預設）+ 刪除控制 */
+export default function QuadrantCell({ zone, index, zones, chips, placements, canDelete, menuChipKey, onOpenMenu, onCloseMenu, onMove, onToggleZone, onClearZones, onRename, onReorder, onDelete }: QuadrantCellProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState('');
     const [dragOver, setDragOver] = useState(false);
@@ -64,6 +65,11 @@ export default function QuadrantCell({ zone, index, zones, chips, placements, ca
             onDrop={(e) => {
                 e.preventDefault();
                 setDragOver(false);
+                const draggedZoneId = e.dataTransfer.getData(ZONE_DRAG_TYPE);
+                if (draggedZoneId) {
+                    onReorder(draggedZoneId, zone.id);
+                    return;
+                }
                 const payload = decodeDragPayload(e.dataTransfer.getData('text/plain'));
                 if (payload) onMove(payload.chipKey, payload.fromZoneId, zone.id);
             }}
@@ -72,33 +78,54 @@ export default function QuadrantCell({ zone, index, zones, chips, placements, ca
             }`}
         >
             <div className="flex items-start justify-between gap-2 mb-2">
-                {editing ? (
-                    <input
-                        type="text"
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onBlur={commitEdit}
-                        onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                        placeholder={label}
-                        autoFocus
-                        className="w-full px-2 py-1 text-sm font-bold bg-white/50 backdrop-blur-sm border border-gray-200 rounded focus:bg-white focus:outline-none"
-                    />
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setDraft(zone.label);
-                            setEditing(true);
+                <div className="flex items-start gap-1 min-w-0">
+                    <span
+                        draggable
+                        onDragStart={(e) => {
+                            e.dataTransfer.setData(ZONE_DRAG_TYPE, zone.id);
+                            e.dataTransfer.effectAllowed = 'move';
                         }}
-                        className="text-sm font-bold text-foreground/80 hover:text-primary flex items-center gap-1"
-                        title="點擊編輯象限標題"
+                        className="p-0.5 mt-0.5 shrink-0 cursor-grab active:cursor-grabbing text-foreground/25 hover:text-foreground/50"
+                        title="拖曳調整象限順序"
+                        aria-label={`拖曳排序象限 ${label}`}
                     >
-                        {label}
-                        <svg className="w-3 h-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <circle cx="6" cy="5" r="1.3" />
+                            <circle cx="6" cy="10" r="1.3" />
+                            <circle cx="6" cy="15" r="1.3" />
+                            <circle cx="12" cy="5" r="1.3" />
+                            <circle cx="12" cy="10" r="1.3" />
+                            <circle cx="12" cy="15" r="1.3" />
                         </svg>
-                    </button>
-                )}
+                    </span>
+                    {editing ? (
+                        <input
+                            type="text"
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
+                            placeholder={label}
+                            autoFocus
+                            className="w-full px-2 py-1 text-sm font-bold bg-white/50 backdrop-blur-sm border border-gray-200 rounded focus:bg-white focus:outline-none"
+                        />
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDraft(zone.label);
+                                setEditing(true);
+                            }}
+                            className="text-sm font-bold text-foreground/80 hover:text-primary flex items-center gap-1 min-w-0"
+                            title="點擊編輯象限標題"
+                        >
+                            <span className="truncate">{label}</span>
+                            <svg className="w-3 h-3 opacity-40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
                 <button
                     type="button"
                     onClick={handleDelete}

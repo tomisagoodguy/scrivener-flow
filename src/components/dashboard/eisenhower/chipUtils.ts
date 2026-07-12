@@ -52,6 +52,9 @@ export function prunePlacements(
     return pruned;
 }
 
+/** 象限卡片拖曳排序用的 dataTransfer type（與名片拖曳的 text/plain 區隔，互不干擾） */
+export const ZONE_DRAG_TYPE = 'application/x-eisenhower-zone';
+
 /** 拖曳 payload：名片鍵 + 來源格 id（待分類為空字串）。case id 為 uuid，不含 '|' */
 export function encodeDragPayload(chipKey: string, fromZoneId: string | null): string {
     return `${chipKey}|${fromZoneId ?? ''}`;

@@ -22,7 +22,7 @@ interface EisenhowerMatrixProps {
  * 資料載入不受收合狀態影響（收合只影響渲染，避免展開瞬間才 fetch 造成的延遲）。
  */
 export default function EisenhowerMatrix({ collapsible = false, defaultCollapsed = false }: EisenhowerMatrixProps) {
-    const { chips, matrix, loading, unclassifiedChips, chipsInZone, moveChip, toggleZone, clearZones, renameZone, addZone, removeZone } =
+    const { chips, matrix, loading, unclassifiedChips, chipsInZone, moveChip, toggleZone, clearZones, renameZone, reorderZone, addZone, removeZone } =
         useEisenhowerMatrix();
     const [stagingDragOver, setStagingDragOver] = useState(false);
     const [collapsed, setCollapsed] = useState(collapsible && defaultCollapsed);
@@ -137,6 +137,7 @@ export default function EisenhowerMatrix({ collapsible = false, defaultCollapsed
                                 onToggleZone={toggleZone}
                                 onClearZones={clearZones}
                                 onRename={renameZone}
+                                onReorder={reorderZone}
                                 onDelete={removeZone}
                             />
                         ))}
