@@ -24,6 +24,10 @@ interface QuadrantCellProps {
     chips: PersonChipData[];
     placements: Record<string, string[]>;
     canDelete: boolean;
+    /** 此格內選單開啟中的名片鍵（容器層控管，null = 無） */
+    menuChipKey: string | null;
+    onOpenMenu: (chipKey: string) => void;
+    onCloseMenu: () => void;
     onMove: (chipKey: string, fromZoneId: string | null, toZoneId: string | null) => void;
     onToggleZone: (chipKey: string, zoneId: string) => void;
     onClearZones: (chipKey: string) => void;
@@ -32,7 +36,7 @@ interface QuadrantCellProps {
 }
 
 /** 單一象限：drop target（搬家語意）+ 可就地編輯的標題（清空回預設）+ 刪除控制 */
-export default function QuadrantCell({ zone, index, zones, chips, placements, canDelete, onMove, onToggleZone, onClearZones, onRename, onDelete }: QuadrantCellProps) {
+export default function QuadrantCell({ zone, index, zones, chips, placements, canDelete, menuChipKey, onOpenMenu, onCloseMenu, onMove, onToggleZone, onClearZones, onRename, onDelete }: QuadrantCellProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState('');
     const [dragOver, setDragOver] = useState(false);
@@ -117,6 +121,9 @@ export default function QuadrantCell({ zone, index, zones, chips, placements, ca
                         zones={zones}
                         currentZoneId={zone.id}
                         memberships={placements[chip.key] ?? []}
+                        menuOpen={menuChipKey === chip.key}
+                        onOpenMenu={() => onOpenMenu(chip.key)}
+                        onCloseMenu={onCloseMenu}
                         onToggleZone={onToggleZone}
                         onClearZones={onClearZones}
                     />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { encodeDragPayload, zoneDisplayLabel } from './chipUtils';
 import type { EisenhowerZone, PersonChipData } from './types';
@@ -12,6 +12,10 @@ interface PersonChipProps {
     currentZoneId: string | null;
     /** 名片目前所有歸屬（供選單勾號） */
     memberships: string[];
+    /** 選單狀態由容器控管：勾選導致實例搬家時選單不會消失 */
+    menuOpen: boolean;
+    onOpenMenu: () => void;
+    onCloseMenu: () => void;
     onToggleZone: (chipKey: string, zoneId: string) => void;
     onClearZones: (chipKey: string) => void;
 }
@@ -19,13 +23,12 @@ interface PersonChipProps {
 /**
  * 案件名片（一案一卡，可屬多格）：卡面並列買賣雙方姓名，案號僅 hover tooltip。
  * 拖曳＝搬家（payload 帶來源格）；「⋯」選單為勾選式多選；格內實例有「✕ 從此格移除」。
+ * 選單開啟時停用拖曳，避免瀏覽器把勾選的點擊誤判成 drag start。
  */
-export default function PersonChip({ chip, zones, currentZoneId, memberships, onToggleZone, onClearZones }: PersonChipProps) {
-    const [menuOpen, setMenuOpen] = useState(false);
-
+export default function PersonChip({ chip, zones, currentZoneId, memberships, menuOpen, onOpenMenu, onCloseMenu, onToggleZone, onClearZones }: PersonChipProps) {
     return (
         <div
-            draggable
+            draggable={!menuOpen}
             onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', encodeDragPayload(chip.key, currentZoneId));
                 e.dataTransfer.effectAllowed = 'move';
@@ -54,7 +57,7 @@ export default function PersonChip({ chip, zones, currentZoneId, memberships, on
 
             <button
                 type="button"
-                onClick={() => setMenuOpen((v) => !v)}
+                onClick={() => (menuOpen ? onCloseMenu() : onOpenMenu())}
                 className="p-0.5 rounded text-foreground/40 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
                 title="選擇所屬象限（可多選）"
                 aria-label={`選擇 ${chip.buyerName ?? chip.sellerName ?? ''} 的象限`}
@@ -80,8 +83,8 @@ export default function PersonChip({ chip, zones, currentZoneId, memberships, on
 
             {menuOpen && (
                 <>
-                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1 z-20 min-w-[150px] rounded-lg border border-border-color bg-white dark:bg-slate-800 shadow-lg py-1">
+                    <div className="fixed inset-0 z-10" onClick={onCloseMenu} />
+                    <div role="menu" className="absolute right-0 top-full mt-1 z-20 min-w-[150px] rounded-lg border border-border-color bg-white dark:bg-slate-800 shadow-lg py-1">
                         {zones.map((zone) => {
                             const checked = memberships.includes(zone.id);
                             return (
@@ -106,7 +109,7 @@ export default function PersonChip({ chip, zones, currentZoneId, memberships, on
                             type="button"
                             disabled={memberships.length === 0}
                             onClick={() => {
-                                setMenuOpen(false);
+                                onCloseMenu();
                                 onClearZones(chip.key);
                             }}
                             className="w-full text-left px-3 py-1.5 text-xs text-foreground/60 border-t border-border-color hover:bg-primary/10 disabled:opacity-40 disabled:cursor-default"

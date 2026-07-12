@@ -15,6 +15,15 @@ export default function EisenhowerMatrix() {
     const { chips, matrix, loading, unclassifiedChips, chipsInZone, moveChip, toggleZone, clearZones, renameZone, addZone, removeZone } =
         useEisenhowerMatrix();
     const [stagingDragOver, setStagingDragOver] = useState(false);
+    /** 開啟中的多選選單（anchor = 開啟時所在容器）；選單開啟期間把名片釘在原容器，勾選不會讓選單消失 */
+    const [menu, setMenu] = useState<{ chipKey: string; anchor: string | null } | null>(null);
+    const closeMenu = () => setMenu(null);
+
+    const pinChip = (list: typeof chips, anchor: string | null) => {
+        if (!menu || menu.anchor !== anchor || list.some((c) => c.key === menu.chipKey)) return list;
+        const pinned = chips.find((c) => c.key === menu.chipKey);
+        return pinned ? [...list, pinned] : list;
+    };
 
     if (loading) {
         return <div className="glass-card p-4 h-[220px] skeleton rounded-2xl" />;
@@ -67,18 +76,21 @@ export default function EisenhowerMatrix() {
                             待分類（{unclassifiedChips.length}）
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                            {unclassifiedChips.map((chip) => (
+                            {pinChip(unclassifiedChips, null).map((chip) => (
                                 <PersonChip
                                     key={chip.key}
                                     chip={chip}
                                     zones={matrix.zones}
                                     currentZoneId={null}
                                     memberships={matrix.placements[chip.key] ?? []}
+                                    menuOpen={menu?.anchor === null && menu.chipKey === chip.key}
+                                    onOpenMenu={() => setMenu({ chipKey: chip.key, anchor: null })}
+                                    onCloseMenu={closeMenu}
                                     onToggleZone={toggleZone}
                                     onClearZones={clearZones}
                                 />
                             ))}
-                            {unclassifiedChips.length === 0 && (
+                            {unclassifiedChips.length === 0 && !menu && (
                                 <span className="text-xs text-foreground/30">全部名片已分類，拖回這裡可取消分類</span>
                             )}
                         </div>
@@ -91,9 +103,12 @@ export default function EisenhowerMatrix() {
                                 zone={zone}
                                 index={index}
                                 zones={matrix.zones}
-                                chips={chipsInZone(zone.id)}
+                                chips={pinChip(chipsInZone(zone.id), zone.id)}
                                 placements={matrix.placements}
                                 canDelete={matrix.zones.length > MIN_ZONES}
+                                menuChipKey={menu?.anchor === zone.id ? menu.chipKey : null}
+                                onOpenMenu={(chipKey) => setMenu({ chipKey, anchor: zone.id })}
+                                onCloseMenu={closeMenu}
                                 onMove={moveChip}
                                 onToggleZone={toggleZone}
                                 onClearZones={clearZones}
