@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ArrowLeftIcon, ChevronDownIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import ThemeToggle from '@/components/layout/ThemeToggle';
+import { ChatHeaderButton } from '@/components/layout/ChatHeaderButton';
 
 const primaryNavItems = [
     { name: '選股池', href: '/investment' },
@@ -179,6 +180,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
 
                     <div className="flex items-center gap-2">
                         <ThemeToggle />
+                        <ChatHeaderButton />
                         {/* Back link */}
                         <Link
                             href="/cases"
