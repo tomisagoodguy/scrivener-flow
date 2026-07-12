@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PriceData } from '@/lib/investment/indicators';
 import type { Holding } from '@/types/investment';
-import { filterAndSortHoldings, SortField, SortOrder } from '@/lib/investment/holdingFilters';
+import { filterAndSortHoldings, isTaiwanStockCode, SortField, SortOrder } from '@/lib/investment/holdingFilters';
 
 export interface RevenueData {
     data_date: string;
@@ -108,14 +108,16 @@ export function useStockDashboard(stockCode: string) {
                     const retailIdx = retailSorted.findIndex((s) => s.stock_code === stockCode);
                     setRetailRank(retailIdx >= 0 ? retailIdx + 1 : null);
 
-                    const navList = isRetailSource ? retailSorted : chips;
+                    // 排除美股/海外持股，避免上一檔/下一檔導航中斷
+                    const navList = (isRetailSource ? retailSorted : chips).filter((s) => isTaiwanStockCode(s.stock_code));
                     setTotalCount(navList.length);
                     const index = navList.findIndex((s) => s.stock_code === stockCode);
-                    if (index >= 0) {
-                        setStockName(navList[index].stock_name ?? stockCode);
+                    const currentChip = chips.find((s) => s.stock_code === stockCode);
+                    if (currentChip) {
+                        setStockName(currentChip.stock_name ?? stockCode);
                         setPrevStock(index > 0 ? { code: navList[index - 1].stock_code, name: navList[index - 1].stock_name ?? navList[index - 1].stock_code } : null);
-                        setNextStock(index < navList.length - 1 ? { code: navList[index + 1].stock_code, name: navList[index + 1].stock_name ?? navList[index + 1].stock_code } : null);
-                        setCurrentIndex(index + 1);
+                        setNextStock(index >= 0 && index < navList.length - 1 ? { code: navList[index + 1].stock_code, name: navList[index + 1].stock_name ?? navList[index + 1].stock_code } : null);
+                        setCurrentIndex(index >= 0 ? index + 1 : -1);
                     } else {
                         setStockName(stockCode);
                     }
@@ -152,9 +154,6 @@ export function useStockDashboard(stockCode: string) {
                 if (!response.ok) return;
                 const allData: Holding[] = await response.json();
 
-                // 全量用來計算 totalCount
-                setTotalCount(allData.length);
-
                 // filtered 清單用來決定上下頁導航與 currentIndex
                 let navData = allData;
                 if (searchParams.toString()) {
@@ -164,13 +163,16 @@ export function useStockDashboard(stockCode: string) {
                     const order = (searchParams.get('order') as SortOrder) || 'desc';
                     navData = filterAndSortHoldings(allData, filters, search, sort, order);
                 }
+                // 排除美股/海外持股（如 NVIDIA），避免上一檔/下一檔導航中斷
+                navData = navData.filter((h) => isTaiwanStockCode(h.stock_code));
+                setTotalCount(navData.length);
 
+                const target = allData.find((h) => h.stock_code === stockCode);
                 const index = navData.findIndex((h: Holding) => h.stock_code === stockCode);
-                const target = navData[index] ?? allData.find((h) => h.stock_code === stockCode);
                 if (target) {
                     setStockName(target.stock_name);
                     setPrevStock(index > 0 ? { code: navData[index - 1].stock_code, name: navData[index - 1].stock_name } : null);
-                    setNextStock(index < navData.length - 1 ? { code: navData[index + 1].stock_code, name: navData[index + 1].stock_name } : null);
+                    setNextStock(index >= 0 && index < navData.length - 1 ? { code: navData[index + 1].stock_code, name: navData[index + 1].stock_name } : null);
                     setCurrentIndex(index >= 0 ? index + 1 : -1);
                     type ExtHolding = Holding & { momentum_60d?: number | null; momentum_pass?: boolean; it_buy_5d?: number | null; it_buy_5d_pass?: boolean; rev_ma3_new_high?: boolean; filter_score?: number | null; is_20d_high?: boolean; is_200d_high?: boolean };
                     const ext = target as ExtHolding;

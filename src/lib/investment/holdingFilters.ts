@@ -19,6 +19,14 @@ export type SortField =
 
 export type SortOrder = 'asc' | 'desc';
 
+// 台股代號：4-6 位數字，選擇性尾綴 1 個英文字母（如 2330、00981A）。
+// 美股/海外標的代號含多個英文字母（如 NVDA、TSLA US），藉此排除以避免上一檔/下一檔導航中斷。
+const TW_STOCK_CODE_RE = /^\d{4,6}[A-Z]?$/;
+
+export function isTaiwanStockCode(code: string): boolean {
+    return TW_STOCK_CODE_RE.test(code);
+}
+
 interface FilterDefinition {
     id: string;
     label: string;
