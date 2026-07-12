@@ -39,6 +39,7 @@ jest.mock('@/hooks/useNotification', () => ({
 describe('useEisenhowerMatrix', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        window.sessionStorage.clear();
         mockGetMatrix.mockResolvedValue({ zones: DEFAULT_ZONES, placements: {} });
         mockSaveMatrix.mockResolvedValue({ success: true });
     });

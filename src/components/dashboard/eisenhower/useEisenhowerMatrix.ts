@@ -15,6 +15,32 @@ import {
 } from './types';
 
 const SAVE_DEBOUNCE_MS = 800;
+/** sessionStorage 快取鍵：先渲染上次結果，背景重抓後再更新（stale-while-revalidate） */
+const CACHE_KEY = 'eisenhower-matrix-cache-v1';
+
+interface MatrixCache {
+    chips: PersonChipData[];
+    matrix: EisenhowerMatrixData;
+}
+
+function readCache(): MatrixCache | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = window.sessionStorage.getItem(CACHE_KEY);
+        return raw ? (JSON.parse(raw) as MatrixCache) : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeCache(cache: MatrixCache) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {
+        // 儲存空間不足或被封鎖：略過快取，不影響功能
+    }
+}
 
 /**
  * 艾森豪矩陣狀態：聚合未結案案件名片、載入/保存個人分類與自訂象限（2–8 格）。
@@ -26,9 +52,10 @@ export function useEisenhowerMatrix() {
     const notifyRef = useRef(notify);
     notifyRef.current = notify;
 
-    const [chips, setChips] = useState<PersonChipData[]>([]);
-    const [matrix, setMatrix] = useState<EisenhowerMatrixData>(() => parseMatrix(null));
-    const [loading, setLoading] = useState(true);
+    const cached = useMemo(() => readCache(), []);
+    const [chips, setChips] = useState<PersonChipData[]>(() => cached?.chips ?? []);
+    const [matrix, setMatrix] = useState<EisenhowerMatrixData>(() => cached?.matrix ?? parseMatrix(null));
+    const [loading, setLoading] = useState(!cached);
 
     const matrixRef = useRef(matrix);
     matrixRef.current = matrix;
@@ -38,32 +65,35 @@ export function useEisenhowerMatrix() {
         let cancelled = false;
         const load = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('cases')
-                    .select('id, case_number, buyer_name, seller_name, status')
-                    .neq('status', CASE_STATUS_CLOSED)
-                    .neq('status', CASE_STATUS_CANCELLED);
-                if (error) throw error;
-
-                const derived = deriveChips((data ?? []) as ChipSourceCase[]);
+                // 案件名片與矩陣設定互不依賴，並行請求取代原本的串行 waterfall
+                const [casesResult, savedResult] = await Promise.all([
+                    supabase
+                        .from('cases')
+                        .select('id, case_number, buyer_name, seller_name, status')
+                        .neq('status', CASE_STATUS_CLOSED)
+                        .neq('status', CASE_STATUS_CANCELLED),
+                    // 設定讀取失敗時：全部名片留在待分類，不阻斷區塊
+                    getEisenhowerMatrix().catch((err) => {
+                        notifyRef.current.error('載入矩陣設定失敗', err);
+                        return parseMatrix(null);
+                    }),
+                ]);
                 if (cancelled) return;
-                setChips(derived);
+                if (casesResult.error) throw casesResult.error;
 
-                // 設定讀取失敗時：全部名片留在待分類，不阻斷區塊
-                let saved: EisenhowerMatrixData = parseMatrix(null);
-                try {
-                    saved = await getEisenhowerMatrix();
-                } catch (err) {
-                    notifyRef.current.error('載入矩陣設定失敗', err);
-                }
-                if (cancelled) return;
+                const derived = deriveChips((casesResult.data ?? []) as ChipSourceCase[]);
+                const saved = savedResult;
 
                 const chipKeys = new Set(derived.map((c) => c.key));
                 const zoneIds = new Set(saved.zones.map((z) => z.id));
-                setMatrix({
+                const nextMatrix: EisenhowerMatrixData = {
                     zones: saved.zones,
                     placements: prunePlacements(saved.placements, chipKeys, zoneIds),
-                });
+                };
+
+                setChips(derived);
+                setMatrix(nextMatrix);
+                writeCache({ chips: derived, matrix: nextMatrix });
             } catch (err) {
                 if (!cancelled) notifyRef.current.error('載入案件名片失敗', err);
             } finally {
