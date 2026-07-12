@@ -59,3 +59,54 @@ def test_main_always_calls_finlab_even_if_previous_snapshot_fully_synced(
     # _login_finlab / _fetch_inventory 永遠不會被呼叫。
     login_mock.assert_called_once()
     fetch_inventory_mock.assert_called_once()
+
+
+def test_main_raises_when_stock_list_empty(monkeypatch):
+    """etf_holdings_snapshot 無資料時必須 raise，不可靜默 return 讓 CI 綠燈。"""
+    storage = FakeStorage([])
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+
+    with pytest.raises(RuntimeError, match="etf_holdings_snapshot 無資料"):
+        mod.main()
+
+
+def test_main_raises_when_finlab_login_fails(monkeypatch):
+    """FinLab 登入失敗時必須 raise，不可靜默 return 讓 CI 綠燈。"""
+    stock_list = ["1101", "2330"]
+    storage = FakeStorage(stock_list)
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+    monkeypatch.setattr(mod, "_login_finlab", lambda: False)
+
+    with pytest.raises(RuntimeError, match="FinLab 登入失敗"):
+        mod.main()
+
+
+def test_main_raises_when_inventory_empty(monkeypatch):
+    """FinLab inventory 資料為空（配額用盡等）時必須 raise，不可靜默 return 讓 CI 綠燈。"""
+    stock_list = ["1101", "2330"]
+    storage = FakeStorage(stock_list)
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+    monkeypatch.setattr(mod, "_login_finlab", lambda: True)
+    monkeypatch.setattr(mod, "_fetch_inventory", lambda: pd.DataFrame())
+
+    with pytest.raises(RuntimeError, match="inventory 資料為空"):
+        mod.main()
+
+
+def test_main_raises_when_no_records_computed(monkeypatch):
+    """_compute_stats 回傳空 list（資料不足兩期等）時必須 raise，不可靜默 return 讓 CI 綠燈。"""
+    stock_list = ["1101", "2330"]
+    storage = FakeStorage(stock_list)
+    monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
+    monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py"])
+    monkeypatch.setattr(mod, "_login_finlab", lambda: True)
+    monkeypatch.setattr(
+        mod, "_fetch_inventory", lambda: pd.DataFrame({"stock_id": ["1101"], "date": ["2026-07-11"]})
+    )
+    monkeypatch.setattr(mod, "_compute_stats", lambda inv_df, sl: [])
+
+    with pytest.raises(RuntimeError, match="本期無可計算的統計資料"):
+        mod.main()

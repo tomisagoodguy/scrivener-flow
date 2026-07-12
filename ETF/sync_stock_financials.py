@@ -46,8 +46,8 @@ class FinancialsSync:
         try:
             # 0. Login
             if not self.finlab.login():
-                logger.error("Finlab 登入失敗")
-                return
+                # 防呆：登入失敗不可靜默結束後回報 CI 綠燈
+                raise RuntimeError("Finlab 登入失敗，中止同步以避免靜默成功")
 
             # 1. 取得目標股票（ETF 成分股 + 策略命中強勢股）
             logger.info("正在獲取目標股票清單...")
@@ -60,8 +60,7 @@ class FinancialsSync:
             )
 
             if not stock_list:
-                logger.error("無目標股票，中止同步")
-                return
+                raise RuntimeError("無目標股票，中止同步以避免靜默成功")
 
             # 2. 同步券商數據（日排程已含，週排程用 --skip-broker 跳過避免重複下載巨型資料集）
             if not skip_broker:
@@ -92,6 +91,12 @@ class FinancialsSync:
             if not skip_shareholder:
                 logger.info("--- 同步股權分散數據 ---")
                 raw_inv = self.finlab.get_shareholder_data()
+                # 防呆：抓到空股權分散資料（多為 FinLab 配額/資料異常）必須中止，
+                # 不可讓流程靜默寫 0 筆後回報「✅ 同步完成」、CI 綠燈、無告警
+                if raw_inv.empty:
+                    raise RuntimeError(
+                        "股權分散資料為空，疑似 FinLab 配額或資料異常；中止同步以避免靜默成功"
+                    )
                 weeks = max(4, days // 7)
                 inv_records = ShareholderProcessor.process(raw_inv, stock_list, weeks=weeks)
                 self.storage.upsert_shareholder_data(inv_records)

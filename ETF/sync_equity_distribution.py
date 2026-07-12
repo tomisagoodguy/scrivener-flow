@@ -433,25 +433,25 @@ def main() -> None:
     # 1. 動態取得成分股池（不寫死 ETF 代碼）
     stock_list = storage.get_all_target_stocks()
     if not stock_list:
-        logger.warning("etf_holdings_snapshot 無資料，中止同步")
-        return
+        # 防呆：etf_holdings_snapshot 空表示上游資料異常，不可靜默結束後回報 CI 綠燈
+        raise RuntimeError("etf_holdings_snapshot 無資料，中止同步以避免靜默成功")
     logger.info(f"成分股池：{len(stock_list)} 支")
 
     # 2. FinLab 登入
     if not _login_finlab():
-        return
+        raise RuntimeError("FinLab 登入失敗，中止同步以避免靜默成功")
 
     # 3. 取得 inventory
     logger.info("從 FinLab 取得股東分散表...")
     inv_df = _fetch_inventory()
     if inv_df.empty:
-        logger.error("FinLab inventory 資料為空，中止")
-        return
+        # 防呆：配額用盡或取得失敗都會導致空表，必須中止並讓 CI 標記失敗
+        raise RuntimeError("FinLab inventory 資料為空，中止同步以避免靜默成功")
 
     # 4. 計算統計差值
     records = _compute_stats(inv_df, stock_list)
     if not records:
-        return
+        raise RuntimeError("本期無可計算的統計資料（inventory 資料不足兩期或無交集），中止同步以避免靜默成功")
 
     # 5. 只補缺的股票（冪等保護：新成分股出現時也能即時補入）
     snapshot_date = records[0]["snapshot_date"]
