@@ -27,11 +27,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     load_dotenv(".env.local")
 
-    api_key = os.getenv("FINLAB_API_KEY")
-    if not api_key:
-        logger.error("FINLAB_API_KEY 未設定")
-        sys.exit(1)
-    finlab.login(api_key)
+    finlab.login()
 
     storage = SQLStorage()
 

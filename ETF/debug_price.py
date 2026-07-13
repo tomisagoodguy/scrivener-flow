@@ -1,4 +1,3 @@
-import os
 import finlab
 from finlab import data
 from dotenv import load_dotenv
@@ -8,7 +7,7 @@ from datetime import datetime
 load_dotenv('.env.local')
 
 def debug_price():
-    finlab.login(os.getenv("FINLAB_API_KEY"))
+    finlab.login()
     df = pd.DataFrame({'code': ['2330', '8299', '2308']})
     date_str = "20260130"
     target_date = datetime.strptime(date_str, "%Y%m%d").strftime("%Y-%m-%d")

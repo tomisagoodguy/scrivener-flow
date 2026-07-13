@@ -131,17 +131,12 @@ def main():
     else:
         load_dotenv()
 
-    api_key = os.getenv("FINLAB_API_KEY") or os.getenv("FINLAB_API_TOKEN")
-    if not api_key:
-        logger.error("FINLAB_API_KEY not set")
-        sys.exit(1)
-
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         logger.error("DATABASE_URL not set")
         sys.exit(1)
 
-    finlab.login(api_token=api_key)
+    finlab.login()
 
     from sqlalchemy import create_engine
     engine = create_engine(db_url)

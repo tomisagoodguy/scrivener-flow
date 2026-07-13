@@ -22,7 +22,7 @@ def main():
     load_dotenv('.env.local')
     
     # Login finlab
-    finlab.login(os.getenv("FINLAB_API_KEY"))
+    finlab.login()
     
     storage = SQLStorage()
     

@@ -1,5 +1,4 @@
 
-import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
@@ -17,13 +16,8 @@ env_path = project_root / '.env.local'
 load_dotenv(env_path)
 
 def diagnose_all_dates():
-    api_key = os.getenv("FINLAB_API_KEY")
-    if not api_key:
-        print("Error: FINLAB_API_KEY not found")
-        return
-
     print("Logging in to Finlab...")
-    finlab.login(api_key)
+    finlab.login()
 
     datasets = {
         'Top15 Buy': 'etl:broker_transactions:top15_buy',
