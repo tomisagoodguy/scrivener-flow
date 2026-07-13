@@ -26,6 +26,8 @@ jobs:
         shell: bash
 
     env:
+      FINLAB_REFRESH_TOKEN: ${{ secrets.FINLAB_REFRESH_TOKEN }}
+      FINLAB_SESSION_ID: ${{ secrets.FINLAB_SESSION_ID }}
       FINLAB_API_KEY: ${{ secrets.FINLAB_API_KEY }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
