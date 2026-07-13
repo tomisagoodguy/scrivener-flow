@@ -9,7 +9,6 @@
     uv run python ETF/compute_factor_ic.py --month 2026-04
 """
 
-import os
 import sys
 import argparse
 import logging
@@ -60,12 +59,8 @@ def _get_engine():
 
 
 def _login_finlab() -> bool:
-    api_key = os.getenv("FINLAB_API_KEY")
-    if not api_key:
-        logger.error("FINLAB_API_KEY 未設定")
-        return False
     try:
-        finlab.login(api_key)
+        finlab.login()
         logger.info("FinLab 登入成功")
         return True
     except Exception as e:
