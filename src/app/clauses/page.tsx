@@ -271,10 +271,12 @@ export default function ClausesPage() {
     const [openIds, setOpenIds] = useState<Set<string>>(new Set());
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // 新資料載入時，預設全部展開
+    // 新資料載入時（條文有新增/刪除）預設全部展開；純排序變動（如複製後重排）不重置展開狀態
+    const clauseIdsKey = useMemo(() => clauses.map(c => c.id).sort().join(','), [clauses]);
     useEffect(() => {
         setOpenIds(new Set(clauses.map(c => c.id)));
-    }, [clauses]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clauseIdsKey]);
 
     const allOpen = filteredClauses.length > 0 && filteredClauses.every(c => openIds.has(c.id));
     const toggleAllOpen = () => {
