@@ -14,7 +14,7 @@ import EisenhowerMatrix from './eisenhower/EisenhowerMatrix';
 import { DashboardWidgetShell } from './DashboardWidgetShell';
 import { HiddenWidgetsMenu } from './HiddenWidgetsMenu';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
-import type { DashboardWidgetId } from '@/domain/dashboard/layoutTypes';
+import { DASHBOARD_WIDGET_LABELS, type DashboardWidgetId } from '@/domain/dashboard/layoutTypes';
 
 interface WorkDashboardProps {
     className?: string;
@@ -74,9 +74,9 @@ export const WorkDashboard: React.FC<WorkDashboardProps> = ({ className }) => {
         <div className={`flex flex-col gap-4 ${className} animate-fade-in`}>
             <div className="flex items-start justify-between gap-2">
                 <WelcomeHeader />
-                <HiddenWidgetsMenu hiddenWidgetIds={hiddenWidgetIds} onShow={showWidget} />
+                <HiddenWidgetsMenu hiddenWidgetIds={hiddenWidgetIds} onShow={showWidget} labels={DASHBOARD_WIDGET_LABELS} />
             </div>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext id="dashboard-widget-layout" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={visibleWidgetIds} strategy={verticalListSortingStrategy}>
                     {visibleWidgetIds.map((id) => (
                         <DashboardWidgetShell key={id} id={id} onHide={() => hideWidget(id)}>

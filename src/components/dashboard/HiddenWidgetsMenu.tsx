@@ -2,17 +2,21 @@
 
 import React, { useState } from 'react';
 import { EyeOff } from 'lucide-react';
-import { DASHBOARD_WIDGET_LABELS, type DashboardWidgetId } from '@/domain/dashboard/layoutTypes';
 
-interface HiddenWidgetsMenuProps {
-    hiddenWidgetIds: DashboardWidgetId[];
-    onShow: (id: DashboardWidgetId) => void;
+interface HiddenWidgetsMenuProps<T extends string> {
+    hiddenWidgetIds: T[];
+    onShow: (id: T) => void;
+    labels: Record<T, string>;
+    /** 選單展開方向：'below-left'（預設，向下貼齊按鈕右緣，往左展開，首頁儀表板用法）或 'right'（水平向右展開，不遮住按鈕下方內容） */
+    placement?: 'below-left' | 'right';
 }
 
-export function HiddenWidgetsMenu({ hiddenWidgetIds, onShow }: HiddenWidgetsMenuProps) {
+export function HiddenWidgetsMenu<T extends string>({ hiddenWidgetIds, onShow, labels, placement = 'below-left' }: HiddenWidgetsMenuProps<T>) {
     const [open, setOpen] = useState(false);
 
     if (hiddenWidgetIds.length === 0) return null;
+
+    const menuPositionClass = placement === 'right' ? 'left-full top-0 ml-2' : 'right-0 top-full mt-2';
 
     return (
         <div className="relative">
@@ -27,7 +31,7 @@ export function HiddenWidgetsMenu({ hiddenWidgetIds, onShow }: HiddenWidgetsMenu
                 <EyeOff size={18} />
             </button>
             {open && (
-                <div role="menu" className="glass-card absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl p-2 shadow-lg">
+                <div role="menu" className={`glass-card absolute z-50 ${menuPositionClass} w-56 rounded-2xl p-2 shadow-lg`}>
                     {hiddenWidgetIds.map((id) => (
                         <button
                             key={id}
@@ -39,7 +43,7 @@ export function HiddenWidgetsMenu({ hiddenWidgetIds, onShow }: HiddenWidgetsMenu
                             }}
                             className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
                         >
-                            {DASHBOARD_WIDGET_LABELS[id]}
+                            {labels[id]}
                         </button>
                     ))}
                 </div>

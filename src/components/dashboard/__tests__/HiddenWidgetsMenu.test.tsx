@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HiddenWidgetsMenu } from '../HiddenWidgetsMenu';
+import { DASHBOARD_WIDGET_LABELS } from '@/domain/dashboard/layoutTypes';
 
 describe('HiddenWidgetsMenu', () => {
     it('清單為空時不渲染按鈕', () => {
-        render(<HiddenWidgetsMenu hiddenWidgetIds={[]} onShow={jest.fn()} />);
+        render(<HiddenWidgetsMenu hiddenWidgetIds={[]} onShow={jest.fn()} labels={DASHBOARD_WIDGET_LABELS} />);
         expect(screen.queryByRole('button', { name: /已隱藏區塊/ })).not.toBeInTheDocument();
     });
 
@@ -13,6 +14,7 @@ describe('HiddenWidgetsMenu', () => {
             <HiddenWidgetsMenu
                 hiddenWidgetIds={['pipeline-view', 'todo-container']}
                 onShow={jest.fn()}
+                labels={DASHBOARD_WIDGET_LABELS}
             />
         );
 
@@ -27,7 +29,7 @@ describe('HiddenWidgetsMenu', () => {
     it('點擊清單項目觸發 onShow 回呼，且父層更新後該項從清單移除', () => {
         const onShow = jest.fn();
         const { rerender } = render(
-            <HiddenWidgetsMenu hiddenWidgetIds={['pipeline-view', 'todo-container']} onShow={onShow} />
+            <HiddenWidgetsMenu hiddenWidgetIds={['pipeline-view', 'todo-container']} onShow={onShow} labels={DASHBOARD_WIDGET_LABELS} />
         );
 
         fireEvent.click(screen.getByRole('button', { name: /已隱藏區塊/ }));
@@ -35,7 +37,7 @@ describe('HiddenWidgetsMenu', () => {
         expect(onShow).toHaveBeenCalledWith('pipeline-view');
 
         // 父層依 onShow 更新 hiddenWidgetIds（移除 pipeline-view）
-        rerender(<HiddenWidgetsMenu hiddenWidgetIds={['todo-container']} onShow={onShow} />);
+        rerender(<HiddenWidgetsMenu hiddenWidgetIds={['todo-container']} onShow={onShow} labels={DASHBOARD_WIDGET_LABELS} />);
         fireEvent.click(screen.getByRole('button', { name: /已隱藏區塊/ }));
         expect(screen.queryByRole('menuitem', { name: /案件進度總覽/ })).not.toBeInTheDocument();
         expect(screen.getByRole('menuitem', { name: /待辦事項/ })).toBeInTheDocument();
@@ -43,11 +45,25 @@ describe('HiddenWidgetsMenu', () => {
 
     it('移除到剩下最後一項並由父層清空後，按鈕消失', () => {
         const { rerender } = render(
-            <HiddenWidgetsMenu hiddenWidgetIds={['todo-container']} onShow={jest.fn()} />
+            <HiddenWidgetsMenu hiddenWidgetIds={['todo-container']} onShow={jest.fn()} labels={DASHBOARD_WIDGET_LABELS} />
         );
         expect(screen.getByRole('button', { name: /已隱藏區塊/ })).toBeInTheDocument();
 
-        rerender(<HiddenWidgetsMenu hiddenWidgetIds={[]} onShow={jest.fn()} />);
+        rerender(<HiddenWidgetsMenu hiddenWidgetIds={[]} onShow={jest.fn()} labels={DASHBOARD_WIDGET_LABELS} />);
         expect(screen.queryByRole('button', { name: /已隱藏區塊/ })).not.toBeInTheDocument();
+    });
+
+    it('泛型 id + labels prop：接受非 DashboardWidgetId 的任意字串 id 與呼叫端自帶的 labels 對照表（例如 /cases 頁面）', () => {
+        render(
+            <HiddenWidgetsMenu
+                hiddenWidgetIds={['export-buttons', 'quick-navigator']}
+                onShow={jest.fn()}
+                labels={{ 'export-buttons': '匯出按鈕', 'quick-navigator': '快速導航' }}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /已隱藏區塊/ }));
+        expect(screen.getByRole('menuitem', { name: '匯出按鈕' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: '快速導航' })).toBeInTheDocument();
     });
 });

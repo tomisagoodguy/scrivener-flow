@@ -4,19 +4,13 @@ import { DemoCase } from '@/types';
 import { computeIsOwnedByCurrentUser, resolveSharedByLabel, resolveSharedWithLabel } from '@/services/caseShareService';
 import { listChatUsers } from '@/lib/chat/chatService';
 
-import GlobalPipelineChart from '@/components/dashboard/GlobalPipelineChart';
-import EisenhowerMatrix from '@/components/dashboard/eisenhower/EisenhowerMatrix';
-
-import ExportExcelButton from '@/components/features/cases/ExportExcelButton';
-import ExportHtmlButton from '@/components/features/cases/ExportHtmlButton';
 import { CaseTableRow } from '@/components/features/cases/case-list/CaseTableRow';
 import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
 import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 
 import { getCaseStage } from '@/lib/stageUtils';
 import CasesPendingView from '@/components/features/cases/CasesPendingView';
-import CaseQuickNavigator from '@/components/features/cases/CaseQuickNavigator';
-import { CasesRapidInput } from '@/components/features/cases/CasesRapidInput';
+import { CasesWidgetLayout } from '@/components/features/cases/CasesWidgetLayout';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,74 +138,71 @@ export default async function CasesPage({
                 <span className="text-slate-900 dark:text-slate-100 italic">CASE MANAGEMENT</span>
             </nav>
 
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">案件管理中心</h1>
-                    <span className="text-xs font-bold bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full border border-blue-500/20">
-                        {cases.length} TOTAL
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <ExportExcelButton cases={cases} />
-                    <ExportHtmlButton cases={cases} />
-                </div>
-            </div>
-
-            {/* Main Tabs & Search */}
-            <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
-                <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-[20px] border border-slate-200 dark:border-slate-800 backdrop-blur-sm overflow-x-auto no-scrollbar shrink-0 max-w-full">
-                    {[
-                        { label: '承辦中', value: 'Processing' },
-                        { label: '已結案', value: 'Closed' },
-                        { label: '📋 備忘錄', value: 'Memo' },
-                        { label: '📅 時程', value: 'Timeline' },
-                        { label: '⚠️ 未完成統整', value: 'Pending' },
-                    ].map((tab) => (
-                        <Link
-                            key={tab.value}
-                            href={`/cases?status=${tab.value}`}
-                            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all duration-300 ${statusParam === tab.value
-                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xl shadow-slate-200/30 dark:shadow-none'
-                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                        >
-                            {tab.label}
-                        </Link>
-                    ))}
-                </div>
-
-                <form className="relative w-full md:w-96 group">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg grayscale group-focus-within:grayscale-0 transition-all">
-                        🔍
-                    </span>
-                    <input
-                        type="text"
-                        name="q"
-                        placeholder="搜尋案號、買賣方或備註..."
-                        defaultValue={typeof queryParam === 'string' ? queryParam : ''}
-                        className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[20px] pl-12 pr-12 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:block">
-                        <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-400 border border-slate-200 dark:border-slate-600">
-                            ENTER
-                        </span>
+            {/* 標題列 + 可自訂功能板塊：匯出按鈕、快速輸入列、快速導航、案件進度總覽、輕重緩急看板 */}
+            <CasesWidgetLayout
+                title="案件管理中心"
+                caseCount={cases.length}
+                cases={cases}
+                monitoringCases={monitoringCases}
+                rapidInputCases={rawCases.map((c) => ({
+                    id: c.id,
+                    case_number: c.case_number,
+                    buyer_name: c.buyer_name,
+                    seller_name: c.seller_name,
+                }))}
+                stageParam={typeof stageParam === 'string' ? stageParam : undefined}
+                showMonitoringWidgets={
+                    statusParam !== 'Closed' &&
+                    statusParam !== 'Memo' &&
+                    statusParam !== 'Timeline' &&
+                    statusParam !== 'Pending' &&
+                    monitoringCases.length > 0
+                }
+            >
+                {/* Main Tabs & Search */}
+                <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
+                    <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-[20px] border border-slate-200 dark:border-slate-800 backdrop-blur-sm overflow-x-auto no-scrollbar shrink-0 max-w-full">
+                        {[
+                            { label: '承辦中', value: 'Processing' },
+                            { label: '已結案', value: 'Closed' },
+                            { label: '📋 備忘錄', value: 'Memo' },
+                            { label: '📅 時程', value: 'Timeline' },
+                            { label: '⚠️ 未完成統整', value: 'Pending' },
+                        ].map((tab) => (
+                            <Link
+                                key={tab.value}
+                                href={`/cases?status=${tab.value}`}
+                                className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all duration-300 ${statusParam === tab.value
+                                    ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xl shadow-slate-200/30 dark:shadow-none'
+                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                    }`}
+                            >
+                                {tab.label}
+                            </Link>
+                        ))}
                     </div>
-                    <input type="hidden" name="status" value={statusParam as string} />
-                    {viewParam !== 'all' && <input type="hidden" name="view" value={viewParam} />}
-                </form>
-            </div>
 
-            {/* 閃電快速輸入列 */}
-            <CasesRapidInput cases={rawCases.map((c) => ({
-                id: c.id,
-                case_number: c.case_number,
-                buyer_name: c.buyer_name,
-                seller_name: c.seller_name,
-            }))} />
-
-            {/* Quick Navigator - Sticky Top Row & FAB */}
-            <CaseQuickNavigator cases={monitoringCases} />
+                    <form className="relative w-full md:w-96 group">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg grayscale group-focus-within:grayscale-0 transition-all">
+                            🔍
+                        </span>
+                        <input
+                            type="text"
+                            name="q"
+                            placeholder="搜尋案號、買賣方或備註..."
+                            defaultValue={typeof queryParam === 'string' ? queryParam : ''}
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[20px] pl-12 pr-12 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:block">
+                            <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-400 border border-slate-200 dark:border-slate-600">
+                                ENTER
+                            </span>
+                        </div>
+                        <input type="hidden" name="status" value={statusParam as string} />
+                        {viewParam !== 'all' && <input type="hidden" name="view" value={viewParam} />}
+                    </form>
+                </div>
+            </CasesWidgetLayout>
 
             {/* Memo Board View */}
             {statusParam === 'Memo' && (
@@ -226,17 +217,6 @@ export default async function CasesPage({
             {/* Pending Items Aggregate View */}
             {statusParam === 'Pending' && (
                 <CasesPendingView cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
-            )}
-
-            {/* Monitoring View */}
-            {statusParam !== 'Closed' && statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && monitoringCases.length > 0 && (
-                <div className="space-y-8">
-                    <GlobalPipelineChart
-                        cases={monitoringCases}
-                        currentStage={typeof stageParam === 'string' ? stageParam : undefined}
-                    />
-                    <EisenhowerMatrix collapsible defaultCollapsed />
-                </div>
             )}
 
             {/* List Table */}

@@ -39,4 +39,21 @@ describe('DashboardWidgetShell', () => {
         fireEvent.click(screen.getByRole('button', { name: '隱藏此區塊' }));
         expect(onHide).toHaveBeenCalledTimes(1);
     });
+
+    it('泛型 id：接受非 DashboardWidgetId 的任意字串 id（例如 /cases 頁面的 export-buttons）仍正常渲染拖曳把手與 X 按鈕', () => {
+        const onHide = jest.fn();
+        render(
+            <DndContext>
+                <SortableContext items={['export-buttons']} strategy={verticalListSortingStrategy}>
+                    <DashboardWidgetShell id="export-buttons" onHide={onHide}>
+                        <div>匯出按鈕板塊</div>
+                    </DashboardWidgetShell>
+                </SortableContext>
+            </DndContext>
+        );
+
+        expect(screen.getByRole('button', { name: '拖曳調整順序' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: '隱藏此區塊' }));
+        expect(onHide).toHaveBeenCalledTimes(1);
+    });
 });

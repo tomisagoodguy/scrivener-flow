@@ -4,17 +4,16 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, X } from 'lucide-react';
-import type { DashboardWidgetId } from '@/domain/dashboard/layoutTypes';
 
-interface DashboardWidgetShellProps {
-    id: DashboardWidgetId;
+interface DashboardWidgetShellProps<T extends string> {
+    id: T;
     /** false 時不渲染拖曳把手與 X 按鈕（例如 welcome-header） */
     interactive?: boolean;
     onHide: () => void;
     children: React.ReactNode;
 }
 
-export function DashboardWidgetShell({ id, interactive = true, onHide, children }: DashboardWidgetShellProps) {
+export function DashboardWidgetShell<T extends string>({ id, interactive = true, onHide, children }: DashboardWidgetShellProps<T>) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         disabled: !interactive,
