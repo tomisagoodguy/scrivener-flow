@@ -7,14 +7,14 @@ import type { EisenhowerZone, PersonChipData } from './types';
 
 /** accent 色依象限索引循環（非投資漲跌語意，僅視覺區隔） */
 const ZONE_ACCENTS = [
-    'border-t-rose-400',
-    'border-t-amber-400',
-    'border-t-sky-400',
-    'border-t-slate-300',
-    'border-t-violet-400',
-    'border-t-emerald-400',
-    'border-t-orange-400',
-    'border-t-cyan-400',
+    'border-t-rose-400/50',
+    'border-t-amber-400/50',
+    'border-t-sky-400/50',
+    'border-t-emerald-400/50',
+    'border-t-violet-400/50',
+    'border-t-slate-300/50',
+    'border-t-orange-400/50',
+    'border-t-cyan-400/50',
 ];
 
 interface QuadrantCellProps {

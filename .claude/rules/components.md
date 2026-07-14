@@ -87,6 +87,11 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 登入表單已拆至 `src/app/login/components/`（`MfaTotpForm`、`PasswordLoginForm` 等子元件）。  
 修改登入邏輯時，直接修改對應子元件，不要在 `ModernLogin.tsx` 主檔寫表單邏輯。
 
+## 浮動/固定定位 UI 控制項
+
+新增儀表板功能性入口（如設定按鈕、清單入口）時，優先嵌入既有版面元素（例如 `WelcomeHeader` 那一列），而非另開新的 `fixed` 浮動按鈕。
+若必須用 `fixed` 定位，先確認未與 `src/components/shared/QuickScrollNavigator.tsx`（首頁與多個路由的 bottom-right 已有回到頂部/底部/首頁按鈕）衝突。
+
 ## 案件列表排序（`/cases` 頁面）——**禁止改動預設排序行為**
 
 `src/app/cases/page.tsx` 預設以里程碑優先順序排序：**印（seal_date）→ 稅（tax_payment_date）→ 過（transfer_date）→ 交（handover_date）**。

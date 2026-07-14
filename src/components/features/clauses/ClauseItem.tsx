@@ -45,7 +45,7 @@ export function ClauseItem({ clause, copyFeedback, isOpen, onToggle, onCopy, onE
                     <div className="flex-1 relative group/content">
                         <div
                             onClick={() => onCopy(clause.content, clause.id)}
-                            className="bg-slate-50 rounded-xl p-4 border border-slate-100 font-mono text-sm leading-relaxed text-slate-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-100 transition-colors relative max-h-[300px] overflow-y-auto custom-scrollbar"
+                            className="bg-slate-50 rounded-xl p-4 border border-slate-100 font-mono text-sm leading-relaxed text-slate-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-100 transition-colors relative"
                         >
                             <pre className="whitespace-pre-wrap font-sans">{clause.content}</pre>
                             <div className="absolute top-2 right-2 opacity-0 group-hover/content:opacity-100 transition-opacity">
