@@ -52,10 +52,9 @@ export function useEisenhowerMatrix() {
     const notifyRef = useRef(notify);
     notifyRef.current = notify;
 
-    const cached = useMemo(() => readCache(), []);
-    const [chips, setChips] = useState<PersonChipData[]>(() => cached?.chips ?? []);
-    const [matrix, setMatrix] = useState<EisenhowerMatrixData>(() => cached?.matrix ?? parseMatrix(null));
-    const [loading, setLoading] = useState(!cached);
+    const [chips, setChips] = useState<PersonChipData[]>([]);
+    const [matrix, setMatrix] = useState<EisenhowerMatrixData>(() => parseMatrix(null));
+    const [loading, setLoading] = useState(true);
 
     const matrixRef = useRef(matrix);
     matrixRef.current = matrix;
@@ -63,6 +62,13 @@ export function useEisenhowerMatrix() {
 
     useEffect(() => {
         let cancelled = false;
+        // sessionStorage 只能在 client mount 後讀取，避免與 SSR 首次渲染輸出不一致（hydration mismatch）
+        const cached = readCache();
+        if (cached) {
+            setChips(cached.chips);
+            setMatrix(cached.matrix);
+            setLoading(false);
+        }
         const load = async () => {
             try {
                 // 案件名片與矩陣設定互不依賴，並行請求取代原本的串行 waterfall
