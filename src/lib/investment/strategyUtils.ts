@@ -23,6 +23,8 @@ export interface StrategyStock {
     name?: string | null;
     industry?: string | null;
     etfHolders?: string[];
+    avg_turnover: number | null;
+    liquidity_flag: boolean | null;
 }
 
 export interface StrategyEntry {

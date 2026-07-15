@@ -339,10 +339,8 @@ def _fetch_uni(
     if not raw.startswith(b"PK"):
         raise RuntimeError(f"統一 ezmoney 未回傳 XLSX，前 60 bytes: {raw[:60]!r}")
     holdings = _parse_xlsx(raw)
-    # ezmoney XLSX 回傳千股（千株），轉換為股
-    for h in holdings:
-        if h.get("shares") is not None:
-            h["shares"] = int(h["shares"] * 1000)
+    # ezmoney XLSX「股數」欄位已是實際股數（非千股），不需再乘 1000
+    # 2026-07-15 修正：曾誤判為千股導致 shares 被放大 1000 倍（00981A 自 2026-06-25 起受影響）
     assets = None
     try:
         rows = _xlsx_raw_rows(raw)
@@ -399,8 +397,10 @@ def _fetch_nomura(
                 {
                     "code": str(row[0]).strip(),
                     "name": str(row[1]).strip(),
-                    # Nomura API 回傳千股（千株），轉換為股
-                    "shares": int(raw_shares * 1000)
+                    # Nomura API「股數」欄本身即實際股數，不需再乘 1000
+                    # 2026-07-15 修正：曾誤判為千股導致 shares 放大 1000 倍
+                    # （00980A 自 2026-07-13 起受影響，用 weight/price/shares 交叉驗證確認）
+                    "shares": int(raw_shares)
                     if raw_shares is not None
                     else None,
                     "weight_pct": _to_num(row[3]),

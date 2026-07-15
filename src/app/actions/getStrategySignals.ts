@@ -17,7 +17,14 @@ const PORTFOLIO_ETF = '00981A';
  */
 const STRATEGY_WINDOW_DAYS = 30;
 
-interface SignalRow { strategy_id: string; stock_id: string; score: number | null; date: string }
+interface SignalRow {
+    strategy_id: string;
+    stock_id: string;
+    score: number | null;
+    date: string;
+    avg_turnover: number | null;
+    liquidity_flag: boolean | null;
+}
 
 async function _getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
     const supabase = getPublicClient();
@@ -29,7 +36,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
         // 顯式日期：精確比對該日期（維持既有行為）
         const { data: signals, error: sigErr } = await supabase
             .from('strategy_signals')
-            .select('strategy_id, stock_id, score, date')
+            .select('strategy_id, stock_id, score, date, avg_turnover, liquidity_flag')
             .eq('date', date)
             .eq('is_selected', true);
 
@@ -48,7 +55,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
 
         const { data: signals, error: sigErr } = await supabase
             .from('strategy_signals')
-            .select('strategy_id, stock_id, score, date')
+            .select('strategy_id, stock_id, score, date, avg_turnover, liquidity_flag')
             .eq('is_selected', true)
             .gte('date', windowStartStr)
             .lte('date', todayStr);
@@ -155,6 +162,8 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
             name: info.name,
             industry: info.industry,
             etfHolders: etfHoldersMap.get(stockId) ?? [],
+            avg_turnover: sig.avg_turnover ?? null,
+            liquidity_flag: sig.liquidity_flag ?? null,
         });
     }
 
@@ -172,9 +181,9 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
 export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
     const cached = unstable_cache(
         () => _getStrategySignals(date),
-        // v2：視窗改以 server 當日為錨、寬度 30 天（fix-strategy-signals-staleness）。
-        // 版本號用於手動失效舊視窗邏輯算出的快取結果。
-        ['strategy-signals-v2', date ?? 'latest'],
+        // v3：strategy_signals 新增 avg_turnover / liquidity_flag 欄位（strategy-liquidity-filter）。
+        // 版本號用於手動失效舊欄位結構算出的快取結果。
+        ['strategy-signals-v3', date ?? 'latest'],
         { revalidate: 3600 },
     );
     return cached();

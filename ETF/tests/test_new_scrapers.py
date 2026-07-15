@@ -641,5 +641,83 @@ class TestDispatchRouting(unittest.TestCase):
         self.assertEqual(result, ([], None))
 
 
+# ── _fetch_uni() tests ─────────────────────────────────────────────────────────
+
+
+def _make_uni_xlsx() -> bytes:
+    """Build a minimal ezmoney-style holdings XLSX (uni issuer: 00981A/00403A/00988A)."""
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["資產類別統計表"])
+    ws.append([])
+    ws.append(["股票代號", "股票名稱", "股數", "持股權重"])
+    ws.append(["2308", "台達電", "5,181,000", "3.64%"])
+    ws.append(["8046", "南電", "9,519,000", "4.65%"])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+class TestFetchUni(unittest.TestCase):
+    """2026-07-15 回歸測試：ezmoney XLSX「股數」欄本身即實際股數，_fetch_uni() 不得再乘 1000。"""
+
+    def _fetch_uni(self, xlsx_bytes: bytes) -> list[dict]:
+        from ETF.scrapers.official_api_scraper import _fetch_uni
+
+        with patch(
+            "ETF.scrapers.official_api_scraper._get", return_value=xlsx_bytes
+        ):
+            holdings, _assets = _fetch_uni("49YTW")
+        return holdings
+
+    def test_shares_not_multiplied_by_1000(self) -> None:
+        """實測 ezmoney XLSX「股數」欄＝實際股數；解析結果不得再放大 1000 倍。"""
+        xlsx = _make_uni_xlsx()
+        result = self._fetch_uni(xlsx)
+        r2308 = next(r for r in result if r["code"] == "2308")
+        self.assertEqual(r2308["shares"], 5_181_000)
+
+
+# ── _fetch_nomura() tests ───────────────────────────────────────────────────────
+
+
+def _make_nomura_json(rows: list[list] | None = None) -> bytes:
+    """Build a minimal Nomura GetFundAssets JSON response (00980A/00985A/00999A)."""
+    if rows is None:
+        rows = [["2308", "台達電子工業", "475000", "5.5"]]
+    payload = {
+        "Entries": {"Data": {"Table": [{"TableTitle": "股票", "Rows": rows}]}}
+    }
+    return json.dumps(payload).encode("utf-8")
+
+
+class TestFetchNomura(unittest.TestCase):
+    """2026-07-15 回歸測試：Nomura API「股數」欄本身即實際股數，_fetch_nomura() 不得再乘 1000。
+
+    實測（2026-07-15）：00980A 官方 API 對 2308 回傳 shares=475000、weight=5.5%，
+    與 DB 當日 price=1855 交叉驗證 implied AUM 與其餘持股加總一致；
+    若乘 1000（475,000,000 股）implied 部位市值將超過整檔 ETF 資產，不合理。
+    此 bug 於 2026-07-13 起已在 00980A/00985A/00999A 產生錯誤資料（尚未回補）。
+    """
+
+    def _fetch_nomura(self, json_bytes: bytes) -> list[dict]:
+        from ETF.scrapers.official_api_scraper import _fetch_nomura
+
+        with patch(
+            "ETF.scrapers.official_api_scraper._post_json", return_value=json_bytes
+        ):
+            holdings, _assets = _fetch_nomura("00980A", "2026-07-14")
+        return holdings
+
+    def test_shares_not_multiplied_by_1000(self) -> None:
+        """實測 Nomura API「股數」欄＝實際股數；解析結果不得再放大 1000 倍。"""
+        result = self._fetch_nomura(_make_nomura_json())
+        r2308 = next(r for r in result if r["code"] == "2308")
+        self.assertEqual(r2308["shares"], 475_000)
+
+
 if __name__ == "__main__":
     unittest.main()

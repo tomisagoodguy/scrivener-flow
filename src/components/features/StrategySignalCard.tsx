@@ -62,6 +62,10 @@ function EtfHolderBadges({ holders }: { holders: string[] }) {
     );
 }
 
+function formatTurnoverYi(avgTurnover: number): string {
+    return `${(avgTurnover / 100_000_000).toFixed(1)} 億`;
+}
+
 function icBadgeClass(ic: number | null): string {
     if (ic === null) return 'bg-gray-100/60 text-gray-400';
     if (ic >= 0.04) return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
@@ -137,6 +141,15 @@ export default function StrategySignalCard({ strategy, factorIC }: Props) {
                                             </span>
                                         )}
                                         <EtfHolderBadges holders={stock.etfHolders ?? []} />
+                                        {stock.liquidity_flag === true && (
+                                            <span
+                                                className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                title={stock.avg_turnover !== null ? `日均成交值 ${formatTurnoverYi(stock.avg_turnover)}元` : undefined}
+                                            >
+                                                低流動
+                                                {stock.avg_turnover !== null && ` · ${formatTurnoverYi(stock.avg_turnover)}`}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {stock.score !== null && (

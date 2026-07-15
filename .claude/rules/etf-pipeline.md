@@ -198,8 +198,15 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 顯示為 張 必須除以 1000；億元市值用 `abs(diff_shares) * 當日收盤價 / 1e8`（不要再乘 1000）。  
 當日收盤價從 holdings 的 `price` 欄位取得（Server 端已補齊，見 `getHoldings()`）。
 
-**所有爬蟲輸出單位均為股（株）**：`official_api_scraper`（千株×1000→株）、`pocket_scraper`（Pocket.tw 的「持有數」欄位直接是株）均已驗證。  
+**所有爬蟲輸出單位均為股（株）**：`pocket_scraper`（Pocket.tw 的「持有數」欄位直接是株）已驗證。  
 `pocket_scraper.py` docstring 舊版誤寫「單位：張」，已於 2026-05-09 修正。勿再懷疑單位不一致。
+
+**陷阱（2026-07-15 修正，兩處千股→股 bug）**：`official_api_scraper.py` 的 `_fetch_uni()`（統一投信/ezmoney XLSX，供 00981A/00403A/00988A）與 `_fetch_nomura()`（野村 API，供 00980A/00985A/00999A）都曾誤判「股數」欄為千股而多乘一次 1000，導致 shares 放大 1000 倍。**已實測 + 用 DB `shares × price / weight` 反推 implied AUM 交叉驗證**確認兩來源的「股數」欄位本身就已經是實際股數，皆**不需要**再乘 1000（兩者曾各自寫著「回傳千股，轉換為股」的錯誤註解，*不要*照抄套用到其他 issuer）。
+
+- `_fetch_uni` bug 於 2026-05-07 引入，因該路徑當時多數失敗 fallback 到 `fhtrust_scraper.py` 而未顯現，直到 **2026-06-25** 起才在 `etf_holdings_snapshot`/`etf_diff_logs` 顯現（00981A/00403A/00988A，尚未回補歷史資料）。
+- `_fetch_nomura` bug 同批引入，同樣因 fallback 掩蓋，直到 **2026-07-13** 起才顯現（00980A/00985A/00999A，尚未回補歷史資料）。
+- 全檔案已 grep 確認**不再有任何 `* 1000` 股數轉換**；其餘 issuer（allianz/capital/yuanta/taishin/first_financial/ctbc/mega/jpm/cathay/ctbc_html/alliance_bernstein/fubon）程式碼從未做過股數換算，且用 2026-07-14 快照的 `shares × price` 反推 implied AUM 逐一比對後量級均合理，未發現同類問題；但 `00983A`/`00989A` 目前 `price` 欄位为 null，此交叉驗證法對它們無效，尚未有独立實測數據佐證。
+- 回歸測試：`ETF/tests/test_new_scrapers.py::TestFetchUni`、`TestFetchNomura`（mock 對應 API 回應，斷言 shares 不可放大 1000 倍）。
 
 ## 關鍵模組索引
 

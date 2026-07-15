@@ -295,6 +295,163 @@ def test_strategy_signal_step_stale_within_threshold_no_warning():
     assert not any("停更" in w for w in ctx.validation_warnings)
 
 
+# ---------------------------------------------------------------------------
+# compute_liquidity — 流動性標記（spec「Liquidity enrichment on strategy signals」）
+# ---------------------------------------------------------------------------
+
+
+def test_compute_liquidity_below_and_above_threshold():
+    """
+    Spec Example: below and above threshold
+    GIVEN threshold 50,000,000; stock A constant turnover 30,000,000 over 20+ days;
+          stock B constant turnover 200,000,000 over 20+ days
+    WHEN compute_liquidity runs for stocks A and B
+    THEN A yields (30000000.0, True) and B yields (200000000.0, False)
+    """
+    from ETF.pipeline.steps.strategy_signal_step import compute_liquidity
+
+    dates = pd.date_range("2026-05-01", periods=25, freq="D")
+    amt = pd.DataFrame(
+        {
+            "A": [30_000_000] * 25,
+            "B": [200_000_000] * 25,
+        },
+        index=dates,
+    )
+
+    result = compute_liquidity(amt, ["A", "B"], 50_000_000)
+
+    assert result["A"] == (30_000_000.0, True)
+    assert result["B"] == (200_000_000.0, False)
+
+
+def test_compute_liquidity_insufficient_history_returns_none():
+    """
+    Scenario: Insufficient or missing turnover data
+    WHEN a selected stock has fewer than 20 days of turnover history
+    THEN its row SHALL carry (None, None)
+    """
+    from ETF.pipeline.steps.strategy_signal_step import compute_liquidity
+
+    dates = pd.date_range("2026-05-01", periods=10, freq="D")
+    amt = pd.DataFrame({"A": [30_000_000] * 10}, index=dates)
+
+    result = compute_liquidity(amt, ["A"], 50_000_000)
+
+    assert result["A"] == (None, None)
+
+
+def test_compute_liquidity_missing_stock_returns_none():
+    """
+    Scenario: Insufficient or missing turnover data
+    WHEN a selected stock is absent from the turnover DataFrame
+    THEN its row SHALL carry (None, None)
+    """
+    from ETF.pipeline.steps.strategy_signal_step import compute_liquidity
+
+    dates = pd.date_range("2026-05-01", periods=25, freq="D")
+    amt = pd.DataFrame({"A": [30_000_000] * 25}, index=dates)
+
+    result = compute_liquidity(amt, ["A", "Z"], 50_000_000)
+
+    assert result["Z"] == (None, None)
+
+
+def test_compute_liquidity_empty_dataframe_does_not_raise():
+    """WHEN amt is an empty DataFrame THEN no exception is raised and all stocks yield (None, None)."""
+    from ETF.pipeline.steps.strategy_signal_step import compute_liquidity
+
+    amt = pd.DataFrame()
+
+    result = compute_liquidity(amt, ["A", "B"], 50_000_000)
+
+    assert result["A"] == (None, None)
+    assert result["B"] == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# StrategySignalStep — 流動性標記整合到 execute()
+# ---------------------------------------------------------------------------
+
+
+def test_strategy_signal_step_rows_include_liquidity_fields():
+    """
+    WHEN step executes normally with valid turnover data
+    THEN each row dict carries avg_turnover / liquidity_flag computed via compute_liquidity
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-05-16")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+
+    strategy = _ConstantStrategy()
+
+    dates = pd.date_range("2026-04-20", periods=25, freq="D")
+    amt_df = pd.DataFrame(
+        {
+            "2330": [30_000_000] * 25,  # below threshold -> True
+            "2317": [200_000_000] * 25,  # above threshold -> False
+        },
+        index=dates,
+    )
+    mock_cache = MagicMock()
+    mock_cache.amt = amt_df
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [strategy],
+    ), patch(
+        "ETF.pipeline.steps.strategy_signal_step.StrategyDataCache",
+        return_value=mock_cache,
+    ):
+        StrategySignalStep().execute(ctx, services)
+
+    rows = services.sql_storage.upsert_strategy_signals.call_args[0][0]
+    assert all("avg_turnover" in r and "liquidity_flag" in r for r in rows)
+    by_stock = {r["stock_id"]: r for r in rows}
+    assert by_stock["2330"]["liquidity_flag"] is True
+    assert by_stock["2330"]["avg_turnover"] == 30_000_000.0
+    assert by_stock["2317"]["liquidity_flag"] is False
+
+
+def test_strategy_signal_step_liquidity_failure_is_non_fatal(caplog):
+    """
+    Scenario: Liquidity computation failure is non-fatal
+    WHEN fetching or computing turnover raises any exception
+    THEN the step SHALL log the error, write all signal rows with both liquidity
+         fields as NULL, and complete signal persistence without raising
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    class _BrokenAmtCache:
+        @property
+        def amt(self):
+            raise RuntimeError("FinLab quota exceeded")
+
+    ctx = _make_ctx("2026-05-16")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+
+    strategy = _ConstantStrategy()
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [strategy],
+    ), patch(
+        "ETF.pipeline.steps.strategy_signal_step.StrategyDataCache",
+        return_value=_BrokenAmtCache(),
+    ):
+        with caplog.at_level(logging.ERROR):
+            result = StrategySignalStep().execute(ctx, services)
+
+    assert result is ctx
+    services.sql_storage.upsert_strategy_signals.assert_called_once()
+    rows = services.sql_storage.upsert_strategy_signals.call_args[0][0]
+    assert all(r["avg_turnover"] is None and r["liquidity_flag"] is None for r in rows)
+    assert any(rec.levelno == logging.ERROR for rec in caplog.records)
+
+
 def test_strategy_signal_step_fresh_write_no_stale_warning():
     """
     Scenario: 本次正常寫入不告警

@@ -19,7 +19,14 @@ jest.mock('@/lib/supabase/service', () => ({
 
 import { getStrategySignals } from '../getStrategySignals';
 
-interface SignalRow { strategy_id: string; stock_id: string; score: number | null; date: string }
+interface SignalRow {
+    strategy_id: string;
+    stock_id: string;
+    score: number | null;
+    date: string;
+    avg_turnover?: number | null;
+    liquidity_flag?: boolean | null;
+}
 
 /**
  * strategy_signals 的 builder：signals 以 await 終結並套用 eq/gte/lte 過濾。
@@ -165,5 +172,48 @@ describe('getStrategySignals', () => {
         expect(signalsBuilder.gte).not.toHaveBeenCalled();
         // 僅回傳該日期策略
         expect(result!.strategies.map((s) => s.id)).toEqual(['capital_layer']);
+    });
+
+    it('liquidity_flag=true 與 avg_turnover 正確傳遞至 StrategyStock', async () => {
+        const signals: SignalRow[] = [
+            {
+                strategy_id: 'capital_layer',
+                stock_id: '2317',
+                score: 1,
+                date: '2026-06-30',
+                avg_turnover: 30_000_000,
+                liquidity_flag: true,
+            },
+            {
+                strategy_id: 'capital_layer',
+                stock_id: '2330',
+                score: 1,
+                date: '2026-06-30',
+                avg_turnover: 200_000_000,
+                liquidity_flag: false,
+            },
+        ];
+        wireTables(makeSignalsBuilder(signals));
+
+        const result = await getStrategySignals();
+
+        const capital = result!.strategies.find((s) => s.id === 'capital_layer')!;
+        const byId = new Map(capital.stocks.map((st) => [st.stock_id, st]));
+        expect(byId.get('2317')?.liquidity_flag).toBe(true);
+        expect(byId.get('2317')?.avg_turnover).toBe(30_000_000);
+        expect(byId.get('2330')?.liquidity_flag).toBe(false);
+    });
+
+    it('缺少 liquidity 欄位時正規化為 null（歷史列 / 未帶值情境）', async () => {
+        const signals: SignalRow[] = [
+            { strategy_id: 'capital_layer', stock_id: '2317', score: 1, date: '2026-06-30' },
+        ];
+        wireTables(makeSignalsBuilder(signals));
+
+        const result = await getStrategySignals();
+
+        const capital = result!.strategies.find((s) => s.id === 'capital_layer')!;
+        expect(capital.stocks[0].liquidity_flag).toBeNull();
+        expect(capital.stocks[0].avg_turnover).toBeNull();
     });
 });

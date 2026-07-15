@@ -390,26 +390,41 @@ class SQLStorage:
 
         Args:
             records: list of dicts with keys:
-                strategy_id, date, stock_id, score, is_selected, conditions
+                strategy_id, date, stock_id, score, is_selected, conditions,
+                avg_turnover (optional), liquidity_flag (optional)
         """
         if not records:
             return
         logger.info(f"準備寫入 {len(records)} 筆策略訊號...")
+        prepared = [
+            {
+                **record,
+                "avg_turnover": (
+                    float(record["avg_turnover"])
+                    if record.get("avg_turnover") is not None
+                    else None
+                ),
+                "liquidity_flag": record.get("liquidity_flag"),
+            }
+            for record in records
+        ]
         upsert_sql = text("""
             INSERT INTO strategy_signals
-                (strategy_id, date, stock_id, score, is_selected, conditions)
+                (strategy_id, date, stock_id, score, is_selected, conditions, avg_turnover, liquidity_flag)
             VALUES
-                (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
+                (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb), :avg_turnover, :liquidity_flag)
             ON CONFLICT (strategy_id, date, stock_id)
             DO UPDATE SET
                 score = EXCLUDED.score,
                 is_selected = EXCLUDED.is_selected,
-                conditions = EXCLUDED.conditions
+                conditions = EXCLUDED.conditions,
+                avg_turnover = EXCLUDED.avg_turnover,
+                liquidity_flag = EXCLUDED.liquidity_flag
         """)
         with self.engine.connect() as conn:
             chunk_size = 3000
-            for i in range(0, len(records), chunk_size):
-                conn.execute(upsert_sql, records[i:i+chunk_size])
+            for i in range(0, len(prepared), chunk_size):
+                conn.execute(upsert_sql, prepared[i:i+chunk_size])
             conn.commit()
         logger.info("✅ 策略訊號寫入完成")
 

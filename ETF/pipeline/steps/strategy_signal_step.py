@@ -7,6 +7,8 @@ import logging
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
 from ETF.strategies import ALL_STRATEGIES
@@ -21,6 +23,37 @@ logger = logging.getLogger(__name__)
 STALENESS_THRESHOLD_DAYS = 3
 # FundMomentumStep 產生、非本步驟系列策略，停更檢查時排除。
 _EXCLUDED_STRATEGY_ID = "fund_momentum"
+# 低流動性門檻（台幣，日均成交值）。低於此值標記 liquidity_flag=True。
+LIQUIDITY_TURNOVER_THRESHOLD = 50_000_000
+
+
+def compute_liquidity(
+    amt: pd.DataFrame, stock_ids: list, threshold: float
+) -> dict:
+    """計算每支股票 20 日均成交值與低流動性旗標（純函式，不觸碰 FinLab）。
+
+    Args:
+        amt: 成交金額 DataFrame（index=日期，columns=股票代號），如 FinLab `price:成交金額`。
+        stock_ids: 欲計算的股票代號清單。
+        threshold: 低流動性門檻；20 日均成交值低於此值標記 True。
+
+    Returns:
+        dict[str, tuple[float | None, bool | None]]：每股 (avg_turnover, liquidity_flag)。
+        20 日資料不足或股票不在 amt 中時回傳 (None, None)（未知不可誤標 true/false）。
+    """
+    if amt is None or amt.empty:
+        return {stock_id: (None, None) for stock_id in stock_ids}
+
+    last_row = amt.rolling(20).mean().iloc[-1]
+
+    result: dict = {}
+    for stock_id in stock_ids:
+        if stock_id not in last_row.index or pd.isna(last_row[stock_id]):
+            result[stock_id] = (None, None)
+            continue
+        avg_turnover = float(last_row[stock_id])
+        result[stock_id] = (avg_turnover, avg_turnover < threshold)
+    return result
 
 
 class StrategySignalStep(BaseStep):
@@ -42,6 +75,7 @@ class StrategySignalStep(BaseStep):
         date_str = ctx.date_str
         all_rows: list[dict] = []
         outer_skipped = False
+        cache = None
 
         try:
             cache = StrategyDataCache()
@@ -91,6 +125,19 @@ class StrategySignalStep(BaseStep):
                 logger.error("[StrategySignalStep] Unexpected error: %s", e)
 
         if all_rows:
+            try:
+                stock_ids = list({row["stock_id"] for row in all_rows})
+                liquidity = compute_liquidity(cache.amt, stock_ids, LIQUIDITY_TURNOVER_THRESHOLD)
+                for row in all_rows:
+                    avg_turnover, liquidity_flag = liquidity.get(row["stock_id"], (None, None))
+                    row["avg_turnover"] = avg_turnover
+                    row["liquidity_flag"] = liquidity_flag
+            except Exception as e:
+                logger.error("[StrategySignalStep] 流動性計算失敗: %s", e)
+                for row in all_rows:
+                    row["avg_turnover"] = None
+                    row["liquidity_flag"] = None
+
             services.sql_storage.upsert_strategy_signals(all_rows)
 
             new_codes = list({row["stock_id"] for row in all_rows} - set(ctx.secondary_stock_codes))
