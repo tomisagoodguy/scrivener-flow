@@ -474,6 +474,13 @@ html.dark .animate-pulse.bg-red-500 {
     color: #fca5a5 !important;            /* red-300 */
 }
 
+/* 聊天未讀 badge 閃爍（animate-blink-badge 紅底白字）→ 比照逾期標籤改深紅底 */
+html.dark .bg-red-500.animate-blink-badge,
+html.dark .animate-blink-badge.bg-red-500 {
+    background-color: #7f1d1d !important; /* red-900 */
+    color: #fca5a5 !important;            /* red-300 */
+}
+
 /* 策略選股「未持有」badge：深色背景 + 清晰文字，避免淺底灰字在深色模式低對比 */
 html.dark .movement-none-badge {
     background-color: rgba(51, 65, 85, 0.7) !important; /* slate-700/70 */

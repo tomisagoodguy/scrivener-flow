@@ -176,6 +176,7 @@ html.dark {
     --animate-pulse-slow: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     --animate-shimmer: shimmer 2s linear infinite;
     --animate-wiggle: wiggle 2.4s ease-in-out infinite;
+    --animate-blink-badge: blink-badge 3s ease-in-out infinite;
 
     @keyframes fade-in {
         from {
@@ -231,6 +232,18 @@ html.dark {
 
         50% {
             transform: rotate(8deg);
+        }
+    }
+
+    @keyframes blink-badge {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.35;
         }
     }
 
