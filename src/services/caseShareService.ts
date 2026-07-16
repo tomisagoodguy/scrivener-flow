@@ -49,6 +49,32 @@ export async function removeShare(supabase: Client, caseId: string, sharedWithUs
     if (error) throw toError(error, '移除分享失敗');
 }
 
+/**
+ * 分享對象駁回自己的分享（狀態式軟移除，不刪除列）。只能由分享對象本人呼叫；
+ * RLS 限制只能更新 `shared_with = auth.uid()` 的列，呼叫端只會傳自己的 id，
+ * 0 rows affected 不視為錯誤。
+ */
+export async function rejectShare(supabase: Client, caseId: string, sharedWithUserId: string): Promise<void> {
+    const { error } = await supabase
+        .from('case_shares')
+        .update({ status: 'rejected', rejected_at: new Date().toISOString() })
+        .eq('case_id', caseId)
+        .eq('shared_with', sharedWithUserId);
+
+    if (error) throw toError(error, '駁回分享失敗');
+}
+
+/** 案件擁有者重新分享（把被駁回的列改回 active）。非擁有者呼叫時 RLS 會拒絕更新，錯誤原樣拋出。 */
+export async function reactivateShare(supabase: Client, caseId: string, sharedWithUserId: string): Promise<void> {
+    const { error } = await supabase
+        .from('case_shares')
+        .update({ status: 'active', rejected_at: null })
+        .eq('case_id', caseId)
+        .eq('shared_with', sharedWithUserId);
+
+    if (error) throw toError(error, '重新分享失敗');
+}
+
 /** 列出某案件目前的分享名單。 */
 export async function listShares(supabase: Client, caseId: string): Promise<CaseShare[]> {
     const { data, error } = await supabase.from('case_shares').select('*').eq('case_id', caseId);

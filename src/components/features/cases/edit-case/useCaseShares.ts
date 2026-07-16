@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { addShare, removeShare, listShares, searchShareableUsers } from '@/services/caseShareService';
+import { addShare, removeShare, reactivateShare, listShares, searchShareableUsers } from '@/services/caseShareService';
 import type { CaseShare } from '@/types/caseShare';
 import type { ChatUser } from '@/types/chat';
 
@@ -10,7 +10,8 @@ interface ShareWithUserInfo extends CaseShare {
 }
 
 interface UseCaseSharesResult {
-    shares: ShareWithUserInfo[];
+    activeShares: ShareWithUserInfo[];
+    rejectedShares: ShareWithUserInfo[];
     loading: boolean;
     error: string | null;
     searchQuery: string;
@@ -18,6 +19,7 @@ interface UseCaseSharesResult {
     searchResults: ChatUser[];
     addUser: (userId: string) => Promise<void>;
     removeUser: (userId: string) => Promise<void>;
+    reactivateUser: (userId: string) => Promise<void>;
 }
 
 /** 案件分享面板的資料與操作邏輯，串接 caseShareService。 */
@@ -56,6 +58,8 @@ export function useCaseShares(caseId: string, currentUserId: string): UseCaseSha
         const matched = allUsers.find((u) => u.id === s.shared_with);
         return { ...s, email: matched?.email ?? null, fullName: matched?.full_name ?? null };
     });
+    const activeShares = sharesWithUserInfo.filter((s) => s.status === 'active');
+    const rejectedShares = sharesWithUserInfo.filter((s) => s.status === 'rejected');
 
     const searchResults = useMemo(() => {
         const trimmed = searchQuery.trim().toLowerCase();
@@ -88,5 +92,26 @@ export function useCaseShares(caseId: string, currentUserId: string): UseCaseSha
         }
     };
 
-    return { shares: sharesWithUserInfo, loading, error, searchQuery, setSearchQuery, searchResults, addUser, removeUser };
+    const reactivateUser = async (userId: string) => {
+        setError(null);
+        try {
+            await reactivateShare(supabase, caseId, userId);
+            await reload();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : '重新分享失敗');
+        }
+    };
+
+    return {
+        activeShares,
+        rejectedShares,
+        loading,
+        error,
+        searchQuery,
+        setSearchQuery,
+        searchResults,
+        addUser,
+        removeUser,
+        reactivateUser,
+    };
 }

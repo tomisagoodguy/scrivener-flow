@@ -80,7 +80,7 @@ export interface DemoCase {
     sharedWithLabel?: string;
 
     /** 原始 case_shares embedded join 結果，供頁面計算 sharedByName/sharedWithLabel 使用。 */
-    case_shares?: { shared_by: string; shared_with: string }[];
+    case_shares?: { shared_by: string; shared_with: string; status: 'active' | 'rejected' }[];
 
     // 1.2 People
     buyer_name: string;

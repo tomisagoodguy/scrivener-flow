@@ -42,7 +42,7 @@ export default async function CasesPage({
       milestones (*),
       financials (*),
       todos_list:todos(*),
-      case_shares (shared_by, shared_with)
+      case_shares (shared_by, shared_with, status)
     `
         )
         .order('created_at', { ascending: false });
@@ -75,7 +75,10 @@ export default async function CasesPage({
             isOwnedByCurrentUser,
             sharedByName: !isOwnedByCurrentUser ? resolveSharedByLabel(c.case_shares?.[0]?.shared_by, chatUsers) : undefined,
             sharedWithLabel: isOwnedByCurrentUser
-                ? resolveSharedWithLabel((c.case_shares ?? []).map((s) => s.shared_with), chatUsers)
+                ? resolveSharedWithLabel(
+                      (c.case_shares ?? []).filter((s) => s.status === 'active').map((s) => s.shared_with),
+                      chatUsers
+                  )
                 : undefined,
         };
     });

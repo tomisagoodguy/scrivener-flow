@@ -10,10 +10,26 @@ interface Props {
     onClose: () => void;
 }
 
-/** 案件擁有者的分享管理面板：列出現有分享名單，可搜尋新增/移除分享對象。 */
+function formatRejectedAt(rejectedAt: string | null): string {
+    if (!rejectedAt) return '';
+    const d = new Date(rejectedAt);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/** 案件擁有者的分享管理面板：列出現有分享名單，可搜尋新增/移除分享對象，並查看/處理被駁回的分享。 */
 export function ShareCasePanel({ caseId, currentUserId, onClose }: Props) {
-    const { shares, loading, error, searchQuery, setSearchQuery, searchResults, addUser, removeUser } =
-        useCaseShares(caseId, currentUserId);
+    const {
+        activeShares,
+        rejectedShares,
+        loading,
+        error,
+        searchQuery,
+        setSearchQuery,
+        searchResults,
+        addUser,
+        removeUser,
+        reactivateUser,
+    } = useCaseShares(caseId, currentUserId);
 
     return (
         <div className="glass-card rounded-3xl p-4 flex flex-col gap-3 max-w-md w-full">
@@ -32,11 +48,11 @@ export function ShareCasePanel({ caseId, currentUserId, onClose }: Props) {
                     <div className="flex items-center justify-center py-4 text-slate-400">
                         <Loader2 className="animate-spin" size={18} />
                     </div>
-                ) : shares.length === 0 ? (
+                ) : activeShares.length === 0 ? (
                     <p className="text-xs text-slate-400 py-1">尚未分享給任何人</p>
                 ) : (
                     <ul className="flex flex-col gap-1">
-                        {shares.map((s) => (
+                        {activeShares.map((s) => (
                             <li
                                 key={s.id}
                                 className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/50 dark:bg-slate-800/50"
@@ -55,6 +71,31 @@ export function ShareCasePanel({ caseId, currentUserId, onClose }: Props) {
                     </ul>
                 )}
             </div>
+
+            {!loading && rejectedShares.length > 0 && (
+                <div>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">已駁回</p>
+                    <ul className="flex flex-col gap-1">
+                        {rejectedShares.map((s) => (
+                            <li
+                                key={s.id}
+                                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/50 dark:bg-slate-800/50"
+                            >
+                                <span className="text-sm truncate text-slate-500 dark:text-slate-400">
+                                    已駁回：{chatDisplayName({ email: s.email, full_name: s.fullName })}
+                                    （{formatRejectedAt(s.rejected_at)}）
+                                </span>
+                                <button
+                                    onClick={() => reactivateUser(s.shared_with)}
+                                    className="text-[11px] font-bold text-blue-500 hover:text-blue-600 shrink-0"
+                                >
+                                    重新分享
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             <div>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">新增分享對象</p>

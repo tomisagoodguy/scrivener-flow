@@ -4,6 +4,7 @@ import EditCaseForm from '@/components/features/cases/EditCaseForm';
 import CaseNavigation from '@/components/features/cases/CaseNavigation';
 import { CaseDetailRapidInput } from '@/components/features/cases/CaseDetailRapidInput';
 import { ShareCaseButton } from '@/components/features/cases/ShareCaseButton';
+import { RejectShareButton } from '@/components/features/cases/RejectShareButton';
 import { computeIsOwnedByCurrentUser } from '@/services/caseShareService';
 
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,7 @@ export default async function CaseDetailPage({ params }: PageProps) {
 
                     <div className="flex items-center gap-3">
                         <ShareCaseButton caseId={caseData.id} isOwnedByCurrentUser={isOwnedByCurrentUser} />
+                        <RejectShareButton caseId={caseData.id} isOwnedByCurrentUser={isOwnedByCurrentUser} />
                         <CaseNavigation
                             cases={casesList || []}
                             currentCaseId={caseData.id}

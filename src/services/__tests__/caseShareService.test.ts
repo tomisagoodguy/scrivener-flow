@@ -6,6 +6,8 @@
 import {
     addShare,
     removeShare,
+    rejectShare,
+    reactivateShare,
     listShares,
     searchShareableUsers,
     computeIsOwnedByCurrentUser,
@@ -103,9 +105,92 @@ describe('removeShare', () => {
     });
 });
 
+describe('rejectShare', () => {
+    it('updates the case_shares row to status=rejected with rejected_at set, scoped to case_id and shared_with', async () => {
+        const eqShared = jest.fn(() => Promise.resolve({ data: null, error: null }));
+        const eqCase = jest.fn(() => ({ eq: eqShared }));
+        const updateMock = jest.fn(() => ({ eq: eqCase }));
+        const supabase = {
+            from: jest.fn(() => ({ update: updateMock })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        await rejectShare(supabase, 'case_1', 'user_b');
+
+        expect(updateMock).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'rejected', rejected_at: expect.any(String) })
+        );
+        expect(eqCase).toHaveBeenCalledWith('case_id', 'case_1');
+        expect(eqShared).toHaveBeenCalledWith('shared_with', 'user_b');
+    });
+
+    it('throws when the database rejects the update (e.g. RLS denial for a non-owner column change)', async () => {
+        const supabase = {
+            from: jest.fn(() => ({
+                update: () => ({
+                    eq: () => ({
+                        eq: () => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied' } }),
+                    }),
+                }),
+            })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        await expect(rejectShare(supabase, 'case_1', 'user_b')).rejects.toThrow('permission denied');
+    });
+
+    it('does not throw when 0 rows are affected (RLS silently filters a row that is not the caller\'s own)', async () => {
+        const supabase = {
+            from: jest.fn(() => ({
+                update: () => ({
+                    eq: () => ({
+                        eq: () => Promise.resolve({ data: [], error: null }),
+                    }),
+                }),
+            })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        await expect(rejectShare(supabase, 'case_1', 'user_other')).resolves.toBeUndefined();
+    });
+});
+
+describe('reactivateShare', () => {
+    it('updates the case_shares row to status=active with rejected_at cleared, scoped to case_id and shared_with', async () => {
+        const eqShared = jest.fn(() => Promise.resolve({ data: null, error: null }));
+        const eqCase = jest.fn(() => ({ eq: eqShared }));
+        const updateMock = jest.fn(() => ({ eq: eqCase }));
+        const supabase = {
+            from: jest.fn(() => ({ update: updateMock })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        await reactivateShare(supabase, 'case_1', 'user_b');
+
+        expect(updateMock).toHaveBeenCalledWith({ status: 'active', rejected_at: null });
+        expect(eqCase).toHaveBeenCalledWith('case_id', 'case_1');
+        expect(eqShared).toHaveBeenCalledWith('shared_with', 'user_b');
+    });
+
+    it('throws when the database rejects the update (e.g. non-owner via RLS)', async () => {
+        const supabase = {
+            from: jest.fn(() => ({
+                update: () => ({
+                    eq: () => ({
+                        eq: () => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied' } }),
+                    }),
+                }),
+            })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        await expect(reactivateShare(supabase, 'case_1', 'user_b')).rejects.toThrow('permission denied');
+    });
+});
+
 describe('listShares', () => {
     it('returns the shares for a case', async () => {
-        const rows = [{ id: 's1', case_id: 'case_1', shared_with: 'user_b', shared_by: 'user_a', created_at: '2026-07-12T00:00:00Z' }];
+        const rows = [{ id: 's1', case_id: 'case_1', shared_with: 'user_b', shared_by: 'user_a', created_at: '2026-07-12T00:00:00Z', status: 'active', rejected_at: null }];
         const supabase = {
             from: jest.fn(() => ({
                 select: () => ({ eq: () => Promise.resolve({ data: rows, error: null }) }),
@@ -116,6 +201,23 @@ describe('listShares', () => {
         const result = await listShares(supabase, 'case_1');
 
         expect(result).toEqual(rows);
+    });
+
+    it('returns rows regardless of status, including rejected ones (no implicit status filter)', async () => {
+        const rows = [
+            { id: 's1', case_id: 'case_1', shared_with: 'user_b', shared_by: 'user_a', created_at: '2026-07-12T00:00:00Z', status: 'active', rejected_at: null },
+            { id: 's2', case_id: 'case_1', shared_with: 'user_c', shared_by: 'user_a', created_at: '2026-07-10T00:00:00Z', status: 'rejected', rejected_at: '2026-07-15T00:00:00Z' },
+        ];
+        const supabase = {
+            from: jest.fn(() => ({
+                select: () => ({ eq: () => Promise.resolve({ data: rows, error: null }) }),
+            })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+
+        const result = await listShares(supabase, 'case_1');
+
+        expect(result.map((r) => r.status)).toEqual(['active', 'rejected']);
     });
 });
 

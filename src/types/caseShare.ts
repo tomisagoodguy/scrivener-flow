@@ -4,6 +4,8 @@ export interface CaseShare {
   shared_with: string;
   shared_by: string;
   created_at: string;
+  status: 'active' | 'rejected';
+  rejected_at: string | null;
 }
 
 export interface CaseShareWithUser extends CaseShare {
