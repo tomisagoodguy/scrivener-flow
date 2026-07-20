@@ -245,9 +245,9 @@ from datetime import date  # noqa: E402
 
 def test_strategy_signal_step_stale_beyond_threshold_appends_warning():
     """
-    Scenario: 連續停更超過門檻時升級告警
+    Scenario: 連續停更超過門檻時升級告警（回退路徑：無法取得最新揭露日）
     GIVEN server 當日 2026-07-01；系列策略最新成功寫入日期 2026-06-10（距當日 21 天），
-          本次因配額 skip 未寫入
+          本次因配額 skip 未寫入；最新月營收揭露日不可得（回退距今日曆天判斷）
     THEN ctx.validation_warnings 含一筆指明停更天數與最後成功日期的告警，
          且與既有「當次全空」告警可並存
     """
@@ -261,7 +261,9 @@ def test_strategy_signal_step_stale_beyond_threshold_appends_warning():
     with patch(
         "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
         [_EmptyStrategy()],
-    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)), patch.object(
+        StrategySignalStep, "_get_latest_revenue_disclosure_date", return_value=None
+    ):
         result = StrategySignalStep().execute(ctx, services)
 
     assert result is ctx
@@ -275,8 +277,9 @@ def test_strategy_signal_step_stale_beyond_threshold_appends_warning():
 
 def test_strategy_signal_step_stale_within_threshold_no_warning():
     """
-    Scenario: 停更在門檻內不告警
-    GIVEN server 當日 2026-07-01；系列策略最新成功寫入日期 2026-06-29（距當日 2 天，門檻內）
+    Scenario: 停更在門檻內不告警（回退路徑：無法取得最新揭露日）
+    GIVEN server 當日 2026-07-01；系列策略最新成功寫入日期 2026-06-29（距當日 2 天，門檻內）；
+          最新月營收揭露日不可得（回退距今日曆天判斷）
     THEN ctx.validation_warnings 不因「連續停更」原因新增告警
     """
     from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
@@ -289,10 +292,84 @@ def test_strategy_signal_step_stale_within_threshold_no_warning():
     with patch(
         "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
         [_ConstantStrategy()],
-    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)), patch.object(
+        StrategySignalStep, "_get_latest_revenue_disclosure_date", return_value=None
+    ):
         StrategySignalStep().execute(ctx, services)
 
     assert not any("停更" in w for w in ctx.validation_warnings)
+
+
+def test_get_latest_revenue_disclosure_date_returns_none_on_error():
+    """
+    Scenario: 取得最新揭露日失敗時回退為距今日曆天判斷（helper 層行為）
+    WHEN finlab.data.get 拋出例外
+    THEN _get_latest_revenue_disclosure_date() 回傳 None，且不 raise
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    with patch("finlab.data.get", side_effect=RuntimeError("FinLab quota exceeded")):
+        result = StrategySignalStep()._get_latest_revenue_disclosure_date()
+
+    assert result is None
+
+
+def test_strategy_signal_step_disclosure_gap_within_no_warning():
+    """
+    Scenario: 月營收揭露空窗期不誤判停更
+    GIVEN server 當日 2026-07-20；monthly_revenue 最新揭露日 2026-07-13；
+          系列策略最新成功寫入日期為 2026-07-13（與最新揭露日相同）
+    THEN ctx.validation_warnings 不因「連續停更」原因新增告警，即使距 server 當日已達 7 天
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-07-20")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    services.sql_storage.get_latest_strategy_signal_date.return_value = date(2026, 7, 13)
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [_ConstantStrategy()],
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 20)), patch.object(
+        StrategySignalStep,
+        "_get_latest_revenue_disclosure_date",
+        return_value=date(2026, 7, 13),
+    ):
+        StrategySignalStep().execute(ctx, services)
+
+    assert not any("停更" in w for w in ctx.validation_warnings)
+
+
+def test_strategy_signal_step_new_disclosure_not_caught_up_appends_warning():
+    """
+    Scenario: 新一期揭露已出現但訊號未跟上，判定為真實停更
+    GIVEN server 當日 2026-08-15；monthly_revenue 最新揭露日 2026-08-12；
+          系列策略最新成功寫入日期仍為 2026-07-13（早於最新揭露日超過 3 天）
+    THEN ctx.validation_warnings 新增一筆指明「距最新揭露日已停更 30 天、
+         最後成功寫入日期 2026-07-13」意涵的告警字串
+    """
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-08-15")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    services.sql_storage.get_latest_strategy_signal_date.return_value = date(2026, 7, 13)
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
+        [_EmptyStrategy()],
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 8, 15)), patch.object(
+        StrategySignalStep,
+        "_get_latest_revenue_disclosure_date",
+        return_value=date(2026, 8, 12),
+    ):
+        StrategySignalStep().execute(ctx, services)
+
+    stale_warnings = [w for w in ctx.validation_warnings if "停更" in w]
+    assert len(stale_warnings) == 1
+    assert "30" in stale_warnings[0]
+    assert "2026-07-13" in stale_warnings[0]
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +545,9 @@ def test_strategy_signal_step_fresh_write_no_stale_warning():
     with patch(
         "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES",
         [_ConstantStrategy()],
-    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)):
+    ), patch.object(StrategySignalStep, "_today", return_value=date(2026, 7, 1)), patch.object(
+        StrategySignalStep, "_get_latest_revenue_disclosure_date", return_value=None
+    ):
         StrategySignalStep().execute(ctx, services)
 
     assert not any("停更" in w for w in ctx.validation_warnings)
