@@ -186,7 +186,7 @@ export function useCaseSchedule(caseId: string) {
 
             switch (filter) {
                 case 'future':
-                    return dueDate >= now;
+                    return itemDate >= today;
                 case 'today':
                     return itemDate.getTime() === today.getTime();
                 case 'expired':

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Tag, FileCode, ChevronsUpDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Tag, FileCode } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
 import { useClauses, Clause } from '@/components/features/clauses/useClauses';
@@ -268,27 +268,7 @@ export default function ClausesPage() {
 
     const [isEditing, setIsEditing] = useState(false);
     const [currentClause, setCurrentClause] = useState<Partial<Clause>>({ tags: [] });
-    const [openIds, setOpenIds] = useState<Set<string>>(new Set());
     const [showSuggestions, setShowSuggestions] = useState(false);
-
-    // 新資料載入時（條文有新增/刪除）預設全部展開；純排序變動（如複製後重排）不重置展開狀態
-    const clauseIdsKey = useMemo(() => clauses.map(c => c.id).sort().join(','), [clauses]);
-    useEffect(() => {
-        setOpenIds(new Set(clauses.map(c => c.id)));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clauseIdsKey]);
-
-    const allOpen = filteredClauses.length > 0 && filteredClauses.every(c => openIds.has(c.id));
-    const toggleAllOpen = () => {
-        if (allOpen) {
-            setOpenIds(prev => { const next = new Set(prev); filteredClauses.forEach(c => next.delete(c.id)); return next; });
-        } else {
-            setOpenIds(prev => { const next = new Set(prev); filteredClauses.forEach(c => next.add(c.id)); return next; });
-        }
-    };
-    const toggleOne = (id: string) => {
-        setOpenIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
-    };
 
     const basicClauses = filteredClauses.filter(c => c.category === '基本特約');
     const supplementClauses = filteredClauses.filter(c => c.category !== '基本特約');
@@ -403,15 +383,6 @@ export default function ClausesPage() {
                             </button>
 
                             <button
-                                onClick={toggleAllOpen}
-                                className="bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl font-bold border border-slate-200 shadow-sm flex items-center gap-2 transition-all active:scale-95"
-                                title={allOpen ? '收合全部條文' : '展開全部條文'}
-                            >
-                                <ChevronsUpDown className="w-4 h-4" />
-                                <span className="hidden sm:inline">{allOpen ? '收合全部' : '展開全部'}</span>
-                            </button>
-
-                            <button
                                 onClick={() => exportClausesToHTML(filteredClauses)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95"
                                 title="匯出為離線 HTML（可在沒有網路的電腦開啟，支援搜尋與列印）"
@@ -462,7 +433,6 @@ export default function ClausesPage() {
                                     </div>
                                     {basicClauses.map((clause) => (
                                         <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback}
-                                            isOpen={openIds.has(clause.id)} onToggle={() => toggleOne(clause.id)}
                                             onCopy={handleCopy} onEdit={handleEditClause} onDelete={handleDelete} />
                                     ))}
                                 </div>
@@ -476,7 +446,6 @@ export default function ClausesPage() {
                                     </div>
                                     {supplementClauses.map((clause) => (
                                         <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback}
-                                            isOpen={openIds.has(clause.id)} onToggle={() => toggleOne(clause.id)}
                                             onCopy={handleCopy} onEdit={handleEditClause} onDelete={handleDelete} />
                                     ))}
                                 </div>

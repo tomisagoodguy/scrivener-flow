@@ -37,9 +37,8 @@ export function useClauses() {
             setCopyFeedback(id);
             setTimeout(() => setCopyFeedback(null), 2000);
 
-            // Increment usage count silently, then refetch so ordering reflects the new count
+            // Increment usage count in DB only; skip refetch so the list doesn't reorder under the user's click
             await supabase.rpc('increment_clause_usage', { row_id: id });
-            fetchClauses();
         } catch (err) {
             console.error('Copy failed', err);
         }
