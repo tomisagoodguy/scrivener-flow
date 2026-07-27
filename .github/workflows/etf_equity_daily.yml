@@ -51,7 +51,7 @@ jobs:
         run: mkdir -p ~/.finlab
 
       - name: Cache Finlab Data
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.finlab
           key: ${{ runner.os }}-finlab-equity-daily-v1
