@@ -43,7 +43,7 @@ jobs:
       LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -109,7 +109,7 @@ jobs:
           echo "=========================="
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
