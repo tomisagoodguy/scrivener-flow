@@ -558,5 +558,6 @@ unmatched 基金（白名單外）是**正常現象**（元大/台新等大投�
 | `sync_stock_financials.py` 不加 `--skip-shareholder` 直接跑 daily | TDCC 集保資料每週才更新，加上舊的 `chunk_size=50` 會讓 daily 跑 ~2 小時；**daily 必須帶 `--skip-shareholder`** |
 | 週排程 `equity_weekly.yml` 不加 `--skip-broker` | `etl:broker_transactions` 是全市場巨型資料集，FinLab cache 7 天後被驅逐，每週從零下載會撞 6 小時 GitHub Actions timeout；**週排程必須帶 `--skip-broker`**（broker 已由日排程同步） |
 | 把 `upsert_broker_transactions` 的 `chunk_size` 改回 50 | `chunk_size=50` 會讓 12,600 筆跑 ~34 分鐘；正確值是 **500** |
+| `etf_equity_daily.yml` 呼叫 `sync_equity_distribution.py` 不加 `--daily-topup` | TDCC 集保每週更新，本週資料未到位時若無此旗標，daily job 會**每天**拋 staleness RuntimeError（誤觸 🚨 LINE 通知）；staleness 監控應只留給 `equity_weekly.yml`（帶 `--retry-run`） |
 | 查詢 `etf_diff_logs` 用 `weight_after` | 此欄不存在；正確欄位是 `curr_weight`（當日持倉比重） |
 | SQLAlchemy 讀回 `NUMERIC` 欄位直接做 `/` 運算 | PostgreSQL `NUMERIC` 對應 Python `decimal.Decimal`，不能直接和 `float` 相除；必須先 `float()` 轉型，例如 `float(diff_shares) * float(price) / 1e8` |

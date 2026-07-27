@@ -64,7 +64,8 @@ jobs:
       - name: Sync equity distribution
         run: |
           # 補入當日新增成分股的大戶籌碼（多數日子無新股 → 秒退）
-          uv run python ETF/sync_equity_distribution.py
+          # --daily-topup：TDCC 本週資料尚未更新時靜默略過，staleness 監控交給 equity_weekly.yml
+          uv run python ETF/sync_equity_distribution.py --daily-topup
 
       - name: Notify LINE on failure
         if: failure()

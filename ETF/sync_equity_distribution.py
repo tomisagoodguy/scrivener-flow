@@ -425,6 +425,11 @@ def main() -> None:
         action="store_true",
         help="標記為週一自動重試（FinLab 仍延遲時使用更嚴格錯誤訊息）",
     )
+    parser.add_argument(
+        "--daily-topup",
+        action="store_true",
+        help="每日補新成分股模式：FinLab inventory 未更新到本週 TDCC 期數時靜默略過，不 raise（staleness 監控交給 equity_weekly.yml）",
+    )
     args = parser.parse_args()
 
     storage = SQLStorage()
@@ -487,7 +492,7 @@ def main() -> None:
         records = [r for r in records if r["stock_code"] not in synced_codes]
         if not records:
             db_max = storage.get_max_equity_snapshot_date()
-            if snapshot_date < expected:
+            if snapshot_date < expected and not args.daily_topup:
                 retry_hint = (
                     "週一重試仍失敗，請人工確認 FinLab 是否已更新 inventory。"
                     if args.retry_run
