@@ -5,7 +5,8 @@ import { InvestmentTabs } from '@/components/features/investment/InvestmentTabs'
 import { StockPickerHub } from '@/components/features/investment/StockPickerHub';
 import { GoldenGrowthZone } from '@/components/features/investment/GoldenGrowthZone';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
-import { EtfComparePanel, type OverlapData, type EtfData } from '@/components/features/investment/EtfComparePanel';
+import { type OverlapData, type EtfData } from '@/components/features/investment/EtfComparePanel';
+import { EtfCompareViewTabs } from '@/components/features/investment/EtfCompareViewTabs';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
 import { ClockIcon } from 'lucide-react';
 import React from 'react';
@@ -402,7 +403,7 @@ export default async function InvestmentPoolPage() {
                     }
                     compareContent={
                         compareData ? (
-                            <EtfComparePanel etfs={compareData.etfs} overlap={compareData.overlap} />
+                            <EtfCompareViewTabs etfs={compareData.etfs} overlap={compareData.overlap} />
                         ) : (
                             <div className="glass-card rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400">
                                 <p className="text-lg">暫無對比資料</p>
