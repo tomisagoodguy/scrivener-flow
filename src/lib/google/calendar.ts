@@ -10,6 +10,10 @@
  */
 
 export const CALENDAR_TIME_ZONE = 'Asia/Taipei';
+
+/** Supabase signInWithOAuth 的 Google scopes（Drive 檔案存取 + 行事曆子行事曆建立）。 */
+export const GOOGLE_OAUTH_SCOPES =
+    'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created';
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 const DEFAULT_CALENDAR_NAME = '案件';
 

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { CalendarCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { backfillCalendar } from '@/app/actions/calendarSync';
+import { createClient } from '@/lib/auth/client';
+import { GOOGLE_OAUTH_SCOPES } from '@/lib/google/calendar';
 
 /**
  * 「同步到 Google 行事曆」按鈕：觸發一次性回填 Server Action，
@@ -11,6 +13,19 @@ import { backfillCalendar } from '@/app/actions/calendarSync';
  */
 export const CalendarSyncButton = () => {
     const [syncing, setSyncing] = useState(false);
+
+    /** 免登出重新走 Google 同意畫面，刷新 provider token（供 needs_reauth 時使用）。 */
+    const handleReauth = async () => {
+        const supabase = createClient();
+        await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(window.location.pathname)}`,
+                scopes: GOOGLE_OAUTH_SCOPES,
+                queryParams: { access_type: 'offline', prompt: 'consent' },
+            },
+        });
+    };
 
     const handleSync = async () => {
         setSyncing(true);
@@ -39,8 +54,10 @@ export const CalendarSyncButton = () => {
                     );
                 }
             } else if (result.status === 'needs_reauth') {
-                toast.error('需重新登入並授權 Google 行事曆後再試（請先登出再以 Google 登入）', {
-                    duration: 10000,
+                toast.error('Google 行事曆授權已失效', {
+                    description: '免登出，點擊「重新授權」同意畫面即可繼續同步',
+                    duration: 15000,
+                    action: { label: '重新授權', onClick: handleReauth },
                 });
             } else {
                 toast.error('同步失敗：' + (result.error ?? '未知錯誤'));

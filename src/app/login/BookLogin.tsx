@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/auth/client';
+import { GOOGLE_OAUTH_SCOPES } from '@/lib/google/calendar';
 import { BookCover } from '@/components/auth/BookCover';
 import { AppleAuthModal } from '@/components/auth/AppleAuthModal';
 import { LogIn, Mail } from 'lucide-react';
@@ -22,8 +23,7 @@ export function BookLogin() {
                 provider: 'google',
                 options: {
                     redirectTo: `${window.location.origin}/auth/callback`,
-                    scopes:
-                        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created',
+                    scopes: GOOGLE_OAUTH_SCOPES,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',

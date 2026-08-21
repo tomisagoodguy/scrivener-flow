@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/auth/client';
+import { GOOGLE_OAUTH_SCOPES } from '@/lib/google/calendar';
 import { useState } from 'react';
 
 export function LoginContent() {
@@ -17,8 +18,7 @@ export function LoginContent() {
                 provider: 'google',
                 options: {
                     redirectTo: `${location.origin}/auth/callback`,
-                    scopes:
-                        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.app.created',
+                    scopes: GOOGLE_OAUTH_SCOPES,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
