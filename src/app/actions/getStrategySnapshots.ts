@@ -14,23 +14,29 @@ export async function getStrategySnapshots(
     if (stockIds.length === 0) return map;
 
     const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('bare_k_snapshots')
-        .select('stock_id, date, ohlcv, mas, signals, margin, revenue, inv_chips, summary')
-        .in('stock_id', stockIds)
-        .order('date', { ascending: false });
 
-    if (error) {
-        console.error('[getStrategySnapshots]', error);
-        return map;
-    }
+    // 逐股查詢「最新一筆」而非整批排序：bare_k_snapshots 是逐日快照表，
+    // 熱門股票可能有數年歷史，.in() + 整批 order by date 需排序全部命中列，
+    // 曾在多支股票同時查詢時觸發 Postgres statement timeout（57014）。
+    // 改用 (stock_id, date DESC) 既有複合索引，逐股 limit(1) 走索引掃描。
+    const results = await Promise.all(
+        stockIds.map((id) =>
+            supabase
+                .from('bare_k_snapshots')
+                .select('stock_id, date, ohlcv, mas, signals, margin, revenue, inv_chips, summary')
+                .eq('stock_id', id)
+                .order('date', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+        )
+    );
 
-    // 取每支股票最新一筆（已按 date desc 排序，取第一次出現的）
-    for (const row of data ?? []) {
-        if (!map.has(row.stock_id)) continue;
-        if (map.get(row.stock_id) === null) {
-            map.set(row.stock_id, row as BareKSnapshot);
+    for (const { data, error } of results) {
+        if (error) {
+            console.error('[getStrategySnapshots]', error);
+            continue;
         }
+        if (data) map.set(data.stock_id, data as BareKSnapshot);
     }
 
     return map;
