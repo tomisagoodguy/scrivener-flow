@@ -4,9 +4,9 @@ import { getDriveFileDetails } from '@/app/actions/googleDrive';
 
 export async function PUT(req: NextRequest) {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (!user) {
         return NextResponse.json({ error: '請先登入' }, { status: 401 });
     }
 
@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: 'session_expired', message: '找不到上傳 session，請重新上傳' }, { status: 404 });
     }
 
-    if (uploadSession.user_id !== session.user.id) {
+    if (uploadSession.user_id !== user.id) {
         return NextResponse.json({ error: '無權限' }, { status: 403 });
     }
 

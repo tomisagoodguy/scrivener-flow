@@ -8,20 +8,19 @@ export async function GET(
     const { fileId } = await params;
     const supabase = await createClient();
 
-    // 1. Get user session
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
+    // 1. Verify user against Auth server (getSession() 只本機解碼 JWT，不足以做授權判斷)
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
         return new NextResponse('Unauthorized: No user session', { status: 401 });
     }
 
-    // 2. Get the persisted Google Access Token from database
-    const { data: settings } = await supabase
-        .from('user_settings')
-        .select('google_access_token')
-        .eq('user_id', userId)
-        .single();
+    // 2. Get the persisted Google Access Token from database (provider_token 需另外從 session 取)
+    const [{ data: { session } }, { data: settings }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.from('user_settings').select('google_access_token').eq('user_id', userId).single(),
+    ]);
 
     const token = session?.provider_token || settings?.google_access_token;
 

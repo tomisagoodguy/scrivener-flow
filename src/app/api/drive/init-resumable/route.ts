@@ -4,9 +4,9 @@ import { getAccessToken, getOrCreateDriveFolder } from '@/app/actions/googleDriv
 
 export async function POST(req: NextRequest) {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (!user) {
         return NextResponse.json({ error: '請先登入' }, { status: 401 });
     }
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const { data: sessionRow, error: dbError } = await supabase
         .from('drive_upload_sessions')
         .insert({
-            user_id: session.user.id,
+            user_id: user.id,
             upload_url: uploadUrl,
             file_name: fileName,
             expires_at: expiresAt,

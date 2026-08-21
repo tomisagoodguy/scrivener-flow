@@ -14,13 +14,14 @@ interface DriveActionResponse {
  */
 export async function getAccessToken() {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (!user) {
         throw new Error('請先登入系統');
     }
 
-    const userId = session.user.id;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = user.id;
 
     // 1. 優先查看 Session (最快，但每小時會過期)
     let token = session?.provider_token;
