@@ -18,6 +18,22 @@ interface StockChartProps {
 }
 
 /**
+ * lightweight-charts 對傳入資料是硬性斷言（time 需唯一遞增、OHLC 需為合法數字），
+ * 海外股票（如透過 ETF 持股同步進來的韓股）常有 data_date 缺漏/重複或欄位不完整，
+ * 未過濾直接丟給 setData() 會在無 error boundary 保護的頁面讓整棵 React tree unmount。
+ */
+function sanitizePriceData(data: PriceData[]): PriceData[] {
+    const byTime = new Map<string, PriceData>();
+    for (const d of data) {
+        if (!d.time) continue;
+        const isValidNumber = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+        if (!isValidNumber(d.open) || !isValidNumber(d.high) || !isValidNumber(d.low) || !isValidNumber(d.close) || !isValidNumber(d.value)) continue;
+        byTime.set(d.time, d);
+    }
+    return Array.from(byTime.values()).sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+}
+
+/**
  * StockChart Component
  * Responsible for rendering the K-line and technical indicators using Lightweight Charts.
  * Isolated from navigation and data-fetching logic.
@@ -162,35 +178,41 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
 
     // 2. Effect: Handle Data Changes
     useEffect(() => {
-        if (!chartRef.current || data.length === 0) return;
-        
-        if (candleSeriesRef.current) {
-            candleSeriesRef.current.setData(data);
+        if (!chartRef.current) return;
+
+        const cleaned = sanitizePriceData(data);
+        if (cleaned.length === 0) return;
+
+        try {
+            if (candleSeriesRef.current) {
+                candleSeriesRef.current.setData(cleaned);
+            }
+
+            if (volumeSeriesRef.current) {
+                volumeSeriesRef.current.setData(cleaned.map(d => ({
+                    time: d.time,
+                    value: d.value,
+                    color: d.close >= d.open ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'
+                })));
+            }
+
+            const currentMaSeries = maSeriesRefs.current;
+            currentMaSeries.forEach((series, period) => {
+                series.setData(IndicatorService.calculateSMA(cleaned, period));
+            });
+
+            // RSI
+            if (rsiSeriesRef.current) {
+                rsiSeriesRef.current.setData(IndicatorService.calculateRSI(cleaned, 14));
+            }
+            if (rsiChartRef.current) {
+                rsiChartRef.current.timeScale().fitContent();
+            }
+
+            chartRef.current.timeScale().fitContent();
+        } catch (err) {
+            console.error('StockChart: failed to render price data', err);
         }
-
-        if (volumeSeriesRef.current) {
-            volumeSeriesRef.current.setData(data.map(d => ({
-                time: d.time,
-                value: d.value,
-                color: d.close >= d.open ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)'
-            })));
-        }
-
-        const currentMaSeries = maSeriesRefs.current;
-        currentMaSeries.forEach((series, period) => {
-            series.setData(IndicatorService.calculateSMA(data, period));
-        });
-
-        // RSI
-        if (rsiSeriesRef.current) {
-            rsiSeriesRef.current.setData(IndicatorService.calculateRSI(data, 14));
-        }
-        if (rsiChartRef.current) {
-            rsiChartRef.current.timeScale().fitContent();
-        }
-
-        chartRef.current.timeScale().fitContent();
-
     }, [data]);
 
     // 3. Effect: Handle Theme Changes (Dynamic Update)
