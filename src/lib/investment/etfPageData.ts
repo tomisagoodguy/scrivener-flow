@@ -5,12 +5,15 @@ import { getServiceClient, getPublicClient } from '@/lib/supabase/service';
 import type { Holding, DiffLog } from '@/types/investment';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
 import { attachTopicsToHoldings, filterHoldingsByTopic, type TopicChip } from '@/lib/investment/topicUtils';
+import { selectDateWithFallback } from '@/lib/investment/holdingsUtils';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
 export type { QuantFilter } from '@/lib/investment/quantFilters';
 
 export interface EtfFreshnessMeta {
     dataDate: string;
     dataSource: 'official_api' | 'pocket';
+    /** true 代表本次選用的 data_date 並非候選清單中最新一筆（已自動回退至前一可用交易日） */
+    isFallback: boolean;
 }
 
 export interface RankingHistoryRow {
@@ -36,6 +39,7 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
     holdings: Holding[];
     updatedAt: string | null;
     dataDate: string | null;
+    isFallback: boolean;
     meta: EtfFreshnessMeta | null;
 }> {
     const supabase = getServiceClient();
@@ -49,7 +53,7 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
         .limit(2);
 
     if (!dateCandidates || dateCandidates.length === 0) {
-        return { holdings: [], updatedAt: null, dataDate: null, meta: null };
+        return { holdings: [], updatedAt: null, dataDate: null, isFallback: false, meta: null };
     }
 
     const fetchHoldingsForDate = async (date: string) => {
@@ -62,18 +66,8 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
         return data || [];
     };
 
-    let targetDate = dateCandidates[0].data_date;
-    let targetUpdatedAt = dateCandidates[0].updated_at;
-    let data = await fetchHoldingsForDate(targetDate);
-
-    const validPriceCount = data.filter(h => h.price && h.price > 0).length;
-    const isValid = data.length > 0 && (validPriceCount / data.length) > 0.5;
-
-    if (!isValid && dateCandidates.length > 1) {
-        targetDate = dateCandidates[1].data_date;
-        targetUpdatedAt = dateCandidates[1].updated_at;
-        data = await fetchHoldingsForDate(targetDate);
-    }
+    const { dataDate: targetDate, isFallback, data } = await selectDateWithFallback(dateCandidates, fetchHoldingsForDate);
+    const targetUpdatedAt = dateCandidates.find(c => c.data_date === targetDate)?.updated_at ?? dateCandidates[0].updated_at;
 
     const codes = (data || []).map(h => h.stock_code);
     const publicClient = getPublicClient();
@@ -175,10 +169,11 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
         ? {
               dataDate: targetDate,
               dataSource: etfMeta?.dataSource ?? 'pocket',
+              isFallback,
           }
         : null;
 
-    return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate, meta };
+    return { holdings, updatedAt: targetUpdatedAt, dataDate: targetDate, isFallback, meta };
 }
 
 export async function getHoldings(etfCode: string, topic?: string | null) {

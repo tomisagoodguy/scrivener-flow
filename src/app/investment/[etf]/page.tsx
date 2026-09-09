@@ -79,7 +79,7 @@ export default async function InvestmentEtfDrilldownPage({
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         資料日期: {displayDate} <span className="text-slate-400 dark:text-slate-300 text-xs ml-1">({updateTime})</span>
                     </div>
-                    {meta && <EtfHeader dataDate={meta.dataDate} dataSource={meta.dataSource} />}
+                    {meta && <EtfHeader dataDate={meta.dataDate} dataSource={meta.dataSource} isFallback={meta.isFallback} />}
                     <AIAnalysisPromptButton holdings={holdingsWithFilters} dataDate={displayDate} />
                 </div>
             </div>

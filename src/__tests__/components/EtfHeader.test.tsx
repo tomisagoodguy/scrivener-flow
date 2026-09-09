@@ -52,4 +52,21 @@ describe('EtfHeader', () => {
             expect(badge?.getAttribute('data-staleness')).toBe('critical');
         });
     });
+
+    describe('date-fallback notice', () => {
+        it('renders the fallback notice when isFallback is true, regardless of staleness', () => {
+            render(<EtfHeader dataDate="2026-05-13" dataSource="pocket" isFallback today={new Date('2026-05-13')} />);
+            expect(screen.getByText('資料已自動回退至最近可用交易日')).toBeInTheDocument();
+        });
+
+        it('does not render the fallback notice when isFallback is false', () => {
+            render(<EtfHeader dataDate="2026-05-13" dataSource="pocket" isFallback={false} today={new Date('2026-05-13')} />);
+            expect(screen.queryByText('資料已自動回退至最近可用交易日')).not.toBeInTheDocument();
+        });
+
+        it('does not render the fallback notice when isFallback is omitted', () => {
+            render(<EtfHeader dataDate="2026-05-13" dataSource="pocket" today={new Date('2026-05-13')} />);
+            expect(screen.queryByText('資料已自動回退至最近可用交易日')).not.toBeInTheDocument();
+        });
+    });
 });

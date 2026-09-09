@@ -2,7 +2,44 @@ import { createClient } from '@/lib/supabase/server';
 import { Holding } from '@/types/investment';
 import { ETF_CODES } from '@/lib/investment/etfRegistry';
 
-async function getHoldingsForEtf(
+/** 資料完整度門檻：低於此比例視為該日資料不足，需回退至前一候選日期 */
+const PRICE_COVERAGE_THRESHOLD = 0.5;
+
+export interface DateFallbackResult<T> {
+    dataDate: string | null;
+    isFallback: boolean;
+    data: T[];
+}
+
+/**
+ * 共用的候選日期挑選邏輯：依序評估候選日期清單，選出第一個「有效股價比例 > 門檻」的日期；
+ * 若最新日期資料不足且存在更早的候選日期，則回退並標記 isFallback: true。
+ *
+ * 與資料來源（Supabase）解耦——呼叫端傳入候選日期清單與依日期取資料的函式，方便單元測試。
+ */
+export async function selectDateWithFallback<T extends { price?: number | null }>(
+    dateCandidates: { data_date: string }[] | null | undefined,
+    fetchForDate: (date: string) => Promise<T[]>
+): Promise<DateFallbackResult<T>> {
+    if (!dateCandidates || dateCandidates.length === 0) {
+        return { dataDate: null, isFallback: false, data: [] };
+    }
+
+    const latestDate = dateCandidates[0].data_date;
+    const latestData = await fetchForDate(latestDate);
+    const validPriceCount = latestData.filter(h => h.price && h.price > 0).length;
+    const isSufficient = latestData.length > 0 && (validPriceCount / latestData.length) > PRICE_COVERAGE_THRESHOLD;
+
+    if (isSufficient || dateCandidates.length <= 1) {
+        return { dataDate: latestDate, isFallback: false, data: latestData };
+    }
+
+    const priorDate = dateCandidates[1].data_date;
+    const priorData = await fetchForDate(priorDate);
+    return { dataDate: priorDate, isFallback: true, data: priorData };
+}
+
+export async function getHoldingsForEtf(
     etfCode: string,
     supabase: Awaited<ReturnType<typeof createClient>>,
     canonicalDate?: string | null
@@ -14,7 +51,7 @@ async function getHoldingsForEtf(
             .eq('etf_code', etfCode)
             .eq('data_date', canonicalDate)
             .order('weight', { ascending: false });
-        return { holdings: data || [], dataDate: canonicalDate };
+        return { holdings: data || [], dataDate: canonicalDate, isFallback: false };
     }
 
     const { data: dateCandidates } = await supabase
@@ -24,8 +61,6 @@ async function getHoldingsForEtf(
         .order('data_date', { ascending: false })
         .order('updated_at', { ascending: false })
         .limit(2);
-
-    if (!dateCandidates || dateCandidates.length === 0) return { holdings: [], dataDate: null };
 
     const fetchForDate = async (date: string) => {
         const { data } = await supabase
@@ -37,16 +72,8 @@ async function getHoldingsForEtf(
         return data || [];
     };
 
-    let targetDate = dateCandidates[0].data_date;
-    let data = await fetchForDate(targetDate);
-
-    const validPriceCount = data.filter(h => h.price && h.price > 0).length;
-    if (data.length > 0 && (validPriceCount / data.length) <= 0.5 && dateCandidates.length > 1) {
-        targetDate = dateCandidates[1].data_date;
-        data = await fetchForDate(targetDate);
-    }
-
-    return { holdings: data, dataDate: targetDate };
+    const { dataDate, isFallback, data } = await selectDateWithFallback(dateCandidates, fetchForDate);
+    return { holdings: data, dataDate, isFallback };
 }
 
 export async function getAllHoldings(): Promise<{
