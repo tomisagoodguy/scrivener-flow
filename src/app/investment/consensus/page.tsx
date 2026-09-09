@@ -107,7 +107,7 @@ async function fetchConsensus(
 
             return { data: enriched, date: queryDate, activeEtfCount };
         },
-        ['consensus', String(minEtfCount)],
+        ['consensus-v1', String(minEtfCount)],
         { revalidate: 3600 },
     );
     return cached();
@@ -149,7 +149,7 @@ async function getDivergenceData(): Promise<{ data: DivergenceRow[]; date: strin
 
             return { data: sorted, date: queryDate };
         },
-        ['divergence'],
+        ['divergence-v1'],
         { revalidate: 3600 },
     );
     return cached();

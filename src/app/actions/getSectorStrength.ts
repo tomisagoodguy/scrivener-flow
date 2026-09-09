@@ -70,7 +70,7 @@ const _getSectorStrength = unstable_cache(
 
         return { date: queryDate, sectors: deduped as SectorRow[] };
     },
-    ['sector-strength'],
+    ['sector-strength-v1'],
     { revalidate: 3600 },
 );
 

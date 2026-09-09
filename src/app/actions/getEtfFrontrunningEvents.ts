@@ -32,7 +32,7 @@ const _getEtfFrontrunningEvents = unstable_cache(
 
         return (data ?? []) as FrontrunningEvent[];
     },
-    ['etf-frontrunning-events'],
+    ['etf-frontrunning-events-v1'],
     { revalidate: 3600 },
 );
 

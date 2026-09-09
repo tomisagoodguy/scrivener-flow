@@ -215,7 +215,7 @@ export async function getWindowMomentum(
 ): Promise<WindowMomentumResult> {
     const cached = unstable_cache(
         () => computeWindowMomentum(windowDays, minEtfCount),
-        ['window-momentum', String(windowDays), String(minEtfCount)],
+        ['window-momentum-v1', String(windowDays), String(minEtfCount)],
         { revalidate: 3600 },
     );
     return cached();

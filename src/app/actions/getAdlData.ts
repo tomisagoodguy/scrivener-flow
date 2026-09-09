@@ -68,7 +68,7 @@ const _getAdlData = unstable_cache(
             latestAdl: latest.adl,
         };
     },
-    ['adl-data'],
+    ['adl-data-v1'],
     { revalidate: 3600 },
 );
 

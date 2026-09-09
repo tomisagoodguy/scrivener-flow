@@ -9,52 +9,69 @@
 ## Requirements
 
 ### Requirement: Server Actions 使用 unstable_cache 包裝
-所有查詢全域性市場資料的 Server Actions SHALL 使用 Next.js `unstable_cache` 包裝，revalidate 設為 3600 秒。
+所有查詢全域性市場資料的 Server Actions SHALL 使用 Next.js `unstable_cache` 包裝，revalidate 設為 3600 秒。每個 `unstable_cache` 呼叫的 key 陣列第一個元素（識別字串）SHALL 帶版號後綴（格式為 `-vN`，N 為正整數，初始版本為 `-v1`），使未來邏輯變更時可透過遞增版號手動使舊 cache 失效。
 
 #### Scenario: getAdlData 快取
 - **WHEN** 任意使用者訪問 `/investment/breadth` 或 `/investment/sectors`
-- **THEN** `getAdlData()` 在 1 小時內只查詢 Supabase 一次，後續請求從 cache 讀取
+- **THEN** `getAdlData()` 在 1 小時內只查詢 Supabase 一次，後續請求從 cache 讀取，且其 cache key 帶版號後綴
 
 #### Scenario: getBuyingPatternStats 快取
 - **WHEN** 任意使用者訪問 `/investment/buying-patterns`
-- **THEN** `getBuyingPatternStats()` 在 1 小時內只查詢 Supabase 一次
+- **THEN** `getBuyingPatternStats()` 在 1 小時內只查詢 Supabase 一次，且其 cache key 帶版號後綴
 
-#### Scenario: 其他 6 個 Server Actions 快取
-- **WHEN** `getEtfFrontrunningEvents`、`getEtfSectorActivity`、`getFactorIC`、`getSectorStrength`（5 個函式）、`getStrategySignals`、`getTreemapData` 被呼叫
-- **THEN** 每個函式在 1 小時內只查詢 Supabase 一次
+#### Scenario: 其他 Server Actions 快取皆帶版號
+- **WHEN** `getEtfFrontrunningEvents`、`getEtfSectorActivity`、`getFactorIC`、`getSectorStrength`（5 個函式）、`getStrategySignals`、`getTreemapData`、`getStreaks`、`getWindowMomentum` 被呼叫
+- **THEN** 每個函式在 1 小時內只查詢 Supabase 一次，且其 `unstable_cache` key 陣列第一個元素帶 `-vN` 版號後綴
+
+##### Example: 版號後綴格式
+
+| 函式 | 修改前 key | 修改後 key |
+|------|-----------|-----------|
+| `getSectorStrength` (主查詢) | `sector-strength` | `sector-strength-v1` |
+| `getEtfFrontrunningEvents` | `etf-frontrunning-events` | `etf-frontrunning-events-v1` |
+| `getFactorIC` | `factor-ic` | `factor-ic-v1` |
+| `getWindowMomentum` | `window-momentum` | `window-momentum-v1` |
+| `getSectorStrength`（已帶版號的子查詢） | `sector-stocks-v2` | `sector-stocks-v2`（不變，已符合規範） |
 
 
 <!-- @trace
-source: investment-caching
-updated: 2026-05-22
+source: investment-cache-key-versioning
+updated: 2026-09-09
 code:
-  - src/app/actions/getTreemapData.ts
-  - src/app/investment/[etf]/page.tsx
-  - src/app/actions/getBuyingPatternStats.ts
-  - ETF/strategies/broker_ranked.py
-  - ETF/pipeline/steps/sector_strength_step.py
-  - src/app/investment/consensus/page.tsx
-  - ETF/services/indicators.py
-  - src/app/investment/equity/page.tsx
-  - src/app/investment/frontrunning/page.tsx
-  - src/app/investment/sectors/page.tsx
-  - ETF/sync_adl_history.py
-  - src/app/actions/getStrategySignals.ts
-  - src/lib/investment/etfPageData.ts
-  - src/lib/supabase/service.ts
-  - ETF/backfill_market_breadth.py
-  - src/app/actions/getSectorStrength.ts
-  - src/app/actions/getFactorIC.ts
   - src/app/investment/history/page.tsx
-  - src/app/investment/page.tsx
-  - ETF/services/finlab/facade.py
-  - src/app/actions/getAdlData.ts
-  - src/lib/investment/equityPageData.ts
-  - src/app/actions/getEtfSectorActivity.ts
-  - src/app/investment/breadth/page.tsx
-  - src/app/investment/buying-patterns/page.tsx
-  - ETF/services/finlab/price_service.py
+  - src/lib/investment/sectorResonanceLayout.ts
+  - src/app/actions/ai/generateInvestmentPromptAction.ts
+  - src/components/features/investment/SectorResonanceBubbleChart.tsx
+  - src/app/actions/ai/optimizationAction.ts
+  - src/app/actions/getFactorIC.ts
+  - src/lib/investment/holdingsUtils.ts
+  - jest.config.js
+  - src/app/actions/getSectorResonanceHeat.ts
+  - src/app/investment/consensus/page.tsx
+  - src/lib/investment/sectorResonanceUtils.ts
+  - src/app/actions/getSectorStrength.ts
+  - src/app/actions/getStreaks.ts
+  - package.json
+  - src/app/actions/getBuyingPatternStats.ts
   - src/app/actions/getEtfFrontrunningEvents.ts
+  - src/lib/investment/etfPageData.ts
+  - src/app/actions/getWindowMomentum.ts
+  - src/app/actions/getAdlData.ts
+  - src/components/features/investment/EtfHeader.tsx
+  - src/app/actions/getEtfSectorActivity.ts
+  - src/lib/ai/geminiFallback.ts
+  - src/app/investment/sectors/SectorDashboard.tsx
+  - src/app/actions/ai/briefingAction.ts
+  - src/app/investment/[etf]/page.tsx
+tests:
+  - src/lib/investment/__tests__/sectorResonanceLayout.test.ts
+  - src/__tests__/components/EtfHeader.test.tsx
+  - src/lib/ai/__tests__/geminiFallback.test.ts
+  - src/lib/investment/__tests__/etfPageData.test.ts
+  - src/lib/investment/__tests__/holdingsUtils.test.ts
+  - src/lib/investment/__tests__/sectorResonanceUtils.test.ts
+  - src/app/actions/__tests__/getSectorResonanceHeat.test.ts
+  - src/components/features/investment/__tests__/SectorResonanceBubbleChart.test.tsx
 -->
 
 ---

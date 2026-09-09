@@ -48,7 +48,7 @@ const _getStreaks = unstable_cache(
             return EMPTY;
         }
     },
-    ['etf-streaks'],
+    ['etf-streaks-v1'],
     { revalidate: 3600 },
 );
 

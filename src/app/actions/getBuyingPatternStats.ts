@@ -34,7 +34,7 @@ const _getBuyingPatternStats = unstable_cache(
         const rows = (data ?? []) as PatternRow[];
         return _aggregate(rows);
     },
-    ['buying-pattern-stats'],
+    ['buying-pattern-stats-v1'],
     { revalidate: 3600 },
 );
 

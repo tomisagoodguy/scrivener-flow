@@ -27,7 +27,7 @@ const fetchAllWeightHistory = unstable_cache(
         type WeightRow = { etf_code: string; stock_code: string; stock_name: string; data_date: string; weight: number; rank: number };
         return (data ?? []) as WeightRow[];
     },
-    ['weight-history'],
+    ['weight-history-v1'],
     { revalidate: 3600 },
 );
 
@@ -75,7 +75,7 @@ const fetchOverlapTrend = unstable_cache(
                 pct7: v.total > 0 ? Number(((v.shared7 / v.total) * 100).toFixed(1)) : 0,
             }));
     },
-    ['overlap-trend'],
+    ['overlap-trend-v1'],
     { revalidate: 3600 },
 );
 

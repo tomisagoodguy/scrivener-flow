@@ -35,7 +35,7 @@ export async function getFactorIC(factors: string[], months: number): Promise<Fa
                 ic_20d: row.ic_20d,
             }));
         },
-        ['factor-ic', factors.join(','), String(months)],
+        ['factor-ic-v1', factors.join(','), String(months)],
         { revalidate: 3600 },
     );
     return cached();

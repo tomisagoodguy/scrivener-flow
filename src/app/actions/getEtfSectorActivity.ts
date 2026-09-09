@@ -155,7 +155,7 @@ async function _fetchEtfSectorActivity(sectorDate: string): Promise<EtfSectorAct
 export async function getEtfSectorActivity(sectorDate: string): Promise<EtfSectorActivityMap> {
     const cached = unstable_cache(
         () => _fetchEtfSectorActivity(sectorDate),
-        ['etf-sector-activity', sectorDate],
+        ['etf-sector-activity-v1', sectorDate],
         { revalidate: 3600 },
     );
     return cached();
