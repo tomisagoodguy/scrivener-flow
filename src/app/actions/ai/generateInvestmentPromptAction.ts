@@ -1,7 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { genAI, ALLOWED_EMAIL, MODELS_TO_TRY } from '@/lib/ai/geminiConfig';
+import { genAI, ALLOWED_EMAIL } from '@/lib/ai/geminiConfig';
+import { callGeminiWithFallback } from '@/lib/ai/geminiFallback';
 import { Holding } from '@/types/investment';
 
 interface GeneratePromptProps {
@@ -373,28 +374,22 @@ ${JSON.stringify(topHoldings, null, 2)}
 (請直接輸出報告內容，不需任何開場白)
 `;
 
-        let lastError = null;
-        for (const modelName of MODELS_TO_TRY) {
-            try {
-                console.info(`🤖 嘗試呼叫 AI 模型: ${modelName}...`);
-                const model = genAI.getGenerativeModel({ model: modelName });
+        try {
+            const { data: analysisReport, modelName } = await callGeminiWithFallback(async (model) => {
                 const result = await model.generateContent(systemPrompt);
-                const analysisReport = result.response.text();
-
-                if (analysisReport) {
-                    console.info(`✅ 成功使用 ${modelName} 生成報告`);
-                    return { success: true, prompt: analysisReport };
+                const text = result.response.text();
+                if (!text) {
+                    throw new Error('模型回傳空白內容');
                 }
-            } catch (e: unknown) {
-                const err = e as Error;
-                console.warn(`⚠️ 模型 ${modelName} 呼叫失敗:`, err.message);
-                lastError = err;
-                continue;
-            }
+                return text;
+            });
+            console.info(`✅ 成功使用 ${modelName} 生成報告`);
+            return { success: true, prompt: analysisReport };
+        } catch (e: unknown) {
+            const err = e as Error;
+            console.error('❌ 所有 AI 模型均呼叫失敗', err.message);
+            return { success: false, message: '生成失敗，所有 AI 模型忙碌中或額度已用盡，請稍後再試。' };
         }
-
-        console.error('❌ 所有 AI 模型均呼叫失敗', lastError);
-        return { success: false, message: '生成失敗，所有 AI 模型忙碌中或額度已用盡，請稍後再試。' };
 
     } catch (e: unknown) {
         const err = e as Error;

@@ -1,7 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { genAI, ALLOWED_EMAIL, MODELS_TO_TRY } from '@/lib/ai/geminiConfig';
+import { genAI, ALLOWED_EMAIL } from '@/lib/ai/geminiConfig';
+import { callGeminiWithFallback } from '@/lib/ai/geminiFallback';
 
 export async function optimizeTextContent(content: string, type: 'grammar' | 'expand' | 'summarize' | 'structure' = 'grammar') {
     if (!genAI) return { success: false, message: 'API Key missing' };
@@ -18,14 +19,13 @@ export async function optimizeTextContent(content: string, type: 'grammar' | 'ex
     else if (type === 'summarize') prompt = '總結重點並條列化，保持表格結構：\n\n';
     else if (type === 'structure') prompt = '將文字轉換為高度有序、美觀且具視覺層次的 HTML 文檔，僅輸出 HTML 片段：\n\n';
 
-    for (const modelName of MODELS_TO_TRY) {
-        try {
-            const model = genAI.getGenerativeModel({ model: modelName });
+    try {
+        const { data } = await callGeminiWithFallback(async (model) => {
             const result = await model.generateContent(prompt + content);
-            return { success: true, data: result.response.text() };
-        } catch (e: any) {
-            console.warn(`Model ${modelName} failed: ${e.message}`);
-        }
+            return result.response.text();
+        });
+        return { success: true, data };
+    } catch {
+        return { success: false, message: '優化失敗。' };
     }
-    return { success: false, message: '優化失敗。' };
 }

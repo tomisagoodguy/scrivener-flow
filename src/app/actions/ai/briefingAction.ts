@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { SchemaType, Tool } from '@google/generative-ai';
-import { genAI, ALLOWED_EMAIL, MODELS_TO_TRY } from '@/lib/ai/geminiConfig';
+import { genAI, ALLOWED_EMAIL } from '@/lib/ai/geminiConfig';
+import { callGeminiWithFallback, GeminiFallbackError } from '@/lib/ai/geminiFallback';
 import { sendLineMessage } from '../lineNotify';
 
 const STANDARD_CHECKLIST_ITEMS = [
@@ -55,10 +56,9 @@ export async function generateAIBriefing(userMessage?: string) {
             }]
         }];
 
-        for (const modelName of MODELS_TO_TRY) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName, tools });
-                const chat = model.startChat();
+        try {
+            const { data: message } = await callGeminiWithFallback(async (model) => {
+                const chat = model.startChat({ tools });
                 const result = await chat.sendMessage(systemPrompt);
                 const response = result.response;
                 const call = response.functionCalls()?.[0];
@@ -67,14 +67,17 @@ export async function generateAIBriefing(userMessage?: string) {
                     const { text } = call.args as { text: string };
                     const lineRes = await sendLineMessage(text);
                     const final = await chat.sendMessage([{ functionResponse: { name: 'sendLineMessage', response: lineRes } }]);
-                    return { success: true, message: final.response.text() };
+                    return final.response.text();
                 }
-                return { success: true, message: response.text() };
-            } catch (e: any) {
-                console.warn(`Model ${modelName} failed: ${e.message}`);
+                return response.text();
+            });
+            return { success: true, message };
+        } catch (e: unknown) {
+            if (e instanceof GeminiFallbackError) {
+                console.error('[AI Briefing Fallback Exhausted]:', e.message);
             }
+            return { success: false, message: 'AI 目前無法連線。' };
         }
-        return { success: false, message: 'AI 目前無法連線。' };
     } catch (error: any) {
         console.error('[AI Action Error]:', error);
         return { success: false, message: `伺服器處理失敗: ${error.message}` };
