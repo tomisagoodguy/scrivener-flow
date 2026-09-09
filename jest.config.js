@@ -12,6 +12,12 @@ const config = {
     // 模組路徑別名 (對應 tsconfig.json)
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+        // d3-force 系列僅發布 ESM（"type": "module"），ts-jest 預設不轉譯
+        // node_modules，改指向各自的 UMD/CJS dist build 供 Jest 直接 require
+        '^d3-force$': '<rootDir>/node_modules/d3-force/dist/d3-force.min.js',
+        '^d3-quadtree$': '<rootDir>/node_modules/d3-quadtree/dist/d3-quadtree.min.js',
+        '^d3-dispatch$': '<rootDir>/node_modules/d3-dispatch/dist/d3-dispatch.min.js',
+        '^d3-timer$': '<rootDir>/node_modules/d3-timer/dist/d3-timer.min.js',
     },
 
     // 轉換器

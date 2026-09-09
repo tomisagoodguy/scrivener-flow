@@ -20,6 +20,7 @@ import { SectorTopicHeatmap } from '@/components/features/investment/sectors/Sec
 import type { TopicWeightRow } from '@/lib/investment/topicUtils';
 import { SectorChainPanel } from './components/SectorChainPanel';
 import { EtfTopicHeatmap } from '@/components/features/investment/sectors/EtfTopicHeatmap';
+import { SectorResonanceBubbleChart } from '@/components/features/investment/SectorResonanceBubbleChart';
 
 type SortKey = '1d' | '5d' | '20d' | 'amount' | 'strength' | 'hit' | 'etf';
 
@@ -35,7 +36,7 @@ function barColor(pct: number | null): string {
     if (pct >= -3) return '#16a34a';
     return '#14532d';
 }
-type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth' | 'topic';
+type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth' | 'topic' | 'resonance';
 
 interface SectorRowProps {
     sector: SectorRow;
@@ -363,7 +364,7 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
                     {tabs.map((t) => {
-                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped' || viewMode === 'treemap' || viewMode === 'breadth') && (t.key === 'hit' || t.key === 'etf');
+                        const hidden = (viewMode === 'heatmap' || viewMode === 'grouped' || viewMode === 'treemap' || viewMode === 'breadth' || viewMode === 'resonance') && (t.key === 'hit' || t.key === 'etf');
                         if (hidden) return null;
                         return (
                             <button
@@ -459,11 +460,23 @@ export default function SectorDashboard({ data, icData = [], etfActivity = {}, t
                         >
                             主題
                         </button>
+                        <button
+                            onClick={() => {
+                                setViewMode('resonance');
+                                if (sortKey === 'amount' || sortKey === 'strength' || sortKey === 'hit' || sortKey === 'etf') setSortKey('1d');
+                            }}
+                            className={`px-3 py-1.5 transition-colors ${viewMode === 'resonance' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white/60'}`}
+                            title="族群資金共振氣泡圖"
+                        >
+                            ◉
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {viewMode === 'topic' ? (
+            {viewMode === 'resonance' ? (
+                <SectorResonanceBubbleChart etfActivity={etfActivity} />
+            ) : viewMode === 'topic' ? (
                 <div>
                     <EtfTopicHeatmap topics={etfTopics} holdingsByTopic={etfTopicHoldings} />
                 </div>
