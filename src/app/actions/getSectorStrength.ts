@@ -13,6 +13,9 @@ export interface SectorRow {
     breadth: number | null;
     avg_amount_5d: number | null;
     strength_score: number | null;
+    rs_ratio: number | null;
+    rs_momentum: number | null;
+    rrg_quadrant: 'leading' | 'weakening' | 'improving' | 'lagging' | null;
 }
 
 export interface SectorStock {
@@ -52,7 +55,7 @@ const _getSectorStrength = unstable_cache(
 
         const { data, error } = await supabase
             .from('sector_strength')
-            .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount, breadth, avg_amount_5d, strength_score')
+            .select('category, ret_1d, ret_5d, ret_20d, stock_count, total_amount, breadth, avg_amount_5d, strength_score, rs_ratio, rs_momentum, rrg_quadrant')
             .eq('date', queryDate)
             .order('ret_1d', { ascending: false });
 

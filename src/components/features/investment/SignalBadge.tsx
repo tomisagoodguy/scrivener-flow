@@ -23,6 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
     single_fund_overweight: '超配',
     cross_product_accumulation: '積累',
     cross_etf_same_day_buy: '同買',
+    weight_shift_5d: '趨勢',
 };
 
 export function SignalBadge({ strength, type, compact = false }: SignalBadgeProps) {

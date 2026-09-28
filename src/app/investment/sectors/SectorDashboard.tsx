@@ -38,6 +38,19 @@ function barColor(pct: number | null): string {
 }
 type ViewMode = 'list' | 'heatmap' | 'grouped' | 'treemap' | 'breadth' | 'topic' | 'resonance';
 
+const RRG_LABEL: Record<NonNullable<SectorRow['rrg_quadrant']>, string> = {
+    leading: '領先',
+    improving: '改善',
+    weakening: '轉弱',
+    lagging: '落後',
+};
+
+function rrgClass(quadrant: NonNullable<SectorRow['rrg_quadrant']>): string {
+    return quadrant === 'leading' || quadrant === 'improving'
+        ? 'text-rose-600 dark:text-rose-400'
+        : 'text-emerald-600 dark:text-emerald-400';
+}
+
 interface SectorRowProps {
     sector: SectorRow;
     date: string;
@@ -89,6 +102,11 @@ function SectorItem({ sector, date, rank, sortKey, etfActivity, consensusMap = {
                     <span className="text-gray-400 text-sm w-5 shrink-0">{rank}</span>
                     <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{sector.category}</span>
                     <span className="text-xs text-gray-400 shrink-0">{sector.stock_count} 支</span>
+                    {sector.rrg_quadrant && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded bg-white/40 dark:bg-white/5 font-medium shrink-0 ${rrgClass(sector.rrg_quadrant)}`}>
+                            {RRG_LABEL[sector.rrg_quadrant]}
+                        </span>
+                    )}
                     {displayCodes.length > 0 && (
                         <div className="flex items-center gap-1 shrink-0">
                             {displayCodes.map((code) => (
