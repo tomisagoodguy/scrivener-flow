@@ -244,6 +244,20 @@ export const caseService = {
         if (error) throw error;
     },
 
+    /**
+     * 更新案件買方/賣方加班費登打狀態。與蓋印章待辦完全獨立，純粹記錄是/否已登打。
+     */
+    async setOvertimeClaimed(
+        supabase: SupabaseClient,
+        caseId: string,
+        party: 'buyer' | 'seller',
+        claimed: boolean
+    ): Promise<void> {
+        const field = party === 'buyer' ? 'buyer_overtime_claimed' : 'seller_overtime_claimed';
+        const { error } = await supabase.from('cases').update({ [field]: claimed }).eq('id', caseId);
+        if (error) throw new Error(error.message || '更新加班費登打狀態失敗');
+    },
+
     async updateChatGroups(
         supabase: SupabaseClient,
         caseId: string,

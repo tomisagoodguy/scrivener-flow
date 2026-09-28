@@ -85,8 +85,10 @@ export interface DemoCase {
     // 1.2 People
     buyer_name: string;
     buyer_phone?: string;
+    buyer_overtime_claimed: boolean;
     seller_name: string;
     seller_phone?: string;
+    seller_overtime_claimed: boolean;
     agent_name?: string;
     agent_phone?: string;
     registrant_name?: string;

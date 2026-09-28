@@ -5,6 +5,7 @@ import type { DemoCase, Milestone, Financials } from '@/types';
 import CaseCompactTodoList from '@/components/features/cases/CaseCompactTodoList';
 import ExcelStep from '@/components/shared/ExcelStep';
 import HighlightableValue from '@/components/shared/HighlightableValue';
+import OvertimeClaimButton from '@/components/features/cases/case-list/OvertimeClaimButton';
 
 interface CaseTableRowProps {
     caseData: DemoCase;
@@ -80,21 +81,35 @@ export function CaseTableRow({ caseData }: CaseTableRowProps) {
 
             {/* 買方 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div
-                    className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
-                    title={caseData.buyer_name}
-                >
-                    {caseData.buyer_name}
+                <div className="flex flex-col items-center gap-1">
+                    <div
+                        className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
+                        title={caseData.buyer_name}
+                    >
+                        {caseData.buyer_name}
+                    </div>
+                    <OvertimeClaimButton
+                        caseId={caseData.id}
+                        party="buyer"
+                        initialClaimed={caseData.buyer_overtime_claimed}
+                    />
                 </div>
             </td>
 
             {/* 賣方 */}
             <td className="px-1 py-2 border border-slate-100 dark:border-slate-800">
-                <div
-                    className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
-                    title={caseData.seller_name}
-                >
-                    {caseData.seller_name}
+                <div className="flex flex-col items-center gap-1">
+                    <div
+                        className="text-[14px] font-black text-slate-900 dark:text-slate-100 text-center leading-tight whitespace-normal truncate"
+                        title={caseData.seller_name}
+                    >
+                        {caseData.seller_name}
+                    </div>
+                    <OvertimeClaimButton
+                        caseId={caseData.id}
+                        party="seller"
+                        initialClaimed={caseData.seller_overtime_claimed}
+                    />
                 </div>
             </td>
 
