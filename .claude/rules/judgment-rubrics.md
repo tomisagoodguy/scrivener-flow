@@ -101,6 +101,7 @@
 | 功能開發/修改流程 | **Spectra**（`/spectra-*`） | openspec（本專案已遷移，屬歷史遺留）、`/plan`（本專案禁用） |
 | 記憶 | 檔案式 `memory/*.md` + `MEMORY.md` 索引 | `mcp__memory__*` graph（別把同事實寫兩邊） |
 | 瀏覽器/前端實測 | `playwright-skill` 或 `webapp-testing` skill | 同時起 puppeteer + playwright MCP |
+| 用 Playwright MCP 驗本地產出的 HTML | 背景跑 `python -m http.server <port>`（在檔案所在目錄）→ 開 `http://localhost:<port>/x.html`；截圖存到 `.playwright-mcp/` 目錄下（如 `.playwright-mcp/check.png`），驗完刪檔 | `file://`（MCP 封鎖）、截圖存 scratchpad（只允許 repo 與 `.playwright-mcp/`） |
 | 跨檔搜尋 | `Grep`/`Glob` 工具，或派 `Explore` agent | Bash `grep`/`find` |
 | 台股量化/選股 | `finlab` + `taiwan-strategy` skill | 憑印象臆測 API |
 
