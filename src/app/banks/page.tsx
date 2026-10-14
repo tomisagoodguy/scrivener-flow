@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Plus, Database, Users } from 'lucide-react';
+import { Search, Plus, Database, Users, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useBanksData } from '@/components/features/banks/useBanksData';
 import { BankEditModal } from '@/components/features/banks/BankEditModal';
 import { BankSidebar } from '@/components/features/banks/BankSidebar';
 import { BankListCard } from '@/components/features/banks/BankListCard';
+import { exportBanksToHTML } from '@/components/features/banks/exportBanksToHTML';
 
 export default function BanksPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +74,7 @@ export default function BanksPage() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
@@ -84,6 +85,15 @@ export default function BanksPage() {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        <button
+                            onClick={() => exportBanksToHTML(filteredBanks)}
+                            disabled={isLoading || filteredBanks.length === 0}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95"
+                            title="匯出為離線 HTML（可在沒有網路的電腦開啟，支援搜尋、點擊複製與列印）"
+                        >
+                            <FileCode size={18} />
+                            <span className="hidden sm:inline">匯出 HTML</span>
+                        </button>
                         {isDbMode && (
                             <button
                                 onClick={() => startEdit()}
