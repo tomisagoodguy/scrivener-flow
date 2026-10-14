@@ -56,6 +56,11 @@ if (data instanceof Error) { ... }
 `useSearchParams()` 不能放在 layout / header 全域元件，會導致靜態 build 失敗。  
 必須在 `layout.tsx` 用 `<Suspense>` 包裹含有 `useSearchParams` 的 Client Component。
 
+## localStorage / sessionStorage 讀取陷阱
+
+Client Component 仍會 SSR。**禁止**用 `useState(() => localStorage...)` 或 `useState(typeof window !== 'undefined' ? ...)` 讀 storage：伺服器與瀏覽器初值不同 → hydration mismatch，伺服器 HTML 勝出，畫面看不到已存狀態，點擊還會反轉寫回（曾造成 `/cases` 黃色標記重開分頁後消失）。
+布林旗標用 `src/hooks/useLocalStorageFlag.ts`（`useSyncExternalStore`，SSR 回 false）。也別為了消 `set-state-in-effect` lint 改回 lazy initializer。
+
 ## UI 風格規範（強制）
 
 所有容器使用 `.glass-card`（`backdrop-blur + bg-white/65 + border-white/50`）。  

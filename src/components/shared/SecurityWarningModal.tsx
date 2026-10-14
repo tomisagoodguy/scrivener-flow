@@ -1,23 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { createClient } from '@/lib/auth/client';
+import { logSecurityAcknowledgement } from '@/app/actions/securityActions';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
 
 const STORAGE_KEY = 'sf_security_warning_acknowledged';
 
-import { createClient } from '@/lib/auth/client';
-import { logSecurityAcknowledgement } from '@/app/actions/securityActions';
-
-
 export function SecurityWarningModal() {
-    // 使用 lazy initializer 讀取 localStorage，避免 useEffect 中同步 setState
-    const [visible, setVisible] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return !localStorage.getItem(STORAGE_KEY);
-    });
+    // SSR 視為已確認（不渲染），hydration 後才依 localStorage 決定是否顯示
+    const [acknowledged, , setAcknowledged] = useLocalStorageFlag(STORAGE_KEY, false, true);
+    const visible = !acknowledged;
 
     async function handleAcknowledge() {
-        localStorage.setItem(STORAGE_KEY, 'true');
-        setVisible(false);
+        setAcknowledged(true);
 
         // 非同步紀錄到後台
         try {

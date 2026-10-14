@@ -1,6 +1,7 @@
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import ExcelStep from '@/components/shared/ExcelStep';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
 
 describe('ExcelStep highlight persistence', () => {
     beforeEach(() => localStorage.clear());
@@ -24,6 +25,16 @@ describe('ExcelStep highlight persistence', () => {
         });
         expect(localStorage.getItem('highlight_c1_稅')).toBe('false');
         expect(cell.className).not.toMatch(/bg-amber-200/);
+    });
+
+    it('uses defaultValue when unset and serverValue during SSR', () => {
+        function Probe() {
+            const [v] = useLocalStorageFlag('k', true, false);
+            return <span>{String(v)}</span>;
+        }
+        expect(renderToString(<Probe />)).toContain('false');
+        render(<Probe />);
+        expect(screen.getByText('true')).toBeTruthy();
     });
 
     it('server render is unhighlighted so hydration does not mismatch', () => {

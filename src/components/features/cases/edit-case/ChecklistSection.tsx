@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Eye, EyeOff, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import CaseTodos from '@/components/features/cases/CaseTodos';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
 import { DemoCase } from '@/types';
 import { ALL_KNOWN_PREFIXES, OLD_STAGES, NEW_STAGES } from '@/lib/checklist/checklistData';
 
@@ -27,27 +28,11 @@ const initCounts = (stages: readonly { key: string }[]) =>
 // ─── Component ───────────────────────────────────────────────────
 
 export const ChecklistSection: React.FC<ChecklistSectionProps> = ({ initialData }) => {
-    const [showCompleted, setShowCompleted] = useState(() =>
-        typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) !== 'false' : true
-    );
-    const [showDetail, setShowDetail] = useState(() =>
-        typeof window !== 'undefined' ? localStorage.getItem(DETAIL_STORAGE_KEY) === 'true' : false
-    );
+    const [showCompleted, handleToggleCompleted] = useLocalStorageFlag(STORAGE_KEY, true);
+    const [showDetail, handleToggleDetail] = useLocalStorageFlag(DETAIL_STORAGE_KEY);
 
     const [oldCounts, setOldCounts] = useState<Record<string, StageCount>>(initCounts(OLD_STAGES));
     const [newCounts, setNewCounts] = useState<Record<string, StageCount>>(initCounts(NEW_STAGES));
-
-    const handleToggleCompleted = () => {
-        const next = !showCompleted;
-        setShowCompleted(next);
-        localStorage.setItem(STORAGE_KEY, String(next));
-    };
-
-    const handleToggleDetail = () => {
-        const next = !showDetail;
-        setShowDetail(next);
-        localStorage.setItem(DETAIL_STORAGE_KEY, String(next));
-    };
 
     const makeOldCountHandler = useCallback(
         (stageKey: string) => (completed: number, total: number) => {
