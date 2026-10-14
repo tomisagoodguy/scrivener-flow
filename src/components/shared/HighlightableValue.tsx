@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
 
 interface HighlightableValueProps {
     value: React.ReactNode;
@@ -15,23 +16,12 @@ export default function HighlightableValue({
     fieldKey,
     defaultClassName = '',
 }: HighlightableValueProps) {
-    const [isHighlighted, setIsHighlighted] = useState(false);
-
-    useEffect(() => {
-        const key = `highlight_${caseId}_${fieldKey}`;
-        const saved = localStorage.getItem(key);
-        if (saved === 'true') {
-            setIsHighlighted(true);
-        }
-    }, [caseId, fieldKey]);
+    const [isHighlighted, toggle] = useLocalStorageFlag(`highlight_${caseId}_${fieldKey}`);
 
     const toggleHighlight = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const key = `highlight_${caseId}_${fieldKey}`;
-        const newState = !isHighlighted;
-        setIsHighlighted(newState);
-        localStorage.setItem(key, String(newState));
+        toggle();
     };
 
     return (

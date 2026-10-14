@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
 
 interface ExcelStepProps {
     label: string;
@@ -11,19 +12,7 @@ interface ExcelStepProps {
 
 export default function ExcelStep({ label, date, note, caseId }: ExcelStepProps) {
     const isCompleted = !!date;
-    // 使用 lazy initializer 在首次渲染時讀取 localStorage，無需 useEffect
-    const [isHighlighted, setIsHighlighted] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const key = `highlight_${caseId}_${label}`;
-        return localStorage.getItem(key) === 'true';
-    });
-
-    const toggleHighlight = () => {
-        const key = `highlight_${caseId}_${label}`;
-        const newState = !isHighlighted;
-        setIsHighlighted(newState);
-        localStorage.setItem(key, String(newState));
-    };
+    const [isHighlighted, toggleHighlight] = useLocalStorageFlag(`highlight_${caseId}_${label}`);
 
     const formatDate = (d?: string) =>
         d ? new Date(d).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }) : '';
