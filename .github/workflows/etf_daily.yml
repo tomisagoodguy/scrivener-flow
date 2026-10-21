@@ -121,7 +121,7 @@ jobs:
         run: mkdir -p ~/.finlab
 
       - name: Cache Finlab Data
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.finlab
           # Reset cache key to v2 to clear potential bloat (>5GB issue)
@@ -134,7 +134,7 @@ jobs:
 
       - name: Cache Playwright Browsers
         id: playwright-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-v1
