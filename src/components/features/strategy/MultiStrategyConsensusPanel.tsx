@@ -46,7 +46,7 @@ function EtfHolderBadges({ holders }: { holders: string[] }) {
 }
 
 export default function MultiStrategyConsensusPanel({ stocks }: Props) {
-    if (stocks.length < 2) return null;
+    if (stocks.length === 0) return null;
 
     return (
         <div className="glass-card rounded-xl p-4 space-y-3">

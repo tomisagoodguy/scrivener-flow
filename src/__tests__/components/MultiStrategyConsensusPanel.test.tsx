@@ -47,9 +47,9 @@ describe('MultiStrategyConsensusPanel', () => {
         expect(screen.getByText('持倉中')).toBeInTheDocument();
     });
 
-    it('does not render when stocks.length < 2', () => {
-        const { container } = render(<MultiStrategyConsensusPanel stocks={[twoStocks[0]]} />);
-        expect(container.firstChild).toBeNull();
+    it('renders when only one stock qualifies', () => {
+        render(<MultiStrategyConsensusPanel stocks={[twoStocks[0]]} />);
+        expect(screen.getByText(twoStocks[0].stock_id)).toBeInTheDocument();
     });
 
     it('does not render when stocks array is empty', () => {
