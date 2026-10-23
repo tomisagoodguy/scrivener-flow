@@ -16,8 +16,11 @@ GATE 路徑改為同目錄、block reason 前綴改為本地版，其餘與上�
   T8 Edit 後出現 <command-name> 類條目 → 不算新一輪，仍 block
   T9 多生態測試指令（mvn/gradle/dotnet/rspec/phpunit/ctest/make test/tox）→ 識別放行
   T10 形似測試的日常指令（cat tox.ini / make testdata 等）→ 仍須 block
+  T11 設 CLAUDE_PROJECT_DIR 時，只改專案外檔案（如 scratchpad 實驗腳本）→ 放行
+  T12 設 CLAUDE_PROJECT_DIR 時，專案內外都改 → 仍 block，reason 只列專案內檔名
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -39,8 +42,16 @@ def _tool_result():
         {"type": "tool_result", "tool_use_id": "toolu_x", "content": "ok"}]}}
 
 
-def run_gate(tmp_path, entries, stop_hook_active=False, transcript_path=None):
-    """以生產介面（stdin JSON → stdout）呼叫 gate，回傳 (stdout, returncode)。"""
+def run_gate(tmp_path, entries, stop_hook_active=False, transcript_path=None, project_dir=None):
+    """以生產介面（stdin JSON → stdout）呼叫 gate，回傳 (stdout, returncode)。
+
+    project_dir=None 時移除 CLAUDE_PROJECT_DIR，避免測試結果受執行環境影響。
+    PYTHONUTF8=1 對齊 settings.json 的生產指令（Windows 預設 cp950 印不出 ⛔）。
+    """
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    env["PYTHONUTF8"] = "1"
+    if project_dir is not None:
+        env["CLAUDE_PROJECT_DIR"] = str(project_dir)
     if transcript_path is None:
         transcript_path = tmp_path / "transcript.jsonl"
         transcript_path.write_text(
@@ -51,7 +62,7 @@ def run_gate(tmp_path, entries, stop_hook_active=False, transcript_path=None):
         "stop_hook_active": stop_hook_active,
         "transcript_path": str(transcript_path)})
     proc = subprocess.run([sys.executable, str(GATE)], input=payload,
-                          capture_output=True, text=True, encoding="utf-8", timeout=30)
+                          capture_output=True, text=True, encoding="utf-8", timeout=30, env=env)
     return proc.stdout.strip(), proc.returncode
 
 
@@ -208,3 +219,31 @@ def test_t10_nontest_commands_still_block(tmp_path):
         if rc != 0 or not blocked:
             failures.append(cmd)
     assert not failures, f"以下非測試指令被誤認為測試（假放行）: {failures}"
+
+
+def test_t11_edit_outside_project_dir_allows(tmp_path):
+    proj = tmp_path / "proj"
+    entries = [
+        _user("跑個回測"),
+        _tool_use("Write", {"file_path": str(tmp_path / "scratchpad" / "fan.py"), "content": "x"}),
+        _tool_result(),
+    ]
+    out, rc = run_gate(tmp_path, entries, project_dir=proj)
+    assert rc == 0
+    assert out == ""
+
+
+def test_t12_edit_inside_and_outside_project_blocks_inside_only(tmp_path):
+    proj = tmp_path / "proj"
+    entries = [
+        _user("改 hook 順便跑實驗"),
+        _tool_use("Write", {"file_path": str(tmp_path / "scratchpad" / "fan.py"), "content": "x"}),
+        _tool_result(),
+        _tool_use("Edit", {"file_path": str(proj / "src" / "app.py"), "old_string": "a", "new_string": "b"}),
+        _tool_result(),
+    ]
+    out, rc = run_gate(tmp_path, entries, project_dir=proj)
+    assert rc == 0
+    reason = json.loads(out)["reason"]
+    assert "app.py" in reason
+    assert "fan.py" not in reason

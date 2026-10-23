@@ -3,7 +3,7 @@
 Stop hook 驗證 gate（soft 模式）。來源：github.com/Miguok/fable-harness（MIT），2026-07-05 引入。
 
 行為：解析 transcript，若「最後一個真實 user prompt 之後」有 Edit/Write/NotebookEdit
-修改程式碼檔，卻沒有任何測試執行命令，輸出 {"decision":"block","reason":...} 擋回一次；
+修改程式碼檔（僅計 CLAUDE_PROJECT_DIR 內；scratchpad 等專案外檔案不計），卻沒有任何測試執行命令，輸出 {"decision":"block","reason":...} 擋回一次；
 stop_hook_active=true（模型第二次結束）時放行，避免純討論 session 被無限卡死。
 任何解析錯誤一律 fail-open（exit 0 無輸出）——gate 絕不可弄壞 session。
 
@@ -11,9 +11,10 @@ stop_hook_active=true（模型第二次結束）時放行，避免純討論 sess
 測試：同目錄 test_verify_gate.py（uv run pytest .claude/hooks/test_verify_gate.py）。
 """
 import json
+import os
 import re
 import sys
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 CODE_EXTS = {
     ".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs",
@@ -61,8 +62,21 @@ def iter_tool_uses(entries):
                 yield block.get("name", ""), block.get("input", {}) or {}
 
 
-def analyze(entries):
-    """回傳 (本輪修改的程式碼檔名列表, 是否偵測到測試執行)。"""
+def in_project(path, project_dir):
+    """project_dir 未設定時一律視為專案內（維持原行為）。"""
+    if not project_dir:
+        return True
+    try:
+        return Path(path).resolve().is_relative_to(Path(project_dir).resolve())
+    except (OSError, ValueError):
+        return True
+
+
+def analyze(entries, project_dir=None):
+    """回傳 (本輪修改的程式碼檔名列表, 是否偵測到測試執行)。
+
+    設了 project_dir 時，專案外的檔案（如 scratchpad 實驗腳本）不計入。
+    """
     last_prompt_idx = -1
     for i, entry in enumerate(entries):
         if is_real_user_prompt(entry):
@@ -73,7 +87,7 @@ def analyze(entries):
     for name, tool_input in iter_tool_uses(current_turn):
         if name in EDIT_TOOLS:
             path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
-            if PurePath(path).suffix.lower() in CODE_EXTS:
+            if PurePath(path).suffix.lower() in CODE_EXTS and in_project(path, project_dir):
                 edited.append(PurePath(path).name)
         elif name in SHELL_TOOLS:
             if TEST_CMD_RE.search(tool_input.get("command", "")):
@@ -96,7 +110,7 @@ def main():
                     entries.append(json.loads(line))
                 except json.JSONDecodeError:
                     continue
-        edited, test_seen = analyze(entries)
+        edited, test_seen = analyze(entries, os.environ.get("CLAUDE_PROJECT_DIR"))
         if edited and not test_seen:
             files = "、".join(dict.fromkeys(edited))
             print(json.dumps({
