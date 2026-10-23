@@ -153,6 +153,12 @@ export default async function StrategyPage({
                     >
                         圖表
                     </Link>
+                    <Link
+                        href="/investment/strategy/fan-breakout"
+                        className="text-sm px-3 py-1.5 rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                        均線發散候選
+                    </Link>
                 </div>
             </div>
 

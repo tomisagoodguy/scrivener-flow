@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
     createChart,
     ColorType,
@@ -10,11 +10,18 @@ import {
     HistogramSeries,
     LineSeries
 } from 'lightweight-charts';
-import { PriceData, IndicatorService } from '@/lib/investment/indicators';
+import { PriceData, IndicatorService, type ChartMarker } from '@/lib/investment/indicators';
+import { DEFAULT_MA_PERIODS, useStockChartOverlays } from './useStockChartOverlays';
+
+export type { ChartMarker };
 
 interface StockChartProps {
     data: PriceData[];
     isDarkMode?: boolean;
+    /** 均線週期，預設 [5, 20, 60] */
+    maPeriods?: readonly number[];
+    /** 訊號標記（K 線下方 ▲），time 對不到 K 棒的會略過；預設無 */
+    markers?: readonly ChartMarker[];
 }
 
 /**
@@ -38,7 +45,7 @@ function sanitizePriceData(data: PriceData[]): PriceData[] {
  * Responsible for rendering the K-line and technical indicators using Lightweight Charts.
  * Isolated from navigation and data-fetching logic.
  */
-export function StockChart({ data, isDarkMode = false }: StockChartProps) {
+export function StockChart({ data, isDarkMode = false, maPeriods = DEFAULT_MA_PERIODS, markers }: StockChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const rsiContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -46,7 +53,7 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const rsiSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const maSeriesRefs = useRef<Map<number, ISeriesApi<"Line">>>(new Map());
+    const cleaned = useMemo(() => sanitizePriceData(data), [data]);
 
     // 1. Initialize Chart (Mount/Unmount only)
     useEffect(() => {
@@ -96,23 +103,7 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
         });
         volumeSeriesRef.current = volumeSeries;
 
-        const maConfigs = [
-            { period: 5, color: '#3b82f6', title: 'MA5' },
-            { period: 20, color: '#f59e0b', title: 'MA20' },
-            { period: 60, color: '#a855f7', title: 'MA60' },
-        ];
-
-        maConfigs.forEach(config => {
-            const series = chart.addSeries(LineSeries, {
-                color: config.color,
-                lineWidth: 1,
-                lastValueVisible: false,
-                priceLineVisible: false,
-                crosshairMarkerVisible: false,
-                title: config.title,
-            });
-            maSeriesRefs.current.set(config.period, series);
-        });
+        // 均線與標記由 useStockChartOverlays 建立（見下方）
 
         // RSI 子圖表
         if (rsiContainerRef.current) {
@@ -160,9 +151,6 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
 
         window.addEventListener('resize', handleResize);
 
-        // Capture refs for cleanup
-        const currentMaRefs = maSeriesRefs.current;
-
         return () => {
             window.removeEventListener('resize', handleResize);
             chart.remove();
@@ -172,15 +160,12 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
             rsiChartRef.current?.remove();
             rsiChartRef.current = null;
             rsiSeriesRef.current = null;
-            currentMaRefs.clear();
         };
     }, []); // Only on mount
 
     // 2. Effect: Handle Data Changes
     useEffect(() => {
         if (!chartRef.current) return;
-
-        const cleaned = sanitizePriceData(data);
         if (cleaned.length === 0) return;
 
         try {
@@ -196,11 +181,6 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
                 })));
             }
 
-            const currentMaSeries = maSeriesRefs.current;
-            currentMaSeries.forEach((series, period) => {
-                series.setData(IndicatorService.calculateSMA(cleaned, period));
-            });
-
             // RSI
             if (rsiSeriesRef.current) {
                 rsiSeriesRef.current.setData(IndicatorService.calculateRSI(cleaned, 14));
@@ -213,7 +193,10 @@ export function StockChart({ data, isDarkMode = false }: StockChartProps) {
         } catch (err) {
             console.error('StockChart: failed to render price data', err);
         }
-    }, [data]);
+    }, [cleaned]);
+
+    // 2b. Effect: 均線 + 訊號標記（須在建圖與 K 線資料 effect 之後）
+    useStockChartOverlays({ chartRef, candleSeriesRef, data: cleaned, maPeriods, markers, isDarkMode });
 
     // 3. Effect: Handle Theme Changes (Dynamic Update)
     useEffect(() => {

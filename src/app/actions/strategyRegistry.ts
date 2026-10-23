@@ -11,5 +11,6 @@ export function getStrategyDescriptions(): Record<string, string> {
         trend_template: '趨勢樣板選股',
         fundamental_momentum: '基本面動能選股',
         fund_momentum: '投信買超動能選股',
+        fan_breakout: '均線發散突破',
     };
 }

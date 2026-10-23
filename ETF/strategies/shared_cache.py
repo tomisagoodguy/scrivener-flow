@@ -25,6 +25,12 @@ class StrategyDataCache:
         return data.get('price:收盤價')
 
     @cached_property
+    def adj_close(self):
+        """還原收盤價（除權息調整）。用於 fan_breakout 均線計算，避免除權息假跌破。"""
+        from finlab import data
+        return data.get('etl:adj_close')
+
+    @cached_property
     def high(self):
         from finlab import data
         return data.get('price:最高價')

@@ -20,6 +20,12 @@ export interface LinePoint {
     value: number;
 }
 
+/** K 線圖上的訊號標記（time 為 `YYYY-MM-DD`，需對應到某根 K 棒才會被畫出） */
+export interface ChartMarker {
+    time: string;
+    text?: string;
+}
+
 export class IndicatorService {
     /**
      * Calculate Simple Moving Average (SMA) for Close Price

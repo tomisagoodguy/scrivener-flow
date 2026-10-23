@@ -551,3 +551,120 @@ def test_strategy_signal_step_fresh_write_no_stale_warning():
         StrategySignalStep().execute(ctx, services)
 
     assert not any("停更" in w for w in ctx.validation_warnings)
+
+
+# ---------------------------------------------------------------------------
+# StrategySignalStep — 策略中繼資料寫入 conditions
+# （spec「StrategySignalStep writes optional strategy metadata」）
+# ---------------------------------------------------------------------------
+
+import json  # noqa: E402
+
+_FAN_METADATA = {
+    "signal_type": "first",
+    "consec_days": 1,
+    "spread": 0.1579,
+    "market": "上市",
+    "recent_signal_dates": ["2026-05-16"],
+}
+
+
+class _MetadataStrategy(_ConstantStrategy):
+    """_ConstantStrategy（2330、2317 皆入選）+ 只提供 2330 的中繼資料。"""
+
+    strategy_id = "fan_breakout"
+
+    def get_signal_metadata(self, cache=None):
+        return {"2330": dict(_FAN_METADATA)}
+
+
+class _BrokenMetadataStrategy(_ConstantStrategy):
+    """get_signal_metadata 一定丟例外的策略。"""
+
+    strategy_id = "fan_breakout"
+
+    def get_signal_metadata(self, cache=None):
+        raise RuntimeError("metadata boom")
+
+
+def _run_step_with(strategy):
+    """以 MagicMock cache / services 執行 StrategySignalStep，回傳 (ctx, upsert 的 rows)。"""
+    from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+
+    ctx = _make_ctx("2026-05-16")
+    services = MagicMock()
+    services.sql_storage = MagicMock()
+    # 無歷史訊號 → 停更檢查提前 return，不碰 FinLab
+    services.sql_storage.get_latest_strategy_signal_date.return_value = None
+
+    mock_cache = MagicMock()
+    mock_cache.amt = pd.DataFrame(
+        {"2330": [200_000_000] * 25, "2317": [200_000_000] * 25},
+        index=pd.date_range("2026-04-20", periods=25, freq="D"),
+    )
+
+    with patch(
+        "ETF.pipeline.steps.strategy_signal_step.ALL_STRATEGIES", [strategy]
+    ), patch(
+        "ETF.pipeline.steps.strategy_signal_step.StrategyDataCache",
+        return_value=mock_cache,
+    ):
+        StrategySignalStep().execute(ctx, services)
+
+    rows = services.sql_storage.upsert_strategy_signals.call_args[0][0]
+    return ctx, rows
+
+
+def test_base_strategy_default_signal_metadata_is_none():
+    """BaseStrategy.get_signal_metadata 預設回傳 None，且不是 abstract。"""
+    assert _ConstantStrategy().get_signal_metadata(cache=None) is None
+
+
+def test_strategy_signal_step_existing_strategy_conditions_stay_null():
+    """
+    Scenario: Existing strategies unchanged
+    GIVEN a strategy that does not override get_signal_metadata selects stocks
+    WHEN step executes
+    THEN its rows are written with conditions null
+    """
+    _, rows = _run_step_with(_ConstantStrategy())
+
+    assert {r["stock_id"] for r in rows} == {"2330", "2317"}
+    assert all(r["conditions"] is None for r in rows)
+
+
+def test_strategy_signal_step_writes_metadata_into_conditions():
+    """
+    Scenario: Metadata written
+    GIVEN fan_breakout selects 2330 and 2317 but its metadata only contains 2330
+    WHEN step executes
+    THEN the 2330 row's conditions is the JSON-serialized metadata object,
+         and the 2317 row keeps conditions null
+    """
+    ctx, rows = _run_step_with(_MetadataStrategy())
+
+    by_stock = {r["stock_id"]: r for r in rows}
+    # upsert_strategy_signals 以 CAST(:conditions AS jsonb) 吃字串 → 必須是 JSON 字串
+    assert isinstance(by_stock["2330"]["conditions"], str)
+    assert json.loads(by_stock["2330"]["conditions"]) == _FAN_METADATA
+    assert by_stock["2317"]["conditions"] is None
+    assert not any("fan_breakout" in w for w in ctx.validation_warnings)
+
+
+def test_strategy_signal_step_metadata_hook_failure_is_non_fatal(caplog):
+    """
+    Scenario: Metadata hook raises
+    WHEN get_signal_metadata raises an exception for fan_breakout
+    THEN the selected rows are still written with conditions null and
+         ctx.validation_warnings contains an entry mentioning fan_breakout
+    """
+    with caplog.at_level(logging.ERROR):
+        ctx, rows = _run_step_with(_BrokenMetadataStrategy())
+
+    assert {r["stock_id"] for r in rows} == {"2330", "2317"}
+    assert all(r["conditions"] is None for r in rows)
+    assert any("fan_breakout" in w for w in ctx.validation_warnings)
+    assert any(
+        rec.levelno == logging.ERROR and "fan_breakout" in rec.getMessage()
+        for rec in caplog.records
+    )

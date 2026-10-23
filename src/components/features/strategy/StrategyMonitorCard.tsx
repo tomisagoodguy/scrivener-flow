@@ -24,6 +24,7 @@ const STRATEGY_SHORT: Record<string, string> = {
     low_vol_alpha:  'α年增率',
     low_vol_cap:    'LowVol',
     trend_template: 'Trend',
+    fan_breakout:   '發散',
 };
 
 const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }> = {

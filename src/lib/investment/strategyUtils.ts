@@ -14,7 +14,8 @@ export type StrategyId =
     | 'broker_ranked'
     | 'low_vol_alpha'
     | 'fund_momentum'
-    | 'trend_template';
+    | 'trend_template'
+    | 'fan_breakout';
 
 export interface StrategyStock {
     stock_id: string;

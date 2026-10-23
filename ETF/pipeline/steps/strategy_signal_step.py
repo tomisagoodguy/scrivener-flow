@@ -3,6 +3,7 @@
 失敗時只 log，不中斷 pipeline（不 re-raise）。
 """
 
+import json
 import logging
 from datetime import date, datetime
 from typing import TYPE_CHECKING
@@ -12,6 +13,7 @@ import pandas as pd
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
 from ETF.strategies import ALL_STRATEGIES
+from ETF.strategies.base_strategy import BaseStrategy
 from ETF.strategies.shared_cache import StrategyDataCache
 
 if TYPE_CHECKING:
@@ -98,6 +100,8 @@ class StrategySignalStep(BaseStep):
                         else str(latest_date)
                     )
 
+                    conditions_by_stock = self._collect_conditions(strategy, cache, ctx)
+
                     rows = []
                     for stock_id, value in latest_row.items():
                         is_selected = bool(value) if value else False
@@ -111,7 +115,7 @@ class StrategySignalStep(BaseStep):
                                 "stock_id": str(stock_id),
                                 "score": score,
                                 "is_selected": True,
-                                "conditions": None,
+                                "conditions": conditions_by_stock.get(str(stock_id)),
                             }
                         )
 
@@ -178,6 +182,45 @@ class StrategySignalStep(BaseStep):
         self._check_signal_staleness(ctx, services)
 
         return ctx
+
+    def _collect_conditions(
+        self, strategy: BaseStrategy, cache: StrategyDataCache, ctx: PipelineContext
+    ) -> dict[str, str]:
+        """呼叫策略的 get_signal_metadata，回傳 {stock_id: JSON 字串}（供寫入 conditions）。
+
+        upsert_strategy_signals 以 CAST(:conditions AS jsonb) 寫入，故需先序列化為字串
+        （與 FundMomentumStep 相同）。hook 或個別股票序列化失敗時只留空 conditions、
+        log error 並加 validation_warnings（含策略 id），不影響該策略入選股的寫入。
+        """
+        try:
+            metadata = strategy.get_signal_metadata(cache=cache)
+        except Exception as e:
+            logger.error(
+                "[%s] get_signal_metadata() failed: %s", strategy.strategy_id, e
+            )
+            ctx.validation_warnings.append(
+                f"策略 {strategy.strategy_id} 中繼資料產生失敗，conditions 留空：{e}"
+            )
+            return {}
+
+        if metadata is None:
+            return {}
+
+        conditions: dict[str, str] = {}
+        for stock_id, item in metadata.items():
+            try:
+                conditions[str(stock_id)] = json.dumps(item)
+            except (TypeError, ValueError) as e:
+                logger.error(
+                    "[%s] metadata of %s is not JSON serializable: %s",
+                    strategy.strategy_id,
+                    stock_id,
+                    e,
+                )
+                ctx.validation_warnings.append(
+                    f"策略 {strategy.strategy_id} 的 {stock_id} 中繼資料無法序列化，conditions 留空：{e}"
+                )
+        return conditions
 
     def _check_signal_staleness(
         self, ctx: PipelineContext, services: "PipelineServices"
