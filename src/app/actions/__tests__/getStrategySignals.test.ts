@@ -132,6 +132,10 @@ describe('getStrategySignals', () => {
         const capitalStocks = capital.stocks.map((st) => st.stock_id);
         expect(capitalStocks).toContain('2317'); // 2026-06-10
         expect(capitalStocks).not.toContain('9999'); // 2026-06-04 較舊，不顯示
+
+        // 每策略帶自身最新資料日期
+        expect(capital.date).toBe('2026-06-10');
+        expect(result!.strategies.find((s) => s.id === 'fund_momentum')!.date).toBe('2026-06-30');
     });
 
     it('視窗外（> 30 天）策略不顯示；視窗以當日為錨（gte = 當日 − 30 天）', async () => {
@@ -172,6 +176,7 @@ describe('getStrategySignals', () => {
         expect(signalsBuilder.gte).not.toHaveBeenCalled();
         // 僅回傳該日期策略
         expect(result!.strategies.map((s) => s.id)).toEqual(['capital_layer']);
+        expect(result!.strategies[0].date).toBe('2026-06-10');
     });
 
     it('liquidity_flag=true 與 avg_turnover 正確傳遞至 StrategyStock', async () => {

@@ -1,94 +1,75 @@
-import Link from 'next/link';
-import { getEtfMeta } from '@/lib/investment/etfRegistry';
+import ConsensusControls from './ConsensusControls';
+import ConsensusStockChip from './ConsensusStockChip';
+import ConsensusMatrix from './ConsensusMatrix';
+import { formatMonthDay, shortStrategyLabel } from '@/lib/investment/strategyConsensusUtils';
+import type { ConsensusParams, MultiConsensusEntry } from '@/lib/investment/strategyConsensusUtils';
 export type { MultiConsensusEntry } from '@/lib/investment/strategyConsensusUtils';
-import type { MultiConsensusEntry } from '@/lib/investment/strategyConsensusUtils';
+
+export interface ConsensusStrategyDate {
+    id: string;
+    label: string;
+    date: string;
+}
 
 interface Props {
     stocks: MultiConsensusEntry[];
+    /** 參與的策略（取自 getStrategySignals 結果），含各自資料日期 */
+    strategies: ConsensusStrategyDate[];
+    /** 頂層最新日期；早於此日期的策略以 muted 樣式標示 */
+    latestDate: string | null;
+    params: ConsensusParams;
 }
 
-import type { MovementLabel } from '@/lib/investment/strategyUtils';
-
-const MOVEMENT_BADGE: Record<MovementLabel, { label: string; className: string }> = {
-    adding:   { label: '加碼中', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
-    reducing: { label: '減碼中', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-    holding:  { label: '持倉中', className: 'bg-gray-200/60 text-gray-600 dark:text-gray-400' },
-    none:     { label: '未持有', className: 'bg-slate-100/60 text-slate-500 dark:bg-slate-600/70 dark:text-slate-300' },
-};
-
-function EtfHolderBadges({ holders }: { holders: string[] }) {
-    const unique = [...new Set(holders)];
-    const visible = unique.slice(0, 3);
-    const rest = unique.length - visible.length;
+function StrategyDateLine({ strategies, latestDate }: Pick<Props, 'strategies' | 'latestDate'>) {
     return (
-        <>
-            {visible.map((etfCode) => {
-                const meta = getEtfMeta(etfCode);
-                if (!meta) return null;
-                return (
-                    <span
-                        key={etfCode}
-                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white"
-                        style={{ backgroundColor: meta.color }}
-                        title={meta.name}
-                    >
-                        {meta.shortCode}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+            {strategies.map((s) => (
+                <span key={s.id} title={s.label}>
+                    {shortStrategyLabel(s.label)}{' '}
+                    <span className={latestDate && s.date < latestDate ? 'text-gray-400' : 'text-gray-700 dark:text-gray-200'}>
+                        {formatMonthDay(s.date)}
                     </span>
-                );
-            })}
-            {rest > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-300/70 text-gray-600 dark:bg-gray-600/70 dark:text-gray-300">
-                    +{rest}
                 </span>
-            )}
-        </>
+            ))}
+        </div>
     );
 }
 
-export default function MultiStrategyConsensusPanel({ stocks }: Props) {
-    if (stocks.length === 0) return null;
+export default function MultiStrategyConsensusPanel({ stocks, strategies, latestDate, params }: Props) {
+    if (strategies.length < 2) return null;
+
+    const isLatest = params.window === 'latest';
+    const strategyDates = isLatest ? Object.fromEntries(strategies.map((s) => [s.id, s.date])) : undefined;
 
     return (
         <div className="glass-card rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                    多策略共選
-                </h2>
-                <span className="text-xs text-gray-400">{stocks.length} 支</span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">多策略共選</h2>
+                    <span className="text-xs text-gray-400">{stocks.length} 支</span>
+                </div>
+                <ConsensusControls params={params} />
             </div>
-            <div className="flex flex-wrap gap-2">
-                {stocks.map((stock) => {
-                    const badge = MOVEMENT_BADGE[stock.movement];
-                    return (
-                        <Link
-                            key={stock.stock_id}
-                            href={`/investment/stock/${stock.stock_id}`}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/60 dark:bg-gray-800/50 border border-white/50 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/60 transition-colors flex-wrap"
-                        >
-                            <span className="font-mono text-sm font-medium text-gray-800 dark:text-gray-100">
-                                {stock.stock_id}
-                            </span>
-                            {stock.name && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {stock.name}
-                                </span>
-                            )}
-                            <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                                {stock.count} 策略
-                            </span>
-                            {stock.industry && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
-                                    {stock.industry}
-                                </span>
-                            )}
-                            <EtfHolderBadges holders={stock.etfHolders} />
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                                {badge.label}
-                            </span>
-                        </Link>
-                    );
-                })}
-            </div>
+
+            {isLatest ? (
+                <StrategyDateLine strategies={strategies} latestDate={latestDate} />
+            ) : (
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    統計區間：近 {params.window} 天（不同策略數）
+                </p>
+            )}
+
+            {params.view === 'matrix' ? (
+                <ConsensusMatrix stocks={stocks} strategyDates={strategyDates} />
+            ) : stocks.length === 0 ? (
+                <p className="text-xs text-gray-400">目前條件下無共選股</p>
+            ) : (
+                <div className="flex flex-wrap gap-2">
+                    {stocks.map((stock) => (
+                        <ConsensusStockChip key={stock.stock_id} stock={stock} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

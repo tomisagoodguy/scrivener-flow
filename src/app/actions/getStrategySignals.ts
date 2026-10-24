@@ -150,7 +150,10 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
     }
 
     const strategyMap = new Map<string, StrategyStock[]>();
+    // 每策略資料日期：typedSignals 已過濾為各策略單一日期
+    const strategyDateMap = new Map<string, string>();
     for (const sig of typedSignals) {
+        strategyDateMap.set(sig.strategy_id, sig.date);
         const strategyId = sig.strategy_id;
         const stockId = sig.stock_id;
         const info = stockInfoMap.get(stockId) ?? { name: null, industry: null };
@@ -172,6 +175,7 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
     const strategies: StrategyEntry[] = [...strategyMap.entries()].map(([id, stocks]) => ({
         id,
         description: descriptions[id] ?? id,
+        date: strategyDateMap.get(id) ?? headerDate,
         stocks,
     }));
 
@@ -181,9 +185,9 @@ async function _getStrategySignals(date?: string): Promise<StrategySignalsResult
 export async function getStrategySignals(date?: string): Promise<StrategySignalsResult | null> {
     const cached = unstable_cache(
         () => _getStrategySignals(date),
-        // v3：strategy_signals 新增 avg_turnover / liquidity_flag 欄位（strategy-liquidity-filter）。
+        // v4：StrategyEntry 新增每策略 date（strategy-consensus-panel-enhance）。
         // 版本號用於手動失效舊欄位結構算出的快取結果。
-        ['strategy-signals-v3', date ?? 'latest'],
+        ['strategy-signals-v4', date ?? 'latest'],
         { revalidate: 3600 },
     );
     return cached();

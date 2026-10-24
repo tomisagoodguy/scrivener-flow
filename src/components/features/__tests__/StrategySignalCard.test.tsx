@@ -23,6 +23,7 @@ function makeStrategy(overrides: Partial<StrategyEntry['stocks'][number]> = {}):
     return {
         id: 'capital_layer',
         description: '資金階層策略',
+        date: '2026-06-30',
         stocks: [
             {
                 stock_id: '2317',

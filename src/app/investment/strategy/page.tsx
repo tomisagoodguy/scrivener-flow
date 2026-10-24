@@ -15,7 +15,13 @@ import type { MovementLabel, StrategySignalsResult } from '@/lib/investment/stra
 import type { StrategyAnalyticsData } from '@/app/actions/getStrategyAnalytics';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import MultiStrategyConsensusPanel from '@/components/features/strategy/MultiStrategyConsensusPanel';
-import { buildMultiConsensusStocks } from '@/lib/investment/strategyConsensusUtils';
+import { getStrategyConsensusHistory } from '@/app/actions/getStrategyConsensusHistory';
+import type { StrategyConsensusHistoryData } from '@/app/actions/getStrategyConsensusHistory';
+import {
+    buildConsensusHistory,
+    buildMultiConsensusStocks,
+    parseConsensusParams,
+} from '@/lib/investment/strategyConsensusUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,13 +83,17 @@ function buildMonitorStocks(
 export default async function StrategyPage({
     searchParams,
 }: {
-    searchParams: Promise<{ view?: string }>;
+    searchParams: Promise<{ view?: string; cmin?: string; cview?: string; cwin?: string }>;
 }) {
-    const { view } = await searchParams;
+    const { view, cmin, cview, cwin } = await searchParams;
     const isMonitor = view === 'monitor';
     const isChart = view === 'chart';
+    const consensusParams = parseConsensusParams({ cmin, cview, cwin });
+    // 近 N 天模式才額外查詢；最新模式由 getStrategySignals 結果直接推導
+    const consensusWindow = consensusParams.window;
+    const needsHistory = !isMonitor && !isChart && consensusWindow !== 'latest';
 
-    const [result, allIC, analytics, rawConsensus] = await Promise.all([
+    const [result, allIC, analytics, rawConsensus, consensusHistory] = await Promise.all([
         getStrategySignals(),
         getFactorIC(
             [...new Set(Object.values(STRATEGY_FACTORS).flat())],
@@ -91,7 +101,19 @@ export default async function StrategyPage({
         ),
         getStrategyAnalytics(),
         getConsensusSignals().catch(() => ({ signals: [], date: null })),
+        needsHistory
+            ? getStrategyConsensusHistory(consensusWindow)
+            : Promise.resolve<StrategyConsensusHistoryData | null>(null),
     ]);
+
+    const consensusStocks = consensusHistory
+        ? buildConsensusHistory(consensusHistory.rows, consensusHistory.stockInfo, consensusParams.minCount)
+        : buildMultiConsensusStocks(result, consensusParams.minCount);
+    const consensusStrategies = (result?.strategies ?? []).map((s) => ({
+        id: s.id,
+        label: s.description,
+        date: s.date,
+    }));
 
     const consensusMap: Record<string, ConsensusSignal> = {};
     for (const s of rawConsensus.signals) consensusMap[s.stock_id] = s;
@@ -192,7 +214,12 @@ export default async function StrategyPage({
                         <StrategyAnalyticsPanel data={analytics} />
                     )}
 
-                    <MultiStrategyConsensusPanel stocks={buildMultiConsensusStocks(result)} />
+                    <MultiStrategyConsensusPanel
+                        stocks={consensusStocks}
+                        strategies={consensusStrategies}
+                        latestDate={result?.date ?? null}
+                        params={consensusParams}
+                    />
 
                     {!result || result.strategies.length === 0 ? (
                         <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>

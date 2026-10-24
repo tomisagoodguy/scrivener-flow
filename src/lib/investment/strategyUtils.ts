@@ -31,6 +31,8 @@ export interface StrategyStock {
 export interface StrategyEntry {
     id: string;
     description: string;
+    /** 該策略採用的訊號日期（YYYY-MM-DD）；未指定日期時為該策略自身最新日期 */
+    date: string;
     stocks: StrategyStock[];
 }
 
