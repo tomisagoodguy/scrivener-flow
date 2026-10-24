@@ -6,8 +6,28 @@
 
 import logging
 from functools import cached_property
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+def industry_mapping(info: 'pd.DataFrame') -> 'pd.Series':
+    """company_basic_info → stock_id（字串、去空白）→ 產業類別 Series；重複 stock_id 取第一筆。
+
+    Raises:
+        KeyError: 缺少「產業類別」欄位。
+    """
+    import pandas as pd
+
+    info = pd.DataFrame(info)
+    if '產業類別' not in info.columns:
+        raise KeyError("company_basic_info 缺少「產業類別」欄位")
+    ids = info['stock_id'] if 'stock_id' in info.columns else info.index.to_series()
+    mapping = pd.Series(info['產業類別'].to_numpy(), index=ids.astype(str).str.strip().to_numpy())
+    return mapping[~mapping.index.duplicated(keep='first')]
 
 
 class StrategyDataCache:
@@ -95,6 +115,12 @@ class StrategyDataCache:
         if isinstance(squeezed, pd.DataFrame):
             squeezed = squeezed.iloc[:, 0]
         return pd.Series(squeezed)
+
+    @cached_property
+    def industry(self):
+        """股票代號 → 產業類別（company_basic_info）。用於 trend_template 產業排除。"""
+        from finlab import data
+        return industry_mapping(data.get('company_basic_info'))
 
     # ── 籌碼資料 ──────────────────────────────────────────────────────────────
 

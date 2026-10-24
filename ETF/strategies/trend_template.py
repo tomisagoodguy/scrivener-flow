@@ -1,6 +1,7 @@
 """趨勢樣板 (Trend Template) 量化選股策略。
 
 14 個多因子條件，積分 ≥ 12 的個股依市值取最小 5 支（偏好小型趨勢股）。
+選股前排除 EXCLUDED_INDUSTRIES（預設生技醫療業）；產業資料取得失敗時不排除。
 
 條件涵蓋：
   - 趨勢動量（RSV、RS、距高點比率）
@@ -13,6 +14,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
 from ETF.strategies.base_strategy import BaseStrategy
 
 if TYPE_CHECKING:
@@ -20,12 +23,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# 排除產業：生技醫療營收小、波動大，股價多由研發/臨床消息驅動，營收動能條件預測力弱
+EXCLUDED_INDUSTRIES: tuple[str, ...] = ("生技醫療業",)
+
 
 class TrendTemplateStrategy(BaseStrategy):
     """趨勢樣板量化選股。
 
-    滿足 14 項多因子條件 ≥ 12 個、成交金額 > 2000 萬、非處置股，
-    依市值由小取 5 支。
+    滿足 14 項多因子條件 ≥ 12 個、成交金額 > 2000 萬、非處置股、
+    非生技醫療業，依市值由小取 5 支。
     """
 
     strategy_id = "trend_template"
@@ -51,6 +57,62 @@ def _price_to_high(close, n: int):
     """收盤價距 n 日最高點比率百分位排名。"""
     high_n = close.rolling(n, min_periods=n // 2).max()
     return (close / high_n).rank(axis=1, pct=True)
+
+
+def build_industry_exclusion_mask(stock_ids, industry_by_stock: pd.Series, excluded) -> pd.Series:
+    """產業排除遮罩：True = 保留、False = 排除。
+
+    只有產業明確屬於 excluded 才排除；對照缺漏或產業為 null 一律保留。
+
+    Raises:
+        TypeError: excluded 為單一字串（會誤做子字串比對）。
+    """
+    if isinstance(excluded, str):
+        raise TypeError("excluded 必須是產業名稱的 tuple/list，不可為單一字串")
+    ids = pd.Index(stock_ids)
+    industry = industry_by_stock.reindex(ids)
+    return pd.Series(~industry.isin(list(excluded)).to_numpy(), index=ids, dtype=bool)
+
+
+def _load_industry_mapping(cache: 'StrategyDataCache | None') -> pd.Series | None:
+    """取 stock_id → 產業類別；任何失敗記錄錯誤並回傳 None（本次不排除產業）。"""
+    try:
+        if cache is not None:
+            return cache.industry
+        from finlab import data
+
+        from ETF.strategies.shared_cache import industry_mapping
+        return industry_mapping(data.get('company_basic_info'))
+    except Exception as e:
+        logger.error("[trend_template] 產業資料取得失敗，本次不排除產業：%s", e, exc_info=True)
+        return None
+
+
+def _industry_allowed(stock_ids, cache: 'StrategyDataCache | None') -> pd.Series:
+    """產業遮罩（True = 保留）；對照取得失敗時全部保留，排除 0 支時發 warning 防標籤不符。"""
+    industry = _load_industry_mapping(cache)
+    if industry is None:
+        return pd.Series(True, index=pd.Index(stock_ids), dtype=bool)
+    allowed = build_industry_exclusion_mask(stock_ids, industry, EXCLUDED_INDUSTRIES)
+    n_excluded = int((~allowed).sum())
+    if n_excluded == 0:
+        logger.warning(
+            "[trend_template] 產業排除 0 支，請確認 EXCLUDED_INDUSTRIES %s 與 company_basic_info 產業名稱一致",
+            EXCLUDED_INDUSTRIES,
+        )
+    else:
+        logger.info("[trend_template] 產業排除 %d 支：%s", n_excluded, EXCLUDED_INDUSTRIES)
+    return allowed
+
+
+def select_smallest_cap(cap, gate, allowed: pd.Series, n: int = 5):
+    """閘門套上產業遮罩後，依市值由小取 n 支；被排除的名額由下一順位遞補。"""
+    gate = gate.copy()
+    blocked = [c for c in gate.columns if c in allowed.index and not allowed[c]]
+    if blocked:
+        gate[blocked] = False
+    position = cap * gate
+    return position[position > 0].is_smallest(n)  # type: ignore[operator]
 
 
 def _compute_candle_volatility(close, timeperiod: int = 20):
@@ -156,10 +218,11 @@ def _build_position(cache: 'StrategyDataCache | None' = None):
 
     scores = sum(c.astype(int) for c in conds)
 
-    # 積分 ≥ 12、成交金額 > 2000 萬、非處置股，依市值取最小 5 支（小型趨勢股）
+    # 積分 ≥ 12、成交金額 > 2000 萬、非處置股、非排除產業，依市值取最小 5 支（小型趨勢股）
     amt_filter = amt > 2 * 10 ** 7
-    position = cap * ((scores >= 12) & amt_filter & disposal_stocks)
-    position = position[position > 0].is_smallest(5)  # type: ignore[operator]
+    gate = (scores >= 12) & amt_filter & disposal_stocks
+    allowed = _industry_allowed(gate.columns, cache)
+    position = select_smallest_cap(cap, gate, allowed, n=5)
     position = position.reindex(rev.index_str_to_date().index, method='ffill')  # type: ignore[operator]
 
     return position
