@@ -274,6 +274,7 @@ close = FinlabDataFrame(cache.close)  # 仍然報錯
 
 `getAllHoldings()` 先查全局最新 `canonicalDate`，再讓 `ETF_REGISTRY` 全部 ETF 並行使用同一日期。
 Pipeline 各步驟日期統一使用 `ctx.date_str`，`date.today()` 只作 fallback。
+`market_breadth_daily` 由 `SyncAdlStep` 寫入，排在 `SyncBareKStep` 等多數步驟之後：在它之前的步驟查「最近 N 個交易日」時當日尚未入表，須用 `ctx.date_str` + 該表早於當日的前 N-1 筆（範例：`sync_bare_k_step.py` 的 `_momentum_window_start`）。
 
 ## etf_diff_logs 查詢補充
 

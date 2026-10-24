@@ -29,6 +29,7 @@
 
 **正例**：「改完 `getHoldings` 補價邏輯 → `yarn test --testPathPatterns useHoldings` 綠燈 + 派 agent 實跑頁面確認數字」→ 可宣告完成。
 **反例**：「我改好了，應該可以了」——沒有任何證據 → 不可宣告完成。詳細清單見 skill `verification-before-completion`。
+**本輪最後一次改碼後必重跑相關測試**（即使只是審查後的小修補）：Stop hook 驗證 gate 會擋下「本輪改了碼卻沒跑測試」的結束。
 
 ---
 
