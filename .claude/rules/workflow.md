@@ -28,6 +28,7 @@ Artifact 順序：`proposal → design → specs → tasks`
 | Google Auth 在 Production 失敗 | Supabase Dashboard → Authentication → Redirect URLs 加入 `https://<your-domain>/**` |
 
 根頁面 `/` 無 session 時自動跳轉 `/login` 是正常行為。
+`/investment/*` 在 localhost 未登入即可存取，可用 headless Playwright 腳本實測；但 `/investment/bare-k/[code]` 未登入只有單一股票（多股捲動需登入後的自選股）。
 
 ## 套件管理
 

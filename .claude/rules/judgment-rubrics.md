@@ -71,7 +71,7 @@
 
 | 產出型態 | 最低驗證（不做＝未完成） |
 |---------|------------------------|
-| 改程式碼 | `yarn tsc --noEmit`（型別）+ 相關 `yarn test`；動 UI 加實跑 |
+| 改程式碼 | `yarn tsc --noEmit`（型別）+ 相關 `yarn test`；動 UI 加實跑。lint 用 `yarn eslint <改動檔>`——全專案 `yarn lint` 有數千筆既有錯誤（`.venv/`、`tools/`、`migrations/`），看總數判斷不出新錯 |
 | 改 Python（ETF） | `uv run ruff check` + `uv run pytest ETF/相關` |
 | 改文件/規則檔 | 派 fresh agent **read-back**：檔在不在、完不完整、規則有無互相打架 |
 | 高風險判斷/品味 | 第二意見（另一 opus）或多答案評審選優 |
