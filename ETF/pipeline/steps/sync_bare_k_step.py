@@ -1,7 +1,8 @@
 """
 Sync Bare-K Step
 
-從 watch_list 聚合所有使用者的自選股，計算裸K六面板快照，
+從 watch_list 聚合所有使用者的自選股，加上最新日策略入選股與窗口同步加碼股
+（優先序：自選股 → 策略股 → 同步加碼股），計算裸K六面板快照，
 並批次 upsert 至 bare_k_snapshots 表。
 """
 
@@ -20,7 +21,29 @@ from ETF.services.finlab.bare_k_service import BareKService
 
 logger = logging.getLogger(__name__)
 
-MAX_STOCKS = 50  # 每次最多同步股票數量
+MAX_STOCKS = 200  # 每次最多同步股票數量
+
+# 同步加碼窗口：必須與 src/app/investment/momentum/page.tsx 的 DEFAULT_WINDOW / DEFAULT_MIN_COUNT 一致
+MOMENTUM_WINDOW_DAYS = 5
+MOMENTUM_MIN_ETF_COUNT = 2
+
+
+def _momentum_window_start(prev_dates: list[str], today: str) -> str:
+    """推算同步加碼窗口起日。
+
+    SyncBareKStep 執行時當日 market_breadth_daily 尚未寫入，因此窗口 =
+    today 加上 prev_dates（降冪，皆早於 today）的前 MOMENTUM_WINDOW_DAYS - 1 筆，
+    起日取其中最早者。prev_dates 不足時以現有最早日期為起日。
+
+    Args:
+        prev_dates: market_breadth_daily 中早於 today 的日期（YYYY-MM-DD，降冪）。
+        today: 窗口迄日（YYYY-MM-DD）。
+
+    Returns:
+        窗口起日（YYYY-MM-DD）。
+    """
+    window = [today, *prev_dates[: MOMENTUM_WINDOW_DAYS - 1]]
+    return min(window)
 
 
 class SyncBareKStep(BaseStep):
@@ -37,24 +60,27 @@ class SyncBareKStep(BaseStep):
         # 1. 從 watch_list 聚合所有使用者的股票（service role 繞過 RLS）
         watch_list_ids = self._fetch_watch_list_stocks(ctx, services)
 
-        # 2. 額外納入策略股（watch_list 優先，策略股 append 後去重）
+        # 2. 額外納入策略股、同步加碼股（優先序：watch_list → 策略股 → 同步加碼股，依序 append 後去重）
         strategy_ids = self._fetch_strategy_stocks(ctx, services)
-        seen: set[str] = set(watch_list_ids)
-        merged: list[str] = list(watch_list_ids)
-        for sid in strategy_ids:
+        momentum_ids = self._fetch_momentum_stocks(ctx, services)
+        seen: set[str] = set()
+        stock_ids: list[str] = []
+        for sid in [*watch_list_ids, *strategy_ids, *momentum_ids]:
             if sid not in seen:
-                merged.append(sid)
+                stock_ids.append(sid)
                 seen.add(sid)
-        stock_ids = merged
 
         if not stock_ids:
-            self.logger.info("watch_list and strategy_signals are both empty, skipping BareK sync.")
+            self.logger.info(
+                "watch_list, strategy_signals and window-momentum are all empty, skipping BareK sync."
+            )
             ctx.bare_k_synced_count = 0
             return ctx
 
         if len(stock_ids) > MAX_STOCKS:
             self.logger.warning(
-                f"Combined watch_list + strategy stocks has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
+                f"Combined watch_list + strategy + window-momentum stocks has {len(stock_ids)} stocks, "
+                f"only syncing first {MAX_STOCKS}"
             )
             stock_ids = stock_ids[:MAX_STOCKS]
 
@@ -112,6 +138,48 @@ class SyncBareKStep(BaseStep):
                 return [row[0] for row in result.fetchall()]
         except Exception as e:
             self.logger.error(f"Failed to fetch strategy stocks: {e}")
+            return []
+
+    def _fetch_momentum_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
+        """
+        查詢窗口內被 >= MOMENTUM_MIN_ETF_COUNT 家 ETF 淨加碼的股票（同步加碼股）。
+
+        判定規則與前端 aggregateWindowMomentum 一致：同一 (stock_code, etf_code) 在窗口內
+        SUM(diff_shares) > 0 才算 1 家；依家數遞減、淨加碼股數合計遞減排序。
+        窗口 = ctx.date_str + market_breadth_daily 中早於 ctx.date_str 的最近 N-1 個交易日
+        （SyncAdlStep 在本步驟之後才寫入當日資料）。
+        失敗時 log error 並回傳空列表（不 raise）。
+        """
+        today = ctx.date_str or str(date.today())
+        n_prev = MOMENTUM_WINDOW_DAYS - 1
+        try:
+            with services.sql_storage.engine.connect() as conn:
+                prev_rows = conn.execute(text("""
+                    SELECT date
+                    FROM market_breadth_daily
+                    WHERE date < CAST(:today AS date)
+                    ORDER BY date DESC
+                    LIMIT :n
+                """), {"today": today, "n": n_prev}).fetchall()
+                prev_dates = [str(row[0]) for row in prev_rows]
+                start = _momentum_window_start(prev_dates, today)
+
+                result = conn.execute(text("""
+                    SELECT stock_code
+                    FROM (
+                        SELECT stock_code, etf_code, SUM(diff_shares) AS net_shares
+                        FROM etf_diff_logs
+                        WHERE data_date BETWEEN CAST(:start AS date) AND CAST(:end AS date)
+                        GROUP BY stock_code, etf_code
+                        HAVING SUM(diff_shares) > 0
+                    ) AS accumulated
+                    GROUP BY stock_code
+                    HAVING COUNT(*) >= :min_count
+                    ORDER BY COUNT(*) DESC, SUM(net_shares) DESC, stock_code
+                """), {"start": start, "end": today, "min_count": MOMENTUM_MIN_ETF_COUNT})
+                return [row[0] for row in result.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Failed to fetch window-momentum stocks: {e}")
             return []
 
     def _fetch_watch_list_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:

@@ -12,6 +12,7 @@
 
 import {
     aggregateWindowMomentum,
+    computeAccumulationDates,
     computeAbsorptionRatio,
     computeAbsorptionTrend,
     splitWindowHalves,
@@ -187,5 +188,22 @@ describe('computeAbsorptionTrend', () => {
         [0, 50_000, 'accelerating'],
     ])('first=%d second=%d → %s', (first, second, expected) => {
         expect(trendOf(first, second)).toBe(expected);
+    });
+});
+
+describe('accumulationDates (computeAccumulationDates over aggregated sharesByDate)', () => {
+    it('marks only net-buy dates of accumulating ETFs', () => {
+        const [stock] = aggregateWindowMomentum(
+            [
+                event({ etf_code: '00981A', stock_code: '2330', data_date: '2026-06-08', diff_shares: 5_000 }),
+                event({ etf_code: '00981A', stock_code: '2330', data_date: '2026-06-10', diff_shares: -2_000 }),
+                event({ etf_code: '00980A', stock_code: '2330', data_date: '2026-06-09', diff_shares: 4_000 }),
+                // 00991A 窗口淨減持 → 不計入家數，其日分布也不納入
+                event({ etf_code: '00991A', stock_code: '2330', data_date: '2026-06-11', diff_shares: 1_000 }),
+                event({ etf_code: '00991A', stock_code: '2330', data_date: '2026-06-12', diff_shares: -9_000 }),
+            ],
+            2,
+        );
+        expect(computeAccumulationDates(stock.sharesByDate)).toEqual(['2026-06-08', '2026-06-09']);
     });
 });

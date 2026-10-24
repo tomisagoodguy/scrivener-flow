@@ -5,6 +5,7 @@ import { getPublicClient } from '@/lib/supabase/service';
 import {
     aggregateWindowMomentum,
     computeAbsorptionRatio,
+    computeAccumulationDates,
     computeAbsorptionTrend,
     type AbsorptionTrend,
     type EtfAccumulationDetail,
@@ -36,6 +37,8 @@ export interface WindowMomentumStock {
     /** 窗口漲跌幅（首日收盤 → 末日收盤，%）；K 線不足 2 根時為 null */
     priceChangePercent: number | null;
     etfDetails: EtfAccumulationDetail[];
+    /** 窗口內加碼日（加碼 ETF 當日合計買超，YYYY-MM-DD 升冪），供圖表 markerDates */
+    accumulationDates: string[];
     candles: MomentumCandle[];
 }
 
@@ -202,6 +205,7 @@ async function computeWindowMomentum(
             absorptionTrend: computeAbsorptionTrend(agg.sharesByDate, windowDates),
             priceChangePercent,
             etfDetails: agg.etfDetails,
+            accumulationDates: computeAccumulationDates(agg.sharesByDate),
             candles,
         };
     });
@@ -215,7 +219,7 @@ export async function getWindowMomentum(
 ): Promise<WindowMomentumResult> {
     const cached = unstable_cache(
         () => computeWindowMomentum(windowDays, minEtfCount),
-        ['window-momentum-v1', String(windowDays), String(minEtfCount)],
+        ['window-momentum-v2', String(windowDays), String(minEtfCount)],
         { revalidate: 3600 },
     );
     return cached();

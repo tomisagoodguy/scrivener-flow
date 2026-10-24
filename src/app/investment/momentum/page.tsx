@@ -2,11 +2,16 @@ export const revalidate = 3600;
 
 import { Suspense } from 'react';
 import { getWindowMomentum } from '@/app/actions/getWindowMomentum';
+import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
+import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import { MomentumCard } from './components/MomentumCard';
+import { MomentumChartViewer } from './components/MomentumChartViewer';
 import { MomentumFilter } from './components/MomentumFilter';
+import { MomentumViewToggle } from './components/MomentumViewToggle';
 
 const VALID_WINDOWS = [3, 5, 10, 14];
 const VALID_MIN_COUNTS = [2, 3, 5];
+// 必須與 ETF/pipeline/steps/sync_bare_k_step.py 的 MOMENTUM_WINDOW_DAYS / MOMENTUM_MIN_ETF_COUNT 一致
 const DEFAULT_WINDOW = 5;
 const DEFAULT_MIN_COUNT = 2;
 
@@ -23,8 +28,17 @@ export default async function MomentumPage({
     const params = await searchParams;
     const windowDays = parseParam(params.window, VALID_WINDOWS, DEFAULT_WINDOW);
     const minEtfCount = parseParam(params.min_count, VALID_MIN_COUNTS, DEFAULT_MIN_COUNT);
+    const view = params.view === 'chart' ? 'chart' : 'cards';
 
     const { stocks, windowStart, windowEnd } = await getWindowMomentum(windowDays, minEtfCount);
+    // 圖表視角才查裸K快照；整批失敗時降級為全部佔位卡，不讓整頁 500
+    const snapshots =
+        view === 'chart' && stocks.length > 0
+            ? await getStrategySnapshots(stocks.map((s) => s.stockCode)).catch((e: unknown) => {
+                  console.error('[MomentumPage] getStrategySnapshots', e);
+                  return new Map<string, BareKSnapshot | null>();
+              })
+            : new Map<string, BareKSnapshot | null>();
 
     return (
         <div className="animate-fade-in space-y-6">
@@ -41,9 +55,12 @@ export default async function MomentumPage({
                                 : '暫無交易日資料，請先執行 ETF Pipeline 同步資料'}
                         </p>
                     </div>
-                    <Suspense fallback={null}>
-                        <MomentumFilter currentWindow={windowDays} currentMinCount={minEtfCount} />
-                    </Suspense>
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <MomentumViewToggle currentView={view} windowDays={windowDays} minEtfCount={minEtfCount} />
+                        <Suspense fallback={null}>
+                            <MomentumFilter currentWindow={windowDays} currentMinCount={minEtfCount} />
+                        </Suspense>
+                    </div>
                 </div>
             </div>
 
@@ -56,6 +73,12 @@ export default async function MomentumPage({
                         可嘗試放寬觀察天數或降低最少家數
                     </p>
                 </div>
+            ) : view === 'chart' ? (
+                <MomentumChartViewer
+                    stocks={stocks}
+                    snapshots={snapshots}
+                    backHref={`/investment/momentum?window=${windowDays}&min_count=${minEtfCount}`}
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {stocks.map((stock) => (

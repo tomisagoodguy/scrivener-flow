@@ -145,3 +145,25 @@ export function computeAbsorptionTrend(
     if (second < first * 0.8) return 'decaying';
     return 'steady';
 }
+
+/** 圖表視角標籤：每家加碼 ETF 一個「<ETF代號> +<張數>張」，順序沿用 etfDetails */
+export function formatMomentumEtfTags(etfDetails: EtfAccumulationDetail[]): string[] {
+    return etfDetails.map(
+        (d) => `${d.etfCode} +${Math.round(d.netShares / 1000).toLocaleString('en-US')}張`,
+    );
+}
+
+/** 圖表視角標題列摘要：「<N> 家同步・權重 ±x.xxpp」，四捨五入後為 0 一律顯示 + */
+export function formatMomentumHeader(etfCount: number, totalWeightChange: number): string {
+    const abs = Math.abs(totalWeightChange).toFixed(2);
+    const sign = totalWeightChange < 0 && abs !== '0.00' ? '-' : '+';
+    return `${etfCount} 家同步・權重 ${sign}${abs}pp`;
+}
+
+/** 加碼日：加碼 ETF 當日 diff_shares 合計 > 0 的日期，升冪 */
+export function computeAccumulationDates(sharesByDate: Record<string, number>): string[] {
+    return Object.entries(sharesByDate)
+        .filter(([, shares]) => shares > 0)
+        .map(([date]) => date)
+        .sort();
+}
