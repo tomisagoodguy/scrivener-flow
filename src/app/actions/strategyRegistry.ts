@@ -1,4 +1,8 @@
-/** Frontend-side strategy description registry (mirrors ETF/strategies/__init__.py). */
+/**
+ * Frontend-side strategy description registry.
+ * 涵蓋 ETF/strategies/__init__.py 的 ALL_STRATEGIES，外加由獨立 FundMomentumStep 產出的 fund_momentum
+ * （刻意不在 ALL_STRATEGIES，見 strategy_signal_step.py 的 _EXCLUDED_STRATEGY_ID）。
+ */
 export function getStrategyDescriptions(): Record<string, string> {
     return {
         super8888: '超級8888 量化選股',
