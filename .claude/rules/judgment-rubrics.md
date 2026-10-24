@@ -85,6 +85,7 @@
 ## F. Windows shell / 編碼 checklist（本環境高頻出錯，見 harness-diagnosis 三.3）
 
 - **Python 讀檔一律指定編碼**：`open(path, encoding='utf-8')` 或整段設 `PYTHONUTF8=1`。系統預設 cp950，讀中文/UTF-8 檔會 `UnicodeDecodeError`。
+- **CLI 的 JSON 輸出 pipe 給 Python**（如 `spectra ... --json | python -c ...`）：用 `json.loads(sys.stdin.buffer.read().decode('utf-8'))`，`json.load(sys.stdin)` 會因 cp950 解碼出錯。
 - **選 shell**：不確定就用 **Bash**（POSIX，跨平台穩）。只有真的要 PowerShell cmdlet/物件管線才用 PowerShell。
 - **路徑**：Bash 用 `/c/Users/...`、`/dev/null`、`$VAR`；PowerShell 用 `C:\Users\...`、`$null`、`$env:VAR`。**別在 Bash 裡寫 PowerShell 語法，反之亦然**。
 - **檔案操作**：優先用 Read/Edit/Write/Glob/Grep 專用工具，不要用 `cat`/`sed`/`find`/`Get-Content`/`Select-String`。
