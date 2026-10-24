@@ -11,6 +11,7 @@
 import {
     computePerformance,
     filterRows,
+    latestRowPerStock,
     paginate,
     parseFanBreakoutConditions,
     sortFanBreakoutRows,
@@ -319,6 +320,37 @@ describe('sortFanBreakoutRows', () => {
         expect(sorted.map((r) => r.stockId)).toEqual(['A', 'C', 'E', 'D', 'B']);
         // does not mutate
         expect(rows.map((r) => r.stockId)).toEqual(['B', 'C', 'A', 'D', 'E']);
+    });
+});
+
+describe('latestRowPerStock', () => {
+    // Spec example (fan-breakout-chart-crossref): dedupe preserves order
+    const input = [
+        makeRow({ stockId: '2330', date: '2026-10-23' }),
+        makeRow({ stockId: '2454', date: '2026-10-23' }),
+        makeRow({ stockId: '2330', date: '2026-10-20' }),
+        makeRow({ stockId: '3017', date: '2026-10-20' }),
+    ];
+
+    it('keeps the first occurrence of each stock in input order', () => {
+        const out = latestRowPerStock(input);
+        expect(out.map((r) => `${r.stockId}@${r.date}`)).toEqual([
+            '2330@2026-10-23',
+            '2454@2026-10-23',
+            '3017@2026-10-20',
+        ]);
+        expect(out[0]).toBe(input[0]);
+    });
+
+    it('empty input -> empty array', () => {
+        expect(latestRowPerStock([])).toEqual([]);
+    });
+
+    it('does not mutate the input array', () => {
+        const copy = [...input];
+        latestRowPerStock(input);
+        expect(input).toHaveLength(4);
+        expect(input).toEqual(copy);
     });
 });
 

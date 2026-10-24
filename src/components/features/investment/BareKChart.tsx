@@ -10,9 +10,11 @@ interface Props {
     snapshot: BareKSnapshot;
     stockName?: string;
     strategies?: string[];
+    /** 要在 K 線下方標箭頭的日期（YYYY-MM-DD），不在快照 ohlcv 內的會被略過 */
+    markerDates?: readonly string[];
 }
 
-export function BareKChart({ snapshot, stockName, strategies }: Props) {
+export function BareKChart({ snapshot, stockName, strategies, markerDates }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartsRef = useRef<IChartApi[]>([]);
     const p1Ref = useRef<HTMLDivElement>(null);
@@ -28,6 +30,7 @@ export function BareKChart({ snapshot, stockName, strategies }: Props) {
     const distColor  = distPct === null ? '#555' : distPct >= -2 ? '#27AE60' : distPct >= -10 ? '#F39C12' : '#E74C3C';
     const sigs       = summary.signals;
     const lastDate   = ohlcv.at(-1)?.date ?? '';
+    const markerKey  = markerDates?.join(',') ?? '';
 
     useEffect(() => {
         if (!p1Ref.current || !p3Ref.current || !p4Ref.current || !p5Ref.current || !p6Ref.current) return;
@@ -35,7 +38,7 @@ export function BareKChart({ snapshot, stockName, strategies }: Props) {
         chartsRef.current.forEach(c => c.remove());
         chartsRef.current = [];
 
-        const c1 = createKLinePanel(p1Ref.current, w, ohlcv, mas);
+        const c1 = createKLinePanel(p1Ref.current, w, ohlcv, mas, markerKey ? markerKey.split(',') : undefined);
         const c3 = createVolumePanel(p3Ref.current, w, ohlcv);
         const c4 = createMarginPanel(p4Ref.current, w, margin);
         const c5 = createRevenuePanel(p5Ref.current, w, revenue);
@@ -63,7 +66,7 @@ export function BareKChart({ snapshot, stockName, strategies }: Props) {
             chartsRef.current = [];
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [snapshot]);
+    }, [snapshot, markerKey]);
 
     return (
         <div ref={containerRef} className="w-full">

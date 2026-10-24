@@ -5,6 +5,8 @@ import type { FactorICRow } from '@/app/actions/getFactorIC';
 import { getStrategyAnalytics } from '@/app/actions/getStrategyAnalytics';
 import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
 import { getConsensusSignals } from '@/app/actions/getConsensusSignals';
+import { getFanBreakoutSignals } from '@/app/actions/getFanBreakoutSignals';
+import type { FanBreakoutRow } from '@/lib/investment/fanBreakout';
 import type { ConsensusSignal } from '@/types';
 import StrategySignalCard from '@/components/features/StrategySignalCard';
 import StrategyAnalyticsPanel from '@/components/features/strategy/StrategyAnalyticsPanel';
@@ -120,9 +122,26 @@ export default async function StrategyPage({
 
     const monitorStocks = (isMonitor || isChart) ? buildMonitorStocks(result, analytics, consensusMap) : [];
 
-    const snapshotMap: Map<string, BareKSnapshot | null> = isChart
-        ? await getStrategySnapshots(monitorStocks.map((s) => s.stock_id))
-        : new Map();
+    // 圖表視角才查快照與均線發散候選；後者失敗時只是不顯示發散脈絡
+    const [snapshotMap, fanBreakout] = isChart
+        ? await Promise.all([
+              getStrategySnapshots(monitorStocks.map((s) => s.stock_id)),
+              getFanBreakoutSignals().catch((e: unknown) => {
+                  console.error('[StrategyPage] getFanBreakoutSignals', e);
+                  return null;
+              }),
+          ])
+        : [new Map<string, BareKSnapshot | null>(), null];
+
+    const fanBreakoutByStock: Record<string, FanBreakoutRow> = {};
+    if (fanBreakout && !fanBreakout.error) {
+        for (const row of fanBreakout.rows) {
+            if (row.date === fanBreakout.latestDate) fanBreakoutByStock[row.stockId] = row;
+        }
+    }
+    const strategyLabels: Record<string, string> = Object.fromEntries(
+        (result?.strategies ?? []).map((s) => [s.id, s.description]),
+    );
 
     if (!result && !isMonitor && !isChart) {
         return (
@@ -189,7 +208,12 @@ export default async function StrategyPage({
                 monitorStocks.length === 0 ? (
                     <p className="text-gray-400 text-sm">本日無策略選股資料</p>
                 ) : (
-                    <StrategyChartViewer stocks={monitorStocks} snapshots={snapshotMap} />
+                    <StrategyChartViewer
+                        stocks={monitorStocks}
+                        snapshots={snapshotMap}
+                        strategyLabels={strategyLabels}
+                        fanBreakoutByStock={fanBreakoutByStock}
+                    />
                 )
             ) : isMonitor ? (
                 /* Monitor view: individual stock cards */

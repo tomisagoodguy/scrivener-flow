@@ -3,17 +3,45 @@ import {
     CandlestickSeries,
     HistogramSeries,
     LineSeries,
+    createSeriesMarkers,
     type Time,
     type IChartApi,
+    type SeriesMarker,
 } from 'lightweight-charts';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import { C, baseChartOptions, toTime, rollingMean } from './BareKChartConfig';
+
+// 台股紅漲：與 StockChart 入選日標記同色（rose-600）
+const SIGNAL_MARKER_COLOR = '#e11d48';
+
+/**
+ * 入選日箭頭標記：只為實際畫成 K 棒（有 o/c）的日期產生，依時間遞增、同一時間只留一個。
+ */
+export function buildSignalMarkers(
+    ohlcv: BareKSnapshot['ohlcv'],
+    markerDates: readonly string[],
+): SeriesMarker<Time>[] {
+    const barDates = new Set(ohlcv.filter(d => d.o !== null && d.c !== null).map(d => d.date));
+    const times = new Set<number>();
+    for (const date of markerDates) {
+        if (barDates.has(date)) times.add(toTime(date));
+    }
+    return Array.from(times)
+        .sort((a, b) => a - b)
+        .map((time): SeriesMarker<Time> => ({
+            time: time as unknown as Time,
+            position: 'belowBar',
+            shape: 'arrowUp',
+            color: SIGNAL_MARKER_COLOR,
+        }));
+}
 
 export function createKLinePanel(
     container: HTMLDivElement,
     width: number,
     ohlcv: BareKSnapshot['ohlcv'],
     mas: BareKSnapshot['mas'],
+    markerDates?: readonly string[],
 ): IChartApi {
     const c = createChart(container, { ...baseChartOptions(360), width });
 
@@ -28,6 +56,9 @@ export function createKLinePanel(
             open: d.o!, high: d.h!, low: d.l!, close: d.c!,
         }))
     );
+
+    const markers = markerDates ? buildSignalMarkers(ohlcv, markerDates) : [];
+    if (markers.length > 0) createSeriesMarkers(candle, markers);
 
     const maConfigs = [
         { key: 'ma5' as const, color: C.ma5 },

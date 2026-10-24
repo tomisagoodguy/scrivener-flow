@@ -78,6 +78,14 @@ export const DEFAULT_FAN_BREAKOUT_FILTERS: FanBreakoutFilters = {
 
 export const FAN_BREAKOUT_PAGE_SIZE = 20;
 
+/** 訊號類型的顯示文字（表格、篩選列、連續看圖、策略圖表頁共用） */
+export const FAN_BREAKOUT_SIGNAL_LABEL: Record<FanBreakoutSignalType, string> = { first: '首次', repeat: '再次' };
+
+/** 帶正負號的百分比（0.1234 → "+12.3%"，0 → "0.0%"）；value 為小數比例。 */
+export function formatSignedPct(value: number, digits = 1): string {
+    return `${value > 0 ? '+' : ''}${(value * 100).toFixed(digits)}%`;
+}
+
 export interface Page<T> {
     items: T[];
     /** 夾進 [1, totalPages] 後的實際頁碼 */
@@ -221,6 +229,21 @@ export function filterRows(rows: FanBreakoutRow[], filters: FanBreakoutFilters):
         if (minConsecDays > 1 && (row.consecDays === null || row.consecDays < minConsecDays)) return false;
         return true;
     });
+}
+
+/**
+ * 每檔股票只保留輸入順序中第一次出現的列（不改動輸入）。
+ * 輸入為訊號日新到舊時，結果即每股最新訊號列。
+ */
+export function latestRowPerStock(rows: FanBreakoutRow[]): FanBreakoutRow[] {
+    const seen = new Set<string>();
+    const out: FanBreakoutRow[] = [];
+    for (const row of rows) {
+        if (seen.has(row.stockId)) continue;
+        seen.add(row.stockId);
+        out.push(row);
+    }
+    return out;
 }
 
 /** 取第 page 頁（1 起算，超出範圍夾回）；改篩選回第 1 頁由呼叫端處理。 */

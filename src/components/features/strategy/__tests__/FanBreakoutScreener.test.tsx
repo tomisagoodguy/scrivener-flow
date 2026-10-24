@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import FanBreakoutScreener from '@/components/features/strategy/FanBreakoutScreener';
 import type { FanBreakoutResult, FanBreakoutRow } from '@/lib/investment/fanBreakout';
 
@@ -199,5 +199,125 @@ describe('FanBreakoutScreener cells and chart', () => {
         };
         expect(props.maPeriods).toEqual([5, 10, 20, 60, 120]);
         expect(props.markers.map((m) => m.time)).toEqual(['2026-09-30', '2026-10-22']);
+    });
+});
+
+// ── 連續看圖（openspec: fan-breakout-chart-crossref, tasks 3.2–3.3） ──
+
+type ObserverCallback = (entries: Array<{ isIntersecting: boolean; target: Element }>) => void;
+let observerCallback: ObserverCallback | null = null;
+
+function activateSection(idx: number) {
+    const header = document.querySelector(`[data-idx="${idx}"]`);
+    if (!header || !observerCallback) throw new Error('observer not ready');
+    act(() => observerCallback?.([{ isIntersecting: true, target: header }]));
+}
+
+function switchToContinuous() {
+    fireEvent.click(screen.getByRole('button', { name: '連續看圖' }));
+}
+
+describe('FanBreakoutScreener continuous view', () => {
+    beforeAll(() => {
+        class MockIntersectionObserver {
+            constructor(cb: ObserverCallback) {
+                observerCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+        }
+        Object.defineProperty(window, 'IntersectionObserver', { writable: true, value: MockIntersectionObserver });
+        Element.prototype.scrollIntoView = jest.fn();
+        window.scrollTo = jest.fn();
+    });
+
+    const rows = [makeRow(0), makeRow(1), makeRow(2)];
+
+    it('defaults to table mode', () => {
+        render(<FanBreakoutScreener result={makeResult(rows)} />);
+        expect(screen.getByRole('button', { name: '表格' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('hides table, pagination and single panel but keeps filters in continuous mode', () => {
+        render(<FanBreakoutScreener result={makeResult(rows)} />);
+        switchToContinuous();
+        expect(screen.getByRole('button', { name: '連續看圖' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '下一頁' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '下一檔' })).not.toBeInTheDocument();
+        expect(screen.getByLabelText('類型')).toBeInTheDocument();
+        expect(screen.getByText('1 / 3')).toBeInTheDocument();
+    });
+
+    it('returns to table via 返回表格 and keeps filters', () => {
+        const filtered = [makeRow(0, { signalType: 'first' }), makeRow(1), makeRow(2)];
+        render(<FanBreakoutScreener result={makeResult(filtered)} />);
+        fireEvent.change(screen.getByLabelText('類型'), { target: { value: 'first' } });
+        switchToContinuous();
+        fireEvent.click(screen.getByRole('button', { name: /返回表格/ }));
+        expect(screen.getByRole('table')).toBeInTheDocument();
+        expect(screen.getByLabelText('類型')).toHaveValue('first');
+        expect(bodyRows()).toHaveLength(1);
+    });
+
+    it('arrow keys do not change the table selection in continuous mode', () => {
+        render(<FanBreakoutScreener result={makeResult(rows)} />);
+        switchToContinuous();
+        fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+        fireEvent.click(screen.getByRole('button', { name: /返回表格/ }));
+        expect(selectedStock()).toBe('1000');
+    });
+
+    it('starts at the stock selected in the table', () => {
+        render(<FanBreakoutScreener result={makeResult(rows)} />);
+        fireEvent.click(bodyRows()[1]);
+        switchToContinuous();
+        expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    });
+
+    it('lists each stock once using its newest signal row', () => {
+        const dup = [
+            makeRow(0, { stockId: '2330', date: '2026-10-23' }),
+            makeRow(1, { stockId: '2454', date: '2026-10-23' }),
+            makeRow(2, { stockId: '2330', date: '2026-10-20' }),
+        ];
+        render(<FanBreakoutScreener result={makeResult(dup)} />);
+        switchToContinuous();
+        expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    });
+
+    it.each([
+        [0.052, '+5.2%', 'text-rose-600'],
+        [-0.031, '-3.1%', 'text-emerald-600'],
+        [0, '0.0%', 'text-gray-500'],
+        [null, '—', 'text-gray-500'],
+    ])('formats return since signal %p as %s', (value, text, cls) => {
+        const one = [makeRow(0, { spread: 0.1234, signalType: 'first', consecDays: 3, returnSinceSignal: value })];
+        render(<FanBreakoutScreener result={makeResult(one)} />);
+        switchToContinuous();
+        const header = document.querySelector('[data-idx="0"]') as HTMLElement;
+        expect(within(header).getByText(text).className).toContain(cls);
+        expect(within(header).getByText('+12.3%')).toBeInTheDocument();
+        expect(within(header).getByText('首次')).toBeInTheDocument();
+        expect(within(header).getByText('連續 3 天')).toBeInTheDocument();
+    });
+
+    it('remounts at the first stock when a filter changes', () => {
+        const many = Array.from({ length: 5 }, (_, i) => makeRow(i, { market: i < 4 ? '上市' : '上櫃' }));
+        render(<FanBreakoutScreener result={makeResult(many)} />);
+        switchToContinuous();
+        activateSection(2);
+        expect(screen.getByText('3 / 5')).toBeInTheDocument();
+        fireEvent.change(screen.getByLabelText('市場'), { target: { value: '上市' } });
+        expect(screen.getByText('1 / 4')).toBeInTheDocument();
+    });
+
+    it('shows the no-match message and no viewer when filters leave zero rows', () => {
+        render(<FanBreakoutScreener result={makeResult(rows)} />);
+        switchToContinuous();
+        fireEvent.change(screen.getByLabelText('市場'), { target: { value: '上櫃' } });
+        expect(screen.getByText('沒有符合篩選條件的候選。')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /返回表格/ })).not.toBeInTheDocument();
     });
 });

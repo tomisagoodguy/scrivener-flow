@@ -1,3 +1,5 @@
+import type { FanBreakoutSignalType } from '@/lib/investment/fanBreakout';
+
 export type MovementLabel = 'adding' | 'reducing' | 'holding' | 'none';
 
 /**
@@ -69,4 +71,44 @@ export function computeMovement(
 
     if (holdings.has(stockId)) return 'holding';
     return 'none';
+}
+
+/**
+ * 策略圖表頁篩選條件。
+ * strategy 的 'all' 為保留值（代表不篩選），其他字串為 strategy id；
+ * 型別 'all' | string 會被 TS 收斂為 string，僅作語意標示。
+ */
+export interface ChartStockFilters {
+    strategy: 'all' | string;
+    fanSignal: 'all' | FanBreakoutSignalType;
+}
+
+export const DEFAULT_CHART_STOCK_FILTERS: ChartStockFilters = { strategy: 'all', fanSignal: 'all' };
+
+/**
+ * 依策略與均線發散訊號型態篩選（兩條件 AND，保留原順序，不改動輸入）。
+ * fanSignal 非 'all' 時，不在 fanSignalTypes 內或值為 null 的股票一律排除。
+ */
+export function filterChartStocks<T extends { stock_id: string; strategies: string[] }>(
+    stocks: T[],
+    filters: ChartStockFilters,
+    fanSignalTypes: Record<string, FanBreakoutSignalType | null>,
+): T[] {
+    const { strategy, fanSignal } = filters;
+    return stocks.filter((stock) => {
+        if (strategy !== 'all' && !stock.strategies.includes(strategy)) return false;
+        if (fanSignal !== 'all' && fanSignalTypes[stock.stock_id] !== fanSignal) return false;
+        return true;
+    });
+}
+
+/** 每個策略 id 出現在幾支股票（同一股票重複列同一策略只算一次）。 */
+export function countStocksByStrategy(stocks: { strategies: string[] }[]): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const stock of stocks) {
+        for (const id of new Set(stock.strategies)) {
+            counts[id] = (counts[id] ?? 0) + 1;
+        }
+    }
+    return counts;
 }

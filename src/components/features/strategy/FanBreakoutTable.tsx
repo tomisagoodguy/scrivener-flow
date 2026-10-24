@@ -1,6 +1,6 @@
 'use client';
 
-import type { FanBreakoutRow } from '@/lib/investment/fanBreakout';
+import { FAN_BREAKOUT_SIGNAL_LABEL as SIGNAL_LABEL, type FanBreakoutRow } from '@/lib/investment/fanBreakout';
 
 interface Props {
     items: FanBreakoutRow[];
@@ -11,7 +11,6 @@ interface Props {
 }
 
 const DASH = '—';
-const SIGNAL_LABEL = { first: '首次', repeat: '再次' } as const;
 const HEADERS = ['日期', '代號', '名稱', '類型', '連續天數', 'spread', '市場', '訊號後報酬', '期間最高', '期間最低'];
 
 function fmtPrice(v: number | null): string {
