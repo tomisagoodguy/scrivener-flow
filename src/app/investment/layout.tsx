@@ -59,19 +59,19 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
 
             {/* Header */}
             <header className="sticky top-0 z-50 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
-                <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+                <div className="max-w-screen-2xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                     {/* Brand + Nav */}
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 min-w-0">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                                 <span className="text-white font-black text-sm">S</span>
                             </div>
-                            <span className="font-black text-sm text-slate-700 dark:text-slate-200 tracking-tight">
+                            <span className="whitespace-nowrap font-black text-sm text-slate-700 dark:text-slate-200 tracking-tight">
                                 投資監控
                             </span>
                         </div>
 
-                        <nav className="flex items-center gap-1">
+                        <nav className="flex flex-wrap items-center gap-1">
                             {primaryNavItems.map((item) => {
                                 const isActive =
                                     item.href === '/investment'
@@ -81,7 +81,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                                        className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                                             isActive
                                                 ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                                                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -99,7 +99,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                 onMouseLeave={more.onLeave}
                             >
                                 <button
-                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                                    className={`flex items-center gap-1 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                                         isMoreActive
                                             ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                                             : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -141,7 +141,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                                 onMouseLeave={watch.onLeave}
                             >
                                 <button
-                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                                    className={`flex items-center gap-1 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                                         isWatchActive
                                             ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                                             : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -184,7 +184,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
                         {/* Back link */}
                         <Link
                             href="/cases"
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all duration-200 font-semibold"
+                            className="flex items-center gap-1.5 whitespace-nowrap text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all duration-200 font-semibold"
                         >
                             <ArrowLeftIcon size={12} />
                             代書系統
