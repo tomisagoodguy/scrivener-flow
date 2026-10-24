@@ -94,27 +94,19 @@ def test_run_raises_when_shareholder_data_empty():
         sync.run(skip_broker=True, skip_revenue=True, skip_shareholder=False)
 
 
-def test_run_raises_when_finlab_lags_behind_expected_tdcc_week(monkeypatch):
+def test_run_raises_when_finlab_lags_behind_expected_tdcc_week(frozen_tdcc_today):
     """FinLab 只到 7/3、DB 也是 7/3 時，週排程不可靜默成功。"""
     inv_df = _make_inventory_df(["2026-06-26", "2026-07-03"])
     sync = make_sync(FakeFinlab(login_ok=True, shareholder_df=inv_df), FakeStorage(["1101"]))
-    monkeypatch.setattr(
-        "ETF.utils.tdcc_schedule.expected_tdcc_friday",
-        lambda today=None: __import__("datetime").date(2026, 7, 10),
-    )
 
     with pytest.raises(RuntimeError, match="FinLab inventory 尚未提供 TDCC 新一期"):
         sync.run(skip_broker=True, skip_revenue=True, skip_shareholder=False)
 
 
-def test_run_skips_finlab_when_db_already_fresh(monkeypatch):
+def test_run_skips_finlab_when_db_already_fresh(frozen_tdcc_today):
     storage = FakeStorage(["1101"])
     storage.get_max_shareholder_date = lambda: "2026-07-10"
     sync = make_sync(FakeFinlab(login_ok=True, shareholder_df=pd.DataFrame()), storage)
-    monkeypatch.setattr(
-        "ETF.utils.tdcc_schedule.expected_tdcc_friday",
-        lambda today=None: __import__("datetime").date(2026, 7, 10),
-    )
 
     sync.run(
         skip_broker=True,
@@ -124,7 +116,7 @@ def test_run_skips_finlab_when_db_already_fresh(monkeypatch):
     )
 
 
-def test_check_shareholder_freshness_ok_when_finlab_has_expected_week():
+def test_check_shareholder_freshness_ok_when_finlab_has_expected_week(frozen_tdcc_today):
     _check_shareholder_freshness(
         {
             "written": 0,

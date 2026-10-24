@@ -3,9 +3,14 @@
 from datetime import date, timedelta
 
 
+def _today() -> date:
+    """本模組唯一時鐘來源；測試以 frozen_tdcc_today fixture 凍結此函式。"""
+    return date.today()
+
+
 def expected_tdcc_friday(today: date | None = None) -> date:
     """回傳 TDCC 集保週資料預期最新截止日（當週或上週五）。"""
-    today = today or date.today()
+    today = today or _today()
     days_since_friday = (today.weekday() - 4) % 7
     return today - timedelta(days=days_since_friday)
 

@@ -35,7 +35,7 @@ def fake_records():
 
 
 def test_main_always_calls_finlab_even_if_previous_snapshot_fully_synced(
-    monkeypatch, fake_records
+    monkeypatch, fake_records, frozen_tdcc_today
 ):
     stock_list = ["1101", "2330"]
     storage = FakeStorage(stock_list)
@@ -99,7 +99,7 @@ def test_main_raises_when_inventory_empty(monkeypatch):
         mod.main()
 
 
-def test_main_raises_when_snapshot_already_synced_but_finlab_lags(monkeypatch):
+def test_main_raises_when_snapshot_already_synced_but_finlab_lags(monkeypatch, frozen_tdcc_today):
     """FinLab 仍停在舊期、且該期股票都已同步時，不可靜默 return。"""
     stock_list = ["1101", "2330"]
     storage = FakeStorage(stock_list)
@@ -120,17 +120,12 @@ def test_main_raises_when_snapshot_already_synced_but_finlab_lags(monkeypatch):
         ],
     )
     monkeypatch.setattr(mod, "_get_synced_codes", lambda snapshot_date, storage: set(stock_list))
-    monkeypatch.setattr(
-        mod,
-        "expected_tdcc_friday",
-        lambda today=None: __import__("datetime").date(2026, 7, 10),
-    )
 
     with pytest.raises(RuntimeError, match="FinLab inventory 尚未提供 TDCC 新一期"):
         mod.main()
 
 
-def test_main_does_not_raise_when_daily_topup_and_finlab_lags(monkeypatch):
+def test_main_does_not_raise_when_daily_topup_and_finlab_lags(monkeypatch, frozen_tdcc_today):
     """--daily-topup 模式下，FinLab 仍停在舊期時應靜默略過，不可 raise（daily job 每天誤報迴歸測試）。"""
     stock_list = ["1101", "2330"]
     storage = FakeStorage(stock_list)
@@ -151,25 +146,15 @@ def test_main_does_not_raise_when_daily_topup_and_finlab_lags(monkeypatch):
         ],
     )
     monkeypatch.setattr(mod, "_get_synced_codes", lambda snapshot_date, storage: set(stock_list))
-    monkeypatch.setattr(
-        mod,
-        "expected_tdcc_friday",
-        lambda today=None: __import__("datetime").date(2026, 7, 10),
-    )
 
     mod.main()  # 不應 raise
 
 
-def test_main_skips_when_skip_if_fresh_and_db_current(monkeypatch):
+def test_main_skips_when_skip_if_fresh_and_db_current(monkeypatch, frozen_tdcc_today):
     storage = FakeStorage(["1101"])
     storage.get_max_equity_snapshot_date = lambda: "2026-07-10"
     monkeypatch.setattr(mod, "SQLStorage", lambda: storage)
     monkeypatch.setattr(sys, "argv", ["sync_equity_distribution.py", "--skip-if-fresh"])
-    monkeypatch.setattr(
-        mod,
-        "expected_tdcc_friday",
-        lambda today=None: __import__("datetime").date(2026, 7, 10),
-    )
     login_mock = pytest.importorskip("unittest.mock").MagicMock(return_value=True)
     monkeypatch.setattr(mod, "_login_finlab", login_mock)
 
