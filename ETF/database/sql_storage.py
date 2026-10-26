@@ -4,8 +4,15 @@ import logging
 import sqlalchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
 
 logger = logging.getLogger(__name__)
+
+
+def _dedupe_by_keys(records: list[dict], key_columns: list[str]) -> list[dict]:
+    """同鍵保留最後一筆（同一條 ON CONFLICT DO UPDATE 不可觸碰同列兩次）。"""
+    return list({tuple(r[k] for k in key_columns): r for r in records}.values())
+
 
 class SQLStorage:
     def __init__(self):
@@ -48,6 +55,40 @@ class SQLStorage:
                 );
             """))
             conn.commit()
+
+    def _bulk_upsert(
+        self,
+        sql: str,
+        columns: list[str],
+        key_columns: list[str],
+        records: list[dict],
+        page_size: int = 1000,
+    ) -> None:
+        """以 execute_values 多列 VALUES 批次 upsert（單一交易）。
+
+        `conn.execute(text(...), list_of_dicts)` 走 psycopg2 executemany，
+        每列一次網路來回（CI → Supabase 約 140ms/列，45k 筆 ≈ 105 分鐘）；
+        execute_values 每 page_size 列一次來回。
+
+        Args:
+            sql: 含 `VALUES %s` 佔位的 INSERT ... ON CONFLICT 語句。
+            columns: 依 VALUES 欄位順序的 record key。
+            key_columns: ON CONFLICT 鍵，用於同批去重。
+            records: 待寫入資料。
+            page_size: 每條 SQL 的列數。
+        """
+        rows = _dedupe_by_keys(records, key_columns)
+        template = "(" + ", ".join(f"%({c})s" for c in columns) + ")"
+        raw = self.engine.raw_connection()
+        try:
+            with raw.cursor() as cur:
+                execute_values(cur, sql, rows, template=template, page_size=page_size)
+            raw.commit()
+        except Exception:
+            raw.rollback()
+            raise
+        finally:
+            raw.close()
 
     def get_target_stocks(self, etf_code: str) -> list:
         """從 etf_holdings_snapshot 取得目標股票清單"""
@@ -129,21 +170,22 @@ class SQLStorage:
             return
             
         logger.info(f"準備寫入 {len(records)} 筆營收記錄...")
-        upsert_sql = text("""
+        upsert_sql = """
             INSERT INTO stock_revenue_monthly (stock_code, data_date, revenue, revenue_yoy, revenue_mom)
-            VALUES (:stock_code, :data_date, :revenue, :revenue_yoy, :revenue_mom)
+            VALUES %s
             ON CONFLICT (stock_code, data_date)
             DO UPDATE SET
                 revenue = EXCLUDED.revenue,
                 revenue_yoy = EXCLUDED.revenue_yoy,
                 revenue_mom = EXCLUDED.revenue_mom,
                 created_at = NOW()
-        """)
-        with self.engine.connect() as conn:
-            chunk_size = 3000
-            for i in range(0, len(records), chunk_size):
-                conn.execute(upsert_sql, records[i:i+chunk_size])
-            conn.commit()
+        """
+        self._bulk_upsert(
+            upsert_sql,
+            ["stock_code", "data_date", "revenue", "revenue_yoy", "revenue_mom"],
+            ["stock_code", "data_date"],
+            records,
+        )
         logger.info("✅ 營收數據寫入完成")
 
     def get_max_shareholder_date(self) -> str | None:
@@ -205,22 +247,23 @@ class SQLStorage:
 
         new_dates = sorted({r['data_date'] for r in new_records})
         logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（涉及日期：{new_dates}）...")
-        upsert_sql = text("""
+        upsert_sql = """
             INSERT INTO stock_shareholder_weekly
             (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
-            VALUES (:stock_code, :data_date, :shareholder_tier, :holder_count, :shares_held, :custody_ratio)
+            VALUES %s
             ON CONFLICT (stock_code, data_date, shareholder_tier)
             DO UPDATE SET
                 holder_count = EXCLUDED.holder_count,
                 shares_held = EXCLUDED.shares_held,
                 custody_ratio = EXCLUDED.custody_ratio,
                 created_at = NOW()
-        """)
-        with self.engine.connect() as conn:
-            chunk_size = 3000
-            for i in range(0, len(new_records), chunk_size):
-                conn.execute(upsert_sql, new_records[i:i+chunk_size])
-            conn.commit()
+        """
+        self._bulk_upsert(
+            upsert_sql,
+            ["stock_code", "data_date", "shareholder_tier", "holder_count", "shares_held", "custody_ratio"],
+            ["stock_code", "data_date", "shareholder_tier"],
+            new_records,
+        )
         logger.info("✅ 集保數據寫入完成")
         return {
             "written": len(new_records),
@@ -236,30 +279,29 @@ class SQLStorage:
             return
 
         logger.info(f"準備寫入 {len(records)} 筆券商交易記錄...")
-        with self.engine.connect() as conn:
-            chunk_size = 3000
-            for i in range(0, len(records), chunk_size):
-                chunk = records[i:i+chunk_size]
-                try:
-                    stmt = text("""
-                        INSERT INTO stock_broker_transactions
-                        (stock_code, data_date, buy_amount, sell_amount, net_volume, force_metric)
-                        VALUES (:stock_code, :data_date, :buy_amount, :sell_amount, :net_volume, :force_metric)
-                        ON CONFLICT (stock_code, data_date)
-                        DO UPDATE SET
-                            buy_amount = EXCLUDED.buy_amount,
-                            sell_amount = EXCLUDED.sell_amount,
-                            net_volume = EXCLUDED.net_volume,
-                            force_metric = EXCLUDED.force_metric,
-                            created_at = NOW()
-                    """)
-                    conn.execute(stmt, chunk)
-                    conn.commit()
-                    logger.info(f"已寫入 {i + len(chunk)} / {len(records)} 筆券商記錄...")
-                except Exception as e:
-                    logger.error(f"寫入券商數據片段失敗 (index {i}): {e}")
-                    conn.rollback()
-                    continue
+        upsert_sql = """
+            INSERT INTO stock_broker_transactions
+            (stock_code, data_date, buy_amount, sell_amount, net_volume, force_metric)
+            VALUES %s
+            ON CONFLICT (stock_code, data_date)
+            DO UPDATE SET
+                buy_amount = EXCLUDED.buy_amount,
+                sell_amount = EXCLUDED.sell_amount,
+                net_volume = EXCLUDED.net_volume,
+                force_metric = EXCLUDED.force_metric,
+                created_at = NOW()
+        """
+        columns = ["stock_code", "data_date", "buy_amount", "sell_amount", "net_volume", "force_metric"]
+        # 分片各自 commit：單片失敗不影響其他片（沿用原行為）
+        chunk_size = 3000
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i:i+chunk_size]
+            try:
+                self._bulk_upsert(upsert_sql, columns, ["stock_code", "data_date"], chunk)
+                logger.info(f"已寫入 {i + len(chunk)} / {len(records)} 筆券商記錄...")
+            except Exception as e:
+                logger.error(f"寫入券商數據片段失敗 (index {i}): {e}")
+                continue
         logger.info("✅ 券商交易數據寫入完成")
     
     def cleanup_old_data(self):
