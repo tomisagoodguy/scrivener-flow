@@ -44,6 +44,9 @@ MID_HOLDER_MIN_TIER = 11
 WHALE_HOLDER_MIN_TIER = 15
 # Tier 17 是集計總列（holder_count = 總股東人數，custody_ratio = 100%），需特別處理
 AGGREGATE_TIER = "17"
+# shareholders_change_rate 欄位為 NUMERIC(8,4)，|值| 必須 < 10^4；
+# 新上市股前期股東數極少（或為 0）時變化率會爆量，此類值無排行意義，寫 NULL
+SHAREHOLDERS_RATE_LIMIT = 10_000
 
 
 def _login_finlab() -> bool:
@@ -137,6 +140,14 @@ def _compute_stats(df: pd.DataFrame, stock_list: list) -> list[dict]:
         / merged["total_shareholders_prev"]
         * 100
     ).round(4)
+    # inf（前期 0 人）>= LIMIT 也成立，一併處理
+    out_of_range = merged["shareholders_change_rate"].abs() >= SHAREHOLDERS_RATE_LIMIT
+    if out_of_range.any():
+        bad = merged.loc[out_of_range, ["total_shareholders_prev", "total_shareholders"]]
+        logger.warning(
+            f"股東人數變化率超出欄位範圍，改寫 NULL：{bad.to_dict(orient='index')}"
+        )
+        merged.loc[out_of_range, "shareholders_change_rate"] = float("nan")
     merged["big_holder_pct_change"] = (
         merged["big_holder_pct"] - merged["big_holder_pct_prev"]
     ).round(3)

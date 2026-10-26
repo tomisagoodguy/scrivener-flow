@@ -177,3 +177,30 @@ def test_main_raises_when_no_records_computed(monkeypatch):
 
     with pytest.raises(RuntimeError, match="本期無可計算的統計資料"):
         mod.main()
+
+
+def _inventory_rows(stock_id: str, date: str, total: int) -> list[dict]:
+    return [
+        {"stock_id": stock_id, "date": date, "tier": "17", "holder_count": total,
+         "shares_held": 0, "custody_ratio": 100.0},
+        {"stock_id": stock_id, "date": date, "tier": "12", "holder_count": 1,
+         "shares_held": 0, "custody_ratio": 50.0},
+    ]
+
+
+def test_compute_stats_nulls_shareholders_rate_exceeding_numeric_8_4():
+    """新上市股前期股東數極少 → 變化率 ≥ 10^4 會撐爆 NUMERIC(8,4)，應寫 NULL。"""
+    rows = (
+        _inventory_rows("1101", "2026-10-16", 1000)
+        + _inventory_rows("1101", "2026-10-22", 990)
+        + _inventory_rows("7777", "2026-10-16", 50)
+        + _inventory_rows("7777", "2026-10-22", 8000)
+        + _inventory_rows("8888", "2026-10-16", 0)
+        + _inventory_rows("8888", "2026-10-22", 500)
+    )
+    records = {r["stock_code"]: r for r in mod._compute_stats(pd.DataFrame(rows), ["1101", "7777", "8888"])}
+
+    assert records["1101"]["shareholders_change_rate"] == -1.0
+    assert records["7777"]["shareholders_change_rate"] is None
+    assert records["8888"]["shareholders_change_rate"] is None
+    assert records["7777"]["total_shareholders"] == 8000
