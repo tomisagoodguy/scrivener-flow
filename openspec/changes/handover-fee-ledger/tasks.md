@@ -1,7 +1,7 @@
 ## 1. 資料庫
 
-- [ ] 1.1 新增 `supabase/migrations/20261028120000_add_handover_fee_ledger.sql`，依「地政士名單獨立成 scriveners 表」與「遞牌費紀錄 handover_fees 表與資料庫層約束」建立兩表、唯一索引 `unique (user_id, name)`、`unique (id, user_id)`、複合外鍵、三條 check 約束與索引；依「RLS 以 user_id 隔離」為兩表啟用 RLS 並建立四條 policy（需求：Per-user data isolation）。只含 CREATE，不含 DROP。驗證：使用者套用後，以 SQL 查詢 `pg_constraint` 確認三條 check 與兩條複合外鍵存在、`pg_class.relrowsecurity` 為 true，並試插入 payer = payee 的列被拒。
-- [ ] 1.2 在同一 migration 依「預設名單於首次讀取時以 RPC 建立」新增 `ensure_default_scriveners()`（`security invoker`）：使用者無任何 scriveners 列時依序插入 孔協、家華、定康、文慶、瑞麟、來慶、順鵬（sort_order 0–6），`on conflict (user_id, name) do nothing`（需求：Scrivener roster management）。[after: 1.1] 驗證：以 SQL 呼叫兩次，確認只有 7 列；把 7 列全部設 `archived_at` 後再呼叫，列數仍為 7。
+- [x] 1.1 新增 `supabase/migrations/20261028120000_add_handover_fee_ledger.sql`，依「地政士名單獨立成 scriveners 表」與「遞牌費紀錄 handover_fees 表與資料庫層約束」建立兩表、唯一索引 `unique (user_id, name)`、`unique (id, user_id)`、複合外鍵、三條 check 約束與索引；依「RLS 以 user_id 隔離」為兩表啟用 RLS 並建立四條 policy（需求：Per-user data isolation）。只含 CREATE，不含 DROP。驗證：使用者套用後，以 SQL 查詢 `pg_constraint` 確認三條 check 與兩條複合外鍵存在、`pg_class.relrowsecurity` 為 true，並試插入 payer = payee 的列被拒。
+- [x] 1.2 在同一 migration 依「預設名單於首次讀取時以 RPC 建立」新增 `ensure_default_scriveners()`（`security invoker`）：使用者無任何 scriveners 列時依序插入 孔協、家華、定康、文慶、瑞麟、來慶、順鵬（sort_order 0–6），`on conflict (user_id, name) do nothing`（需求：Scrivener roster management）。[after: 1.1] 驗證：以 SQL 呼叫兩次，確認只有 7 列；把 7 列全部設 `archived_at` 後再呼叫，列數仍為 7。
 
 ## 2. 領域模型與純函式
 
@@ -29,7 +29,7 @@
 
 > 變更說明：已完成的 2.2（`object_number` trim 後必填）、4.2／4.3（清單直接顯示物件編號）與 1.1 的 `handover_fees_object_number_not_blank` 約束，被「物件編號改為選填並以後續 migration 放寬」取代，由 6.1、6.2 補償；原 Non-Goal「不編輯」由「編輯沿用新增表單」取代，由 6.3、6.4 實作。已完成任務的描述保留不改，作為歷史紀錄。
 
-- [ ] 6.1 新增 `supabase/migrations/20261029120000_handover_fee_object_number_optional.sql`，依「物件編號改為選填並以後續 migration 放寬」把 `handover_fees.object_number` 改為可為 null，以 `handover_fees_object_number_null_or_not_blank` 取代 `handover_fees_object_number_not_blank`（需求：Record a handover fee）。含 DROP，由使用者在 SQL Editor 執行。驗證：執行後查 `information_schema.columns` 的 `is_nullable = 'YES'`，且 `pg_constraint` 只剩新約束、舊約束不存在。
+- [x] 6.1 新增 `supabase/migrations/20261029120000_handover_fee_object_number_optional.sql`，依「物件編號改為選填並以後續 migration 放寬」把 `handover_fees.object_number` 改為可為 null，以 `handover_fees_object_number_null_or_not_blank` 取代 `handover_fees_object_number_not_blank`（需求：Record a handover fee）。含 DROP，由使用者在 SQL Editor 執行。驗證：執行後查 `information_schema.columns` 的 `is_nullable = 'YES'`，且 `pg_constraint` 只剩新約束、舊約束不存在。
 - [x] 6.2 依「物件編號改為選填並以後續 migration 放寬」修改 Zod：物件編號選填、trim 後空字串轉 `null`；`HandoverFee.object_number` 改 `string | null`；未收清單與歷史在 null 時顯示 `—`（需求：Record a handover fee）。驗證：`yarn test --testPathPatterns handover` 中驗證表「物件編號只有空白 → 存成 null」通過，`createHandoverFee` 寫入 `object_number: null`，UnpaidFeeList 對 null 顯示 `—`。
 - [x] 6.3 依「編輯沿用新增表單」新增 Server Action `updateHandoverFee(id, input)`：驗證與名單檢查同新增，只更新六個內容欄位不碰 `paid_at`，條件含 `deleted_at is null`，影響 0 列回「找不到紀錄，請重新整理」（需求：Edit a handover fee record）。[after: 6.2] 驗證：`yarn test --testPathPatterns actions/__tests__/handoverFees` 斷言 update payload 不含 `paid_at`、查詢含 `is deleted_at null`、0 列回錯、付款人等於收款人時不呼叫 DB。
 - [x] 6.4 依「編輯沿用新增表單」以 `HandoverFeeEditProvider` 串接：未收清單與歷史每列加「編輯」按鈕，表單載入該筆資料並切換為編輯模式（「儲存修改」「取消編輯」），存檔呼叫 `updateHandoverFee`，成功或取消後回到新增模式；付款人或收款人已隱藏時顯示為未選（需求：Edit a handover fee record）。[after: 6.3] 驗證：RTL 測試涵蓋 spec「Edit an unpaid record」（載入後改金額 3500、物件 A124 → 呼叫 `updateHandoverFee` 且不呼叫 `createHandoverFee`）與「Cancel editing」（取消後欄位清空、按鈕回到「新增紀錄」）；`yarn tsc --noEmit` 與 `yarn eslint` 對改動檔無錯誤。
