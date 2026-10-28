@@ -97,6 +97,14 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 新增儀表板功能性入口（如設定按鈕、清單入口）時，優先嵌入既有版面元素（例如 `WelcomeHeader` 那一列），而非另開新的 `fixed` 浮動按鈕。
 若必須用 `fixed` 定位，先確認未與 `src/components/shared/QuickScrollNavigator.tsx`（首頁與多個路由的 bottom-right 已有回到頂部/底部/首頁按鈕）衝突。
 
+## Client 呼叫 Server Action 會排隊（逐項按需載入別「掛載即請求」）
+
+**現象**：清單每項掛載時各自呼叫 Server Action（如逐檔抓裸K快照），使用者一跳遠，目的地要等沿路所有請求跑完（選股池圖表頁估計跳到第 150 檔要 ~27s）。
+
+**原因**：Next.js 瀏覽器端的 Server Action 呼叫是**排隊、一次一個**執行（dev 實測每次 ~0.18s）；`ScrollChartViewer` 已渲染段落又只增不減。
+
+**正確做法**：用 `IntersectionObserver` 等項目**連續在視窗內 300ms** 才請求、且一生只請求一次，範本 `src/components/features/investment/pool/LazyBareKSlide.tsx`（`DWELL_MS`）。✅ 停留閘門：實測跳到第 150 檔 0.84s 載入、只 2 個請求。❌ `useEffect(() => { action([code]) }, [code])` 掛載即請求。
+
 ## ScrollChartViewer 外層間距
 
 `ScrollChartViewer` 的 sticky 子導覽列自帶 `-mt-4 md:-mt-6`，外層容器要用 `pt-6` 抵銷，否則會壓到上方的篩選/導覽列。`space-y-6` 只在檢視器前面還有兄弟元素時才有效（策略頁有篩選列才成立；籌碼排行圖表視角曾因此重疊）。

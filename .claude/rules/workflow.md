@@ -29,6 +29,8 @@ Artifact 順序：`proposal → design → specs → tasks`
 
 根頁面 `/` 無 session 時自動跳轉 `/login` 是正常行為。
 `/investment/*` 在 localhost 未登入即可存取，可用 headless Playwright 腳本實測；但 `/investment/bare-k/[code]` 未登入只有單一股票（多股捲動需登入後的自選股）。
+Playwright 測 `ScrollChartViewer` 圖表頁（策略／籌碼排行／選股池）：全站有 CSS `scroll-behavior: smooth`，`scrollIntoView()` 未指定時仍是平滑捲動，遠距離會因上方段落渲染變高而停在半路 → 一律 `scrollIntoView({block:'start', behavior:'instant'})` 並迴圈到 `getBoundingClientRect().top` 接近 0；頁面第一個 `<section>` 不是圖表段落，用 `document.querySelector('[data-idx="i"]').closest('section')` 定位第 i 檔（0 起算）。
+背景跑的 `yarn dev` 用 `TaskStop` 只停 yarn 外層，Next 的 `node.exe` 仍占 3000 port（下次 `yarn dev` 會立刻退出）→ 收尾時用 **PowerShell** 工具：`$id = (Get-NetTCPConnection -LocalPort 3000 -State Listen).OwningProcess | Select-Object -First 1`，確認 `(Get-CimInstance Win32_Process -Filter "ProcessId=$id").CommandLine` 含 `scrivener-flow` 與 `next` 後 `Stop-Process -Id $id -Confirm:$false`。
 Playwright 定位 `/investment/*` 連結**別用名稱子字串**：全域導覽有「籌碼排行」等連結、右下 `QuickScrollNavigator` 有「返回首頁」（未登入點了會跳 `/login`）。用 `exact=True` 或 `a[href^="/investment/..."]` 鎖定。
 
 ## 套件管理
@@ -45,4 +47,5 @@ Playwright 定位 `/investment/*` 連結**別用名稱子字串**：全域導覽
 - `spectra task done <change> <id>` 的 `<id>` 是**數字流水號**（1, 2, 3…），不是 `tasks.md` 的 `1.1`/`2.1` 標籤。傳 `1.1` 會報 `Invalid task ID: must be a number`。先用 `spectra instructions apply --change <name> --json` 取得每個 task 的數字 `id`。
 - Parked changes：`spectra list --parked` 查看、`spectra unpark <name>` 還原；`/spectra-apply` 與 `/spectra-ingest` 會自動處理。
 - **長 artifact 別用 Bash heredoc 餵 `--stdin`**：內容會被靜默截斷，CLI 仍印「Content validated ✓」（2026-10-28 equity-ranking-chart-view 的 spec 只寫進一半）。先用 Write 寫成檔，再 `spectra new artifact <id> --change <name> --stdin < <file>`，寫完 `grep -c "#### Scenario"` 核對數量。
+- **`spectra task start` / `spectra scope` 報 `traverses a directory symlink`**（因 `.claude/skills/finlab` 是資料夾捷徑）：無法建立基準快照，不是 change 本身有錯。改在完成時明確歸屬檔案：`spectra task done --change <name> <id> --file <path> --file <path>`；verify/review 改用 `git status` 界定範圍。
 - `spectra analyze` 的 COV/CON 警告是**逐字比對**：`tasks.md` 每條 task 要引用 spec 的 `Requirement: <名稱>` 與 design 的決策標題原文（例：`（需求：Chart list selection；決策 1：…）`），否則每條都報 Warning。
