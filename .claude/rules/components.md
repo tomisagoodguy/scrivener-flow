@@ -97,6 +97,10 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 新增儀表板功能性入口（如設定按鈕、清單入口）時，優先嵌入既有版面元素（例如 `WelcomeHeader` 那一列），而非另開新的 `fixed` 浮動按鈕。
 若必須用 `fixed` 定位，先確認未與 `src/components/shared/QuickScrollNavigator.tsx`（首頁與多個路由的 bottom-right 已有回到頂部/底部/首頁按鈕）衝突。
 
+## ScrollChartViewer 外層間距
+
+`ScrollChartViewer` 的 sticky 子導覽列自帶 `-mt-4 md:-mt-6`，外層容器要用 `pt-6` 抵銷，否則會壓到上方的篩選/導覽列。`space-y-6` 只在檢視器前面還有兄弟元素時才有效（策略頁有篩選列才成立；籌碼排行圖表視角曾因此重疊）。
+
 ## 案件列表排序（`/cases` 頁面）——**禁止改動預設排序行為**
 
 `src/app/cases/page.tsx` 預設以里程碑優先順序排序：**印（seal_date）→ 稅（tax_payment_date）→ 過（transfer_date）→ 交（handover_date）**。

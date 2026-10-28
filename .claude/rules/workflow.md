@@ -29,6 +29,7 @@ Artifact 順序：`proposal → design → specs → tasks`
 
 根頁面 `/` 無 session 時自動跳轉 `/login` 是正常行為。
 `/investment/*` 在 localhost 未登入即可存取，可用 headless Playwright 腳本實測；但 `/investment/bare-k/[code]` 未登入只有單一股票（多股捲動需登入後的自選股）。
+Playwright 定位 `/investment/*` 連結**別用名稱子字串**：全域導覽有「籌碼排行」等連結、右下 `QuickScrollNavigator` 有「返回首頁」（未登入點了會跳 `/login`）。用 `exact=True` 或 `a[href^="/investment/..."]` 鎖定。
 
 ## 套件管理
 
@@ -43,3 +44,5 @@ Artifact 順序：`proposal → design → specs → tasks`
 - 無 `spectra sync` 子指令。`spectra archive <name>`（不加 `--skip-specs`）預設即把 delta specs 同步進主 `openspec/specs/`（ADDED/MODIFIED 一併套用），不需另外手動 sync。
 - `spectra task done <change> <id>` 的 `<id>` 是**數字流水號**（1, 2, 3…），不是 `tasks.md` 的 `1.1`/`2.1` 標籤。傳 `1.1` 會報 `Invalid task ID: must be a number`。先用 `spectra instructions apply --change <name> --json` 取得每個 task 的數字 `id`。
 - Parked changes：`spectra list --parked` 查看、`spectra unpark <name>` 還原；`/spectra-apply` 與 `/spectra-ingest` 會自動處理。
+- **長 artifact 別用 Bash heredoc 餵 `--stdin`**：內容會被靜默截斷，CLI 仍印「Content validated ✓」（2026-10-28 equity-ranking-chart-view 的 spec 只寫進一半）。先用 Write 寫成檔，再 `spectra new artifact <id> --change <name> --stdin < <file>`，寫完 `grep -c "#### Scenario"` 核對數量。
+- `spectra analyze` 的 COV/CON 警告是**逐字比對**：`tasks.md` 每條 task 要引用 spec 的 `Requirement: <名稱>` 與 design 的決策標題原文（例：`（需求：Chart list selection；決策 1：…）`），否則每條都報 Warning。
