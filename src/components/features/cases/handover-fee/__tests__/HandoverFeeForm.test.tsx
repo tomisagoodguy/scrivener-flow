@@ -96,6 +96,17 @@ describe('HandoverFeeForm', () => {
         await waitFor(() => expect(mockAddScrivener).toHaveBeenCalledWith('志明'));
     });
 
+    it('已選的地政士被隱藏後，選取清空且無法送出', async () => {
+        const { rerender } = render(<HandoverFeeForm scriveners={scriveners} />);
+        fillValid();
+        rerender(<HandoverFeeForm scriveners={[scriveners[1]]} />);
+
+        expect((screen.getByLabelText('付款人') as HTMLSelectElement).value).toBe('');
+        fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent('請選擇付款人');
+        expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it('名單為空時提示新增地政士', () => {
         render(<HandoverFeeForm scriveners={[]} />);
         expect(screen.getByText('名單是空的，請先新增地政士')).toBeInTheDocument();

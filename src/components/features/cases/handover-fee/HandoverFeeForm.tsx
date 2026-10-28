@@ -16,7 +16,10 @@ interface HandoverFeeFormProps {
 }
 
 export function HandoverFeeForm({ scriveners, defaultDate }: HandoverFeeFormProps) {
-    const { fields, setters, swap, submit, error, isPending } = useHandoverFeeForm(defaultDate);
+    const { fields, setters, swap, submit, error, isPending } = useHandoverFeeForm(
+        scriveners.map((s) => s.id),
+        defaultDate
+    );
     const ids = { date: useId(), object: useId(), amount: useId(), note: useId() };
 
     return (
@@ -74,7 +77,7 @@ export function HandoverFeeForm({ scriveners, defaultDate }: HandoverFeeFormProp
                 <button
                     type="submit"
                     disabled={isPending}
-                    className="px-6 py-2 rounded-2xl bg-blue-600 text-white text-xs font-black shadow-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    className="px-6 py-2 rounded-full bg-blue-600 text-white text-xs font-black shadow-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                     新增紀錄
                 </button>

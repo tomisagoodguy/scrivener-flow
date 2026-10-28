@@ -26,13 +26,29 @@ export interface HandoverFeeWithNames extends HandoverFee {
     payee_name: string;
 }
 
+/** 上限遠低於 Postgres integer（2147483647），避免溢位錯誤原文外露 */
+const MAX_AMOUNT = 99_999_999;
+
+/** `YYYY-MM-DD` 是否為真實存在的日期（排除 2026-02-30、2026-13-45） */
+function isRealDate(value: string): boolean {
+    const time = Date.parse(`${value}T00:00:00Z`);
+    return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === value;
+}
+
 export const createHandoverFeeSchema = z
     .object({
-        fee_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式錯誤'),
+        fee_date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式錯誤')
+            .refine((v) => isRealDate(v), '日期格式錯誤'),
         object_number: z.string().trim().min(1, '請輸入物件編號'),
-        payer_scrivener_id: z.string().min(1, '請選擇付款人'),
-        payee_scrivener_id: z.string().min(1, '請選擇收款人'),
-        amount: z.number('金額必須是正整數').int('金額必須是正整數').positive('金額必須是正整數'),
+        payer_scrivener_id: z.string().min(1, '請選擇付款人').uuid('付款人資料錯誤'),
+        payee_scrivener_id: z.string().min(1, '請選擇收款人').uuid('收款人資料錯誤'),
+        amount: z
+            .number('金額必須是正整數')
+            .int('金額必須是正整數')
+            .positive('金額必須是正整數')
+            .max(MAX_AMOUNT, '金額過大'),
         note: z.string().trim().optional(),
     })
     .refine((v) => v.payer_scrivener_id !== v.payee_scrivener_id, {

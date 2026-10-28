@@ -37,7 +37,7 @@ type Call = [string, unknown[]];
 function makeBuilder(result: { data?: unknown; error?: unknown }) {
     const calls: Call[] = [];
     const builder: Record<string, unknown> = {};
-    ['select', 'insert', 'update', 'eq', 'is', 'not', 'or', 'gte', 'lt', 'order', 'ilike'].forEach((m) => {
+    ['select', 'insert', 'update', 'eq', 'is', 'not', 'or', 'gte', 'lt', 'order', 'ilike', 'in'].forEach((m) => {
         builder[m] = jest.fn((...args: unknown[]) => {
             calls.push([m, args]);
             return builder;
@@ -78,12 +78,16 @@ describe('createHandoverFee', () => {
     });
 
     it('成功寫入 user_id、trim 後物件編號、未收狀態', async () => {
+        const check = makeBuilder({ data: [{ id: A }, { id: B }] });
         const { builder, calls } = makeBuilder({});
-        mockFrom.mockReturnValue(builder);
+        mockFrom.mockReturnValueOnce(check.builder).mockReturnValueOnce(builder);
 
         const result = await createHandoverFee({ ...validInput, object_number: ' A123 ', note: '' });
         expect(result).toEqual({ success: true });
-        expect(mockFrom).toHaveBeenCalledWith('handover_fees');
+        expect(mockFrom).toHaveBeenNthCalledWith(1, 'scriveners');
+        expect(check.calls).toContainEqual(['is', ['archived_at', null]]);
+        expect(check.calls).toContainEqual(['in', ['id', [A, B]]]);
+        expect(mockFrom).toHaveBeenNthCalledWith(2, 'handover_fees');
         expect(calls[0]).toEqual([
             'insert',
             [
@@ -101,8 +105,19 @@ describe('createHandoverFee', () => {
         ]);
     });
 
-    it('DB 錯誤（如引用他人名單被外鍵擋下）回傳錯誤', async () => {
-        mockFrom.mockReturnValue(makeBuilder({ error: { message: 'violates foreign key constraint' } }).builder);
+    it('付款人或收款人已隱藏或不屬於本人 → 拒絕且不寫入', async () => {
+        mockFrom.mockReturnValueOnce(makeBuilder({ data: [{ id: B }] }).builder);
+        expect(await createHandoverFee(validInput)).toEqual({
+            success: false,
+            error: '付款人或收款人不在使用中的名單，請重新選擇',
+        });
+        expect(mockFrom).toHaveBeenCalledTimes(1);
+    });
+
+    it('DB 錯誤回傳錯誤', async () => {
+        mockFrom
+            .mockReturnValueOnce(makeBuilder({ data: [{ id: A }, { id: B }] }).builder)
+            .mockReturnValueOnce(makeBuilder({ error: { message: 'violates foreign key constraint' } }).builder);
         expect(await createHandoverFee(validInput)).toEqual({
             success: false,
             error: 'violates foreign key constraint',
@@ -111,29 +126,40 @@ describe('createHandoverFee', () => {
 });
 
 describe('setHandoverFeePaid / deleteHandoverFee', () => {
-    it('標記已收寫入非 null 的 paid_at', async () => {
-        const { builder, calls } = makeBuilder({});
+    it('標記已收寫入非 null 的 paid_at，且只改未刪除的列', async () => {
+        const { builder, calls } = makeBuilder({ data: [{ id: 'f1' }] });
         mockFrom.mockReturnValue(builder);
         expect(await setHandoverFeePaid('f1', true)).toEqual({ success: true });
         const payload = calls[0][1][0] as { paid_at: string | null };
         expect(typeof payload.paid_at).toBe('string');
         expect(calls).toContainEqual(['eq', ['id', 'f1']]);
+        expect(calls).toContainEqual(['is', ['deleted_at', null]]);
     });
 
     it('改回未收寫入 null', async () => {
-        const { builder, calls } = makeBuilder({});
+        const { builder, calls } = makeBuilder({ data: [{ id: 'f1' }] });
         mockFrom.mockReturnValue(builder);
         await setHandoverFeePaid('f1', false);
         expect(calls[0]).toEqual(['update', [{ paid_at: null }]]);
     });
 
     it('刪除為軟刪除，寫入 deleted_at', async () => {
-        const { builder, calls } = makeBuilder({});
+        const { builder, calls } = makeBuilder({ data: [{ id: 'f1' }] });
         mockFrom.mockReturnValue(builder);
         expect(await deleteHandoverFee('f1')).toEqual({ success: true });
         const payload = calls[0][1][0] as { deleted_at: string };
         expect(calls[0][0]).toBe('update');
         expect(typeof payload.deleted_at).toBe('string');
+        expect(calls).toContainEqual(['is', ['deleted_at', null]]);
+    });
+
+    it.each([
+        ['setHandoverFeePaid', () => setHandoverFeePaid('missing', true)],
+        ['deleteHandoverFee', () => deleteHandoverFee('missing')],
+        ['archiveScrivener', () => archiveScrivener('missing')],
+    ])('%s：影響 0 列時回「找不到紀錄」', async (_name, run) => {
+        mockFrom.mockReturnValue(makeBuilder({ data: [] }).builder);
+        expect(await run()).toEqual({ success: false, error: '找不到紀錄，請重新整理' });
     });
 });
 
@@ -183,8 +209,18 @@ describe('addScrivener / archiveScrivener', () => {
         expect(insert.calls[0]).toEqual(['insert', [{ user_id: 'u1', name: '志明', sort_order: 0 }]]);
     });
 
+    it('同時新增同名撞到唯一索引（23505）→ 友善訊息', async () => {
+        mockFrom
+            .mockReturnValueOnce(makeBuilder({ data: null }).builder)
+            .mockReturnValueOnce(makeBuilder({ data: [] }).builder)
+            .mockReturnValueOnce(
+                makeBuilder({ error: { code: '23505', message: 'duplicate key value violates unique constraint' } }).builder
+            );
+        expect(await addScrivener('志明')).toEqual({ success: false, error: '已有同名地政士' });
+    });
+
     it('隱藏寫入 archived_at', async () => {
-        const { builder, calls } = makeBuilder({});
+        const { builder, calls } = makeBuilder({ data: [{ id: 's1' }] });
         mockFrom.mockReturnValue(builder);
         expect(await archiveScrivener('s1')).toEqual({ success: true });
         const payload = calls[0][1][0] as { archived_at: string };

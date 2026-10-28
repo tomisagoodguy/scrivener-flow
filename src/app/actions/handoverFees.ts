@@ -15,6 +15,8 @@ type ActionResult = { success: true } | { success: false; error: string };
 type DataResult<T> = { success: true; data: T } | { success: false; error: string };
 
 const UNAUTHORIZED = { success: false, error: 'Unauthorized' } as const;
+const NOT_FOUND = { success: false, error: '找不到紀錄，請重新整理' } as const;
+const UNIQUE_VIOLATION = '23505';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -58,6 +60,19 @@ export async function createHandoverFee(input: CreateHandoverFeeInput): Promise<
     const parsed = createHandoverFeeSchema.safeParse(input);
     if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? '輸入資料錯誤' };
 
+    // 付款人/收款人必須是本人名單中使用中的地政士（DB 複合外鍵只擋得住他人名單，擋不住已隱藏者）
+    const partyIds = [parsed.data.payer_scrivener_id, parsed.data.payee_scrivener_id];
+    const { data: parties, error: partyError } = await supabase
+        .from('scriveners')
+        .select('id')
+        .eq('user_id', user.id)
+        .is('archived_at', null)
+        .in('id', partyIds);
+    if (partyError) return { success: false, error: partyError.message };
+    if ((parties ?? []).length !== partyIds.length) {
+        return { success: false, error: '付款人或收款人不在使用中的名單，請重新選擇' };
+    }
+
     const { note, ...rest } = parsed.data;
     const { error } = await supabase
         .from('handover_fees')
@@ -72,12 +87,15 @@ export async function setHandoverFeePaid(id: string, paid: boolean): Promise<Act
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('handover_fees')
         .update({ paid_at: paid ? new Date().toISOString() : null })
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .select('id');
     if (error) return { success: false, error: error.message };
+    if (!data?.length) return NOT_FOUND;
 
     revalidatePath('/cases');
     return { success: true };
@@ -88,12 +106,15 @@ export async function deleteHandoverFee(id: string): Promise<ActionResult> {
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('handover_fees')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .select('id');
     if (error) return { success: false, error: error.message };
+    if (!data?.length) return NOT_FOUND;
 
     revalidatePath('/cases');
     return { success: true };
@@ -136,6 +157,8 @@ export async function addScrivener(rawName: string): Promise<ActionResult> {
         const { error } = await supabase
             .from('scriveners')
             .insert({ user_id: user.id, name, sort_order: maxOrder + 1 });
+        // 兩個分頁同時新增同名時，查詢後才撞到唯一索引
+        if (error?.code === UNIQUE_VIOLATION) return { success: false, error: '已有同名地政士' };
         if (error) return { success: false, error: error.message };
     }
 
@@ -148,12 +171,14 @@ export async function archiveScrivener(id: string): Promise<ActionResult> {
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('scriveners')
         .update({ archived_at: new Date().toISOString() })
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id');
     if (error) return { success: false, error: error.message };
+    if (!data?.length) return NOT_FOUND;
 
     revalidatePath('/cases');
     return { success: true };

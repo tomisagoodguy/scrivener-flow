@@ -52,6 +52,15 @@ describe('UnpaidFeeList', () => {
         expect(screen.getByRole('listitem')).toHaveAttribute('data-aging', level);
     });
 
+    it.each([
+        ['2026-10-30', '未到'],
+        ['2026-10-28', '今天'],
+        ['2026-10-24', '4 天'],
+    ])('帳齡文字：%s → %s', (date, label) => {
+        render(<UnpaidFeeList fees={[fee('1', date, 1000)]} today="2026-10-28" />);
+        expect(screen.getByRole('listitem')).toHaveTextContent(label);
+    });
+
     it('按「已收」呼叫 setHandoverFeePaid(id, true)', async () => {
         render(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
         fireEvent.click(screen.getByRole('button', { name: '已收' }));

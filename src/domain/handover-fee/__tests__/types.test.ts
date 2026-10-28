@@ -36,6 +36,11 @@ describe('createHandoverFeeSchema', () => {
         ['缺付款人', { payer_scrivener_id: '' }, '請選擇付款人'],
         ['缺收款人', { payee_scrivener_id: '' }, '請選擇收款人'],
         ['日期格式錯誤', { fee_date: '2026/10/28' }, '日期格式錯誤'],
+        ['不存在的日期', { fee_date: '2026-13-45' }, '日期格式錯誤'],
+        ['2 月 30 日', { fee_date: '2026-02-30' }, '日期格式錯誤'],
+        ['付款人 id 非 uuid', { payer_scrivener_id: 'abc' }, '付款人資料錯誤'],
+        ['收款人 id 非 uuid', { payee_scrivener_id: 'abc' }, '收款人資料錯誤'],
+        ['金額超過上限', { amount: 100_000_000 }, '金額過大'],
     ])('%s → 拒絕', (_label, patch, message) => {
         expect(firstError({ ...valid, ...patch })).toBe(message);
     });

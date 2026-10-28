@@ -10,6 +10,12 @@ const AGING_STYLE: Record<AgingLevel, { border: string; text: string }> = {
     red: { border: 'border-l-red-500', text: 'text-red-600 dark:text-red-400' },
 };
 
+function ageLabel(age: number): string {
+    if (age < 0) return '未到';
+    if (age === 0) return '今天';
+    return `${age} 天`;
+}
+
 interface UnpaidFeeListProps {
     fees: HandoverFeeWithNames[];
     /** 台北時區今天 `YYYY-MM-DD` */
@@ -52,7 +58,7 @@ export function UnpaidFeeList({ fees, today }: UnpaidFeeListProps) {
                                 className={`flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 pl-3 border-l-4 ${style.border}`}
                             >
                                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-20">{fee.fee_date}</span>
-                                <span className={`text-[11px] font-black w-12 ${style.text}`}>{age > 0 ? `${age} 天` : '今天'}</span>
+                                <span className={`text-[11px] font-black w-12 ${style.text}`}>{ageLabel(age)}</span>
                                 <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{fee.object_number}</span>
                                 <span className="text-sm text-slate-600 dark:text-slate-300">
                                     {fee.payer_name} → {fee.payee_name}

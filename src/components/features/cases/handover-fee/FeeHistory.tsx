@@ -25,6 +25,8 @@ export function FeeHistory({ fees, scriveners, month, scrivenerId }: FeeHistoryP
     const { error, isPending, setPaid, remove } = useFeeRowActions();
     const ids = { month: useId(), scrivener: useId() };
     const active = scriveners.filter((s) => !s.archived_at);
+    // URL 篩選指向已隱藏者時仍要顯示在選單上，畫面才與實際篩選一致
+    const hiddenSelected = scriveners.find((s) => s.id === scrivenerId && s.archived_at);
 
     return (
         <section className="glass-card p-5 space-y-3">
@@ -49,6 +51,7 @@ export function FeeHistory({ fees, scriveners, month, scrivenerId }: FeeHistoryP
                     {active.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
+                    {hiddenSelected && <option value={hiddenSelected.id}>{hiddenSelected.name}（已隱藏）</option>}
                 </select>
             </div>
 

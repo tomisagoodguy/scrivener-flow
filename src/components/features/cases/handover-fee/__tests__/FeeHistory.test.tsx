@@ -56,6 +56,13 @@ describe('FeeHistory', () => {
         expect(within(filter).getByRole('option', { name: '孔協' })).toBeInTheDocument();
     });
 
+    it('URL 篩選指向已隱藏者時，選單顯示「（已隱藏）」選項並選中', () => {
+        render(<FeeHistory fees={fees} scriveners={scriveners} month="2026-10" scrivenerId={H} />);
+        const filter = screen.getByLabelText('地政士篩選') as HTMLSelectElement;
+        expect(filter.value).toBe(H);
+        expect(within(filter).getByRole('option', { name: '來慶（已隱藏）' })).toBeInTheDocument();
+    });
+
     it('已收紀錄可改回未收', async () => {
         render(<FeeHistory fees={fees} scriveners={scriveners} month="2026-10" scrivenerId="" />);
         expect(screen.getByRole('listitem')).toHaveTextContent('已收');

@@ -6,11 +6,14 @@ import { todayInTaipei } from '@/domain/handover-fee/agingUtils';
 import { createHandoverFeeSchema } from '@/domain/handover-fee/types';
 
 /** 新增遞牌費表單狀態；前端先以同一份 Zod schema 驗證，再交給 Server Action */
-export function useHandoverFeeForm(defaultDate?: string) {
+export function useHandoverFeeForm(activeIds: string[], defaultDate?: string) {
     const [feeDate, setFeeDate] = useState(() => defaultDate ?? todayInTaipei());
     const [objectNumber, setObjectNumber] = useState('');
-    const [payerId, setPayerId] = useState('');
-    const [payeeId, setPayeeId] = useState('');
+    const [rawPayerId, setPayerId] = useState('');
+    const [rawPayeeId, setPayeeId] = useState('');
+    // 已選的地政士若被隱藏（不在使用中名單），視為未選，避免畫面顯示「請選擇」卻送出舊 id
+    const payerId = activeIds.includes(rawPayerId) ? rawPayerId : '';
+    const payeeId = activeIds.includes(rawPayeeId) ? rawPayeeId : '';
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [error, setError] = useState<string | null>(null);
