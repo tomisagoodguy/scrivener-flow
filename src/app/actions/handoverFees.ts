@@ -10,6 +10,7 @@ import {
     type HandoverFeeWithNames,
     type Scrivener,
 } from '@/domain/handover-fee/types';
+import { MONTH_PATTERN, UUID_PATTERN } from '@/domain/handover-fee/historyParams';
 
 type ActionResult = { success: true } | { success: false; error: string };
 type DataResult<T> = { success: true; data: T } | { success: false; error: string };
@@ -17,8 +18,6 @@ type DataResult<T> = { success: true; data: T } | { success: false; error: strin
 const UNAUTHORIZED = { success: false, error: 'Unauthorized' } as const;
 const NOT_FOUND = { success: false, error: '找不到紀錄，請重新整理' } as const;
 const UNIQUE_VIOLATION = '23505';
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const FEE_SELECT = `
     id, fee_date, object_number, payer_scrivener_id, payee_scrivener_id, amount, paid_at, note,
@@ -262,8 +261,8 @@ export async function listFeeHistory(params: {
     scrivenerId?: string;
 }): Promise<DataResult<HandoverFeeWithNames[]>> {
     const { month, scrivenerId } = params;
-    if (!MONTH_RE.test(month)) return { success: false, error: '月份格式錯誤' };
-    if (scrivenerId && !UUID_RE.test(scrivenerId)) return { success: false, error: '地政士參數錯誤' };
+    if (!MONTH_PATTERN.test(month)) return { success: false, error: '月份格式錯誤' };
+    if (scrivenerId && !UUID_PATTERN.test(scrivenerId)) return { success: false, error: '地政士參數錯誤' };
 
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;

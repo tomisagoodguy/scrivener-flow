@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 import { useRouter } from 'next/navigation';
+import { isNavigableMonth } from '@/domain/handover-fee/historyParams';
 import type { HandoverFeeWithNames, Scrivener } from '@/domain/handover-fee/types';
 import { useHandoverFeeEdit } from './HandoverFeeEditContext';
 import { ScrivenerRoster } from './ScrivenerRoster';
@@ -39,14 +40,14 @@ export function FeeHistory({ fees, scriveners, month, scrivenerId }: FeeHistoryP
                     id={ids.month}
                     type="month"
                     value={month}
-                    onChange={(e) => e.target.value && router.push(buildHref(e.target.value, scrivenerId))}
+                    onChange={(e) => isNavigableMonth(e.target.value) && router.replace(buildHref(e.target.value, scrivenerId))}
                     className={INPUT_CLASS}
                 />
                 <label htmlFor={ids.scrivener} className="text-[11px] font-black text-slate-500 dark:text-slate-400">地政士篩選</label>
                 <select
                     id={ids.scrivener}
                     value={scrivenerId}
-                    onChange={(e) => router.push(buildHref(month, e.target.value))}
+                    onChange={(e) => router.replace(buildHref(month, e.target.value))}
                     className={INPUT_CLASS}
                 >
                     <option value="">全部</option>

@@ -1,11 +1,10 @@
 import { listFeeHistory, listScrivenersWithDefaults, listUnpaidFees } from '@/app/actions/handoverFees';
-import { currentMonthInTaipei, todayInTaipei } from '@/domain/handover-fee/agingUtils';
+import { todayInTaipei } from '@/domain/handover-fee/agingUtils';
+import { normalizeHistoryParams } from '@/domain/handover-fee/historyParams';
 import { FeeHistory } from './FeeHistory';
 import { HandoverFeeEditProvider } from './HandoverFeeEditContext';
 import { HandoverFeeForm } from './HandoverFeeForm';
 import { UnpaidFeeList } from './UnpaidFeeList';
-
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 interface HandoverFeeViewProps {
     month?: string;
@@ -23,8 +22,8 @@ function LoadError({ message }: { message: string }) {
 /** `/cases?status=HandoverFee`：新增表單、未收款清單、歷史紀錄 */
 export default async function HandoverFeeView({ month, scrivenerId }: HandoverFeeViewProps) {
     const today = todayInTaipei();
-    const selectedMonth = month && MONTH_RE.test(month) ? month : currentMonthInTaipei();
-    const selectedScrivener = scrivenerId ?? '';
+    // 書籤或手打的不合法參數退回預設值，避免整個歷史區塊只剩錯誤訊息
+    const { month: selectedMonth, scrivenerId: selectedScrivener } = normalizeHistoryParams(month, scrivenerId);
 
     const [scrivenersResult, unpaidResult, historyResult] = await Promise.all([
         listScrivenersWithDefaults(),

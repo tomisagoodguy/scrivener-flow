@@ -9,9 +9,9 @@ import { HandoverFeeEditProvider } from '../HandoverFeeEditContext';
 
 const renderWithEdit = (ui: React.ReactElement) => render(ui, { wrapper: HandoverFeeEditProvider });
 
-const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => ({ replace: mockReplace }),
 }));
 
 const mockSetPaid = jest.fn();
@@ -76,9 +76,17 @@ describe('FeeHistory', () => {
     it('變更月份與地政士寫入 URL 參數', () => {
         renderWithEdit(<FeeHistory fees={fees} scriveners={scriveners} month="2026-10" scrivenerId="" />);
         fireEvent.change(screen.getByLabelText('月份'), { target: { value: '2026-09' } });
-        expect(mockPush).toHaveBeenLastCalledWith('/cases?status=HandoverFee&month=2026-09');
+        expect(mockReplace).toHaveBeenLastCalledWith('/cases?status=HandoverFee&month=2026-09');
         fireEvent.change(screen.getByLabelText('地政士篩選'), { target: { value: A } });
-        expect(mockPush).toHaveBeenLastCalledWith(`/cases?status=HandoverFee&month=2026-10&scrivener=${A}`);
+        expect(mockReplace).toHaveBeenLastCalledWith(`/cases?status=HandoverFee&month=2026-10&scrivener=${A}`);
+    });
+
+    it('鍵盤逐字輸入年份的中間值（0002-10 等）不觸發跳頁', () => {
+        renderWithEdit(<FeeHistory fees={fees} scriveners={scriveners} month="2026-10" scrivenerId="" />);
+        for (const partial of ['0002-10', '0020-10', '0202-10']) {
+            fireEvent.change(screen.getByLabelText('月份'), { target: { value: partial } });
+        }
+        expect(mockReplace).not.toHaveBeenCalled();
     });
 
     it('名單管理可隱藏使用中的地政士', async () => {
