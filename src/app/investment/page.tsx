@@ -8,7 +8,7 @@ import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { type OverlapData, type EtfData } from '@/components/features/investment/EtfComparePanel';
 import { EtfCompareViewTabs } from '@/components/features/investment/EtfCompareViewTabs';
 import { getGoldenZoneStats } from '@/app/actions/revenueLabActions';
-import { ClockIcon } from 'lucide-react';
+import { ClockIcon, LineChartIcon } from 'lucide-react';
 import React from 'react';
 import { Holding, DiffLog } from '@/types/investment';
 import { ETF_REGISTRY, ETF_CODES, getEtfMeta } from '@/lib/investment/etfRegistry';
@@ -295,6 +295,12 @@ export default async function InvestmentPoolPage() {
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         資料日期: {displayDate}
                     </div>
+                    <Link
+                        href="/investment/pool-chart"
+                        className="flex items-center gap-1.5 bg-white/60 hover:bg-white dark:bg-slate-800 border border-gray-200 hover:border-blue-300 px-4 py-2 rounded-full text-sm font-medium text-slate-700 dark:text-white transition-all"
+                    >
+                        <LineChartIcon className="w-4 h-4" /> 圖表瀏覽
+                    </Link>
                     <PipelineMonitor />
                     <ExcelDownloadButton />
                 </div>

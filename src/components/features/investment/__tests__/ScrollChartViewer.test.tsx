@@ -100,6 +100,20 @@ describe('ScrollChartViewer', () => {
         expect(dots).toHaveLength(4);
     });
 
+    it('showJumpDots defaults to true and keeps the jump dots for 4 slides', () => {
+        render(<ScrollChartViewer slides={makeSlides(4)} initialIndex={0} renderSlide={renderSlide} showJumpDots />);
+        expect(screen.getByRole('navigation', { name: '快速跳轉' })).toBeInTheDocument();
+    });
+
+    it('hides the jump dots when showJumpDots is false but keeps the sub-nav', () => {
+        render(
+            <ScrollChartViewer slides={makeSlides(4)} initialIndex={0} renderSlide={renderSlide} showJumpDots={false} />,
+        );
+        expect(screen.queryByRole('navigation', { name: '快速跳轉' })).not.toBeInTheDocument();
+        expect(screen.getByText('1 / 4')).toBeInTheDocument();
+        expect(screen.getByTitle(`${2331} 股票1`)).toBeInTheDocument();
+    });
+
     it('calls onActiveChange and renders neighbours when a section becomes active', () => {
         const onActiveChange = jest.fn();
         render(

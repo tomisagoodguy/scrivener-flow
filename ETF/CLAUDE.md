@@ -58,7 +58,7 @@ ETF/
 │       ├── signal_detect_step.py  # [輔助] 偵測進階訊號 → etf_signals
 │       ├── buying_pattern_step.py # [輔助] 分類 7 種買進模式 + 補前瞻報酬 → etf_buying_patterns
 │       ├── position_summary_step.py # [輔助] 現金流法持倉損益 → etf_position_summary + etf_pnl_series
-│       ├── sync_bare_k_step.py    # 同步 watch_list 裸K快照
+│       ├── sync_bare_k_step.py    # 同步裸K快照（自選→策略→同步加碼→籌碼排行→選股池，MAX_STOCKS=400）
 │       ├── news_context_step.py   # 直接呼叫 MOPS API，取重大公告 → ctx.news_context
 │       ├── notify_step.py         # LINE 推送通知（含 💎 大戶積累標記）
 │       └── cleanup_step.py        # 清理暫存資料
@@ -167,10 +167,10 @@ uv add deap pymoo joblib
 
 | 步驟 | 預期耗時 | 備註 |
 | :--- | :--- | :--- |
-| `main.py --days 30`（主 pipeline） | ~10 min | 正常 |
+| `main.py --days 30`（主 pipeline） | ~10 min（估計 +≤19 min） | 2026-10-28 起 SyncBareKStep 納入選股池股（台股 218 檔，`MAX_STOCKS=400`，~5.2s/檔）；增量為估計值，待首次 CI log 確認 |
 | `sync_stock_financials.py --skip-shareholder` | ~5 min | 券商 ~45k 筆，`_bulk_upsert`（execute_values） |
 | `daily_ai_report.py`（11 ETF） | ~15 min | Gemini rate limit |
-| **日排程合計** | **~33 min** | 22 交易日/月 ≈ 730 min |
+| **日排程合計** | **~33 min（估計最多 ~52 min）** | 22 交易日/月 ≈ 730 min（加選股池同步後估計最多 ~1150 min） |
 | `equity_weekly.yml`（集保 + 週排程） | ~20 min | `--skip-broker` 跳過券商資料，timeout-minutes: 60 |
 
 > **注意**：日排程若超過 60 分鐘請先確認：
@@ -198,7 +198,7 @@ ScrapeStep
   → SignalDetectStep        ← [輔助] 3 種訊號偵測（multi_fund/overweight/cross_product） → etf_signals
   → BuyingPatternStep       ← [輔助] 分類 7 種買進模式 + 補前 30 天前瞻報酬 → etf_buying_patterns
   → PositionSummaryStep     ← [輔助] 現金流法：CFt=−Δshares×close → etf_position_summary + etf_pnl_series
-  → SyncBareKStep           ← 同步 watch_list 裸K快照
+  → SyncBareKStep           ← 同步裸K快照（自選→策略→同步加碼→籌碼排行→選股池台股成分股，上限 400）
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
   → DividendSyncStep        ← [輔助] 全 ETF 配息記錄冪等 upsert → etf_dividend_records
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎

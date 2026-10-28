@@ -16,6 +16,13 @@ Requirement "SyncBareKStep includes equity ranking stocks"):
 - MAX_STOCKS (200) truncation drops equity ranking stocks first
 - _fetch_equity_ranking_stocks: double -> big -> retail concatenation, de-dup, query shape,
   empty table, and SQL failure (logs error, returns [], never raises)
+
+Also covers the investment-pool-chart-view change
+(spec: openspec/changes/investment-pool-chart-view/specs, Requirement
+"SyncBareKStep includes pool stocks"):
+- MAX_STOCKS == 400; pool stocks appended after equity ranking, de-duplicated, truncated first
+- _fetch_pool_stocks: success path (ordered codes, no '::' cast), SQL failure
+  (logs error, returns [], other sources still sync)
 """
 
 import argparse
@@ -61,11 +68,12 @@ def run_execute(
     momentum: list[str],
     equity: list[str] | None = None,
     services: MagicMock | None = None,
+    pool: list[str] | None = None,
 ) -> list[str]:
     """跑 execute()，回傳實際送進 compute_snapshot 的股票代號順序。
 
-    equity 預設為空清單（mock 掉 _fetch_equity_ranking_stocks）；
-    若傳入 services，則不 mock 籌碼查詢，改走真實的 _fetch_equity_ranking_stocks。
+    equity / pool 預設為空清單（mock 掉 _fetch_equity_ranking_stocks / _fetch_pool_stocks）；
+    若傳入 services，則不 mock 籌碼與選股池查詢，改走真實查詢。
     """
     step = SyncBareKStep()
     svc = MagicMock()
@@ -79,6 +87,9 @@ def run_execute(
         if services is None:
             stack.enter_context(
                 patch.object(SyncBareKStep, "_fetch_equity_ranking_stocks", return_value=equity or [])
+            )
+            stack.enter_context(
+                patch.object(SyncBareKStep, "_fetch_pool_stocks", return_value=pool or [])
             )
         stack.enter_context(patch(f"{MODULE}.BareKService", return_value=svc))
         stack.enter_context(patch.object(SyncBareKStep, "_upsert_snapshots"))
@@ -101,7 +112,7 @@ def make_result(codes: list[str]) -> MagicMock:
 
 class TestConstants:
     def test_constants_match_spec(self):
-        assert sync_bare_k_step.MAX_STOCKS == 200
+        assert sync_bare_k_step.MAX_STOCKS == 400
         assert sync_bare_k_step.MOMENTUM_WINDOW_DAYS == 5
         assert sync_bare_k_step.MOMENTUM_MIN_ETF_COUNT == 2
 
@@ -155,19 +166,19 @@ class TestExecuteMerge:
         """watch_list 與策略股皆空時，同步加碼股仍要被同步。"""
         assert run_execute(watch=[], strategy=[], momentum=["3017"]) == ["3017"]
 
-    def test_truncates_to_200_preserving_priority(self, caplog):
+    def test_truncates_to_max_stocks_preserving_priority(self, caplog):
         watch = [f"W{i:03d}" for i in range(10)]
-        strategy = [f"S{i:03d}" for i in range(150)]
-        momentum = [f"M{i:03d}" for i in range(100)]  # 合計 260 > 200
+        strategy = [f"S{i:03d}" for i in range(250)]
+        momentum = [f"M{i:03d}" for i in range(200)]  # 合計 460 > 400
 
         with caplog.at_level(logging.WARNING, logger="SyncBareKStep"):
             computed = run_execute(watch, strategy, momentum)
 
-        assert len(computed) == 200
+        assert len(computed) == 400
         assert computed[:10] == watch
-        assert computed[10:160] == strategy
-        assert computed[160:] == momentum[:40]
-        assert any("200" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
+        assert computed[10:260] == strategy
+        assert computed[260:] == momentum[:140]
+        assert any("400" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
 
     def test_equity_appended_last_and_deduped(self):
         """spec: 籌碼股排在同步加碼股之後，與前面名單去重（保留首次出現位置）。"""
@@ -184,20 +195,63 @@ class TestExecuteMerge:
         assert run_execute(watch=[], strategy=[], momentum=[], equity=["6669"]) == ["6669"]
 
     def test_equity_truncated_first_at_max_stocks(self, caplog):
-        """spec: 前三份合計 195 支，籌碼股新增 20 支 -> 只補進前 5 支。"""
+        """前三份合計 395 支，籌碼股新增 20 支 -> 只補進前 5 支。"""
         watch = [f"W{i:03d}" for i in range(5)]
-        strategy = [f"S{i:03d}" for i in range(100)]
-        momentum = [f"M{i:03d}" for i in range(90)]  # 合計 195
+        strategy = [f"S{i:03d}" for i in range(200)]
+        momentum = [f"M{i:03d}" for i in range(190)]  # 合計 395
         equity = [f"E{i:03d}" for i in range(20)]
 
         with caplog.at_level(logging.WARNING, logger="SyncBareKStep"):
             computed = run_execute(watch, strategy, momentum, equity)
 
-        assert len(computed) == 200
-        assert computed[:195] == [*watch, *strategy, *momentum]
-        assert computed[195:] == equity[:5]
+        assert len(computed) == 400
+        assert computed[:395] == [*watch, *strategy, *momentum]
+        assert computed[395:] == equity[:5]
         warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-        assert any("200" in m and "equity" in m.lower() for m in warnings)
+        assert any("400" in m and "equity" in m.lower() for m in warnings)
+
+    def test_pool_appended_after_equity_and_deduped(self):
+        """spec Merge order: pool 排在籌碼股之後並去重保留首次出現位置。"""
+        computed = run_execute(
+            watch=["2330"], strategy=["2454"], momentum=[], equity=["3008"],
+            pool=["2330", "2317", "3008"],
+        )
+        assert computed == ["2330", "2454", "3008", "2317"]
+
+    def test_pool_only_still_syncs(self):
+        assert run_execute(watch=[], strategy=[], momentum=[], pool=["2317"]) == ["2317"]
+
+    def test_pool_truncated_first_at_max_stocks(self, caplog):
+        """前四份合計 395 支，選股池 20 支 -> 只補進前 5 支，warning 含 pool。"""
+        watch = [f"W{i:03d}" for i in range(5)]
+        strategy = [f"S{i:03d}" for i in range(200)]
+        equity = [f"E{i:03d}" for i in range(190)]
+        pool = [f"P{i:03d}" for i in range(20)]
+
+        with caplog.at_level(logging.WARNING, logger="SyncBareKStep"):
+            computed = run_execute(watch, strategy, [], equity, pool=pool)
+
+        assert len(computed) == 400
+        assert computed[395:] == pool[:5]
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("400" in m and "pool" in m.lower() for m in warnings)
+
+    def test_pool_query_failure_does_not_abort_step(self, caplog):
+        """spec Pool query fails: log error、視為空清單、其餘名單照常同步。"""
+        services = MagicMock()
+        services.sql_storage.engine.connect.side_effect = RuntimeError("db down")
+
+        with caplog.at_level(logging.ERROR, logger="SyncBareKStep"):
+            computed = run_execute(
+                watch=["2330"], strategy=["2454"], momentum=["3017"], services=services
+            )
+
+        assert computed == ["2330", "2454", "3017"]
+        assert any(
+            "pool" in r.getMessage().lower() and "db down" in r.getMessage()
+            for r in caplog.records
+            if r.levelno == logging.ERROR
+        )
 
     def test_equity_query_failure_does_not_abort_step(self, caplog):
         """spec: 籌碼查詢拋例外 -> log error、視為空清單、其餘名單照常同步、不 raise。"""
@@ -219,7 +273,10 @@ class TestExecuteMerge:
     def test_no_equity_data_syncs_other_stocks(self):
         """spec: equity_distribution_stats 無資料 -> 籌碼清單為空，其餘名單照常同步。"""
         services = make_services()
-        services._conn.execute.side_effect = [make_result([]), make_result([]), make_result([])]
+        services._conn.execute.side_effect = [
+            make_result([]), make_result([]), make_result([]),  # 籌碼三份清單
+            make_result([]),  # 選股池
+        ]
 
         computed = run_execute(
             watch=["2330"], strategy=["2454"], momentum=["3017"], services=services
@@ -369,3 +426,39 @@ class TestFetchEquityRankingStocks:
         assert "ORDER BY shareholders_change_rate ASC" in retail_sql
 
         assert [p["limit"] for p in params] == [10, 30, 30]
+
+
+# ---------------------------------------------------------------------------
+# _fetch_pool_stocks
+# ---------------------------------------------------------------------------
+
+
+class TestFetchPoolStocks:
+    def test_sql_failure_returns_empty_list_and_logs_error(self, caplog):
+        step = SyncBareKStep()
+        services = MagicMock()
+        services.sql_storage.engine.connect.side_effect = RuntimeError("db down")
+
+        with caplog.at_level(logging.ERROR, logger="SyncBareKStep"):
+            result = step._fetch_pool_stocks(make_ctx(), services)
+
+        assert result == []
+        assert any(r.levelno == logging.ERROR and "db down" in r.getMessage() for r in caplog.records)
+
+    def test_success_path_returns_ordered_codes_and_query_shape(self):
+        step = SyncBareKStep()
+        services = make_services()
+        conn = services._conn
+        conn.execute.side_effect = [make_result(["2330", "2317", "3008"])]
+
+        result = step._fetch_pool_stocks(make_ctx(), services)
+
+        assert result == ["2330", "2317", "3008"]
+        assert conn.execute.call_count == 1
+        sql = " ".join(str(conn.execute.call_args_list[0].args[0]).split())
+        assert "etf_holdings_snapshot" in sql
+        assert "MAX(data_date)" in sql
+        assert "^[0-9]{4}$" in sql
+        assert "COUNT(DISTINCT h.etf_code) DESC" in sql
+        assert "h.stock_code ASC" in sql
+        assert "::" not in sql  # SQLAlchemy text() 禁用 :: 轉型

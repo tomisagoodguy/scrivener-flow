@@ -29,6 +29,7 @@ paths:
 | `/investment/consensus` | 籌碼共識頁（多 ETF 同時買進的共同持股排行） |
 | `/investment/compare` | ETF 持股重疊比較 |
 | `/investment/equity` | 股東結構分析（大戶 / 中實戶 / 散戶變化） |
+| `/investment/pool-chart` | 選股池圖表瀏覽：全部主動 ETF 台股成分股連續捲動裸K圖（依持有 ETF 數排序，快照 client 按需載入） |
 | `/investment/revenue-lab` | 月營收實驗室（營收趨勢 + 年增率分析） |
 | `/investment/history` | 持股歷史紀錄查詢 |
 | `/banks` | 代償銀行管理 |

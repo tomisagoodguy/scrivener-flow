@@ -2,7 +2,8 @@
 Sync Bare-K Step
 
 從 watch_list 聚合所有使用者的自選股，加上最新日策略入選股、窗口同步加碼股與
-籌碼排行股（優先序：自選股 → 策略股 → 同步加碼股 → 籌碼排行股），計算裸K六面板快照，
+籌碼排行股與選股池股（優先序：自選股 → 策略股 → 同步加碼股 → 籌碼排行股 → 選股池股），
+計算裸K六面板快照，
 並批次 upsert 至 bare_k_snapshots 表。
 """
 
@@ -21,7 +22,7 @@ from ETF.services.finlab.bare_k_service import BareKService
 
 logger = logging.getLogger(__name__)
 
-MAX_STOCKS = 200  # 每次最多同步股票數量
+MAX_STOCKS = 400  # 每次最多同步股票數量
 
 # 同步加碼窗口：必須與 src/app/investment/momentum/page.tsx 的 DEFAULT_WINDOW / DEFAULT_MIN_COUNT 一致
 MOMENTUM_WINDOW_DAYS = 5
@@ -66,21 +67,22 @@ class SyncBareKStep(BaseStep):
         watch_list_ids = self._fetch_watch_list_stocks(ctx, services)
 
         # 2. 額外納入策略股、同步加碼股、籌碼排行股
-        #    （優先序：watch_list → 策略股 → 同步加碼股 → 籌碼排行股，依序 append 後去重；
-        #     超過 MAX_STOCKS 時最後面的籌碼排行股最先被截斷）
+        #    （優先序：watch_list → 策略股 → 同步加碼股 → 籌碼排行股 → 選股池股，依序 append 後去重；
+        #     超過 MAX_STOCKS 時最後面的選股池股最先被截斷）
         strategy_ids = self._fetch_strategy_stocks(ctx, services)
         momentum_ids = self._fetch_momentum_stocks(ctx, services)
         equity_ids = self._fetch_equity_ranking_stocks(ctx, services)
+        pool_ids = self._fetch_pool_stocks(ctx, services)
         seen: set[str] = set()
         stock_ids: list[str] = []
-        for sid in [*watch_list_ids, *strategy_ids, *momentum_ids, *equity_ids]:
+        for sid in [*watch_list_ids, *strategy_ids, *momentum_ids, *equity_ids, *pool_ids]:
             if sid not in seen:
                 stock_ids.append(sid)
                 seen.add(sid)
 
         if not stock_ids:
             self.logger.info(
-                "watch_list, strategy_signals, window-momentum and equity ranking are all empty, "
+                "watch_list, strategy_signals, window-momentum, equity ranking and pool are all empty, "
                 "skipping BareK sync."
             )
             ctx.bare_k_synced_count = 0
@@ -88,7 +90,7 @@ class SyncBareKStep(BaseStep):
 
         if len(stock_ids) > MAX_STOCKS:
             self.logger.warning(
-                f"Combined watch_list + strategy + window-momentum + equity ranking stocks "
+                f"Combined watch_list + strategy + window-momentum + equity ranking + pool stocks "
                 f"has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
             )
             stock_ids = stock_ids[:MAX_STOCKS]
@@ -252,6 +254,32 @@ class SyncBareKStep(BaseStep):
             return stock_ids
         except Exception as e:
             self.logger.error(f"Failed to fetch equity ranking stocks: {e}")
+            return []
+
+    def _fetch_pool_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
+        """
+        查詢選股池股：每支 ETF 最新 data_date 的 4 碼台股成分股（去重）。
+
+        依持有 ETF 數遞減、stock_code 遞增排序。
+        失敗時 log error 並回傳空列表（不 raise）。
+        """
+        try:
+            with services.sql_storage.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT h.stock_code
+                    FROM etf_holdings_snapshot h
+                    JOIN (
+                        SELECT etf_code, MAX(data_date) AS d
+                        FROM etf_holdings_snapshot
+                        GROUP BY etf_code
+                    ) m ON h.etf_code = m.etf_code AND h.data_date = m.d
+                    WHERE h.stock_code ~ '^[0-9]{4}$'
+                    GROUP BY h.stock_code
+                    ORDER BY COUNT(DISTINCT h.etf_code) DESC, h.stock_code ASC
+                """))
+                return [row[0] for row in result.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Failed to fetch pool stocks: {e}")
             return []
 
     def _fetch_watch_list_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:

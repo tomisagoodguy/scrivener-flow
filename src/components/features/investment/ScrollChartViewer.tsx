@@ -19,6 +19,8 @@ export interface ScrollChartViewerProps<T extends ScrollSlide> {
     onBack?: () => void;
     backLabel?: string;
     onActiveChange?: (slide: T, index: number) => void;
+    /** 是否顯示右側跳轉點（仍需超過 3 支）；檔數過多（點會超出畫面）時傳 false */
+    showJumpDots?: boolean;
 }
 
 /** 全局 Header（≈64px）+ sub-nav（≈48px）+ 8px 間距 */
@@ -41,6 +43,7 @@ export function ScrollChartViewer<T extends ScrollSlide>({
     onBack,
     backLabel = '返回',
     onActiveChange,
+    showJumpDots = true,
 }: ScrollChartViewerProps<T>) {
     const sectionsRef = useRef<(HTMLElement | null)[]>([]);
     const headersRef = useRef<(HTMLElement | null)[]>([]);
@@ -138,7 +141,7 @@ export function ScrollChartViewer<T extends ScrollSlide>({
             </div>
 
             {/* 右側快速跳轉點（超過 3 支才顯示） */}
-            {slides.length > 3 && <ScrollChartDots slides={slides} activeIndex={activeIndex} onJump={scrollToIndex} />}
+            {showJumpDots && slides.length > 3 && <ScrollChartDots slides={slides} activeIndex={activeIndex} onJump={scrollToIndex} />}
         </div>
     );
 }
