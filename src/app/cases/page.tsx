@@ -11,6 +11,7 @@ import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 import { getCaseStage } from '@/lib/stageUtils';
 import CasesPendingView from '@/components/features/cases/CasesPendingView';
 import { CasesWidgetLayout } from '@/components/features/cases/CasesWidgetLayout';
+import HandoverFeeView from '@/components/features/cases/handover-fee/HandoverFeeView';
 
 export const dynamic = 'force-dynamic';
 
@@ -159,6 +160,7 @@ export default async function CasesPage({
                     statusParam !== 'Memo' &&
                     statusParam !== 'Timeline' &&
                     statusParam !== 'Pending' &&
+                    statusParam !== 'HandoverFee' &&
                     monitoringCases.length > 0
                 }
             >
@@ -171,6 +173,7 @@ export default async function CasesPage({
                             { label: '📋 備忘錄', value: 'Memo' },
                             { label: '📅 時程', value: 'Timeline' },
                             { label: '⚠️ 未完成統整', value: 'Pending' },
+                            { label: '💰 遞牌費', value: 'HandoverFee' },
                         ].map((tab) => (
                             <Link
                                 key={tab.value}
@@ -222,8 +225,16 @@ export default async function CasesPage({
                 <CasesPendingView cases={rawCases.filter((c) => c.status !== 'Closed' && c.status !== 'Cancelled')} />
             )}
 
+            {/* Handover Fee Ledger View */}
+            {statusParam === 'HandoverFee' && (
+                <HandoverFeeView
+                    month={typeof resolvedSearchParams?.month === 'string' ? resolvedSearchParams.month : undefined}
+                    scrivenerId={typeof resolvedSearchParams?.scrivener === 'string' ? resolvedSearchParams.scrivener : undefined}
+                />
+            )}
+
             {/* List Table */}
-            {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && (
+            {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && statusParam !== 'HandoverFee' && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-wrap">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">排序</span>
