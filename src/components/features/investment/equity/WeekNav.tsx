@@ -12,13 +12,16 @@ export function WeekNav({
     weeks,
     tier,
     dateRange,
+    extraParams,
 }: {
     weeks: Weeks;
     tier: Tier | null;
     dateRange?: { from: string; to: string };
+    /** 圖表視角帶入 view / list，切週數時留在圖表 */
+    extraParams?: Record<string, string>;
 }) {
     function href(value: Weeks): string {
-        const params = new URLSearchParams();
+        const params = new URLSearchParams(extraParams);
         if (tier) params.set('tier', tier);
         if (value !== 1) params.set('weeks', String(value));
         const qs = params.toString();

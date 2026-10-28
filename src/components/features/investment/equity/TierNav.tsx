@@ -8,9 +8,10 @@ const OPTIONS: { label: string; value: Tier | null }[] = [
     { label: '1000張+', value: '1000' },
 ];
 
-export function TierNav({ tier, weeks }: { tier: Tier | null; weeks?: Weeks }) {
+export function TierNav({ tier, weeks, extraParams }: { tier: Tier | null; weeks?: Weeks; extraParams?: Record<string, string> }) {
     function href(value: Tier | null): string {
-        const params = new URLSearchParams();
+        // extraParams：圖表視角帶入 view / list，切級距時留在圖表
+        const params = new URLSearchParams(extraParams);
         if (value) params.set('tier', value);
         if (weeks && weeks !== 1) params.set('weeks', String(weeks));
         const qs = params.toString();

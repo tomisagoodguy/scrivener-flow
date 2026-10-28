@@ -1,8 +1,8 @@
 """
 Sync Bare-K Step
 
-從 watch_list 聚合所有使用者的自選股，加上最新日策略入選股與窗口同步加碼股
-（優先序：自選股 → 策略股 → 同步加碼股），計算裸K六面板快照，
+從 watch_list 聚合所有使用者的自選股，加上最新日策略入選股、窗口同步加碼股與
+籌碼排行股（優先序：自選股 → 策略股 → 同步加碼股 → 籌碼排行股），計算裸K六面板快照，
 並批次 upsert 至 bare_k_snapshots 表。
 """
 
@@ -26,6 +26,11 @@ MAX_STOCKS = 200  # 每次最多同步股票數量
 # 同步加碼窗口：必須與 src/app/investment/momentum/page.tsx 的 DEFAULT_WINDOW / DEFAULT_MIN_COUNT 一致
 MOMENTUM_WINDOW_DAYS = 5
 MOMENTUM_MIN_ETF_COUNT = 2
+
+# 籌碼排行股：重現 /investment/equity 預設視角（1 週、不分級距）的三份清單
+# EQUITY_LIST_LIMIT 必須與前端 src/lib/investment/equityChartUtils.ts 的 EQUITY_CHART_LIST_LIMIT 一致
+EQUITY_DOUBLE_LIMIT = 10  # 雙訊號（大戶增 + 股東減）本身上限 10 檔
+EQUITY_LIST_LIMIT = 30  # 主力買進、散戶減少各取前 30 檔
 
 
 def _momentum_window_start(prev_dates: list[str], today: str) -> str:
@@ -60,27 +65,31 @@ class SyncBareKStep(BaseStep):
         # 1. 從 watch_list 聚合所有使用者的股票（service role 繞過 RLS）
         watch_list_ids = self._fetch_watch_list_stocks(ctx, services)
 
-        # 2. 額外納入策略股、同步加碼股（優先序：watch_list → 策略股 → 同步加碼股，依序 append 後去重）
+        # 2. 額外納入策略股、同步加碼股、籌碼排行股
+        #    （優先序：watch_list → 策略股 → 同步加碼股 → 籌碼排行股，依序 append 後去重；
+        #     超過 MAX_STOCKS 時最後面的籌碼排行股最先被截斷）
         strategy_ids = self._fetch_strategy_stocks(ctx, services)
         momentum_ids = self._fetch_momentum_stocks(ctx, services)
+        equity_ids = self._fetch_equity_ranking_stocks(ctx, services)
         seen: set[str] = set()
         stock_ids: list[str] = []
-        for sid in [*watch_list_ids, *strategy_ids, *momentum_ids]:
+        for sid in [*watch_list_ids, *strategy_ids, *momentum_ids, *equity_ids]:
             if sid not in seen:
                 stock_ids.append(sid)
                 seen.add(sid)
 
         if not stock_ids:
             self.logger.info(
-                "watch_list, strategy_signals and window-momentum are all empty, skipping BareK sync."
+                "watch_list, strategy_signals, window-momentum and equity ranking are all empty, "
+                "skipping BareK sync."
             )
             ctx.bare_k_synced_count = 0
             return ctx
 
         if len(stock_ids) > MAX_STOCKS:
             self.logger.warning(
-                f"Combined watch_list + strategy + window-momentum stocks has {len(stock_ids)} stocks, "
-                f"only syncing first {MAX_STOCKS}"
+                f"Combined watch_list + strategy + window-momentum + equity ranking stocks "
+                f"has {len(stock_ids)} stocks, only syncing first {MAX_STOCKS}"
             )
             stock_ids = stock_ids[:MAX_STOCKS]
 
@@ -180,6 +189,69 @@ class SyncBareKStep(BaseStep):
                 return [row[0] for row in result.fetchall()]
         except Exception as e:
             self.logger.error(f"Failed to fetch window-momentum stocks: {e}")
+            return []
+
+    def _fetch_equity_ranking_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
+        """
+        查詢籌碼排行股（重現 /investment/equity 預設視角：1 週、不分級距、預設排序）。
+
+        取 equity_distribution_stats 全局最新 snapshot_date（獨立 MAX 子查詢，不依賴特定股票），
+        直接用預計算欄位依序查三份清單，串接後去重（保留首次出現位置）：
+        1. 雙訊號：big_holder_pct_change > 0 且 shareholders_change_rate < 0，
+           依 big_holder_pct_change 遞減，前 EQUITY_DOUBLE_LIMIT 檔
+        2. 主力買進：big_holder_pct_change > 0，依 big_holder_pct_change 遞減，前 EQUITY_LIST_LIMIT 檔
+        3. 散戶減少：shareholders_change_rate < 0，依 shareholders_change_rate 遞增，前 EQUITY_LIST_LIMIT 檔
+        同值以 stock_code 遞增作為穩定次序。無資料回傳空列表；
+        失敗時 log error 並回傳空列表（不 raise）。
+        """
+        queries = [
+            (
+                text("""
+                    SELECT stock_code
+                    FROM equity_distribution_stats
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
+                      AND big_holder_pct_change > 0
+                      AND shareholders_change_rate < 0
+                    ORDER BY big_holder_pct_change DESC, stock_code ASC
+                    LIMIT :limit
+                """),
+                EQUITY_DOUBLE_LIMIT,
+            ),
+            (
+                text("""
+                    SELECT stock_code
+                    FROM equity_distribution_stats
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
+                      AND big_holder_pct_change > 0
+                    ORDER BY big_holder_pct_change DESC, stock_code ASC
+                    LIMIT :limit
+                """),
+                EQUITY_LIST_LIMIT,
+            ),
+            (
+                text("""
+                    SELECT stock_code
+                    FROM equity_distribution_stats
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
+                      AND shareholders_change_rate < 0
+                    ORDER BY shareholders_change_rate ASC, stock_code ASC
+                    LIMIT :limit
+                """),
+                EQUITY_LIST_LIMIT,
+            ),
+        ]
+        try:
+            seen: set[str] = set()
+            stock_ids: list[str] = []
+            with services.sql_storage.engine.connect() as conn:
+                for stmt, limit in queries:
+                    for row in conn.execute(stmt, {"limit": limit}).fetchall():
+                        if row[0] not in seen:
+                            seen.add(row[0])
+                            stock_ids.append(row[0])
+            return stock_ids
+        except Exception as e:
+            self.logger.error(f"Failed to fetch equity ranking stocks: {e}")
             return []
 
     def _fetch_watch_list_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:

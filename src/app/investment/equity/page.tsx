@@ -8,6 +8,17 @@ import { DoubleSignalSection } from '@/components/features/investment/equity/Dou
 import { TierNav } from '@/components/features/investment/equity/TierNav';
 import { WeekNav } from '@/components/features/investment/equity/WeekNav';
 import { RankingPanelGrid } from '@/components/features/investment/equity/RankingPanelGrid';
+import { EquityViewNav } from '@/components/features/investment/equity/EquityViewNav';
+import { EquityChartViewer } from '@/components/features/investment/equity/EquityChartViewer';
+import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
+import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import {
+    equityBaseParams,
+    equityHref,
+    parseEquityChartList,
+    selectEquityChartRows,
+    type EquityChartList,
+} from '@/lib/investment/equityChartUtils';
 
 const VALID_SORT_KEYS: SortKey[] = [
     'total_shareholders', 'shareholders_change_rate',
@@ -26,7 +37,23 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
     const tier: Tier | null = tierRaw === '200' || tierRaw === '400' || tierRaw === '1000' ? tierRaw : null;
     const weeksRaw = parseInt(params.weeks ?? '1', 10);
     const weeks: Weeks = (VALID_WEEKS.includes(weeksRaw as Weeks) ? weeksRaw : 1) as Weeks;
+    const isChart = params.view === 'chart';
+    const list = parseEquityChartList(params.list);
+    const baseParams = equityBaseParams(tier, weeks, sort, dir);
+    const navParams = isChart ? { view: 'chart', list } : undefined;
     const data = await fetchRankingData(sort, dir, tier, weeks);
+
+    const hasRows = data !== null && !data.insufficientData;
+    const counts: Record<EquityChartList, number> = {
+        double: hasRows ? selectEquityChartRows(data, 'double').length : 0,
+        big: hasRows ? selectEquityChartRows(data, 'big').length : 0,
+        retail: hasRows ? selectEquityChartRows(data, 'retail').length : 0,
+    };
+    // 只有圖表視角且有排行資料時才查裸K快照
+    const chartRows = isChart && hasRows ? selectEquityChartRows(data, list) : [];
+    const snapshots = chartRows.length > 0
+        ? await getStrategySnapshots(chartRows.map((r) => r.stock_code))
+        : new Map<string, BareKSnapshot | null>();
 
     return (
         <div className="min-h-screen p-6 animate-fade-in">
@@ -43,8 +70,9 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
                         </p>
                     </div>
                 </div>
-                <TierNav tier={tier} weeks={weeks} />
-                <WeekNav weeks={weeks} tier={tier} dateRange={data?.dateRange} />
+                <EquityViewNav isChart={isChart} list={list} baseParams={baseParams} counts={counts} />
+                <TierNav tier={tier} weeks={weeks} extraParams={navParams} />
+                <WeekNav weeks={weeks} tier={tier} dateRange={data?.dateRange} extraParams={navParams} />
                 {!data ? (
                     <div className="glass-card rounded-2xl p-12 text-center">
                         <p className="text-gray-400">尚無資料，每週一更新</p>
@@ -54,6 +82,15 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
                         <p className="text-gray-500 font-medium">歷史快照不足 {weeks} 期</p>
                         <p className="text-sm text-gray-400 mt-1">資料累積中，請選擇較短的觀察區間</p>
                     </div>
+                ) : isChart ? (
+                    <EquityChartViewer
+                        rows={chartRows}
+                        snapshots={snapshots}
+                        etfMap={data.etfMap}
+                        tier={tier}
+                        backHref={equityHref(baseParams)}
+                        listKey={list}
+                    />
                 ) : (
                     <>
                         <DoubleSignalSection rows={data.doubleSignalRanking} priceIndicators={data.priceIndicators} etfMap={data.etfMap} flowMap={data.flowMap} />
