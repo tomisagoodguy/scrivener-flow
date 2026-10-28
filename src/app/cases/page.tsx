@@ -9,6 +9,7 @@ import CaseMemoBoard from '@/components/features/cases/CaseMemoBoard';
 import TimelineHub from '@/components/features/cases/timeline-hub/TimelineHub';
 
 import { getCaseStage } from '@/lib/stageUtils';
+import { showsCaseList, showsMonitoringWidgets } from '@/lib/cases/caseTabs';
 import CasesPendingView from '@/components/features/cases/CasesPendingView';
 import { CasesWidgetLayout } from '@/components/features/cases/CasesWidgetLayout';
 import HandoverFeeView from '@/components/features/cases/handover-fee/HandoverFeeView';
@@ -155,14 +156,7 @@ export default async function CasesPage({
                     seller_name: c.seller_name,
                 }))}
                 stageParam={typeof stageParam === 'string' ? stageParam : undefined}
-                showMonitoringWidgets={
-                    statusParam !== 'Closed' &&
-                    statusParam !== 'Memo' &&
-                    statusParam !== 'Timeline' &&
-                    statusParam !== 'Pending' &&
-                    statusParam !== 'HandoverFee' &&
-                    monitoringCases.length > 0
-                }
+                showMonitoringWidgets={showsMonitoringWidgets(String(statusParam)) && monitoringCases.length > 0}
             >
                 {/* Main Tabs & Search */}
                 <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
@@ -234,7 +228,7 @@ export default async function CasesPage({
             )}
 
             {/* List Table */}
-            {statusParam !== 'Memo' && statusParam !== 'Timeline' && statusParam !== 'Pending' && statusParam !== 'HandoverFee' && (
+            {showsCaseList(String(statusParam)) && (
                 <div className="glass-card overflow-hidden border-none shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-wrap">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">排序</span>

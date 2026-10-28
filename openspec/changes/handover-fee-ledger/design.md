@@ -56,6 +56,7 @@ DB 約束：`check (payer_scrivener_id <> payee_scrivener_id)`、`check (amount 
 - `todayInTaipei(now?: Date): string`：用 `Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' })` 取得 `YYYY-MM-DD`。
 - `ageInDays(feeDate: string, today: string): number`：兩個日期字串以 UTC 午夜換算的整數天差。
 - `agingLevel(age: number): 'none' | 'orange' | 'red'`：`age > 7` → red，`age > 3` → orange，否則 none。
+畫面呈現：未收清單每列以左側色條（`border-l-orange-400`／`border-l-red-500`）加帳齡文字色表示，不用底色——`dark-theme.css` 會以 `!important` 覆蓋圓角／白底元素的背景色（見 `.claude/rules/dark-mode.md`），邊框與文字色不受影響。
 純函式可單元測試，避免伺服器 UTC 與台灣日期差一天的問題（例如台灣早上 7 點，UTC 仍是前一天）。
 
 ### Zod 驗證作為單一事實來源
@@ -87,7 +88,7 @@ Zod：`object_number` 改為選填字串，trim 後空字串轉成 `null`。`Han
 - 未收清單依 `fee_date` 由舊到新；歷史依 `fee_date` 由新到舊；兩者都排除 `deleted_at is not null`。
 - 地政士篩選比對 payer 或 payee 任一方。
 
-**介面（Server Actions，`src/app/actions/handoverFees.ts`，皆回傳 `{ success: true } | { error: string }`）**
+**介面（Server Actions，`src/app/actions/handoverFees.ts`，皆回傳 `{ success: true } | { success: false; error: string }`（讀取函式成功時另帶 `data`））**
 - `createHandoverFee(input: CreateHandoverFeeInput)`
 - `setHandoverFeePaid(id: string, paid: boolean)`：`paid=true` 設 `paid_at=now()`，`false` 設為 null
 - `updateHandoverFee(id: string, input: CreateHandoverFeeInput)`：驗證同新增；只改六個內容欄位，不改 `paid_at`；目標已刪除或不存在時回 `{ success: false, error: '找不到紀錄，請重新整理' }`

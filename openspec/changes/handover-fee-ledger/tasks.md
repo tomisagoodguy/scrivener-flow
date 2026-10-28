@@ -19,11 +19,11 @@
 - [x] 4.1 實作新增表單 Client Component（`src/components/features/cases/handover-fee/`）：日期預設 `todayInTaipei()` 且可修改、物件編號、付款／收款下拉（只列 active 名單，最後一項「＋新增地政士」可就地新增）、⇄ 對調按鈕、金額、備註，送出呼叫 `createHandoverFee` 並顯示錯誤（需求：Record a handover fee、Scrivener roster management）。單一元件 ≤150 行，邏輯抽到 `useHandoverFeeForm.ts`。[after: 3.3] 驗證：React Testing Library 測試 ⇄ 對調 payer／payee、日期預設值、錯誤訊息顯示。
 - [x] 4.2 實作未收款清單元件：顯示筆數與總額、依 `agingLevel` 套橘／紅底色（深色模式依 `dark-mode.md` 做法）、「已收」按鈕、刪除需確認、空狀態訊息（需求：Unpaid fee list with aging highlight、Mark a fee as received、Delete a handover fee record）。[after: 4.1] 驗證：RTL 測試 spec「3000 + 2000 未收、5000 已收」顯示 2 筆／5000，以及取消確認時不呼叫刪除。
 - [x] 4.3 實作歷史紀錄元件：月份（預設本月）與地政士篩選寫入 URL 參數 `month`、`scrivener`，篩選選項只列 active 名單、已隱藏者在紀錄中仍顯示姓名，每列顯示已收狀態並提供「改回未收」與刪除，另提供名單管理（隱藏地政士）入口（需求：Handover fee history with filters、Scrivener roster management）。[after: 4.2] 驗證：RTL 測試已隱藏的 來慶 仍出現在紀錄、但不在篩選選項中。
-- [ ] 4.4 依「分頁接入 cases 頁的 status 參數」修改 `src/app/cases/page.tsx`：在 `Pending` 之後新增 `💰 遞牌費` 分頁，`HandoverFee` 加入 `showMonitoringWidgets` 與案件列表 table 的排除條件，並渲染 Server Component `HandoverFeeView`（需求：Handover fee tab on cases page）。不改動既有排序與其他分頁。[after: 4.3] 驗證：`yarn tsc --noEmit` 與 `yarn eslint` 對改動檔無新錯誤；登入後實跑 `/cases?status=HandoverFee` 不顯示監控小卡與案件 table，`/cases?status=Processing` 照舊。
+- [x] 4.4 依「分頁接入 cases 頁的 status 參數」修改 `src/app/cases/page.tsx`：在 `Pending` 之後新增 `💰 遞牌費` 分頁，`HandoverFee` 加入 `showMonitoringWidgets` 與案件列表 table 的排除條件，並渲染 Server Component `HandoverFeeView`（需求：Handover fee tab on cases page）。不改動既有排序與其他分頁。[after: 4.3] 驗證：`yarn tsc --noEmit` 與 `yarn eslint` 對改動檔無新錯誤；登入後實跑 `/cases?status=HandoverFee` 不顯示監控小卡與案件 table，`/cases?status=Processing` 照舊。
 
 ## 5. 整體驗收
 
-- [ ] 5.1 端對端實跑（需登入；Per-user data isolation 以第二個帳號確認看不到第一個帳號的紀錄）：首次進入自動出現預設 7 人、新增一筆、新增一筆不填物件編號（清單顯示 `—`）、編輯一筆後金額變更且仍為未收、標記已收後從未收清單消失、在歷史改回未收、刪除、新增／隱藏／還原地政士。[after: 4.4, 6.1, 6.4] 驗證：`yarn test --testPathPatterns handover` 全部通過，並附實跑截圖或操作紀錄。
+- [x] 5.1 端對端實跑（需登入；Per-user data isolation 以第二個帳號確認看不到第一個帳號的紀錄）：首次進入自動出現預設 7 人、新增一筆、新增一筆不填物件編號（清單顯示 `—`）、編輯一筆後金額變更且仍為未收、標記已收後從未收清單消失、在歷史改回未收、刪除、新增／隱藏／還原地政士。[after: 4.4, 6.1, 6.4] 驗證：`yarn test --testPathPatterns handover` 全部通過，並附實跑截圖或操作紀錄。
 
 ## 6. 需求追加：物件編號選填與編輯紀錄（2026-10-29）
 
