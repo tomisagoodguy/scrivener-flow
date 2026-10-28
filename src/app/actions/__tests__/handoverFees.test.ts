@@ -29,6 +29,7 @@ import {
     listScrivenersWithDefaults,
     listUnpaidFees,
     setHandoverFeePaid,
+    updateHandoverFee,
 } from '../handoverFees';
 
 type Call = [string, unknown[]];
@@ -105,6 +106,14 @@ describe('createHandoverFee', () => {
         ]);
     });
 
+    it('物件編號空白寫入 null', async () => {
+        const { builder, calls } = makeBuilder({});
+        mockFrom.mockReturnValueOnce(makeBuilder({ data: [{ id: A }, { id: B }] }).builder).mockReturnValueOnce(builder);
+
+        expect(await createHandoverFee({ ...validInput, object_number: '  ' })).toEqual({ success: true });
+        expect((calls[0][1][0] as { object_number: string | null }).object_number).toBeNull();
+    });
+
     it('付款人或收款人已隱藏或不屬於本人 → 拒絕且不寫入', async () => {
         mockFrom.mockReturnValueOnce(makeBuilder({ data: [{ id: B }] }).builder);
         expect(await createHandoverFee(validInput)).toEqual({
@@ -122,6 +131,66 @@ describe('createHandoverFee', () => {
             success: false,
             error: 'violates foreign key constraint',
         });
+    });
+});
+
+describe('updateHandoverFee', () => {
+    it('驗證失敗不查 DB', async () => {
+        expect(await updateHandoverFee('f1', { ...validInput, payee_scrivener_id: A })).toEqual({
+            success: false,
+            error: '付款人與收款人不可相同',
+        });
+        expect(mockFrom).not.toHaveBeenCalled();
+    });
+
+    it('付款人或收款人不在使用中名單 → 拒絕', async () => {
+        mockFrom.mockReturnValueOnce(makeBuilder({ data: [{ id: A }] }).builder);
+        expect(await updateHandoverFee('f1', validInput)).toEqual({
+            success: false,
+            error: '付款人或收款人不在使用中的名單，請重新選擇',
+        });
+        expect(mockFrom).toHaveBeenCalledTimes(1);
+    });
+
+    it('只更新六個內容欄位、不碰 paid_at，且只作用於未刪除的本人紀錄', async () => {
+        const update = makeBuilder({ data: [{ id: 'f1' }] });
+        mockFrom.mockReturnValueOnce(makeBuilder({ data: [{ id: A }, { id: B }] }).builder).mockReturnValueOnce(update.builder);
+
+        expect(await updateHandoverFee('f1', { ...validInput, object_number: 'A124', amount: 3500 })).toEqual({
+            success: true,
+        });
+        expect(mockFrom).toHaveBeenNthCalledWith(2, 'handover_fees');
+        expect(update.calls[0]).toEqual([
+            'update',
+            [
+                {
+                    fee_date: '2026-10-28',
+                    object_number: 'A124',
+                    payer_scrivener_id: A,
+                    payee_scrivener_id: B,
+                    amount: 3500,
+                    note: null,
+                },
+            ],
+        ]);
+        expect(update.calls).toContainEqual(['eq', ['id', 'f1']]);
+        expect(update.calls).toContainEqual(['eq', ['user_id', 'u1']]);
+        expect(update.calls).toContainEqual(['is', ['deleted_at', null]]);
+    });
+
+    it('目標已刪除或不存在（影響 0 列）→ 找不到紀錄', async () => {
+        mockFrom
+            .mockReturnValueOnce(makeBuilder({ data: [{ id: A }, { id: B }] }).builder)
+            .mockReturnValueOnce(makeBuilder({ data: [] }).builder);
+        expect(await updateHandoverFee('gone', validInput)).toEqual({
+            success: false,
+            error: '找不到紀錄，請重新整理',
+        });
+    });
+
+    it('未登入回 Unauthorized', async () => {
+        mockGetUser.mockResolvedValue({ data: { user: null } });
+        expect(await updateHandoverFee('f1', validInput)).toEqual({ success: false, error: 'Unauthorized' });
     });
 });
 

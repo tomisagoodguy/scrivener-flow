@@ -12,7 +12,7 @@ export interface Scrivener {
 export interface HandoverFee {
     id: string;
     fee_date: string;
-    object_number: string;
+    object_number: string | null;
     payer_scrivener_id: string;
     payee_scrivener_id: string;
     amount: number;
@@ -41,7 +41,11 @@ export const createHandoverFeeSchema = z
             .string()
             .regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式錯誤')
             .refine((v) => isRealDate(v), '日期格式錯誤'),
-        object_number: z.string().trim().min(1, '請輸入物件編號'),
+        // 選填：trim 後空字串存成 null（DB 約束只允許 null 或非空白）
+        object_number: z
+            .string()
+            .optional()
+            .transform((v) => v?.trim() || null),
         payer_scrivener_id: z.string().min(1, '請選擇付款人').uuid('付款人資料錯誤'),
         payee_scrivener_id: z.string().min(1, '請選擇收款人').uuid('收款人資料錯誤'),
         amount: z

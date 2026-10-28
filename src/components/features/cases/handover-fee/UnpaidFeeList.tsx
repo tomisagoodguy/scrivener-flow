@@ -2,6 +2,7 @@
 
 import { ageInDays, agingLevel, type AgingLevel } from '@/domain/handover-fee/agingUtils';
 import type { HandoverFeeWithNames } from '@/domain/handover-fee/types';
+import { useHandoverFeeEdit } from './HandoverFeeEditContext';
 import { formatAmount, useFeeRowActions } from './useFeeRowActions';
 
 const AGING_STYLE: Record<AgingLevel, { border: string; text: string }> = {
@@ -24,6 +25,7 @@ interface UnpaidFeeListProps {
 
 export function UnpaidFeeList({ fees, today }: UnpaidFeeListProps) {
     const { error, isPending, setPaid, remove } = useFeeRowActions();
+    const { startEdit } = useHandoverFeeEdit();
     const total = fees.reduce((sum, f) => sum + f.amount, 0);
 
     return (
@@ -59,13 +61,20 @@ export function UnpaidFeeList({ fees, today }: UnpaidFeeListProps) {
                             >
                                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-20">{fee.fee_date}</span>
                                 <span className={`text-[11px] font-black w-12 ${style.text}`}>{ageLabel(age)}</span>
-                                <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{fee.object_number}</span>
+                                <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{fee.object_number ?? '—'}</span>
                                 <span className="text-sm text-slate-600 dark:text-slate-300">
                                     {fee.payer_name} → {fee.payee_name}
                                 </span>
                                 <span className="text-sm font-black text-slate-800 dark:text-slate-100">{formatAmount(fee.amount)}</span>
                                 {fee.note && <span className="text-xs text-slate-400 truncate max-w-[200px]">{fee.note}</span>}
                                 <span className="ml-auto flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => startEdit(fee)}
+                                        className="px-3 py-1 rounded-full text-[11px] font-black text-slate-500 hover:text-blue-600"
+                                    >
+                                        編輯
+                                    </button>
                                     <button
                                         type="button"
                                         disabled={isPending}
@@ -77,7 +86,7 @@ export function UnpaidFeeList({ fees, today }: UnpaidFeeListProps) {
                                     <button
                                         type="button"
                                         disabled={isPending}
-                                        onClick={() => remove(fee.id, fee.object_number)}
+                                        onClick={() => remove(fee.id, fee.object_number ?? fee.fee_date)}
                                         className="px-3 py-1 rounded-full text-[11px] font-black text-slate-400 hover:text-red-600 disabled:opacity-50 transition-colors"
                                     >
                                         刪除

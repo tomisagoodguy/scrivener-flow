@@ -1,6 +1,7 @@
 import { listFeeHistory, listScrivenersWithDefaults, listUnpaidFees } from '@/app/actions/handoverFees';
 import { currentMonthInTaipei, todayInTaipei } from '@/domain/handover-fee/agingUtils';
 import { FeeHistory } from './FeeHistory';
+import { HandoverFeeEditProvider } from './HandoverFeeEditContext';
 import { HandoverFeeForm } from './HandoverFeeForm';
 import { UnpaidFeeList } from './UnpaidFeeList';
 
@@ -35,24 +36,26 @@ export default async function HandoverFeeView({ month, scrivenerId }: HandoverFe
     const activeScriveners = scriveners.filter((s) => !s.archived_at);
 
     return (
-        <div className="space-y-6">
-            {!scrivenersResult.success && <LoadError message={scrivenersResult.error} />}
-            <HandoverFeeForm scriveners={activeScriveners} defaultDate={today} />
-            {unpaidResult.success ? (
-                <UnpaidFeeList fees={unpaidResult.data} today={today} />
-            ) : (
-                <LoadError message={unpaidResult.error} />
-            )}
-            {historyResult.success ? (
-                <FeeHistory
-                    fees={historyResult.data}
-                    scriveners={scriveners}
-                    month={selectedMonth}
-                    scrivenerId={selectedScrivener}
-                />
-            ) : (
-                <LoadError message={historyResult.error} />
-            )}
-        </div>
+        <HandoverFeeEditProvider>
+            <div className="space-y-6">
+                {!scrivenersResult.success && <LoadError message={scrivenersResult.error} />}
+                <HandoverFeeForm scriveners={activeScriveners} defaultDate={today} />
+                {unpaidResult.success ? (
+                    <UnpaidFeeList fees={unpaidResult.data} today={today} />
+                ) : (
+                    <LoadError message={unpaidResult.error} />
+                )}
+                {historyResult.success ? (
+                    <FeeHistory
+                        fees={historyResult.data}
+                        scriveners={scriveners}
+                        month={selectedMonth}
+                        scrivenerId={selectedScrivener}
+                    />
+                ) : (
+                    <LoadError message={historyResult.error} />
+                )}
+            </div>
+        </HandoverFeeEditProvider>
     );
 }

@@ -5,6 +5,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HandoverFeeForm } from '../HandoverFeeForm';
 import type { Scrivener } from '@/domain/handover-fee/types';
+import { HandoverFeeEditProvider } from '../HandoverFeeEditContext';
+
+const renderWithEdit = (ui: React.ReactElement) => render(ui, { wrapper: HandoverFeeEditProvider });
 
 const mockCreate = jest.fn();
 const mockAddScrivener = jest.fn();
@@ -35,7 +38,7 @@ afterEach(() => jest.useRealTimers());
 
 describe('HandoverFeeForm', () => {
     it('日期預設為台北今天且可修改', () => {
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         const date = screen.getByLabelText('日期') as HTMLInputElement;
         expect(date.value).toBe('2026-10-28');
         fireEvent.change(date, { target: { value: '2026-10-25' } });
@@ -43,7 +46,7 @@ describe('HandoverFeeForm', () => {
     });
 
     it('⇄ 對調付款人與收款人', () => {
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fillValid();
         fireEvent.click(screen.getByRole('button', { name: '對調付款人與收款人' }));
         expect((screen.getByLabelText('付款人') as HTMLSelectElement).value).toBe(B);
@@ -52,7 +55,7 @@ describe('HandoverFeeForm', () => {
 
     it('送出有效資料呼叫 createHandoverFee（含修改後的日期）', async () => {
         mockCreate.mockResolvedValue({ success: true });
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fillValid();
         fireEvent.change(screen.getByLabelText('日期'), { target: { value: '2026-10-25' } });
         fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
@@ -70,7 +73,7 @@ describe('HandoverFeeForm', () => {
     });
 
     it('付款人與收款人相同時顯示錯誤且不送出', async () => {
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fillValid();
         fireEvent.change(screen.getByLabelText('收款人'), { target: { value: A } });
         fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
@@ -81,7 +84,7 @@ describe('HandoverFeeForm', () => {
 
     it('伺服器回傳錯誤時顯示訊息', async () => {
         mockCreate.mockResolvedValue({ success: false, error: 'violates foreign key constraint' });
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fillValid();
         fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
         expect(await screen.findByRole('alert')).toHaveTextContent('violates foreign key constraint');
@@ -89,7 +92,7 @@ describe('HandoverFeeForm', () => {
 
     it('選單中「＋新增地政士」可就地新增', async () => {
         mockAddScrivener.mockResolvedValue({ success: true });
-        render(<HandoverFeeForm scriveners={scriveners} />);
+        renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fireEvent.change(screen.getByLabelText('付款人'), { target: { value: '__add__' } });
         fireEvent.change(screen.getByLabelText('新地政士姓名'), { target: { value: '志明' } });
         fireEvent.click(screen.getByRole('button', { name: '加入名單' }));
@@ -97,7 +100,7 @@ describe('HandoverFeeForm', () => {
     });
 
     it('已選的地政士被隱藏後，選取清空且無法送出', async () => {
-        const { rerender } = render(<HandoverFeeForm scriveners={scriveners} />);
+        const { rerender } = renderWithEdit(<HandoverFeeForm scriveners={scriveners} />);
         fillValid();
         rerender(<HandoverFeeForm scriveners={[scriveners[1]]} />);
 
@@ -108,7 +111,7 @@ describe('HandoverFeeForm', () => {
     });
 
     it('名單為空時提示新增地政士', () => {
-        render(<HandoverFeeForm scriveners={[]} />);
+        renderWithEdit(<HandoverFeeForm scriveners={[]} />);
         expect(screen.getByText('名單是空的，請先新增地政士')).toBeInTheDocument();
     });
 });

@@ -17,7 +17,6 @@
 - 首頁摘要卡片、LINE／Email 未收提醒。
 - 當日平分、月結互抵、清償建議計算。
 - 與 `cases` 表關聯（物件編號只是文字）。
-- 編輯既有紀錄（輸入錯誤以「刪除後重新新增」處理）。
 - 名單排序拖曳、改名。
 
 ## Decisions
@@ -63,6 +62,24 @@ DB 約束：`check (payer_scrivener_id <> payee_scrivener_id)`、`check (amount 
 
 `src/domain/handover-fee/types.ts` 定義 `Scrivener`、`HandoverFee` 介面，以及 `createHandoverFeeSchema`（Zod）：`fee_date` 符合 `YYYY-MM-DD`、`object_number` trim 後非空、`amount` 為正整數、兩個 scrivener id 為 uuid，並以 `refine` 檢查 payer ≠ payee。Server Action 與 Client 表單共用此 schema；DB 約束是最後一道防線。錯誤訊息用繁體中文，直接標出違反哪條規則。
 
+### 物件編號改為選填並以後續 migration 放寬
+
+**Supersedes**: handover-fee-ledger / 遞牌費紀錄 handover_fees 表與資料庫層約束
+
+2026-10-29 使用者表示物件編號不一定要填。原 migration 已在 Supabase 套用，不能改舊檔，改新增 `supabase/migrations/20261029120000_handover_fee_object_number_optional.sql`：`alter column object_number drop not null`、`drop constraint handover_fees_object_number_not_blank`、改加 `handover_fees_object_number_null_or_not_blank check (object_number is null or length(btrim(object_number)) > 0)`。空白一律存成 null（不存空字串），DB 約束確保只有 null 或有內容兩種狀態，讀取端只需處理 null。
+Zod：`object_number` 改為選填字串，trim 後空字串轉成 `null`。`HandoverFee.object_number` 型別改為 `string | null`，清單與歷史在 null 時顯示 `—`，刪除確認訊息在 null 時改用日期描述該筆。
+此 migration 含 DROP，依專案規則由使用者在 SQL Editor 執行，執行後以 `information_schema.columns.is_nullable` 與 `pg_constraint` 查詢驗證。
+替代方案：保留 NOT NULL、空白存 `''` → 需要同時放寬 check，且讀取端要分辨 `''` 與 null，否決。
+
+### 編輯沿用新增表單
+
+**Supersedes**: handover-fee-ledger / Zod 驗證作為單一事實來源
+
+原本 Non-Goal「不編輯，打錯就刪除重新新增」取消。未收清單與歷史每列加「編輯」按鈕，按下後把該筆資料載入頁面上方同一個表單，表單進入編輯模式（標題改「編輯遞牌費」、送出鈕改「儲存修改」、多一顆「取消編輯」）。存檔呼叫新的 Server Action `updateHandoverFee(id, input)`，與新增共用 `createHandoverFeeSchema` 與「付款人/收款人須為本人使用中名單」檢查。
+清單元件與表單在不同 Client Component，以 `HandoverFeeEditProvider`（React Context，只存「目前正在編輯的那筆紀錄」）串接，避免把狀態提升到 Server Component。
+`updateHandoverFee` 只更新 `fee_date`、`object_number`、`payer_scrivener_id`、`payee_scrivener_id`、`amount`、`note`，不碰 `paid_at`，所以已收狀態不變；條件加 `deleted_at is null`，影響 0 列回「找不到紀錄，請重新整理」。
+替代方案：每列行內編輯（inline edit）→ 每列都要一組表單欄位與付款人選單，元件超過 150 行上限且手機難操作，否決。
+
 ## Implementation Contract
 
 **行為**
@@ -73,6 +90,7 @@ DB 約束：`check (payer_scrivener_id <> payee_scrivener_id)`、`check (amount 
 **介面（Server Actions，`src/app/actions/handoverFees.ts`，皆回傳 `{ success: true } | { error: string }`）**
 - `createHandoverFee(input: CreateHandoverFeeInput)`
 - `setHandoverFeePaid(id: string, paid: boolean)`：`paid=true` 設 `paid_at=now()`，`false` 設為 null
+- `updateHandoverFee(id: string, input: CreateHandoverFeeInput)`：驗證同新增；只改六個內容欄位，不改 `paid_at`；目標已刪除或不存在時回 `{ success: false, error: '找不到紀錄，請重新整理' }`
 - `deleteHandoverFee(id: string)`：設 `deleted_at=now()`
 - `addScrivener(name: string)`：trim 後空字串 → error；同名且 active → error「已有同名地政士」；同名且已隱藏 → 清除 `archived_at`（還原）；否則 insert，`sort_order` = 目前最大值 + 1
 - `archiveScrivener(id: string)`：設 `archived_at=now()`
@@ -105,5 +123,6 @@ DB 約束：`check (payer_scrivener_id <> payee_scrivener_id)`、`check (amount 
 ## Migration Plan
 
 1. 新增 `supabase/migrations/20261028120000_add_handover_fee_ledger.sql`：建立兩表、約束、索引、RLS policy、`ensure_default_scriveners()` RPC。只新增物件，無 DROP，不影響既有資料。
-2. 由使用者在 Supabase 套用 migration，再以查詢驗證。
-3. 回滾：移除分頁入口即可停用功能；資料表保留不影響其他功能。
+2. 由使用者在 Supabase 套用 migration，再以查詢驗證（已於 2026-10-29 套用）。
+3. 新增 `supabase/migrations/20261029120000_handover_fee_object_number_optional.sql` 放寬物件編號（含 DROP，由使用者在 SQL Editor 執行），再以查詢驗證。既有資料的物件編號都有值，放寬不影響既有列。
+4. 回滾：移除分頁入口即可停用功能；資料表保留不影響其他功能。

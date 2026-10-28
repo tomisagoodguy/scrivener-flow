@@ -23,4 +23,13 @@
 
 ## 5. 整體驗收
 
-- [ ] 5.1 端對端實跑（需登入；Per-user data isolation 以第二個帳號確認看不到第一個帳號的紀錄）：首次進入自動出現預設 7 人、新增一筆、標記已收後從未收清單消失、在歷史改回未收、刪除、新增／隱藏／還原地政士。[after: 4.4] 驗證：`yarn test --testPathPatterns handover` 全部通過，並附實跑截圖或操作紀錄。
+- [ ] 5.1 端對端實跑（需登入；Per-user data isolation 以第二個帳號確認看不到第一個帳號的紀錄）：首次進入自動出現預設 7 人、新增一筆、新增一筆不填物件編號（清單顯示 `—`）、編輯一筆後金額變更且仍為未收、標記已收後從未收清單消失、在歷史改回未收、刪除、新增／隱藏／還原地政士。[after: 4.4, 6.1, 6.4] 驗證：`yarn test --testPathPatterns handover` 全部通過，並附實跑截圖或操作紀錄。
+
+## 6. 需求追加：物件編號選填與編輯紀錄（2026-10-29）
+
+> 變更說明：已完成的 2.2（`object_number` trim 後必填）、4.2／4.3（清單直接顯示物件編號）與 1.1 的 `handover_fees_object_number_not_blank` 約束，被「物件編號改為選填並以後續 migration 放寬」取代，由 6.1、6.2 補償；原 Non-Goal「不編輯」由「編輯沿用新增表單」取代，由 6.3、6.4 實作。已完成任務的描述保留不改，作為歷史紀錄。
+
+- [ ] 6.1 新增 `supabase/migrations/20261029120000_handover_fee_object_number_optional.sql`，依「物件編號改為選填並以後續 migration 放寬」把 `handover_fees.object_number` 改為可為 null，以 `handover_fees_object_number_null_or_not_blank` 取代 `handover_fees_object_number_not_blank`（需求：Record a handover fee）。含 DROP，由使用者在 SQL Editor 執行。驗證：執行後查 `information_schema.columns` 的 `is_nullable = 'YES'`，且 `pg_constraint` 只剩新約束、舊約束不存在。
+- [x] 6.2 依「物件編號改為選填並以後續 migration 放寬」修改 Zod：物件編號選填、trim 後空字串轉 `null`；`HandoverFee.object_number` 改 `string | null`；未收清單與歷史在 null 時顯示 `—`（需求：Record a handover fee）。驗證：`yarn test --testPathPatterns handover` 中驗證表「物件編號只有空白 → 存成 null」通過，`createHandoverFee` 寫入 `object_number: null`，UnpaidFeeList 對 null 顯示 `—`。
+- [x] 6.3 依「編輯沿用新增表單」新增 Server Action `updateHandoverFee(id, input)`：驗證與名單檢查同新增，只更新六個內容欄位不碰 `paid_at`，條件含 `deleted_at is null`，影響 0 列回「找不到紀錄，請重新整理」（需求：Edit a handover fee record）。[after: 6.2] 驗證：`yarn test --testPathPatterns actions/__tests__/handoverFees` 斷言 update payload 不含 `paid_at`、查詢含 `is deleted_at null`、0 列回錯、付款人等於收款人時不呼叫 DB。
+- [x] 6.4 依「編輯沿用新增表單」以 `HandoverFeeEditProvider` 串接：未收清單與歷史每列加「編輯」按鈕，表單載入該筆資料並切換為編輯模式（「儲存修改」「取消編輯」），存檔呼叫 `updateHandoverFee`，成功或取消後回到新增模式；付款人或收款人已隱藏時顯示為未選（需求：Edit a handover fee record）。[after: 6.3] 驗證：RTL 測試涵蓋 spec「Edit an unpaid record」（載入後改金額 3500、物件 A124 → 呼叫 `updateHandoverFee` 且不呼叫 `createHandoverFee`）與「Cancel editing」（取消後欄位清空、按鈕回到「新增紀錄」）；`yarn tsc --noEmit` 與 `yarn eslint` 對改動檔無錯誤。

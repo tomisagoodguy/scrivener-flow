@@ -5,6 +5,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UnpaidFeeList } from '../UnpaidFeeList';
 import type { HandoverFeeWithNames } from '@/domain/handover-fee/types';
+import { HandoverFeeEditProvider } from '../HandoverFeeEditContext';
+
+const renderWithEdit = (ui: React.ReactElement) => render(ui, { wrapper: HandoverFeeEditProvider });
 
 const mockSetPaid = jest.fn();
 const mockDelete = jest.fn();
@@ -36,7 +39,7 @@ beforeEach(() => {
 
 describe('UnpaidFeeList', () => {
     it('顯示未收筆數與總額（3000 + 2000）', () => {
-        render(<UnpaidFeeList fees={[fee('1', '2026-10-27', 3000), fee('2', '2026-10-28', 2000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', '2026-10-27', 3000), fee('2', '2026-10-28', 2000)]} today="2026-10-28" />);
         expect(screen.getByText('未收 2 筆，共 $5,000')).toBeInTheDocument();
         expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
@@ -48,7 +51,7 @@ describe('UnpaidFeeList', () => {
         ['2026-10-21', 'orange'],
         ['2026-10-20', 'red'],
     ])('帳齡著色：%s → %s', (date, level) => {
-        render(<UnpaidFeeList fees={[fee('1', date, 1000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', date, 1000)]} today="2026-10-28" />);
         expect(screen.getByRole('listitem')).toHaveAttribute('data-aging', level);
     });
 
@@ -57,39 +60,44 @@ describe('UnpaidFeeList', () => {
         ['2026-10-28', '今天'],
         ['2026-10-24', '4 天'],
     ])('帳齡文字：%s → %s', (date, label) => {
-        render(<UnpaidFeeList fees={[fee('1', date, 1000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', date, 1000)]} today="2026-10-28" />);
         expect(screen.getByRole('listitem')).toHaveTextContent(label);
     });
 
+    it('沒有物件編號時顯示 —', () => {
+        renderWithEdit(<UnpaidFeeList fees={[{ ...fee('1', '2026-10-28', 1000), object_number: null }]} today="2026-10-28" />);
+        expect(screen.getByRole('listitem')).toHaveTextContent('—');
+    });
+
     it('按「已收」呼叫 setHandoverFeePaid(id, true)', async () => {
-        render(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
         fireEvent.click(screen.getByRole('button', { name: '已收' }));
         await waitFor(() => expect(mockSetPaid).toHaveBeenCalledWith('1', true));
     });
 
     it('刪除取消確認時不呼叫刪除', () => {
         jest.spyOn(window, 'confirm').mockReturnValue(false);
-        render(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
         fireEvent.click(screen.getByRole('button', { name: '刪除' }));
         expect(mockDelete).not.toHaveBeenCalled();
     });
 
     it('刪除確認後呼叫 deleteHandoverFee', async () => {
         jest.spyOn(window, 'confirm').mockReturnValue(true);
-        render(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
         fireEvent.click(screen.getByRole('button', { name: '刪除' }));
         await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('1'));
     });
 
     it('操作失敗時顯示錯誤', async () => {
         mockSetPaid.mockResolvedValue({ success: false, error: 'boom' });
-        render(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[fee('1', '2026-10-28', 3000)]} today="2026-10-28" />);
         fireEvent.click(screen.getByRole('button', { name: '已收' }));
         expect(await screen.findByRole('alert')).toHaveTextContent('boom');
     });
 
     it('沒有未收款時顯示空狀態', () => {
-        render(<UnpaidFeeList fees={[]} today="2026-10-28" />);
+        renderWithEdit(<UnpaidFeeList fees={[]} today="2026-10-28" />);
         expect(screen.getByText('目前沒有未收的遞牌費')).toBeInTheDocument();
     });
 });

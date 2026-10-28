@@ -53,19 +53,24 @@ function nextMonthStart(month: string): string {
     return m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
 }
 
-export async function createHandoverFee(input: CreateHandoverFeeInput): Promise<ActionResult> {
-    const { supabase, user } = await getAuthedClient();
-    if (!user) return UNAUTHORIZED;
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+type FeeContent = Omit<HandoverFee, 'id' | 'paid_at'>;
 
+/** 新增與編輯共用：Zod 驗證 + 付款人/收款人必須是本人名單中使用中的地政士 */
+async function validateFeeContent(
+    supabase: SupabaseServerClient,
+    userId: string,
+    input: CreateHandoverFeeInput
+): Promise<{ success: true; data: FeeContent } | { success: false; error: string }> {
     const parsed = createHandoverFeeSchema.safeParse(input);
     if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? '輸入資料錯誤' };
 
-    // 付款人/收款人必須是本人名單中使用中的地政士（DB 複合外鍵只擋得住他人名單，擋不住已隱藏者）
+    // DB 複合外鍵只擋得住他人名單，擋不住已隱藏者
     const partyIds = [parsed.data.payer_scrivener_id, parsed.data.payee_scrivener_id];
     const { data: parties, error: partyError } = await supabase
         .from('scriveners')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .is('archived_at', null)
         .in('id', partyIds);
     if (partyError) return { success: false, error: partyError.message };
@@ -74,10 +79,42 @@ export async function createHandoverFee(input: CreateHandoverFeeInput): Promise<
     }
 
     const { note, ...rest } = parsed.data;
+    return { success: true, data: { ...rest, note: note || null } };
+}
+
+export async function createHandoverFee(input: CreateHandoverFeeInput): Promise<ActionResult> {
+    const { supabase, user } = await getAuthedClient();
+    if (!user) return UNAUTHORIZED;
+
+    const content = await validateFeeContent(supabase, user.id, input);
+    if (!content.success) return content;
+
     const { error } = await supabase
         .from('handover_fees')
-        .insert({ user_id: user.id, ...rest, note: note || null, paid_at: null });
+        .insert({ user_id: user.id, ...content.data, paid_at: null });
     if (error) return { success: false, error: error.message };
+
+    revalidatePath('/cases');
+    return { success: true };
+}
+
+/** 編輯內容欄位；不碰 paid_at，已收狀態不變；已刪除紀錄不可編輯 */
+export async function updateHandoverFee(id: string, input: CreateHandoverFeeInput): Promise<ActionResult> {
+    const { supabase, user } = await getAuthedClient();
+    if (!user) return UNAUTHORIZED;
+
+    const content = await validateFeeContent(supabase, user.id, input);
+    if (!content.success) return content;
+
+    const { data, error } = await supabase
+        .from('handover_fees')
+        .update(content.data)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .select('id');
+    if (error) return { success: false, error: error.message };
+    if (!data?.length) return NOT_FOUND;
 
     revalidatePath('/cases');
     return { success: true };

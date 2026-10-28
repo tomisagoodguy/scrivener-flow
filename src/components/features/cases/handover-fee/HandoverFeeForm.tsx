@@ -1,7 +1,8 @@
 'use client';
 
 import { useId } from 'react';
-import type { Scrivener } from '@/domain/handover-fee/types';
+import type { HandoverFee, Scrivener } from '@/domain/handover-fee/types';
+import { HANDOVER_FEE_FORM_ID, useHandoverFeeEdit } from './HandoverFeeEditContext';
 import { ScrivenerSelect } from './ScrivenerSelect';
 import { useHandoverFeeForm } from './useHandoverFeeForm';
 
@@ -15,22 +16,36 @@ interface HandoverFeeFormProps {
     defaultDate?: string;
 }
 
-export function HandoverFeeForm({ scriveners, defaultDate }: HandoverFeeFormProps) {
-    const { fields, setters, swap, submit, error, isPending } = useHandoverFeeForm(
-        scriveners.map((s) => s.id),
-        defaultDate
-    );
+/** 以編輯中的紀錄 id 作為 key：切換編輯對象或回到新增模式時重新掛載，欄位初值隨之重設 */
+export function HandoverFeeForm(props: HandoverFeeFormProps) {
+    const { editing, cancelEdit } = useHandoverFeeEdit();
+    return <FeeFormBody key={editing?.id ?? 'new'} {...props} editing={editing} onExitEdit={cancelEdit} />;
+}
+
+function FeeFormBody({
+    scriveners,
+    defaultDate,
+    editing,
+    onExitEdit,
+}: HandoverFeeFormProps & { editing: HandoverFee | null; onExitEdit: () => void }) {
+    const { fields, setters, swap, submit, error, isPending } = useHandoverFeeForm({
+        activeIds: scriveners.map((s) => s.id),
+        defaultDate,
+        editing,
+        onEditSaved: onExitEdit,
+    });
     const ids = { date: useId(), object: useId(), amount: useId(), note: useId() };
 
     return (
         <form
+            id={HANDOVER_FEE_FORM_ID}
             className="glass-card p-5 space-y-3"
             onSubmit={(e) => {
                 e.preventDefault();
                 submit();
             }}
         >
-            <h2 className="text-sm font-black text-slate-700 dark:text-slate-200">新增遞牌費</h2>
+            <h2 className="text-sm font-black text-slate-700 dark:text-slate-200">{editing ? '編輯遞牌費' : '新增遞牌費'}</h2>
             {scriveners.length === 0 && (
                 <p className="text-xs font-bold text-orange-600 dark:text-orange-400">名單是空的，請先新增地政士</p>
             )}
@@ -74,12 +89,17 @@ export function HandoverFeeForm({ scriveners, defaultDate }: HandoverFeeFormProp
                     <label htmlFor={ids.note} className={LABEL_CLASS}>備註</label>
                     <input id={ids.note} value={fields.note} onChange={(e) => setters.setNote(e.target.value)} className={INPUT_CLASS} />
                 </div>
+                {editing && (
+                    <button type="button" onClick={onExitEdit} className="px-4 py-2 text-xs font-black text-slate-500 hover:text-slate-800">
+                        取消編輯
+                    </button>
+                )}
                 <button
                     type="submit"
                     disabled={isPending}
                     className="px-6 py-2 rounded-full bg-blue-600 text-white text-xs font-black shadow-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
-                    新增紀錄
+                    {editing ? '儲存修改' : '新增紀錄'}
                 </button>
             </div>
 

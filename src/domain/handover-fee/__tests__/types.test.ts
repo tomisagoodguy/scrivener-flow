@@ -28,11 +28,20 @@ describe('createHandoverFeeSchema', () => {
     });
 
     it.each([
+        ['只有空白', '   '],
+        ['空字串', ''],
+        ['未提供', undefined],
+    ])('物件編號%s → 通過並存成 null', (_label, objectNumber) => {
+        const r = createHandoverFeeSchema.safeParse({ ...valid, object_number: objectNumber });
+        expect(r.success).toBe(true);
+        if (r.success) expect(r.data.object_number).toBeNull();
+    });
+
+    it.each([
         ['付款人與收款人相同', { payee_scrivener_id: A }, '付款人與收款人不可相同'],
         ['金額 0', { amount: 0 }, '金額必須是正整數'],
         ['金額 -500', { amount: -500 }, '金額必須是正整數'],
         ['金額 1500.5', { amount: 1500.5 }, '金額必須是正整數'],
-        ['物件編號只有空白', { object_number: '   ' }, '請輸入物件編號'],
         ['缺付款人', { payer_scrivener_id: '' }, '請選擇付款人'],
         ['缺收款人', { payee_scrivener_id: '' }, '請選擇收款人'],
         ['日期格式錯誤', { fee_date: '2026/10/28' }, '日期格式錯誤'],

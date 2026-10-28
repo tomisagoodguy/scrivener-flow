@@ -21,7 +21,7 @@ The `/cases` page SHALL show a tab labelled `💰 遞牌費` immediately after t
 
 ### Requirement: Record a handover fee
 
-The system SHALL let the user create a handover fee record with: fee date, object number, payer scrivener, payee scrivener, amount, and an optional note. The fee date input SHALL default to the current date in the Asia/Taipei time zone and SHALL be editable by the user. Payer and payee SHALL be chosen from the user's active scriveners, and the form SHALL provide a swap control that exchanges the selected payer and payee. A new record SHALL be stored as not received. The system MUST reject the record, without storing it, when the payer equals the payee, when the amount is not a positive integer, when the object number is empty after trimming, or when either scrivener is missing.
+The system SHALL let the user create a handover fee record with: fee date, an optional object number, payer scrivener, payee scrivener, amount, and an optional note. The fee date input SHALL default to the current date in the Asia/Taipei time zone and SHALL be editable by the user. An object number that is empty after trimming SHALL be stored as no object number, and lists SHALL display `—` for it. Payer and payee SHALL be chosen from the user's active scriveners, and the form SHALL provide a swap control that exchanges the selected payer and payee. A new record SHALL be stored as not received. The system MUST reject the record, without storing it, when the payer equals the payee, when the amount is not a positive integer, when either scrivener is missing, or when either scrivener is hidden or not in the user's roster.
 
 #### Scenario: Create a record with the default date
 
@@ -32,6 +32,11 @@ The system SHALL let the user create a handover fee record with: fee date, objec
 
 - **WHEN** the user changes the date to 2026-10-25 before submitting a valid record
 - **THEN** the stored record's fee date is 2026-10-25
+
+#### Scenario: Create a record without an object number
+
+- **WHEN** the user leaves the object number empty (or only spaces) and submits an otherwise valid record
+- **THEN** the record is stored with no object number and the unpaid list shows `—` in its object number position
 
 #### Scenario: Swap payer and payee
 
@@ -51,8 +56,38 @@ The system SHALL let the user create a handover fee record with: fee date, objec
 | amount `0` | rejected: amount must be a positive integer | zero |
 | amount `-500` | rejected: amount must be a positive integer | negative |
 | amount `1500.5` | rejected: amount must be a positive integer | decimal |
-| object number of only spaces | rejected: object number required | whitespace only |
+| object number of only spaces | stored with no object number | object number is optional |
 | amount `3000`, distinct scriveners, object `A123` | stored | valid |
+
+### Requirement: Edit a handover fee record
+
+Every row in the unpaid list and the history SHALL provide an edit action. Choosing it SHALL load that record's fee date, object number, payer, payee, amount, and note into the form, switch the form into edit mode with a cancel control, and on submit SHALL overwrite that record with the new values. Editing SHALL apply the same validation rules as creating a record and SHALL NOT change the record's received status or received time. Cancelling SHALL leave the record unchanged and return the form to create mode. A deleted record MUST NOT be editable; an edit targeting a deleted or non-existent record SHALL return a not-found error without storing anything. When the record's payer or payee is hidden, the form SHALL show that scrivener as unselected so the user must choose an active one before saving.
+
+#### Scenario: Edit an unpaid record
+
+- **GIVEN** an unpaid record dated 2026-10-27, object `A123`, 孔協 → 家華, amount 3000
+- **WHEN** the user chooses edit on it, changes the amount to `3500` and the object number to `A124`, and saves
+- **THEN** the same record now has object `A124` and amount 3500, it remains not received, and no new record is created
+
+#### Scenario: Edit keeps received status
+
+- **WHEN** the user edits a received record in the history and changes its note
+- **THEN** the record keeps its received status and received time
+
+#### Scenario: Cancel editing
+
+- **WHEN** the user chooses edit on a record and then presses cancel
+- **THEN** the record is unchanged and the form is empty and back in create mode
+
+#### Scenario: Reject invalid edit
+
+- **WHEN** the user edits a record so that payer equals payee and saves
+- **THEN** the record is unchanged and the form shows `付款人與收款人不可相同`
+
+#### Scenario: Edit a deleted record
+
+- **WHEN** an edit request targets a record that has been deleted
+- **THEN** nothing is stored and the error `找不到紀錄，請重新整理` is returned
 
 ### Requirement: Unpaid fee list with aging highlight
 
