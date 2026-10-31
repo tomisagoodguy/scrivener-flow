@@ -11,11 +11,10 @@ import {
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 import { C, baseChartOptions, toTime, rollingMean } from './BareKChartConfig';
+import { TradeLabelsPrimitive, buildTradeLabels } from './BareKTradeLabels';
 
-// 台股紅漲：與 StockChart 入選日標記同色（rose-600）；也用於「買」標記
+// 台股紅漲：與 StockChart 入選日標記同色（rose-600）
 const SIGNAL_MARKER_COLOR = '#e11d48';
-// 「選」標記（amber-600），與買進的紅色區分
-const SELECT_MARKER_COLOR = '#d97706';
 // 持有期間背景：rose-600 低透明度
 const HOLDING_BG_COLOR = 'rgba(225, 29, 72, 0.08)';
 const HOLDING_BG_SCALE = 'holding-bg';
@@ -45,28 +44,6 @@ export function buildSignalMarkers(
 /** 有畫成 K 棒（o/c 非 null）的 ohlcv 列 */
 function drawnBars(ohlcv: BareKSnapshot['ohlcv']): BareKSnapshot['ohlcv'] {
     return ohlcv.filter(d => d.o !== null && d.c !== null);
-}
-
-/**
- * 策略選股日「選」、買進日「買」文字標記（K 棒上方，與發散箭頭區分）；只標實際 K 棒、依時間遞增。
- */
-export function buildHoldingTextMarkers(
-    ohlcv: BareKSnapshot['ohlcv'],
-    marks: StrategyHoldingMarks,
-): SeriesMarker<Time>[] {
-    const barDates = new Set(drawnBars(ohlcv).map(d => d.date));
-    const build = (dates: readonly string[], text: string, color: string) =>
-        [...new Set(dates)].filter(d => barDates.has(d)).map((d): SeriesMarker<Time> => ({
-            time: toTime(d) as unknown as Time,
-            position: 'aboveBar',
-            shape: 'circle',
-            color,
-            text,
-        }));
-    return [
-        ...build(marks.signalDates, '選', SELECT_MARKER_COLOR),
-        ...build(marks.entryDates, '買', SIGNAL_MARKER_COLOR),
-    ].sort((a, b) => Number(a.time) - Number(b.time));
 }
 
 /**
@@ -115,11 +92,9 @@ export function createKLinePanel(
         }))
     );
 
-    const markers = [
-        ...(markerDates ? buildSignalMarkers(ohlcv, markerDates) : []),
-        ...(holdingMarks ? buildHoldingTextMarkers(ohlcv, holdingMarks) : []),
-    ].sort((a, b) => Number(a.time) - Number(b.time));
+    const markers = markerDates ? buildSignalMarkers(ohlcv, markerDates) : [];
     if (markers.length > 0) createSeriesMarkers(candle, markers);
+    if (holdingMarks) candle.attachPrimitive(new TradeLabelsPrimitive(buildTradeLabels(ohlcv, holdingMarks)));
 
     const maConfigs = [
         { key: 'ma5' as const, color: C.ma5 },

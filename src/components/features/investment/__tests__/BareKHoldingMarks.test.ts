@@ -1,12 +1,13 @@
 /**
  * 策略持有標記（change: strategy-chart-holding-marks, task 2.1）：
- * 「選」「買」文字標記、持有期間背景（區間聯集）、createKLinePanel 串接。
+ * 持有期間背景（區間聯集）、createKLinePanel 串接「買」「賣」標籤 primitive（change: strategy-chart-trade-labels）。
  */
 
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import { createChart, createSeriesMarkers } from 'lightweight-charts';
 import { toTime } from '../BareKChartConfig';
-import { buildHoldingBackground, buildHoldingTextMarkers, createKLinePanel } from '../BareKChartPanels';
+import { buildHoldingBackground, createKLinePanel } from '../BareKChartPanels';
+import { TradeLabelsPrimitive } from '../BareKTradeLabels';
 
 jest.mock('lightweight-charts', () => ({
     ColorType: { Solid: 'solid' },
@@ -63,26 +64,9 @@ describe('buildHoldingBackground', () => {
     });
 });
 
-describe('buildHoldingTextMarkers', () => {
-    it('選股日標「選」、買進日標「買」，K 棒上方，略過快照外日期', () => {
-        const markers = buildHoldingTextMarkers(OHLCV, {
-            signalDates: ['2026-08-29', '2026-09-30', '2026-10-15'],
-            entryDates: ['2026-10-30'],
-            periods: [],
-        });
-
-        expect(markers.map(m => [m.time, m.text])).toEqual([
-            [toTime('2026-10-15'), '選'],
-            [toTime('2026-10-30'), '買'],
-        ]);
-        for (const m of markers) expect(m.position).toBe('aboveBar');
-        expect(markers[0].color).not.toBe(markers[1].color);
-    });
-});
-
 describe('createKLinePanel with holdingMarks', () => {
     function mockChart() {
-        const series = { setData: jest.fn() };
+        const series = { setData: jest.fn(), attachPrimitive: jest.fn() };
         const priceScale = { applyOptions: jest.fn() };
         const chart = { addSeries: jest.fn(() => series), priceScale: jest.fn(() => priceScale) };
         (createChart as jest.Mock).mockReturnValue(chart);
@@ -92,12 +76,12 @@ describe('createKLinePanel with holdingMarks', () => {
 
     beforeEach(() => jest.clearAllMocks());
 
-    it('背景 Histogram 在 K 線之前加入、掛隱藏價格軸；文字與發散箭頭合併後只呼叫一次 createSeriesMarkers', () => {
-        const { chart, priceScale } = mockChart();
+    it('背景 Histogram 在 K 線之前加入、掛隱藏價格軸；「買」「賣」改掛 primitive，內建 marker 只剩發散箭頭', () => {
+        const { chart, series, priceScale } = mockChart();
         createKLinePanel({} as HTMLDivElement, 800, OHLCV, MAS, ['2026-09-10'], {
-            signalDates: ['2026-09-01'],
             entryDates: ['2026-10-01'],
-            periods: [{ start: '2026-10-01', end: null }],
+            exitDates: ['2026-10-15'],
+            periods: [{ start: '2026-10-01', end: '2026-10-15' }],
         });
 
         const calls = chart.addSeries.mock.calls as unknown as [{ kind: string }, Record<string, unknown>][];
@@ -109,12 +93,15 @@ describe('createKLinePanel with holdingMarks', () => {
 
         expect(createSeriesMarkers).toHaveBeenCalledTimes(1);
         const markers = (createSeriesMarkers as jest.Mock).mock.calls[0][1] as { time: number }[];
-        expect(markers.map(m => m.time)).toEqual([toTime('2026-09-01'), toTime('2026-09-10'), toTime('2026-10-01')]);
+        expect(markers.map(m => m.time)).toEqual([toTime('2026-09-10')]);
+        expect(series.attachPrimitive).toHaveBeenCalledTimes(1);
+        expect(series.attachPrimitive.mock.calls[0][0]).toBeInstanceOf(TradeLabelsPrimitive);
     });
 
     it('未傳 holdingMarks → 不加背景 series，第一個 series 是 K 線', () => {
-        const { chart } = mockChart();
+        const { chart, series } = mockChart();
         createKLinePanel({} as HTMLDivElement, 800, OHLCV, MAS);
+        expect(series.attachPrimitive).not.toHaveBeenCalled();
 
         const calls = chart.addSeries.mock.calls as unknown as [{ kind: string }][];
         expect(calls[0][0].kind).toBe('Candlestick');

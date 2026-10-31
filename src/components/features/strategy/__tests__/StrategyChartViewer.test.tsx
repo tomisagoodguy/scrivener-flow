@@ -167,8 +167,8 @@ describe('StrategyChartViewer chart context', () => {
 
     it('passes strategy holding marks per stock (task 3.1)', () => {
         const marks = {
-            signalDates: ['2026-09-30'],
             entryDates: ['2026-10-01'],
+            exitDates: [],
             periods: [{ start: '2026-10-01', end: null }],
         };
         renderViewer({ holdingMarksByStock: { '2330': marks } });

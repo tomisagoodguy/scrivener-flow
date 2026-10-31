@@ -15,7 +15,7 @@ const STOCK_CHUNK_SIZE = 300;
 const LOOKBACK_DAYS = 400;
 
 /**
- * 策略圖表視角用：查指定股票的 strategy_trades，彙整成每股「選」「買」日期與持有區間。
+ * 策略圖表視角用：查指定股票的 strategy_trades，彙整成每股「買」「賣」日期與持有區間。
  * 查詢錯誤時拋錯，由呼叫端決定是否以空物件繼續。
  */
 export async function getStrategyChartTrades(stockIds: string[]): Promise<Record<string, StrategyHoldingMarks>> {

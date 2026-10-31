@@ -50,11 +50,10 @@ describe('getStrategyChartTrades', () => {
         expect(first.order.mock.calls.map((c) => c[0])).toEqual(['strategy_id', 'stock_id', 'entry_signal_date']);
         expect(result).toEqual({
             '2330': {
-                signalDates: ['2026-09-30'],
                 entryDates: ['2026-10-01'],
+                exitDates: [],
                 periods: [{ start: '2026-10-01', end: null }],
             },
-            '9999': { signalDates: ['2026-08-29'], entryDates: [], periods: [] },
         });
     });
 

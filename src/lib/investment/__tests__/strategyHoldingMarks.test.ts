@@ -15,7 +15,7 @@ function row(overrides: Partial<StrategyHoldingRow>): StrategyHoldingRow {
 }
 
 describe('buildHoldingMarks', () => {
-    it('依股票分組，選股日與買進日各自去重升冪', () => {
+    it('依股票分組，買進日與出場日各自去重升冪（持有中無出場日）', () => {
         const result = buildHoldingMarks([
             row({ entry_signal_date: '2026-09-30', entry_date: '2026-10-01', exit_date: null }),
             row({ entry_signal_date: '2026-08-29', entry_date: '2026-09-01', exit_date: '2026-09-10' }),
@@ -24,23 +24,23 @@ describe('buildHoldingMarks', () => {
             row({ stock_id: '2454', entry_signal_date: '2026-09-12', entry_date: '2026-09-15', exit_date: '2026-10-05' }),
         ]);
 
-        expect(result['2330'].signalDates).toEqual(['2026-08-29', '2026-09-30']);
+        expect(result['2330'].exitDates).toEqual(['2026-09-10']);
         expect(result['2330'].entryDates).toEqual(['2026-09-01', '2026-10-01']);
         expect(result['2330'].periods).toEqual([
             { start: '2026-09-01', end: '2026-09-10' },
             { start: '2026-10-01', end: null },
         ]);
         expect(result['2454']).toEqual({
-            signalDates: ['2026-09-12'],
             entryDates: ['2026-09-15'],
+            exitDates: ['2026-10-05'],
             periods: [{ start: '2026-09-15', end: '2026-10-05' }],
         });
     });
 
-    it('entry_date 為 null（待進場）→ 只有選股日，不產生買進日與區間', () => {
+    it('entry_date 為 null（待進場）→ 不產生任何標記', () => {
         const result = buildHoldingMarks([row({ entry_signal_date: '2026-10-30', entry_date: null, exit_date: null })]);
 
-        expect(result['2330']).toEqual({ signalDates: ['2026-10-30'], entryDates: [], periods: [] });
+        expect(result).toEqual({});
     });
 
     it('空輸入 → 空物件', () => {
