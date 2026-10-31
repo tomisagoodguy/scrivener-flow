@@ -21,6 +21,7 @@ import MultiStrategyConsensusPanel from '@/components/features/strategy/MultiStr
 import { getStrategyConsensusHistory } from '@/app/actions/getStrategyConsensusHistory';
 import { getStrategyTradePerformance } from '@/app/actions/getStrategyTradePerformance';
 import type { StrategyTradePerformanceData } from '@/app/actions/getStrategyTradePerformance';
+import { getStrategyChartTradesOrEmpty } from '@/app/actions/getStrategyChartTrades';
 import { getStrategyDescriptions } from '@/app/actions/strategyRegistry';
 import StrategyTradePerformancePanel from '@/components/features/strategy/StrategyTradePerformancePanel';
 import type { StrategyConsensusHistoryData } from '@/app/actions/getStrategyConsensusHistory';
@@ -140,16 +141,18 @@ export default async function StrategyPage({
 
     const monitorStocks = (isMonitor || isChart) && analytics ? buildMonitorStocks(result, analytics, consensusMap) : [];
 
-    // 圖表視角才查快照與均線發散候選；後者失敗時只是不顯示發散脈絡
-    const [snapshotMap, fanBreakout] = isChart
+    // 圖表視角才查快照、均線發散候選與持有紀錄；後兩者失敗時只是不顯示對應標記
+    const chartStockIds = monitorStocks.map((s) => s.stock_id);
+    const [snapshotMap, fanBreakout, holdingMarksByStock] = isChart
         ? await Promise.all([
-              getStrategySnapshots(monitorStocks.map((s) => s.stock_id)),
+              getStrategySnapshots(chartStockIds),
               getFanBreakoutSignals().catch((e: unknown) => {
                   console.error('[StrategyPage] getFanBreakoutSignals', e);
                   return null;
               }),
+              getStrategyChartTradesOrEmpty(chartStockIds),
           ])
-        : [new Map<string, BareKSnapshot | null>(), null];
+        : [new Map<string, BareKSnapshot | null>(), null, {}];
 
     const fanBreakoutByStock: Record<string, FanBreakoutRow> = {};
     if (fanBreakout && !fanBreakout.error) {
@@ -208,6 +211,7 @@ export default async function StrategyPage({
                         snapshots={snapshotMap}
                         strategyLabels={strategyLabels}
                         fanBreakoutByStock={fanBreakoutByStock}
+                        holdingMarksByStock={holdingMarksByStock}
                     />
                 )
             ) : isMonitor ? (

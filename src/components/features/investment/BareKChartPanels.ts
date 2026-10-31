@@ -9,10 +9,16 @@ import {
     type SeriesMarker,
 } from 'lightweight-charts';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 import { C, baseChartOptions, toTime, rollingMean } from './BareKChartConfig';
 
-// 台股紅漲：與 StockChart 入選日標記同色（rose-600）
+// 台股紅漲：與 StockChart 入選日標記同色（rose-600）；也用於「買」標記
 const SIGNAL_MARKER_COLOR = '#e11d48';
+// 「選」標記（amber-600），與買進的紅色區分
+const SELECT_MARKER_COLOR = '#d97706';
+// 持有期間背景：rose-600 低透明度
+const HOLDING_BG_COLOR = 'rgba(225, 29, 72, 0.08)';
+const HOLDING_BG_SCALE = 'holding-bg';
 
 /**
  * 入選日箭頭標記：只為實際畫成 K 棒（有 o/c）的日期產生，依時間遞增、同一時間只留一個。
@@ -36,14 +42,66 @@ export function buildSignalMarkers(
         }));
 }
 
+/** 有畫成 K 棒（o/c 非 null）的 ohlcv 列 */
+function drawnBars(ohlcv: BareKSnapshot['ohlcv']): BareKSnapshot['ohlcv'] {
+    return ohlcv.filter(d => d.o !== null && d.c !== null);
+}
+
+/**
+ * 策略選股日「選」、買進日「買」文字標記（K 棒上方，與發散箭頭區分）；只標實際 K 棒、依時間遞增。
+ */
+export function buildHoldingTextMarkers(
+    ohlcv: BareKSnapshot['ohlcv'],
+    marks: StrategyHoldingMarks,
+): SeriesMarker<Time>[] {
+    const barDates = new Set(drawnBars(ohlcv).map(d => d.date));
+    const build = (dates: readonly string[], text: string, color: string) =>
+        [...new Set(dates)].filter(d => barDates.has(d)).map((d): SeriesMarker<Time> => ({
+            time: toTime(d) as unknown as Time,
+            position: 'aboveBar',
+            shape: 'circle',
+            color,
+            text,
+        }));
+    return [
+        ...build(marks.signalDates, '選', SELECT_MARKER_COLOR),
+        ...build(marks.entryDates, '買', SIGNAL_MARKER_COLOR),
+    ].sort((a, b) => Number(a.time) - Number(b.time));
+}
+
+/**
+ * 持有期間背景：落在任一區間（end 為 null＝延伸到最新 K 棒）的 K 棒各給一根滿高長條，天然聯集、同色不疊深。
+ */
+export function buildHoldingBackground(
+    ohlcv: BareKSnapshot['ohlcv'],
+    periods: StrategyHoldingMarks['periods'],
+): { time: Time; value: number; color: string }[] {
+    if (periods.length === 0) return [];
+    return drawnBars(ohlcv)
+        .filter(d => periods.some(p => d.date >= p.start && (p.end === null || d.date <= p.end)))
+        .map(d => ({ time: toTime(d.date) as unknown as Time, value: 1, color: HOLDING_BG_COLOR }));
+}
+
 export function createKLinePanel(
     container: HTMLDivElement,
     width: number,
     ohlcv: BareKSnapshot['ohlcv'],
     mas: BareKSnapshot['mas'],
     markerDates?: readonly string[],
+    holdingMarks?: StrategyHoldingMarks,
 ): IChartApi {
     const c = createChart(container, { ...baseChartOptions(360), width });
+
+    // 背景須先加入才會畫在 K 棒下層；獨立隱藏價格軸不影響 K 線縮放
+    if (holdingMarks) {
+        const bg = c.addSeries(HistogramSeries, {
+            priceScaleId: HOLDING_BG_SCALE,
+            priceLineVisible: false,
+            lastValueVisible: false,
+        });
+        c.priceScale(HOLDING_BG_SCALE).applyOptions({ visible: false, scaleMargins: { top: 0, bottom: 0 } });
+        bg.setData(buildHoldingBackground(ohlcv, holdingMarks.periods));
+    }
 
     const candle = c.addSeries(CandlestickSeries, {
         upColor: C.up, downColor: C.down,
@@ -57,7 +115,10 @@ export function createKLinePanel(
         }))
     );
 
-    const markers = markerDates ? buildSignalMarkers(ohlcv, markerDates) : [];
+    const markers = [
+        ...(markerDates ? buildSignalMarkers(ohlcv, markerDates) : []),
+        ...(holdingMarks ? buildHoldingTextMarkers(ohlcv, holdingMarks) : []),
+    ].sort((a, b) => Number(a.time) - Number(b.time));
     if (markers.length > 0) createSeriesMarkers(candle, markers);
 
     const maConfigs = [

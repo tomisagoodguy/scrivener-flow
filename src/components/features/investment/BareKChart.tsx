@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { IChartApi } from 'lightweight-charts';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 import { SIGNAL_META, type SignalKey } from './BareKChartConfig';
 import { createKLinePanel, createVolumePanel, createMarginPanel, createRevenuePanel, createChipsPanel } from './BareKChartPanels';
 
@@ -12,9 +13,11 @@ interface Props {
     strategies?: string[];
     /** 要在 K 線下方標箭頭的日期（YYYY-MM-DD），不在快照 ohlcv 內的會被略過 */
     markerDates?: readonly string[];
+    /** 策略選股日「選」、買進日「買」標記與持有期間淡色背景 */
+    holdingMarks?: StrategyHoldingMarks;
 }
 
-export function BareKChart({ snapshot, stockName, strategies, markerDates }: Props) {
+export function BareKChart({ snapshot, stockName, strategies, markerDates, holdingMarks }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartsRef = useRef<IChartApi[]>([]);
     const p1Ref = useRef<HTMLDivElement>(null);
@@ -31,6 +34,8 @@ export function BareKChart({ snapshot, stockName, strategies, markerDates }: Pro
     const sigs       = summary.signals;
     const lastDate   = ohlcv.at(-1)?.date ?? '';
     const markerKey  = markerDates?.join(',') ?? '';
+    // 父層每次 render 會給新物件，用字串當重畫依賴
+    const holdingKey = holdingMarks ? JSON.stringify(holdingMarks) : '';
 
     useEffect(() => {
         if (!p1Ref.current || !p3Ref.current || !p4Ref.current || !p5Ref.current || !p6Ref.current) return;
@@ -38,7 +43,8 @@ export function BareKChart({ snapshot, stockName, strategies, markerDates }: Pro
         chartsRef.current.forEach(c => c.remove());
         chartsRef.current = [];
 
-        const c1 = createKLinePanel(p1Ref.current, w, ohlcv, mas, markerKey ? markerKey.split(',') : undefined);
+        const c1 = createKLinePanel(p1Ref.current, w, ohlcv, mas, markerKey ? markerKey.split(',') : undefined,
+            holdingKey ? (JSON.parse(holdingKey) as StrategyHoldingMarks) : undefined);
         const c3 = createVolumePanel(p3Ref.current, w, ohlcv);
         const c4 = createMarginPanel(p4Ref.current, w, margin);
         const c5 = createRevenuePanel(p5Ref.current, w, revenue);
@@ -66,7 +72,7 @@ export function BareKChart({ snapshot, stockName, strategies, markerDates }: Pro
             chartsRef.current = [];
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [snapshot, markerKey]);
+    }, [snapshot, markerKey, holdingKey]);
 
     return (
         <div ref={containerRef} className="w-full">

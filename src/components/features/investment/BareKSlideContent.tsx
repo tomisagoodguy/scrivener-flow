@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { BareKChart } from './BareKChart';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 
 interface Props {
     code: string;
@@ -12,14 +13,16 @@ interface Props {
     isOwner?: boolean;
     noSnapshotMessage?: string;
     markerDates?: readonly string[];
+    /** 策略選股日／買進日標記與持有期間背景（只有策略圖表視角傳入） */
+    holdingMarks?: StrategyHoldingMarks;
 }
 
 /** 捲動檢視器中一格的裸K內容：有快照畫六面板圖，無快照顯示佔位卡。 */
-export function BareKSlideContent({ code, name, strategies, snapshot, isOwner = false, noSnapshotMessage, markerDates }: Props) {
+export function BareKSlideContent({ code, name, strategies, snapshot, isOwner = false, noSnapshotMessage, markerDates, holdingMarks }: Props) {
     if (snapshot) {
         return (
             <div className="glass-card rounded-2xl p-4">
-                <BareKChart snapshot={snapshot} stockName={name} strategies={strategies} markerDates={markerDates} />
+                <BareKChart snapshot={snapshot} stockName={name} strategies={strategies} markerDates={markerDates} holdingMarks={holdingMarks} />
             </div>
         );
     }

@@ -128,3 +128,44 @@ export function returnColorClass(value: number | null): string {
     if (value === null || value === 0) return 'text-gray-500 dark:text-gray-400';
     return value > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
 }
+
+/** 圖表標記用的 strategy_trades 欄位子集（DB 原始欄名） */
+export interface StrategyHoldingRow {
+    stock_id: string;
+    entry_signal_date: string;
+    entry_date: string | null;
+    exit_date: string | null;
+}
+
+/** 單一股票在 K 線上的「選」「買」日期與持有區間（end 為 null＝持有中） */
+export interface StrategyHoldingMarks {
+    signalDates: string[];
+    entryDates: string[];
+    periods: { start: string; end: string | null }[];
+}
+
+/** 依股票彙整各策略的持有紀錄；待進場（entry_date 為 null）只留選股日。日期與區間去重、升冪。 */
+export function buildHoldingMarks(rows: readonly StrategyHoldingRow[]): Record<string, StrategyHoldingMarks> {
+    const acc = new Map<string, { signal: Set<string>; entry: Set<string>; periods: Map<string, StrategyHoldingMarks['periods'][number]> }>();
+    for (const r of rows) {
+        let a = acc.get(r.stock_id);
+        if (!a) {
+            a = { signal: new Set(), entry: new Set(), periods: new Map() };
+            acc.set(r.stock_id, a);
+        }
+        a.signal.add(r.entry_signal_date);
+        if (r.entry_date) {
+            a.entry.add(r.entry_date);
+            a.periods.set(`${r.entry_date}|${r.exit_date}`, { start: r.entry_date, end: r.exit_date });
+        }
+    }
+    const result: Record<string, StrategyHoldingMarks> = {};
+    for (const [stockId, a] of acc) {
+        result[stockId] = {
+            signalDates: [...a.signal].sort(),
+            entryDates: [...a.entry].sort(),
+            periods: [...a.periods.values()].sort((x, y) => x.start.localeCompare(y.start)),
+        };
+    }
+    return result;
+}

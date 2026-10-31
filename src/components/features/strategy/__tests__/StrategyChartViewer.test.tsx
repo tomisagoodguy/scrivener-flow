@@ -97,6 +97,7 @@ function renderViewer(props: Partial<React.ComponentProps<typeof StrategyChartVi
             snapshots={SNAPSHOTS}
             strategyLabels={LABELS}
             fanBreakoutByStock={FAN}
+            holdingMarksByStock={{}}
             {...props}
         />,
     );
@@ -162,6 +163,17 @@ describe('StrategyChartViewer chart context', () => {
         expect(screen.getByText('發散 +8.7%・再次・連續 4 天')).toBeInTheDocument();
         expect(lastChartPropsFor('2330').markerDates).toEqual(dates);
         expect(lastChartPropsFor('2454').markerDates).toBeUndefined();
+    });
+
+    it('passes strategy holding marks per stock (task 3.1)', () => {
+        const marks = {
+            signalDates: ['2026-09-30'],
+            entryDates: ['2026-10-01'],
+            periods: [{ start: '2026-10-01', end: null }],
+        };
+        renderViewer({ holdingMarksByStock: { '2330': marks } });
+        expect(lastChartPropsFor('2330').holdingMarks).toEqual(marks);
+        expect(lastChartPropsFor('2454').holdingMarks).toBeUndefined();
     });
 
     it('renders without fan context when no candidates are given', () => {

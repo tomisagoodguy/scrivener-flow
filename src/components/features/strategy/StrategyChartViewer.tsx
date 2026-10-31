@@ -18,6 +18,7 @@ import {
     filterChartStocks,
     type ChartStockFilters,
 } from '@/lib/investment/strategyUtils';
+import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 import StrategyChartFilterBar from './StrategyChartFilterBar';
 
 interface Props {
@@ -27,10 +28,13 @@ interface Props {
     strategyLabels: Record<string, string>;
     /** 均線發散最新訊號日的候選（stockId → 列）；查詢失敗時為空物件 */
     fanBreakoutByStock: Record<string, FanBreakoutRow>;
+    /** strategy_trades 彙整的選股日／買進日／持有區間（stockId → 標記）；查詢失敗時為空物件 */
+    holdingMarksByStock: Record<string, StrategyHoldingMarks>;
 }
 
 interface ChartSlide extends StockSlide {
     fan: FanBreakoutRow | null;
+    holdingMarks: StrategyHoldingMarks | undefined;
 }
 
 /** 「發散 +8.7%・再次・連續 4 天」；缺值的部分略過 */
@@ -42,7 +46,7 @@ function fanContext(row: FanBreakoutRow): string {
     return parts.join('・');
 }
 
-export function StrategyChartViewer({ stocks, snapshots, strategyLabels, fanBreakoutByStock }: Props) {
+export function StrategyChartViewer({ stocks, snapshots, strategyLabels, fanBreakoutByStock, holdingMarksByStock }: Props) {
     const [filters, setFilters] = useState<ChartStockFilters>(DEFAULT_CHART_STOCK_FILTERS);
 
     const strategyOptions = useMemo(
@@ -64,8 +68,9 @@ export function StrategyChartViewer({ stocks, snapshots, strategyLabels, fanBrea
             strategies: s.strategies.map((id) => strategyLabels[id] ?? id),
             snapshot: snapshots.get(s.stock_id) ?? null,
             fan: fanBreakoutByStock[s.stock_id] ?? null,
+            holdingMarks: holdingMarksByStock[s.stock_id],
         }));
-    }, [stocks, filters, fanBreakoutByStock, strategyLabels, snapshots]);
+    }, [stocks, filters, fanBreakoutByStock, holdingMarksByStock, strategyLabels, snapshots]);
 
     return (
         // space-y-6 抵銷捲動子導覽列的 -mt-6，不壓到篩選列
@@ -97,6 +102,7 @@ export function StrategyChartViewer({ stocks, snapshots, strategyLabels, fanBrea
                             snapshot={slide.snapshot}
                             noSnapshotMessage="此股票尚未同步裸K資料，將於今日 Pipeline 執行後更新"
                             markerDates={slide.fan?.recentSignalDates}
+                            holdingMarks={slide.holdingMarks}
                         />
                     )}
                 />
