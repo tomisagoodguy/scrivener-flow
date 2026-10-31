@@ -28,10 +28,12 @@ MAX_STOCKS = 400  # 每次最多同步股票數量
 MOMENTUM_WINDOW_DAYS = 5
 MOMENTUM_MIN_ETF_COUNT = 2
 
-# 籌碼排行股：重現 /investment/equity 預設視角（1 週、不分級距）的三份清單
+# 籌碼排行股：重現 /investment/equity 1–4 週、不分級距、預設排序視角的三份清單
 # EQUITY_LIST_LIMIT 必須與前端 src/lib/investment/equityChartUtils.ts 的 EQUITY_CHART_LIST_LIMIT 一致
+# EQUITY_MAX_WEEKS 必須與前端 src/app/investment/equity/page.tsx 的 VALID_WEEKS 最大值一致
 EQUITY_DOUBLE_LIMIT = 10  # 雙訊號（大戶增 + 股東減）本身上限 10 檔
-EQUITY_LIST_LIMIT = 30  # 主力買進、散戶減少各取前 30 檔
+EQUITY_LIST_LIMIT = 100  # 主力買進、散戶減少各取前 100 檔
+EQUITY_MAX_WEEKS = 4
 
 
 def _momentum_window_start(prev_dates: list[str], today: str) -> str:
@@ -195,62 +197,76 @@ class SyncBareKStep(BaseStep):
 
     def _fetch_equity_ranking_stocks(self, ctx: PipelineContext, services: "PipelineServices") -> list[str]:
         """
-        查詢籌碼排行股（重現 /investment/equity 預設視角：1 週、不分級距、預設排序）。
+        查詢籌碼排行股（重現 /investment/equity 1–EQUITY_MAX_WEEKS 週、不分級距、預設排序視角）。
 
-        取 equity_distribution_stats 全局最新 snapshot_date（獨立 MAX 子查詢，不依賴特定股票），
-        直接用預計算欄位依序查三份清單，串接後去重（保留首次出現位置）：
-        1. 雙訊號：big_holder_pct_change > 0 且 shareholders_change_rate < 0，
-           依 big_holder_pct_change 遞減，前 EQUITY_DOUBLE_LIMIT 檔
-        2. 主力買進：big_holder_pct_change > 0，依 big_holder_pct_change 遞減，前 EQUITY_LIST_LIMIT 檔
-        3. 散戶減少：shareholders_change_rate < 0，依 shareholders_change_rate 遞增，前 EQUITY_LIST_LIMIT 檔
-        同值以 stock_code 遞增作為穩定次序。無資料回傳空列表；
-        失敗時 log error 並回傳空列表（不 raise）。
+        與前端 equityPageData._fetchRankingData 相同算法，一次查詢：
+        取全局最新 EQUITY_MAX_WEEKS + 1 個相異 snapshot_date（不依賴特定股票），第 N 週比較最新期與
+        往前第 N 期的同股票列——big_change = big_holder_pct 差值；sh_rate = total_shareholders
+        變化率（百分比，四捨五入到小數 2 位，前期 total_shareholders 非正則為 NULL）。每週三份清單：
+        1. 雙訊號：big_change > 0 且 sh_rate < 0，依 big_change 遞減，前 EQUITY_DOUBLE_LIMIT 檔
+        2. 主力買進：big_change > 0，依 big_change 遞減，前 EQUITY_LIST_LIMIT 檔
+        3. 散戶減少：sh_rate < 0，依 sh_rate 遞增，前 EQUITY_LIST_LIMIT 檔
+        同值以 stock_code 遞增。結果依 週數 → 清單 → 名次 串接，去重保留首次出現；
+        歷史快照不足的週數自然無結果。無資料回傳空列表；失敗時 log error 並回傳空列表（不 raise）。
         """
-        queries = [
-            (
-                text("""
-                    SELECT stock_code
-                    FROM equity_distribution_stats
-                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
-                      AND big_holder_pct_change > 0
-                      AND shareholders_change_rate < 0
-                    ORDER BY big_holder_pct_change DESC, stock_code ASC
-                    LIMIT :limit
-                """),
-                EQUITY_DOUBLE_LIMIT,
+        stmt = text("""
+            WITH dates AS (
+                SELECT snapshot_date,
+                       ROW_NUMBER() OVER (ORDER BY snapshot_date DESC) - 1 AS weeks
+                FROM (
+                    SELECT DISTINCT snapshot_date FROM equity_distribution_stats
+                    ORDER BY snapshot_date DESC
+                    LIMIT :max_weeks + 1
+                ) d
             ),
-            (
-                text("""
-                    SELECT stock_code
-                    FROM equity_distribution_stats
-                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
-                      AND big_holder_pct_change > 0
-                    ORDER BY big_holder_pct_change DESC, stock_code ASC
-                    LIMIT :limit
-                """),
-                EQUITY_LIST_LIMIT,
+            cur AS (
+                SELECT e.stock_code, e.big_holder_pct, e.total_shareholders
+                FROM equity_distribution_stats e
+                JOIN dates ON dates.snapshot_date = e.snapshot_date AND dates.weeks = 0
             ),
-            (
-                text("""
-                    SELECT stock_code
-                    FROM equity_distribution_stats
-                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)
-                      AND shareholders_change_rate < 0
-                    ORDER BY shareholders_change_rate ASC, stock_code ASC
-                    LIMIT :limit
-                """),
-                EQUITY_LIST_LIMIT,
+            changes AS (
+                SELECT dates.weeks, c.stock_code,
+                       c.big_holder_pct - o.big_holder_pct AS big_change,
+                       CASE WHEN o.total_shareholders > 0 THEN
+                           ROUND(CAST(c.total_shareholders - o.total_shareholders AS numeric)
+                                 / o.total_shareholders * 100, 2)
+                       END AS sh_rate
+                FROM dates
+                JOIN equity_distribution_stats o ON o.snapshot_date = dates.snapshot_date
+                JOIN cur c ON c.stock_code = o.stock_code
+                WHERE dates.weeks >= 1
             ),
-        ]
+            ranked AS (
+                SELECT weeks, 0 AS list_order, stock_code,
+                       ROW_NUMBER() OVER (PARTITION BY weeks ORDER BY big_change DESC, stock_code ASC) AS rn
+                FROM changes WHERE big_change > 0 AND sh_rate < 0
+                UNION ALL
+                SELECT weeks, 1 AS list_order, stock_code,
+                       ROW_NUMBER() OVER (PARTITION BY weeks ORDER BY big_change DESC, stock_code ASC) AS rn
+                FROM changes WHERE big_change > 0
+                UNION ALL
+                SELECT weeks, 2 AS list_order, stock_code,
+                       ROW_NUMBER() OVER (PARTITION BY weeks ORDER BY sh_rate ASC, stock_code ASC) AS rn
+                FROM changes WHERE sh_rate < 0
+            )
+            SELECT stock_code
+            FROM ranked
+            WHERE (list_order = 0 AND rn <= :double_limit) OR (list_order > 0 AND rn <= :list_limit)
+            ORDER BY weeks, list_order, rn
+        """)
+        params = {
+            "max_weeks": EQUITY_MAX_WEEKS,
+            "double_limit": EQUITY_DOUBLE_LIMIT,
+            "list_limit": EQUITY_LIST_LIMIT,
+        }
         try:
             seen: set[str] = set()
             stock_ids: list[str] = []
             with services.sql_storage.engine.connect() as conn:
-                for stmt, limit in queries:
-                    for row in conn.execute(stmt, {"limit": limit}).fetchall():
-                        if row[0] not in seen:
-                            seen.add(row[0])
-                            stock_ids.append(row[0])
+                for row in conn.execute(stmt, params).fetchall():
+                    if row[0] not in seen:
+                        seen.add(row[0])
+                        stock_ids.append(row[0])
             return stock_ids
         except Exception as e:
             self.logger.error(f"Failed to fetch equity ranking stocks: {e}")

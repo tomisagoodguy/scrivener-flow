@@ -240,6 +240,7 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 ## equity_distribution_stats 查詢規則
 
 `equity_distribution_stats` 已有預計算欄位 `big_holder_pct_change`、`mid_holder_pct_change`、`whale_holder_pct_change`（週變化 pp），直接查最新 `snapshot_date` 即可，**禁止**重複拉兩個 snapshot 再手動算差。
+**例外**：多週（2–4 週）排行沒有預計算欄位，必須與前端 `equityPageData._fetchRankingData` 同算法兩期相減；`sync_bare_k_step.py` 的 `_fetch_equity_ranking_stocks` 即依此重現 1–4 週名單，勿改回預計算欄位（否則 2–4 週圖表約半數無裸K）。
 
 查最新全局 snapshot 日期必須用獨立查詢，不能依賴特定 `stock_code`（該股若無資料會靜默回傳空，導致整批查詢失敗）：
 

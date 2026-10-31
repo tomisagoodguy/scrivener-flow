@@ -23,6 +23,10 @@ Also covers the investment-pool-chart-view change
 - MAX_STOCKS == 400; pool stocks appended after equity ranking, de-duplicated, truncated first
 - _fetch_pool_stocks: success path (ordered codes, no '::' cast), SQL failure
   (logs error, returns [], other sources still sync)
+
+Updated by the equity-chart-top-100 change (Requirement "SyncBareKStep includes equity
+ranking stocks"): EQUITY_LIST_LIMIT 100, EQUITY_MAX_WEEKS 4, single query reproducing
+weeks 1-4 with week -> list -> rank concatenation order.
 """
 
 import argparse
@@ -118,7 +122,8 @@ class TestConstants:
 
     def test_equity_constants_match_spec(self):
         assert sync_bare_k_step.EQUITY_DOUBLE_LIMIT == 10
-        assert sync_bare_k_step.EQUITY_LIST_LIMIT == 30
+        assert sync_bare_k_step.EQUITY_LIST_LIMIT == 100
+        assert sync_bare_k_step.EQUITY_MAX_WEEKS == 4
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +279,7 @@ class TestExecuteMerge:
         """spec: equity_distribution_stats 無資料 -> 籌碼清單為空，其餘名單照常同步。"""
         services = make_services()
         services._conn.execute.side_effect = [
-            make_result([]), make_result([]), make_result([]),  # 籌碼三份清單
+            make_result([]),  # 籌碼排行（單一查詢）
             make_result([]),  # 選股池
         ]
 
@@ -371,7 +376,7 @@ class TestFetchEquityRankingStocks:
     def test_empty_table_returns_empty_list_without_error(self, caplog):
         step = SyncBareKStep()
         services = make_services()
-        services._conn.execute.side_effect = [make_result([]), make_result([]), make_result([])]
+        services._conn.execute.return_value = make_result([])
 
         with caplog.at_level(logging.ERROR, logger="SyncBareKStep"):
             result = step._fetch_equity_ranking_stocks(make_ctx(), services)
@@ -379,53 +384,49 @@ class TestFetchEquityRankingStocks:
         assert result == []
         assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
 
-    def test_concatenates_double_big_retail_and_dedupes_preserving_first(self):
+    def test_concatenates_in_week_list_rank_order_and_dedupes_preserving_first(self):
+        """spec Example: concatenation order（SQL 已依 週數→清單→名次 排序，Python 去重保留首次）。"""
         step = SyncBareKStep()
         services = make_services()
-        services._conn.execute.side_effect = [
-            make_result(["2454", "6669"]),  # 雙訊號
-            make_result(["2454", "2330", "6669"]),  # 主力買進
-            make_result(["2330", "3661"]),  # 散戶減少
-        ]
+        # (1,double,1,2454) (1,big,1,2454) (1,big,2,6669) (1,retail,1,2330)
+        # (2,double,1,3661) (2,big,1,6669) (4,retail,1,3008)
+        services._conn.execute.return_value = make_result(
+            ["2454", "2454", "6669", "2330", "3661", "6669", "3008"]
+        )
 
         result = step._fetch_equity_ranking_stocks(make_ctx(), services)
 
-        assert result == ["2454", "6669", "2330", "3661"]
+        assert result == ["2454", "6669", "2330", "3661", "3008"]
 
-    def test_query_shape_per_list(self):
+    def test_single_query_shape_and_params(self):
         step = SyncBareKStep()
         services = make_services()
         conn = services._conn
-        conn.execute.side_effect = [make_result([]), make_result([]), make_result([])]
+        conn.execute.return_value = make_result([])
 
         step._fetch_equity_ranking_stocks(make_ctx(), services)
 
-        assert conn.execute.call_count == 3
-        calls = [c.args for c in conn.execute.call_args_list]
-        sqls = [" ".join(str(stmt).split()) for stmt, _ in calls]
-        params = [p for _, p in calls]
+        assert conn.execute.call_count == 1
+        stmt, params = conn.execute.call_args.args
+        sql = " ".join(str(stmt).split())
 
-        for sql in sqls:
-            assert "equity_distribution_stats" in sql
-            # 全局最新日期必須用獨立子查詢，不可依賴特定股票
-            assert "snapshot_date = (SELECT MAX(snapshot_date) FROM equity_distribution_stats)" in sql
-            assert "::" not in sql  # SQLAlchemy text() 禁用 :: 轉型
-            assert "stock_code ASC" in sql  # 同值以 stock_code 遞增作穩定次序
+        assert "equity_distribution_stats" in sql
+        assert "::" not in sql  # SQLAlchemy text() 禁用 :: 轉型
+        # 全局最新 N+1 個相異日期，不依賴特定股票
+        assert "SELECT DISTINCT snapshot_date FROM equity_distribution_stats" in sql
+        assert "LIMIT :max_weeks + 1" in sql
+        # 與前端相同的 N 週動態計算
+        assert "c.big_holder_pct - o.big_holder_pct" in sql
+        assert "ROUND(" in sql and "* 100, 2)" in sql
+        assert "o.total_shareholders > 0" in sql
+        # 三份清單條件與排序，同值 stock_code 遞增
+        assert "big_change > 0 AND sh_rate < 0" in sql
+        assert "ORDER BY big_change DESC, stock_code ASC" in sql
+        assert "ORDER BY sh_rate ASC, stock_code ASC" in sql
+        # 結果依 週數 → 清單 → 名次 排序
+        assert "ORDER BY weeks, list_order, rn" in sql
 
-        double_sql, big_sql, retail_sql = sqls
-        assert "big_holder_pct_change > 0" in double_sql
-        assert "shareholders_change_rate < 0" in double_sql
-        assert "ORDER BY big_holder_pct_change DESC" in double_sql
-
-        assert "big_holder_pct_change > 0" in big_sql
-        assert "shareholders_change_rate < 0" not in big_sql
-        assert "ORDER BY big_holder_pct_change DESC" in big_sql
-
-        assert "shareholders_change_rate < 0" in retail_sql
-        assert "big_holder_pct_change > 0" not in retail_sql
-        assert "ORDER BY shareholders_change_rate ASC" in retail_sql
-
-        assert [p["limit"] for p in params] == [10, 30, 30]
+        assert params == {"max_weeks": 4, "double_limit": 10, "list_limit": 100}
 
 
 # ---------------------------------------------------------------------------

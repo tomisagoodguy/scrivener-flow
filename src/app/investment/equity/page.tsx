@@ -10,8 +10,6 @@ import { WeekNav } from '@/components/features/investment/equity/WeekNav';
 import { RankingPanelGrid } from '@/components/features/investment/equity/RankingPanelGrid';
 import { EquityViewNav } from '@/components/features/investment/equity/EquityViewNav';
 import { EquityChartViewer } from '@/components/features/investment/equity/EquityChartViewer';
-import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
-import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import {
     equityBaseParams,
     equityHref,
@@ -26,6 +24,7 @@ const VALID_SORT_KEYS: SortKey[] = [
     'it_buy_5d', 'amount',
 ];
 
+// 最大值必須與 ETF/pipeline/steps/sync_bare_k_step.py 的 EQUITY_MAX_WEEKS 一致（Pipeline 依此同步各週名單的裸K）
 const VALID_WEEKS: Weeks[] = [1, 2, 3, 4];
 
 export default async function EquityDistributionPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -49,11 +48,8 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
         big: hasRows ? selectEquityChartRows(data, 'big').length : 0,
         retail: hasRows ? selectEquityChartRows(data, 'retail').length : 0,
     };
-    // 只有圖表視角且有排行資料時才查裸K快照
+    // 裸K快照由圖表各段在 client 按需載入，Server 端不查
     const chartRows = isChart && hasRows ? selectEquityChartRows(data, list) : [];
-    const snapshots = chartRows.length > 0
-        ? await getStrategySnapshots(chartRows.map((r) => r.stock_code))
-        : new Map<string, BareKSnapshot | null>();
 
     return (
         <div className="min-h-screen p-6 animate-fade-in">
@@ -85,7 +81,6 @@ export default async function EquityDistributionPage({ searchParams }: { searchP
                 ) : isChart ? (
                     <EquityChartViewer
                         rows={chartRows}
-                        snapshots={snapshots}
                         etfMap={data.etfMap}
                         tier={tier}
                         backHref={equityHref(baseParams)}

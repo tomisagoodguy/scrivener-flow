@@ -4,7 +4,7 @@ import type { EquityRow, RankingData, SortDir, SortKey, Tier, Weeks } from '@/li
 export type EquityChartList = 'double' | 'big' | 'retail';
 
 /** 主力買進 / 散戶減少圖表各取前 N 名；必須與 ETF/pipeline/steps/sync_bare_k_step.py 的 EQUITY_LIST_LIMIT 一致 */
-export const EQUITY_CHART_LIST_LIMIT = 30;
+export const EQUITY_CHART_LIST_LIMIT = 100;
 
 const CHART_LISTS: readonly EquityChartList[] = ['double', 'big', 'retail'];
 

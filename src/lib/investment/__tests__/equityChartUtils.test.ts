@@ -1,5 +1,6 @@
 /**
- * Tests for equity ranking chart view helpers (change: equity-ranking-chart-view, task 2.1).
+ * Tests for equity ranking chart view helpers (change: equity-ranking-chart-view, task 2.1;
+ * list limit 100 from change: equity-chart-top-100, task 1.1).
  * Covers the "rows selected per list" and "header context formatting" example tables.
  */
 
@@ -57,8 +58,8 @@ describe('parseEquityChartList', () => {
 });
 
 describe('selectEquityChartRows', () => {
-    it('limit is 30 (must equal Python EQUITY_LIST_LIMIT)', () => {
-        expect(EQUITY_CHART_LIST_LIMIT).toBe(30);
+    it('limit is 100 (must equal Python EQUITY_LIST_LIMIT)', () => {
+        expect(EQUITY_CHART_LIST_LIMIT).toBe(100);
     });
 
     it('double: returns the double-signal rows as is', () => {
@@ -66,15 +67,23 @@ describe('selectEquityChartRows', () => {
         expect(selectEquityChartRows(data, 'double')).toEqual(data.doubleSignalRanking);
     });
 
-    it('big: returns big-holder rows 1–30 in order', () => {
+    it('big: returns big-holder rows 1–100 in order', () => {
         const data = rankingData(7, 218, 272);
         const result = selectEquityChartRows(data, 'big');
-        expect(result).toEqual(data.bigHolderRanking.slice(0, 30));
+        expect(result).toEqual(data.bigHolderRanking.slice(0, 100));
         expect(result.map((r) => r.stock_code).at(0)).toBe('B1');
-        expect(result.map((r) => r.stock_code).at(-1)).toBe('B30');
+        expect(result.map((r) => r.stock_code).at(-1)).toBe('B100');
     });
 
-    it('retail: returns all rows when fewer than 30', () => {
+    it('retail: returns retail rows 1–100 in order', () => {
+        const data = rankingData(7, 218, 272);
+        const result = selectEquityChartRows(data, 'retail');
+        expect(result).toEqual(data.retailDeclineRanking.slice(0, 100));
+        expect(result.map((r) => r.stock_code).at(0)).toBe('R1');
+        expect(result.map((r) => r.stock_code).at(-1)).toBe('R100');
+    });
+
+    it('retail: returns all rows when fewer than 100', () => {
         const data = rankingData(7, 218, 12);
         expect(selectEquityChartRows(data, 'retail')).toEqual(data.retailDeclineRanking);
     });
