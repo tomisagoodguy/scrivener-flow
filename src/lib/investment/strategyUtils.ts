@@ -102,6 +102,27 @@ export function filterChartStocks<T extends { stock_id: string; strategies: stri
     });
 }
 
+/** 策略頁主視角（`view` 參數）。 */
+export type StrategyView = 'strategy' | 'monitor' | 'chart' | 'trades';
+
+/** 解析 `view` 參數；缺值或無法辨識的值回退策略視角。 */
+export function parseStrategyView(view?: string): StrategyView {
+    return view === 'monitor' || view === 'chart' || view === 'trades' ? view : 'strategy';
+}
+
+/**
+ * 策略頁標題資料日期：優先策略訊號日期；換股後表現視角退回其 asOf（不依賴當日訊號），
+ * 其他視角退回策略分析日期；皆無時顯示「—」。
+ */
+export function resolveStrategyTitleDate(
+    view: StrategyView,
+    signalsDate: string | null,
+    tradeAsOf: string | null,
+    analyticsDate: string | null,
+): string {
+    return signalsDate ?? (view === 'trades' ? tradeAsOf : analyticsDate) ?? '—';
+}
+
 /** 每個策略 id 出現在幾支股票（同一股票重複列同一策略只算一次）。 */
 export function countStocksByStrategy(stocks: { strategies: string[] }[]): Record<string, number> {
     const counts: Record<string, number> = {};

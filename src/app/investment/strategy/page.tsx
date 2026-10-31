@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getStrategySignals } from '@/app/actions/getStrategySignals';
 import { getFactorIC } from '@/app/actions/getFactorIC';
 import type { FactorICRow } from '@/app/actions/getFactorIC';
@@ -13,8 +12,10 @@ import StrategyAnalyticsPanel from '@/components/features/strategy/StrategyAnaly
 import { StrategyMonitorCard } from '@/components/features/strategy/StrategyMonitorCard';
 import { StrategyChartViewer } from '@/components/features/strategy/StrategyChartViewer';
 import type { StrategyMonitorStock } from '@/components/features/strategy/StrategyMonitorCard';
+import { parseStrategyView, resolveStrategyTitleDate } from '@/lib/investment/strategyUtils';
 import type { MovementLabel, StrategySignalsResult } from '@/lib/investment/strategyUtils';
 import type { StrategyAnalyticsData } from '@/app/actions/getStrategyAnalytics';
+import StrategyViewTabs from '@/components/features/strategy/StrategyViewTabs';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import MultiStrategyConsensusPanel from '@/components/features/strategy/MultiStrategyConsensusPanel';
 import { getStrategyConsensusHistory } from '@/app/actions/getStrategyConsensusHistory';
@@ -92,27 +93,35 @@ export default async function StrategyPage({
     searchParams: Promise<{ view?: string; cmin?: string; cview?: string; cwin?: string }>;
 }) {
     const { view, cmin, cview, cwin } = await searchParams;
-    const isMonitor = view === 'monitor';
-    const isChart = view === 'chart';
+    const activeView = parseStrategyView(view);
+    const isMonitor = activeView === 'monitor';
+    const isChart = activeView === 'chart';
+    const isTrades = activeView === 'trades';
+    const isStrategy = activeView === 'strategy';
     const consensusParams = parseConsensusParams({ cmin, cview, cwin });
     const isConsensusChart = consensusParams.view === 'chart';
     // 近 N 天模式才額外查詢；最新模式由 getStrategySignals 結果直接推導
     const consensusWindow = consensusParams.window;
-    const needsHistory = !isMonitor && !isChart && consensusWindow !== 'latest';
-    // 策略卡片（因子 IC）與換股後表現只在策略視角、非共選圖表模式顯示
-    const showsStrategyDetail = !isMonitor && !isChart && !isConsensusChart;
+    const needsHistory = isStrategy && consensusWindow !== 'latest';
+    // 策略卡片（因子 IC）只在策略視角、非共選圖表模式顯示
+    const showsStrategyDetail = isStrategy && !isConsensusChart;
 
+    // 換股後表現視角只查策略訊號（標題日期）與換股後表現
     const [result, allIC, analytics, rawConsensus, consensusHistory, tradePerformance] = await Promise.all([
         getStrategySignals(),
         showsStrategyDetail
             ? getFactorIC([...new Set(Object.values(STRATEGY_FACTORS).flat())], 12)
             : Promise.resolve<FactorICRow[]>([]),
-        getStrategyAnalytics(),
-        getConsensusSignals().catch(() => ({ signals: [], date: null })),
+        isTrades
+            ? Promise.resolve<StrategyAnalyticsData | null>(null)
+            : getStrategyAnalytics(),
+        isTrades
+            ? Promise.resolve({ signals: [] as ConsensusSignal[], date: null })
+            : getConsensusSignals().catch(() => ({ signals: [], date: null })),
         needsHistory
             ? getStrategyConsensusHistory(consensusWindow)
             : Promise.resolve<StrategyConsensusHistoryData | null>(null),
-        showsStrategyDetail
+        isTrades
             ? getStrategyTradePerformance()
             : Promise.resolve<StrategyTradePerformanceData | null>(null),
     ]);
@@ -129,7 +138,7 @@ export default async function StrategyPage({
     const consensusMap: Record<string, ConsensusSignal> = {};
     for (const s of rawConsensus.signals) consensusMap[s.stock_id] = s;
 
-    const monitorStocks = (isMonitor || isChart) ? buildMonitorStocks(result, analytics, consensusMap) : [];
+    const monitorStocks = (isMonitor || isChart) && analytics ? buildMonitorStocks(result, analytics, consensusMap) : [];
 
     // 圖表視角才查快照與均線發散候選；後者失敗時只是不顯示發散脈絡
     const [snapshotMap, fanBreakout] = isChart
@@ -152,7 +161,8 @@ export default async function StrategyPage({
         (result?.strategies ?? []).map((s) => [s.id, s.description]),
     );
 
-    if (!result && !isMonitor && !isChart) {
+    // 換股後表現不依賴當日訊號，不套用此提早返回
+    if (!result && isStrategy) {
         return (
             <main className="max-w-4xl mx-auto px-4 py-8">
                 <p className="text-gray-400 text-sm">尚無策略訊號資料，請稍後再試。</p>
@@ -169,50 +179,26 @@ export default async function StrategyPage({
                         策略選股中心
                     </h1>
                     <span className="text-sm text-gray-400">
-                        資料日期：{result?.date ?? analytics.date}
+                        資料日期：{resolveStrategyTitleDate(
+                            activeView,
+                            result?.date ?? null,
+                            tradePerformance?.asOf ?? null,
+                            analytics?.date ?? null,
+                        )}
                     </span>
                 </div>
-                <div className="flex gap-1 bg-gray-100/70 dark:bg-gray-800/50 rounded-xl p-1">
-                    <Link
-                        href="/investment/strategy"
-                        className={`text-sm px-3 py-1.5 rounded-lg transition-all ${
-                            !isMonitor && !isChart
-                                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm font-medium'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        策略視角
-                    </Link>
-                    <Link
-                        href="/investment/strategy?view=monitor"
-                        className={`text-sm px-3 py-1.5 rounded-lg transition-all ${
-                            isMonitor
-                                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm font-medium'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        監控清單
-                    </Link>
-                    <Link
-                        href="/investment/strategy?view=chart"
-                        className={`text-sm px-3 py-1.5 rounded-lg transition-all ${
-                            isChart
-                                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm font-medium'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        圖表
-                    </Link>
-                    <Link
-                        href="/investment/strategy/fan-breakout"
-                        className="text-sm px-3 py-1.5 rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                        均線發散候選
-                    </Link>
-                </div>
+                <StrategyViewTabs active={activeView} />
             </div>
 
-            {isChart ? (
+            {isTrades ? (
+                tradePerformance && (
+                    <StrategyTradePerformancePanel
+                        trades={tradePerformance.trades}
+                        asOf={tradePerformance.asOf}
+                        strategyLabels={getStrategyDescriptions()}
+                    />
+                )
+            ) : isChart ? (
                 /* Chart view: scroll viewer with BareK charts */
                 monitorStocks.length === 0 ? (
                     <p className="text-gray-400 text-sm">本日無策略選股資料</p>
@@ -243,7 +229,7 @@ export default async function StrategyPage({
             ) : (
                 /* Strategy view: original cards（共選圖表模式只留共選面板，避免長捲動圖表後再接卡片） */
                 <>
-                    {!isConsensusChart && analytics.stocks.length > 0 && (
+                    {!isConsensusChart && analytics && analytics.stocks.length > 0 && (
                         <StrategyAnalyticsPanel data={analytics} />
                     )}
 
@@ -253,14 +239,6 @@ export default async function StrategyPage({
                         latestDate={result?.date ?? null}
                         params={consensusParams}
                     />
-
-                    {tradePerformance && (
-                        <StrategyTradePerformancePanel
-                            trades={tradePerformance.trades}
-                            asOf={tradePerformance.asOf}
-                            strategyLabels={getStrategyDescriptions()}
-                        />
-                    )}
 
                     {isConsensusChart ? null : !result || result.strategies.length === 0 ? (
                         <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>

@@ -8,8 +8,43 @@ import {
     countStocksByStrategy,
     DEFAULT_CHART_STOCK_FILTERS,
     filterChartStocks,
+    parseStrategyView,
+    resolveStrategyTitleDate,
     type ChartStockFilters,
+    type StrategyView,
 } from '@/lib/investment/strategyUtils';
+
+// change: strategy-trades-view-tab, spec「View parsing」
+describe('parseStrategyView', () => {
+    it.each<[string | undefined, StrategyView]>([
+        [undefined, 'strategy'],
+        ['monitor', 'monitor'],
+        ['chart', 'chart'],
+        ['trades', 'trades'],
+        ['foo', 'strategy'],
+    ])('view=%s → %s', (view, expected) => {
+        expect(parseStrategyView(view)).toBe(expected);
+    });
+});
+
+// spec「No strategy signals in trades view」
+describe('resolveStrategyTitleDate', () => {
+    it('trades view falls back to trade performance asOf when no signals', () => {
+        expect(resolveStrategyTitleDate('trades', null, '2026-10-30', '2026-10-29')).toBe('2026-10-30');
+    });
+
+    it('prefers the strategy signals date', () => {
+        expect(resolveStrategyTitleDate('trades', '2026-10-31', '2026-10-30', null)).toBe('2026-10-31');
+    });
+
+    it('other views fall back to analytics date', () => {
+        expect(resolveStrategyTitleDate('monitor', null, '2026-10-30', '2026-10-29')).toBe('2026-10-29');
+    });
+
+    it('returns — when no date is available', () => {
+        expect(resolveStrategyTitleDate('trades', null, null, null)).toBe('—');
+    });
+});
 
 interface ChartStock {
     stock_id: string;
