@@ -89,6 +89,7 @@
 - **CLI 的 JSON 輸出 pipe 給 Python**（如 `spectra ... --json | python -c ...`）：用 `json.loads(sys.stdin.buffer.read().decode('utf-8'))`，`json.load(sys.stdin)` 會因 cp950 解碼出錯。
 - **選 shell**：不確定就用 **Bash**（POSIX，跨平台穩）。只有真的要 PowerShell cmdlet/物件管線才用 PowerShell。
 - **路徑**：Bash 用 `/c/Users/...`、`/dev/null`、`$VAR`；PowerShell 用 `C:\Users\...`、`$null`、`$env:VAR`。**別在 Bash 裡寫 PowerShell 語法，反之亦然**。
+- **Bash 裡呼叫的 Windows Python 不認 `/c/...`**（`open('/c/Users/...')` → `FileNotFoundError`）：傳給 Python 的路徑改用 `C:/Users/...` 或 `$(cygpath -w <path>)`。
 - **檔案操作**：優先用 Read/Edit/Write/Glob/Grep 專用工具，不要用 `cat`/`sed`/`find`/`Get-Content`/`Select-String`。
 
 **正例**：`export PYTHONUTF8=1; python3 -c "import json; json.load(open('.claude/settings.json',encoding='utf-8'))"`。
