@@ -94,7 +94,11 @@ export function createKLinePanel(
 
     const markers = markerDates ? buildSignalMarkers(ohlcv, markerDates) : [];
     if (markers.length > 0) createSeriesMarkers(candle, markers);
-    if (holdingMarks) candle.attachPrimitive(new TradeLabelsPrimitive(buildTradeLabels(ohlcv, holdingMarks)));
+    if (holdingMarks) {
+        // 加大上下邊距，位於極值的「買」「賣」標籤才留在圖內
+        candle.priceScale().applyOptions({ scaleMargins: { top: 0.12, bottom: 0.15 } });
+        candle.attachPrimitive(new TradeLabelsPrimitive(buildTradeLabels(ohlcv, holdingMarks)));
+    }
 
     const maConfigs = [
         { key: 'ma5' as const, color: C.ma5 },

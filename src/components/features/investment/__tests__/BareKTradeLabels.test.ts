@@ -5,7 +5,7 @@
 
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import { toTime } from '../BareKChartConfig';
-import { buildTradeLabels } from '../BareKTradeLabels';
+import { buildTradeLabels, labelAnchorY } from '../BareKTradeLabels';
 
 jest.mock('lightweight-charts', () => ({}), { virtual: true });
 
@@ -55,5 +55,31 @@ describe('buildTradeLabels', () => {
             [toTime('2026-10-01'), '買'],
             [toTime('2026-10-13'), '買'],
         ]);
+    });
+});
+
+describe('labelAnchorY（change: strategy-chart-label-clearance）', () => {
+    it('「買」取標籤覆蓋範圍內最高的 K 棒頂（spec 範例 1 → 40）', () => {
+        const bars = [
+            { x: 96, highY: 50, lowY: 80 },
+            { x: 100, highY: 60, lowY: 90 },
+            { x: 104, highY: 40, lowY: 70 },
+            { x: 130, highY: 10, lowY: 20 },
+        ];
+        expect(labelAnchorY('above', 100, bars, 12)).toBe(40);
+    });
+
+    it('「賣」取標籤覆蓋範圍內最低的 K 棒底（spec 範例 2 → 95）', () => {
+        const bars = [
+            { x: 96, highY: 50, lowY: 80 },
+            { x: 100, highY: 60, lowY: 90 },
+            { x: 104, highY: 40, lowY: 95 },
+            { x: 130, highY: 10, lowY: 120 },
+        ];
+        expect(labelAnchorY('below', 100, bars, 12)).toBe(95);
+    });
+
+    it('範圍內沒有 K 棒 → null', () => {
+        expect(labelAnchorY('above', 100, [{ x: 200, highY: 10, lowY: 20 }], 12)).toBeNull();
     });
 });

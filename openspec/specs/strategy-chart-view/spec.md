@@ -380,7 +380,7 @@ tests:
 ---
 ### Requirement: Strategy holding marks on chart
 
-The strategy chart view SHALL query `strategy_trades` for the stocks shown in the chart and, on each stock's K-line panel, SHALL draw a filled rounded label with white bold text "買" above the bar on every non-null `entry_date`, and a filled rounded label with white bold text "賣" below the bar on every non-null `exit_date`. The "買" label SHALL use a red fill (#e11d48) and the "賣" label a green fill (#059669), with text no smaller than 12 CSS pixels independent of the chart's axis font size. The "賣" label SHALL be offset far enough below the bar not to overlap the fan-breakout up-arrow drawn below the same bar. The chart SHALL NOT mark `entry_signal_date`. Fan-breakout markers (red up-arrows below the bar) SHALL keep rendering unchanged. Trades from all strategies of the stock SHALL be included, regardless of the strategy filter selected in the filter bar. A date SHALL be labeled only when the snapshot's `ohlcv` contains a drawn bar (non-null open and close) on that date; the same label text SHALL appear at most once per date.
+The strategy chart view SHALL query `strategy_trades` for the stocks shown in the chart and, on each stock's K-line panel, SHALL draw a filled rounded label with white bold text "買" above the bar on every non-null `entry_date`, and a filled rounded label with white bold text "賣" below the bar on every non-null `exit_date`. The "買" label SHALL use a red fill (#e11d48) and the "賣" label a green fill (#059669), with text no smaller than 12 CSS pixels independent of the chart's axis font size. The "賣" label SHALL be offset far enough below the bar not to overlap the fan-breakout up-arrow drawn below the same bar. The chart SHALL NOT mark `entry_signal_date`. Fan-breakout markers (red up-arrows below the bar) SHALL keep rendering unchanged. Trades from all strategies of the stock SHALL be included, regardless of the strategy filter selected in the filter bar. A date SHALL be labeled only when the snapshot's `ohlcv` contains a drawn bar (non-null open and close) on that date; the same label text SHALL appear at most once per date. No label SHALL overlap any candlestick body or wick: a "買" label SHALL sit above the highest high, and a "賣" label below the lowest low, of every bar horizontally covered by the label. When strategy trades are present, the K-line panel's price scale SHALL reserve enough top and bottom margin that labels at the chart's extreme highs and lows stay inside the panel.
 
 #### Scenario: Entry and exit dates are labeled
 
@@ -407,29 +407,36 @@ The strategy chart view SHALL query `strategy_trades` for the stocks shown in th
 - **WHEN** the `strategy_trades` query fails
 - **THEN** the chart view still renders every stock's chart without "買"/"賣" labels and without holding background, and the error is logged on the server
 
+#### Scenario: Label clears neighbouring taller candles
+
+- **WHEN** a "買" label is drawn on a bar whose high is 100, and a neighbouring bar covered by the label's width has a high of 110
+- **THEN** the label's bottom edge is placed above the 110 high, not above the 100 high
+
+##### Example: anchor selection
+
+| label | label x | bars (x, high y, low y) in px | half width | anchor y |
+| ----- | ------- | ----------------------------- | ---------- | -------- |
+| 買 | 100 | (96, 50, 80), (100, 60, 90), (104, 40, 70), (130, 10, 20) | 12 | 40 |
+| 賣 | 100 | (96, 50, 80), (100, 60, 90), (104, 40, 95), (130, 10, 120) | 12 | 95 |
+
 
 <!-- @trace
-source: strategy-chart-trade-labels
+source: strategy-chart-label-clearance
 updated: 2026-10-31
 code:
-  - src/components/features/investment/BareKChartPanels.ts
-  - src/app/investment/equity/page.tsx
-  - src/components/features/investment/equity/EquityChartViewer.tsx
-  - src/app/actions/getStrategyChartTrades.ts
-  - src/lib/investment/equityChartUtils.ts
   - src/components/features/investment/BareKTradeLabels.ts
-  - src/app/actions/getWindowMomentum.ts
-  - src/lib/investment/strategyTradeUtils.ts
+  - src/components/features/investment/equity/EquityChartViewer.tsx
+  - src/lib/investment/equityChartUtils.ts
+  - src/app/investment/equity/page.tsx
   - ETF/pipeline/steps/sync_bare_k_step.py
+  - src/components/features/investment/BareKChartPanels.ts
+  - src/app/actions/getWindowMomentum.ts
 tests:
-  - src/components/features/strategy/__tests__/StrategyChartViewer.test.tsx
+  - src/components/features/investment/__tests__/BareKTradeLabels.test.ts
+  - ETF/tests/test_sync_bare_k_step.py
+  - src/components/features/investment/equity/__tests__/EquityChartViewer.test.tsx
   - src/components/features/investment/__tests__/BareKHoldingMarks.test.ts
   - src/lib/investment/__tests__/equityChartUtils.test.ts
-  - src/components/features/investment/__tests__/BareKTradeLabels.test.ts
-  - src/app/actions/__tests__/getStrategyChartTrades.test.ts
-  - src/lib/investment/__tests__/strategyHoldingMarks.test.ts
-  - src/components/features/investment/equity/__tests__/EquityChartViewer.test.tsx
-  - ETF/tests/test_sync_bare_k_step.py
 -->
 
 ---

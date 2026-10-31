@@ -66,18 +66,19 @@ describe('buildHoldingBackground', () => {
 
 describe('createKLinePanel with holdingMarks', () => {
     function mockChart() {
-        const series = { setData: jest.fn(), attachPrimitive: jest.fn() };
+        const candlePriceScale = { applyOptions: jest.fn() };
+        const series = { setData: jest.fn(), attachPrimitive: jest.fn(), priceScale: jest.fn(() => candlePriceScale) };
         const priceScale = { applyOptions: jest.fn() };
         const chart = { addSeries: jest.fn(() => series), priceScale: jest.fn(() => priceScale) };
         (createChart as jest.Mock).mockReturnValue(chart);
-        return { chart, series, priceScale };
+        return { chart, series, priceScale, candlePriceScale };
     }
     const MAS = { ma5: [], ma20: [], ma60: [], ma120: [], h260: [] } as unknown as BareKSnapshot['mas'];
 
     beforeEach(() => jest.clearAllMocks());
 
     it('背景 Histogram 在 K 線之前加入、掛隱藏價格軸；「買」「賣」改掛 primitive，內建 marker 只剩發散箭頭', () => {
-        const { chart, series, priceScale } = mockChart();
+        const { chart, series, priceScale, candlePriceScale } = mockChart();
         createKLinePanel({} as HTMLDivElement, 800, OHLCV, MAS, ['2026-09-10'], {
             entryDates: ['2026-10-01'],
             exitDates: ['2026-10-15'],
@@ -96,12 +97,15 @@ describe('createKLinePanel with holdingMarks', () => {
         expect(markers.map(m => m.time)).toEqual([toTime('2026-09-10')]);
         expect(series.attachPrimitive).toHaveBeenCalledTimes(1);
         expect(series.attachPrimitive.mock.calls[0][0]).toBeInstanceOf(TradeLabelsPrimitive);
+        // 標籤在極值處仍留在圖內（change: strategy-chart-label-clearance）
+        expect(candlePriceScale.applyOptions).toHaveBeenCalledWith({ scaleMargins: { top: 0.12, bottom: 0.15 } });
     });
 
     it('未傳 holdingMarks → 不加背景 series，第一個 series 是 K 線', () => {
-        const { chart, series } = mockChart();
+        const { chart, series, candlePriceScale } = mockChart();
         createKLinePanel({} as HTMLDivElement, 800, OHLCV, MAS);
         expect(series.attachPrimitive).not.toHaveBeenCalled();
+        expect(candlePriceScale.applyOptions).not.toHaveBeenCalled();
 
         const calls = chart.addSeries.mock.calls as unknown as [{ kind: string }][];
         expect(calls[0][0].kind).toBe('Candlestick');
