@@ -240,24 +240,20 @@ async function _fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier 
     if (!latestRow) return null;
     const snapshotDate: string = latestRow.snapshot_date;
 
-    // Fetch previous N distinct snapshot dates (needed for multi-week comparison)
-    const { data: prevRaw } = await supabase
-        .from('equity_distribution_stats')
-        .select('snapshot_date')
-        .lt('snapshot_date', snapshotDate)
-        .order('snapshot_date', { ascending: false })
-        .limit(weeks * 1000);
-
-    const prevRows = prevRaw as unknown as EqStatDateRow[] | null;
+    // 逐期往前找相異 snapshot_date：每期約 500+ 列，一次撈多期列會被 PostgREST max-rows(1000) 截斷
     const prevDates: string[] = [];
-    const seen = new Set<string>();
-    for (const row of prevRows ?? []) {
-        const d = row.snapshot_date;
-        if (!seen.has(d)) {
-            seen.add(d);
-            prevDates.push(d);
-            if (prevDates.length >= weeks) break;
-        }
+    let cursor = snapshotDate;
+    for (let i = 0; i < weeks; i++) {
+        const { data: prevRaw } = await supabase
+            .from('equity_distribution_stats')
+            .select('snapshot_date')
+            .lt('snapshot_date', cursor)
+            .order('snapshot_date', { ascending: false })
+            .limit(1);
+        const prevRow = (prevRaw as unknown as EqStatDateRow[] | null)?.[0];
+        if (!prevRow) break;
+        prevDates.push(prevRow.snapshot_date);
+        cursor = prevRow.snapshot_date;
     }
 
     const dateRange = {
@@ -384,7 +380,7 @@ async function _fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier 
 export async function fetchRankingData(sort: SortKey | null, dir: SortDir, tier: Tier | null, weeks: Weeks = 1): Promise<RankingData | null> {
     const cached = unstable_cache(
         () => _fetchRankingData(sort, dir, tier, weeks),
-        ['equity-ranking', sort ?? 'null', dir, tier ?? 'null', String(weeks)],
+        ['equity-ranking-v2', sort ?? 'null', dir, tier ?? 'null', String(weeks)],
         { revalidate: 3600 },
     );
     return cached();
