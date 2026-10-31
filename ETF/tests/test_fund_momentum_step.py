@@ -224,3 +224,114 @@ def test_fund_momentum_step_metadata_values():
     assert meta["fund_20d"] == pytest.approx(500_000.0, rel=0.01)
     assert meta["consec_days"] == 20
     assert meta["fund_ratio_5d"] == pytest.approx(25_000.0 / 5_000_000.0, rel=0.01)
+
+
+# ---------------------------------------------------------------------------
+# compute_selection_history / 持有期間（change: fund-momentum-trades）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("values,expected", [
+    ([100.0, 200.0, np.nan, 300.0], 3),
+    ([100.0, -50.0, 200.0, 300.0], 2),
+    ([100.0, 200.0, 300.0, np.nan], 3),
+])
+def test_selection_history_consec_matches_spec_examples(values, expected):
+    """spec 範例表：連續天數以非缺值計算，缺值不中斷也不累加。"""
+    from ETF.pipeline.steps.fund_momentum_step import _consec_history
+
+    dates = pd.date_range("2026-10-01", periods=len(values), freq="B")
+    consec = _consec_history(pd.DataFrame({"2330": values}, index=dates))
+    assert consec["2330"].iloc[-1] == expected
+
+
+def test_selection_history_last_row_matches_daily_signal():
+    """最後一列入選結果與每日 is_selected 計算一致。"""
+    from ETF.pipeline.steps.fund_momentum_step import (
+        CONSEC_THRESHOLD,
+        SCORE_THRESHOLD,
+        _compute_consec_days,
+        compute_selection_history,
+    )
+
+    stocks = [str(1000 + i) for i in range(40)]
+    fund_df = _make_fund_df(60, stocks, seed=7)
+    fund_df.iloc[-4:, :6] = 2_000_000.0  # 確保有入選股
+    fund_df.iloc[10:15, 3] = np.nan
+
+    history = compute_selection_history(fund_df)
+
+    fund_20d_last = fund_df.rolling(20, min_periods=1).sum().iloc[-1]
+    score = (fund_20d_last.rank(pct=True) * 100).round().fillna(0).astype(int)
+    for stock in stocks:
+        cd = _compute_consec_days(fund_df[stock].dropna())
+        expected = cd >= CONSEC_THRESHOLD and score[stock] >= SCORE_THRESHOLD
+        assert bool(history[stock].iloc[-1]) == expected, stock
+    assert history.iloc[-1].sum() > 0
+
+
+def test_selection_runs_become_fund_momentum_trades():
+    """入選 10-13~10-15、10-16 落選 → persist 收到 fund_momentum 的持有部位，推導出 10-13 → 10-16。"""
+    from ETF.pipeline.steps.fund_momentum_step import STRATEGY_ID, FundMomentumStep
+    from ETF.processors.strategy_trades import derive_trade_episodes
+    from datetime import date
+
+    ctx = MagicMock()
+    ctx.strategy_data_cache = MagicMock()
+    ctx.date_str = "2026-10-16"
+    services = MagicMock()
+    dates = pd.to_datetime(["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16"])
+    history = pd.DataFrame({"2330": [False, True, True, True, False]}, index=dates)
+
+    with patch("ETF.pipeline.steps.fund_momentum_step.compute_selection_history", return_value=history), \
+            patch("ETF.pipeline.steps.fund_momentum_step.persist_strategy_trades") as persist:
+        FundMomentumStep()._persist_trades(ctx, services, pd.DataFrame())
+
+    positions_by_strategy, run_date, cache, sql_storage = persist.call_args[0]
+    assert list(positions_by_strategy) == [STRATEGY_ID]
+    assert run_date == date(2026, 10, 16)
+    assert cache is ctx.strategy_data_cache
+    assert sql_storage is services.sql_storage
+    episodes = derive_trade_episodes(positions_by_strategy[STRATEGY_ID], date(2026, 1, 1))
+    assert [(e.stock_id, e.entry_signal_date, e.exit_signal_date) for e in episodes] == [
+        ("2330", date(2026, 10, 13), date(2026, 10, 16)),
+    ]
+
+
+def test_trade_failure_is_isolated(caplog):
+    """推導持有期間失敗只 log，不 re-raise。"""
+    from ETF.pipeline.steps.fund_momentum_step import FundMomentumStep
+
+    ctx = MagicMock()
+    ctx.date_str = "2026-10-16"
+    with patch("ETF.pipeline.steps.fund_momentum_step.compute_selection_history", side_effect=RuntimeError("boom")), \
+            caplog.at_level(logging.ERROR):
+        FundMomentumStep()._persist_trades(ctx, MagicMock(), pd.DataFrame())
+    assert "boom" in caplog.text
+
+
+def test_run_writes_signals_then_persists_trades():
+    """_run 先寫每日訊號，再推導持有期間。"""
+    import sys
+    import argparse
+    import pathlib
+    from ETF.pipeline.context import PipelineContext
+    from ETF.pipeline.steps.fund_momentum_step import FundMomentumStep
+
+    stocks = ["2330", "2454"]
+    fund_df = _make_fund_df(25, stocks)
+    ctx = PipelineContext(
+        args=argparse.Namespace(days=30, dry_run=False),
+        output_dir=pathlib.Path("."),
+        date_str=str(fund_df.index[-1].date()),
+        is_dry_run=False,
+    )
+    services = MagicMock()
+    calls: list[str] = []
+    services.sql_storage.upsert_strategy_signals.side_effect = lambda rows: calls.append("signals")
+
+    with patch.dict(sys.modules, {"finlab": _make_finlab_mock(fund_df, _make_volume_df(25, stocks))}), \
+            patch.object(FundMomentumStep, "_notify_new_selected"), \
+            patch.object(FundMomentumStep, "_persist_trades", side_effect=lambda *a: calls.append("trades")):
+        FundMomentumStep()._run(ctx, services)
+    assert calls == ["signals", "trades"]

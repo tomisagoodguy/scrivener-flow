@@ -10,6 +10,9 @@
   fund_ratio_5d — fund_5d / volume_5d（買超佔成交比率）
   score         — fund_20d.rank(pct=True) * 100，整數 0–100（全市場強度百分位）
   is_selected   — consec_days >= 3 AND score >= 90（建倉確認）
+
+另以同一套條件算出近 HISTORY_ROWS 個交易日的入選歷史，當作 fund_momentum 的持有部位，
+交給 persist_strategy_trades 推導持有期間 → strategy_trades（入選日隔日開盤買、落選日隔日開盤賣）。
 """
 
 import json
@@ -22,6 +25,8 @@ from sqlalchemy import text
 
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
+from ETF.pipeline.steps.strategy_trade_step import persist_strategy_trades
+from ETF.strategies.shared_cache import StrategyDataCache
 
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
@@ -32,6 +37,9 @@ STRATEGY_ID = "fund_momentum"
 CONSEC_THRESHOLD = 3
 SCORE_THRESHOLD = 90
 LINE_NOTIFY_TYPE = "fund_momentum"
+# 入選歷史保留的交易日數（涵蓋 strategy_trades 的 365 曆日重算窗口）與 20 日滾動所需的前置列
+HISTORY_ROWS = 300
+ROLLING_DAYS = 20
 
 
 def _compute_consec_days(series: pd.Series) -> int:
@@ -42,6 +50,26 @@ def _compute_consec_days(series: pd.Series) -> int:
             break
         count += 1
     return count
+
+
+def _consec_history(fund_df: pd.DataFrame) -> pd.DataFrame:
+    """每個日期的連續正值天數；與 _compute_consec_days 同口徑：缺值略過（不中斷、不累加），缺值日沿用前值。"""
+    out: dict[str, pd.Series] = {}
+    for stock_id in fund_df.columns:
+        s = fund_df[stock_id].dropna()
+        positive = s > 0
+        streak = positive.astype(int).groupby((~positive).cumsum()).cumsum()
+        out[stock_id] = streak.reindex(fund_df.index).ffill().fillna(0)
+    return pd.DataFrame(out, index=fund_df.index)
+
+
+def compute_selection_history(fund_df: pd.DataFrame) -> pd.DataFrame:
+    """近 HISTORY_ROWS 個交易日每天的入選名單（bool）；最後一列與每日 is_selected 相同。"""
+    window = fund_df.tail(HISTORY_ROWS + ROLLING_DAYS)
+    fund_20d = window.rolling(ROLLING_DAYS, min_periods=1).sum()
+    score = (fund_20d.rank(axis=1, pct=True) * 100).round().fillna(0)
+    selected = (_consec_history(window) >= CONSEC_THRESHOLD) & (score >= SCORE_THRESHOLD)
+    return selected.tail(HISTORY_ROWS)
 
 
 class FundMomentumStep(BaseStep):
@@ -166,6 +194,27 @@ class FundMomentumStep(BaseStep):
 
         # 建倉確認 LINE 通知
         self._notify_new_selected(ctx, services, rows, date_key)
+
+        # 入選歷史 → 持有期間（strategy_trades）
+        self._persist_trades(ctx, services, fund_df)
+
+    def _persist_trades(
+        self, ctx: PipelineContext, services: "PipelineServices", fund_df: pd.DataFrame
+    ) -> None:
+        """以入選歷史當 fund_momentum 的持有部位寫入 strategy_trades；失敗只 log，不影響已寫入的訊號。"""
+        try:
+            history = compute_selection_history(fund_df)
+            try:
+                run_date = date.fromisoformat(ctx.date_str)
+            except (TypeError, ValueError):
+                run_date = date.today()
+            cache = ctx.strategy_data_cache or StrategyDataCache()
+            written = persist_strategy_trades(
+                {STRATEGY_ID: history}, run_date, cache, services.sql_storage
+            )
+            logger.info(f"[FundMomentumStep] 持有期間寫入 {written} 筆")
+        except Exception as e:
+            logger.error(f"[FundMomentumStep] 持有期間推導失敗，已跳過: {e}")
 
     def _notify_new_selected(
         self,
