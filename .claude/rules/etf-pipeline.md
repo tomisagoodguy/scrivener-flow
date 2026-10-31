@@ -81,6 +81,7 @@ Pipeline 步驟分兩級，錯誤處理策略不同：
 | 步驟檔案 | 說明 |
 |---------|------|
 | `strategy_signal_step.py` | 5 種 FinLab 量化策略選股信號 → `strategy_signals` |
+| `strategy_trade_step.py` | 由 `ctx.strategy_positions` 推導持有期間與換股後報酬 → `strategy_trades`（只清理推導成功的策略） |
 | `shareholder_signal_step.py` | 股東結構變化信號（大戶增減）|
 
 **股東結構 & 公司基本面**

@@ -81,6 +81,7 @@ class StrategySignalStep(BaseStep):
 
         try:
             cache = StrategyDataCache()
+            ctx.strategy_data_cache = cache
             logger.info("[StrategySignalStep] 共用快取建立完成，開始執行策略")
 
             for strategy in ALL_STRATEGIES:
@@ -91,6 +92,9 @@ class StrategySignalStep(BaseStep):
                             f"[{strategy.strategy_id}] get_positions() returned empty"
                         )
                         continue
+
+                    # 完整歷史供 StrategyTradeStep 推導持有期間
+                    ctx.strategy_positions[strategy.strategy_id] = positions
 
                     latest_row = positions.iloc[-1]
                     latest_date = positions.index[-1]

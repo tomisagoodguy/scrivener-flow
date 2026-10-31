@@ -18,6 +18,10 @@ import type { StrategyAnalyticsData } from '@/app/actions/getStrategyAnalytics';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import MultiStrategyConsensusPanel from '@/components/features/strategy/MultiStrategyConsensusPanel';
 import { getStrategyConsensusHistory } from '@/app/actions/getStrategyConsensusHistory';
+import { getStrategyTradePerformance } from '@/app/actions/getStrategyTradePerformance';
+import type { StrategyTradePerformanceData } from '@/app/actions/getStrategyTradePerformance';
+import { getStrategyDescriptions } from '@/app/actions/strategyRegistry';
+import StrategyTradePerformancePanel from '@/components/features/strategy/StrategyTradePerformancePanel';
 import type { StrategyConsensusHistoryData } from '@/app/actions/getStrategyConsensusHistory';
 import {
     buildConsensusHistory,
@@ -95,10 +99,10 @@ export default async function StrategyPage({
     // 近 N 天模式才額外查詢；最新模式由 getStrategySignals 結果直接推導
     const consensusWindow = consensusParams.window;
     const needsHistory = !isMonitor && !isChart && consensusWindow !== 'latest';
-    // 策略卡片（因子 IC）只在策略視角、非共選圖表模式顯示
+    // 策略卡片（因子 IC）與換股後表現只在策略視角、非共選圖表模式顯示
     const showsStrategyDetail = !isMonitor && !isChart && !isConsensusChart;
 
-    const [result, allIC, analytics, rawConsensus, consensusHistory] = await Promise.all([
+    const [result, allIC, analytics, rawConsensus, consensusHistory, tradePerformance] = await Promise.all([
         getStrategySignals(),
         showsStrategyDetail
             ? getFactorIC([...new Set(Object.values(STRATEGY_FACTORS).flat())], 12)
@@ -108,6 +112,9 @@ export default async function StrategyPage({
         needsHistory
             ? getStrategyConsensusHistory(consensusWindow)
             : Promise.resolve<StrategyConsensusHistoryData | null>(null),
+        showsStrategyDetail
+            ? getStrategyTradePerformance()
+            : Promise.resolve<StrategyTradePerformanceData | null>(null),
     ]);
 
     const consensusStocks = consensusHistory
@@ -246,6 +253,14 @@ export default async function StrategyPage({
                         latestDate={result?.date ?? null}
                         params={consensusParams}
                     />
+
+                    {tradePerformance && (
+                        <StrategyTradePerformancePanel
+                            trades={tradePerformance.trades}
+                            asOf={tradePerformance.asOf}
+                            strategyLabels={getStrategyDescriptions()}
+                        />
+                    )}
 
                     {isConsensusChart ? null : !result || result.strategies.length === 0 ? (
                         <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>

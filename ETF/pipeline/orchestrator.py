@@ -48,6 +48,7 @@ from ETF.pipeline.steps import (
     SyncTopicsStep,
 )
 from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
+from ETF.pipeline.steps.strategy_trade_step import StrategyTradeStep
 from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
 from ETF.pipeline.steps.sector_rrg_step import SectorRrgStep
 from ETF.pipeline.steps.data_validation_step import DataValidationStep
@@ -80,6 +81,7 @@ class PipelineOrchestrator:
         SectorStrengthStep,     # [輔助] 計算全市場族群漲幅 → sector_strength；命中股加進 secondary_stock_codes
         SectorRrgStep,          # [輔助] 族群相對大盤 RRG 訊號（四象限）→ 覆蓋 sector_strength.strength_score
         StrategySignalStep,     # [輔助] 執行量化策略，upsert 訊號 → strategy_signals；策略股加進 secondary_stock_codes
+        StrategyTradeStep,      # [輔助] 由 positions 歷史推導持有期間與換股後報酬 → strategy_trades
         SyncOHLCVStep,          # 合併 ETF 持股 + sector + 策略股一起 sync K 線
         SyncTopicsStep,         # [輔助] 同步投資主題標籤 → stock_topics / stock_topic_assignments
         OverlapComputeStep,     # 聚合跨 ETF 共識持股 → etf_stock_overlap

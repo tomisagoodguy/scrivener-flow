@@ -41,6 +41,11 @@ class PipelineContext:
     # 完整 category 字串清單（一股多題材）。供下游計算 by_sector 共用，避免重複呼叫 FinLab。
     stock_industry_map: Dict[str, List[str]] = field(default_factory=dict)
 
+    # StrategySignalStep 寫入、StrategyTradeStep 消費：各策略 get_positions() 完整歷史
+    # 與共用資料快取（沿用已下載的價格，避免重算策略與重複耗用 FinLab 配額）
+    strategy_positions: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    strategy_data_cache: Optional[Any] = None
+
     # 驗證警告（DataValidationStep 寫入，NotifyStep 讀取）
     validation_warnings: List[str] = field(default_factory=list)
 

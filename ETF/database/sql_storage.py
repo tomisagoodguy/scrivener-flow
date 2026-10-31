@@ -427,6 +427,88 @@ class SQLStorage:
             logger.error(f"upsert_etf_news 失敗: {e}")
             return 0
 
+    _STRATEGY_TRADE_COLUMNS = [
+        "strategy_id", "stock_id", "entry_signal_date", "entry_date", "entry_price",
+        "exit_signal_date", "exit_date", "exit_price", "latest_date", "latest_close",
+        "holding_return", "post_exit_return",
+    ]
+
+    def upsert_strategy_trades(self, records: list) -> None:
+        """Upsert 策略持有期間至 strategy_trades（鍵：strategy_id, stock_id, entry_signal_date）。
+
+        Args:
+            records: price_trade_episodes() 輸出的 row dict，另含 strategy_id。
+        """
+        if not records:
+            return
+        logger.info(f"準備寫入 {len(records)} 筆策略持有期間...")
+        updates = ",\n                ".join(
+            f"{c} = EXCLUDED.{c}" for c in self._STRATEGY_TRADE_COLUMNS[3:]
+        )
+        upsert_sql = f"""
+            INSERT INTO strategy_trades ({", ".join(self._STRATEGY_TRADE_COLUMNS)})
+            VALUES %s
+            ON CONFLICT (strategy_id, stock_id, entry_signal_date)
+            DO UPDATE SET
+                {updates},
+                updated_at = NOW()
+        """
+        self._bulk_upsert(
+            upsert_sql,
+            self._STRATEGY_TRADE_COLUMNS,
+            ["strategy_id", "stock_id", "entry_signal_date"],
+            records,
+        )
+        logger.info("✅ 策略持有期間寫入完成")
+
+    def prune_strategy_trades(
+        self, strategy_id: str, since: str, keep: list[tuple[str, str]]
+    ) -> int:
+        """刪除某策略在重算視窗內（無出場訊號或出場訊號日 >= since）、但不在 keep 鍵集合的列。
+
+        Args:
+            strategy_id: 策略代號。
+            since: 重算視窗起日（YYYY-MM-DD）。
+            keep: 本次推導出的 (stock_id, entry_signal_date) 鍵。
+
+        Returns:
+            刪除筆數。
+        """
+        with self.engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    DELETE FROM strategy_trades t
+                    WHERE t.strategy_id = :strategy_id
+                      AND (t.exit_signal_date IS NULL OR t.exit_signal_date >= CAST(:since AS date))
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM unnest(CAST(:stock_ids AS text[]), CAST(:dates AS date[])) AS k(stock_id, entry_signal_date)
+                          WHERE k.stock_id = t.stock_id AND k.entry_signal_date = t.entry_signal_date
+                      )
+                """),
+                {
+                    "strategy_id": strategy_id,
+                    "since": since,
+                    "stock_ids": [k[0] for k in keep],
+                    "dates": [k[1] for k in keep],
+                },
+            )
+            conn.commit()
+            return result.rowcount
+
+    def delete_expired_strategy_trades(self, days: int = 365) -> int:
+        """刪除出場日早於 days 天前的持有期間，回傳刪除筆數。"""
+        with self.engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    "DELETE FROM strategy_trades "
+                    "WHERE exit_date < CURRENT_DATE - make_interval(days => :days)"
+                ),
+                {"days": days},
+            )
+            conn.commit()
+            return result.rowcount
+
     def upsert_strategy_signals(self, records: list) -> None:
         """Upsert strategy signal rows into strategy_signals table.
 
