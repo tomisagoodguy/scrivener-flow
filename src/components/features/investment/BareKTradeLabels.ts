@@ -24,8 +24,11 @@ const RADIUS = 3;
 const GAP_ABOVE = 6;
 // 「賣」在 K 棒下方要讓出均線發散的 belowBar 箭頭
 const GAP_BELOW = 18;
-// 標籤半寬（12px 字＋左右內距約 20px，加 2px 餘裕）：此範圍內的 K 棒都要避開
+// 標籤寬約 20px（12px 字＋左右內距）；半寬加 2px 餘裕：此範圍內的 K 棒都要避開
+const LABEL_WIDTH = 20;
 const HALF_WIDTH = 12;
+// 同側標籤重疊時，每疊一層的額外間距
+const STACK_GAP = 2;
 
 export interface TradeLabel {
     time: number;
@@ -79,11 +82,34 @@ export function labelAnchorY(
         : Math.max(...covered.map(b => b.lowY));
 }
 
+/**
+ * 同側標籤依序放置，與已放置者相交就往遠離 K 棒的方向（買往上、賣往下）再疊一層；回傳各項最終 top（CSS px）。
+ */
+export function stackLabelTops(
+    items: readonly { x: number; top: number; position: TradeLabel['position'] }[],
+    width: number,
+    height: number,
+    gap: number,
+): number[] {
+    const placed: { x: number; top: number; position: TradeLabel['position'] }[] = [];
+    return items.map(item => {
+        const step = (height + gap) * (item.position === 'above' ? -1 : 1);
+        let top = item.top;
+        const hits = () =>
+            placed.some(p => p.position === item.position && Math.abs(p.x - item.x) < width
+                && top < p.top + height && p.top < top + height);
+        while (hits()) top += step;
+        placed.push({ x: item.x, top, position: item.position });
+        return top;
+    });
+}
+
 type DrawTarget = Parameters<IPrimitivePaneRenderer['draw']>[0];
 
 interface LabelPoint {
     x: number;
-    y: number;
+    /** 標籤頂端（CSS px），已避開 K 棒與同側標籤 */
+    top: number;
     label: TradeLabel;
 }
 
@@ -96,14 +122,12 @@ class TradeLabelsRenderer implements IPrimitivePaneRenderer {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const h = LABEL_HEIGHT * vr;
-            for (const { x, y, label } of this.points) {
-                // y 是錨點（覆蓋範圍內 K 棒的極值）
+            for (const { x, top: cssTop, label } of this.points) {
                 const w = ctx.measureText(label.text).width + PAD_X * 2 * hr;
                 // 貼近左右邊緣的 K 棒：標籤往內收，不被價格軸切掉
                 const cx = Math.min(Math.max(x * hr, w / 2), bitmapSize.width - w / 2);
-                const rawTop = label.position === 'above' ? (y - GAP_ABOVE) * vr - h : (y + GAP_BELOW) * vr;
                 // 價格軸已預留上下邊距；此處只是最後保險，避免標籤畫出圖面
-                const top = Math.min(Math.max(rawTop, 0), bitmapSize.height - h);
+                const top = Math.min(Math.max(cssTop * vr, 0), bitmapSize.height - h);
                 ctx.fillStyle = label.color;
                 ctx.beginPath();
                 ctx.roundRect(cx - w / 2, top, w, h, RADIUS * hr);
@@ -134,12 +158,17 @@ class TradeLabelsPaneView implements IPrimitivePaneView {
             const lowY = series.priceToCoordinate(d.low);
             return x === null || highY === null || lowY === null ? [] : [{ x, highY, lowY }];
         });
-        this.points = this.source.labels.flatMap((label): LabelPoint[] => {
+        // 錨點為覆蓋範圍內 K 棒的極值；labels 已依時間遞增
+        const anchored = this.source.labels.flatMap((label) => {
             const x = timeScale.timeToCoordinate(label.time as unknown as Time);
             if (x === null) return [];
             const y = labelAnchorY(label.position, x, bars, HALF_WIDTH);
-            return y === null ? [] : [{ x, y, label }];
+            if (y === null) return [];
+            const top = label.position === 'above' ? y - GAP_ABOVE - LABEL_HEIGHT : y + GAP_BELOW;
+            return [{ x, top, position: label.position, label }];
         });
+        const tops = stackLabelTops(anchored, LABEL_WIDTH, LABEL_HEIGHT, STACK_GAP);
+        this.points = anchored.map((a, i) => ({ x: a.x, top: tops[i], label: a.label }));
     }
 
     zOrder(): PrimitivePaneViewZOrder {

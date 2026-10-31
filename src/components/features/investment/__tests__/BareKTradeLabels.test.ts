@@ -5,7 +5,7 @@
 
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
 import { toTime } from '../BareKChartConfig';
-import { buildTradeLabels, labelAnchorY } from '../BareKTradeLabels';
+import { buildTradeLabels, labelAnchorY, stackLabelTops } from '../BareKTradeLabels';
 
 jest.mock('lightweight-charts', () => ({}), { virtual: true });
 
@@ -81,5 +81,31 @@ describe('labelAnchorY（change: strategy-chart-label-clearance）', () => {
 
     it('範圍內沒有 K 棒 → null', () => {
         expect(labelAnchorY('above', 100, [{ x: 200, highY: 10, lowY: 20 }], 12)).toBeNull();
+    });
+});
+
+describe('stackLabelTops（change: strategy-chart-label-stacking）', () => {
+    it('同側相鄰「買」往上錯開（spec 範例表 1–4 列 → 50, 32, 16, 50）', () => {
+        const tops = stackLabelTops([
+            { x: 100, top: 50, position: 'above' },
+            { x: 108, top: 50, position: 'above' },
+            { x: 112, top: 52, position: 'above' },
+            { x: 140, top: 50, position: 'above' },
+        ], 20, 16, 2);
+        expect(tops).toEqual([50, 32, 16, 50]);
+    });
+
+    it('同側相鄰「賣」往下錯開（spec 範例表第 5 列 → 98）', () => {
+        expect(stackLabelTops([
+            { x: 100, top: 78, position: 'below' },
+            { x: 104, top: 80, position: 'below' },
+        ], 20, 16, 2)).toEqual([78, 98]);
+    });
+
+    it('「買」與「賣」分屬兩側，不互相避讓', () => {
+        expect(stackLabelTops([
+            { x: 100, top: 50, position: 'above' },
+            { x: 102, top: 50, position: 'below' },
+        ], 20, 16, 2)).toEqual([50, 50]);
     });
 });

@@ -380,7 +380,7 @@ tests:
 ---
 ### Requirement: Strategy holding marks on chart
 
-The strategy chart view SHALL query `strategy_trades` for the stocks shown in the chart and, on each stock's K-line panel, SHALL draw a filled rounded label with white bold text "買" above the bar on every non-null `entry_date`, and a filled rounded label with white bold text "賣" below the bar on every non-null `exit_date`. The "買" label SHALL use a red fill (#e11d48) and the "賣" label a green fill (#059669), with text no smaller than 12 CSS pixels independent of the chart's axis font size. The "賣" label SHALL be offset far enough below the bar not to overlap the fan-breakout up-arrow drawn below the same bar. The chart SHALL NOT mark `entry_signal_date`. Fan-breakout markers (red up-arrows below the bar) SHALL keep rendering unchanged. Trades from all strategies of the stock SHALL be included, regardless of the strategy filter selected in the filter bar. A date SHALL be labeled only when the snapshot's `ohlcv` contains a drawn bar (non-null open and close) on that date; the same label text SHALL appear at most once per date. No label SHALL overlap any candlestick body or wick: a "買" label SHALL sit above the highest high, and a "賣" label below the lowest low, of every bar horizontally covered by the label. When strategy trades are present, the K-line panel's price scale SHALL reserve enough top and bottom margin that labels at the chart's extreme highs and lows stay inside the panel.
+The strategy chart view SHALL query `strategy_trades` for the stocks shown in the chart and, on each stock's K-line panel, SHALL draw a filled rounded label with white bold text "買" above the bar on every non-null `entry_date`, and a filled rounded label with white bold text "賣" below the bar on every non-null `exit_date`. The "買" label SHALL use a red fill (#e11d48) and the "賣" label a green fill (#059669), with text no smaller than 12 CSS pixels independent of the chart's axis font size. The "賣" label SHALL be offset far enough below the bar not to overlap the fan-breakout up-arrow drawn below the same bar. The chart SHALL NOT mark `entry_signal_date`. Fan-breakout markers (red up-arrows below the bar) SHALL keep rendering unchanged. Trades from all strategies of the stock SHALL be included, regardless of the strategy filter selected in the filter bar. A date SHALL be labeled only when the snapshot's `ohlcv` contains a drawn bar (non-null open and close) on that date; the same label text SHALL appear at most once per date. No label SHALL overlap any candlestick body or wick: a "買" label SHALL sit above the highest high, and a "賣" label below the lowest low, of every bar horizontally covered by the label. When strategy trades are present, the K-line panel's price scale SHALL reserve enough top and bottom margin that labels at the chart's extreme highs and lows stay inside the panel. Labels SHALL NOT overlap each other: when a label's rectangle would intersect an already placed label on the same side ("買" above, "賣" below), it SHALL be moved one label height plus 2 CSS px further away from the bars (up for "買", down for "賣"), repeating until it no longer intersects; labels SHALL be placed in ascending time order.
 
 #### Scenario: Entry and exit dates are labeled
 
@@ -419,24 +419,30 @@ The strategy chart view SHALL query `strategy_trades` for the stocks shown in th
 | 買 | 100 | (96, 50, 80), (100, 60, 90), (104, 40, 70), (130, 10, 20) | 12 | 40 |
 | 賣 | 100 | (96, 50, 80), (100, 60, 90), (104, 40, 95), (130, 10, 120) | 12 | 95 |
 
+#### Scenario: Adjacent buy labels are stacked
+
+- **WHEN** stock 1815 has "買" labels on 2026-10-08 and 2026-10-13 whose x positions are 8 px apart and whose anchors give the same top position
+- **THEN** the 2026-10-08 label stays at its anchor position and the 2026-10-13 label is drawn 18 px higher, and the two labels do not overlap
+
+##### Example: stacking tops (label width 20 px, height 16 px, gap 2 px)
+
+| label | x | initial top | placed tops before it | final top |
+| ----- | - | ----------- | --------------------- | --------- |
+| 買 | 100 | 50 | (none) | 50 |
+| 買 | 108 | 50 | (100, 50) | 32 |
+| 買 | 112 | 52 | (100, 50), (108, 32) | 16 |
+| 買 | 140 | 50 | (100, 50), (108, 32), (112, 16) | 50 |
+| 賣 | 104 | 80 | (100, 78) | 98 |
+
 
 <!-- @trace
-source: strategy-chart-label-clearance
+source: strategy-chart-label-stacking
 updated: 2026-10-31
 code:
-  - src/components/features/investment/BareKTradeLabels.ts
-  - src/components/features/investment/equity/EquityChartViewer.tsx
-  - src/lib/investment/equityChartUtils.ts
-  - src/app/investment/equity/page.tsx
-  - ETF/pipeline/steps/sync_bare_k_step.py
-  - src/components/features/investment/BareKChartPanels.ts
   - src/app/actions/getWindowMomentum.ts
+  - src/components/features/investment/BareKTradeLabels.ts
 tests:
   - src/components/features/investment/__tests__/BareKTradeLabels.test.ts
-  - ETF/tests/test_sync_bare_k_step.py
-  - src/components/features/investment/equity/__tests__/EquityChartViewer.test.tsx
-  - src/components/features/investment/__tests__/BareKHoldingMarks.test.ts
-  - src/lib/investment/__tests__/equityChartUtils.test.ts
 -->
 
 ---
