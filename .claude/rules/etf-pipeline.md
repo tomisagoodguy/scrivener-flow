@@ -251,6 +251,8 @@ const { data } = await supabase.from('equity_distribution_stats')
 .eq('stock_code', stockCodes[0])  // 若該股無資料則 distinctDates.length < 2，靜默失敗
 ```
 
+找「前 N 期相異 `snapshot_date`」**禁止**一次撈多列再去重：每期約 500+ 列，PostgREST `max-rows` 上限 1000 會靜默截斷（`.limit(3000)` 也只回 1000），曾導致籌碼排行 3/4 週誤判「歷史快照不足」。改逐期 `.lt('snapshot_date', cursor).order(desc).limit(1)`，範本 `src/lib/investment/equityPageData.ts`。
+
 ## FinLab 策略檔案的 Pylance 型別錯誤
 
 `FinlabDataFrame` 無 `py.typed` stubs，pandas-stubs 的 `__getattr__` 會把任何未知屬性（`.average`、`.rise`、`.is_smallest`、`.index_str_to_date` 等 FinLab 擴展方法）推斷為 `Series[Any]`，導致 `reportCallIssue`（物件無法呼叫）。
