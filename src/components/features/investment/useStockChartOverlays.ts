@@ -27,7 +27,12 @@ const FALLBACK_MA_COLORS = ['#0ea5e9', '#d946ef', '#14b8a6'];
 const MARKER_COLOR_LIGHT = '#e11d48';
 const MARKER_COLOR_DARK = '#fb7185';
 
-function normalizePeriods(periods: readonly number[]): number[] {
+/** 均線顏色（圖上線條與 StockChart 圖例共用） */
+export function maColor(period: number, index: number): string {
+    return MA_COLORS[period] ?? FALLBACK_MA_COLORS[index % FALLBACK_MA_COLORS.length];
+}
+
+export function normalizePeriods(periods: readonly number[]): number[] {
     return Array.from(new Set(periods)).filter(p => Number.isInteger(p) && p > 0);
 }
 
@@ -72,12 +77,12 @@ export function useStockChartOverlays({ chartRef, candleSeriesRef, data, maPerio
             periods.forEach((period, i) => {
                 if (series.has(period)) return;
                 series.set(period, chart.addSeries(LineSeries, {
-                    color: MA_COLORS[period] ?? FALLBACK_MA_COLORS[i % FALLBACK_MA_COLORS.length],
+                    color: maColor(period, i),
                     lineWidth: 1,
                     lastValueVisible: false,
                     priceLineVisible: false,
                     crosshairMarkerVisible: false,
-                    title: `MA${period}`,
+                    // 不設 title：價格軸上的 MA 標籤會擋住 K 線，改由 StockChart 上方圖例標示
                 }));
             });
 

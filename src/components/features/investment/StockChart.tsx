@@ -11,7 +11,7 @@ import {
     LineSeries
 } from 'lightweight-charts';
 import { PriceData, IndicatorService, type ChartMarker } from '@/lib/investment/indicators';
-import { DEFAULT_MA_PERIODS, useStockChartOverlays } from './useStockChartOverlays';
+import { DEFAULT_MA_PERIODS, maColor, normalizePeriods, useStockChartOverlays } from './useStockChartOverlays';
 
 export type { ChartMarker };
 
@@ -223,6 +223,13 @@ export function StockChart({ data, isDarkMode = false, maPeriods = DEFAULT_MA_PE
 
     return (
         <div className="w-full flex flex-col">
+            <div className="text-xs px-2 py-1 flex flex-wrap items-center gap-3" data-testid="ma-legend">
+                {normalizePeriods(maPeriods).map((period, i) => (
+                    <span key={period} className="font-medium" style={{ color: maColor(period, i) }}>
+                        MA{period}
+                    </span>
+                ))}
+            </div>
             <div ref={chartContainerRef} className="w-full" style={{ height: 450 }} />
             <div className="text-xs text-slate-400 px-2 py-1 flex items-center gap-1">
                 RSI(14)

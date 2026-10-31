@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { createChart, createSeriesMarkers, LineSeries } from 'lightweight-charts';
 import { StockChart } from '@/components/features/investment/StockChart';
 import type { ChartMarker, PriceData } from '@/lib/investment/indicators';
@@ -75,7 +75,11 @@ function maLines(chart: MockChart): { options: Record<string, unknown>; series: 
         .map(({ options, series }) => ({ options, series }));
 }
 
-const titles = (chart: MockChart) => maLines(chart).map(l => l.options.title);
+// 均線不再設 series title（價格軸標籤會擋住 K 線），改以顏色辨識週期
+const COLOR_TO_MA: Record<string, string> = {
+    '#3b82f6': 'MA5', '#0891b2': 'MA10', '#f59e0b': 'MA20', '#a855f7': 'MA60', '#64748b': 'MA120',
+};
+const titles = (chart: MockChart) => maLines(chart).map(l => COLOR_TO_MA[l.options.color as string]);
 
 beforeAll(() => {
     // jsdom 的 clientWidth 恆為 0，StockChart 在寬度 0 時不建圖
@@ -93,9 +97,9 @@ describe('StockChart default behaviour (existing usages)', () => {
         const lines = maLines(mainChart());
         expect(lines).toHaveLength(3);
         expect(lines.map(l => [l.options.title, l.options.color, l.options.lineWidth])).toEqual([
-            ['MA5', '#3b82f6', 1],
-            ['MA20', '#f59e0b', 1],
-            ['MA60', '#a855f7', 1],
+            [undefined, '#3b82f6', 1],
+            [undefined, '#f59e0b', 1],
+            [undefined, '#a855f7', 1],
         ]);
         expect(createSeriesMarkersMock).not.toHaveBeenCalled();
     });
@@ -115,6 +119,7 @@ describe('StockChart maPeriods', () => {
         const lines = maLines(mainChart());
         expect(lines).toHaveLength(5);
         expect(titles(mainChart())).toEqual(['MA5', 'MA10', 'MA20', 'MA60', 'MA120']);
+        expect(screen.getByTestId('ma-legend').textContent).toBe('MA5MA10MA20MA60MA120');
         expect(new Set(lines.map(l => l.options.color)).size).toBe(5);
         const ma120 = lines[4].series.setData.mock.calls[0][0] as unknown[];
         expect(ma120).toHaveLength(11);
