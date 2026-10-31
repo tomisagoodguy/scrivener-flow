@@ -2,6 +2,7 @@
 
 import { unstable_cache } from 'next/cache';
 import { getPublicClient } from '@/lib/supabase/service';
+import { isTaiwanStockCode } from '@/lib/investment/holdingFilters';
 import {
     aggregateWindowMomentum,
     computeAbsorptionRatio,
@@ -152,7 +153,10 @@ async function computeWindowMomentum(
     const minDate = windowDates[0];
     const maxDate = windowDates[windowDates.length - 1];
 
-    const events = await fetchDiffEvents(supabase, minDate, maxDate);
+    // 只留台股代號：美股等海外成分股無 OHLCV/裸K 資料，聚合前排除以免佔家數門檻
+    const events = (await fetchDiffEvents(supabase, minDate, maxDate)).filter((e) =>
+        isTaiwanStockCode(e.stock_code),
+    );
     const aggregated = aggregateWindowMomentum(events, minEtfCount);
     if (aggregated.length === 0) {
         return { stocks: [], windowStart: minDate, windowEnd: maxDate };
@@ -219,7 +223,7 @@ export async function getWindowMomentum(
 ): Promise<WindowMomentumResult> {
     const cached = unstable_cache(
         () => computeWindowMomentum(windowDays, minEtfCount),
-        ['window-momentum-v2', String(windowDays), String(minEtfCount)],
+        ['window-momentum-v3', String(windowDays), String(minEtfCount)],
         { revalidate: 3600 },
     );
     return cached();
