@@ -8,12 +8,58 @@ TBD - created by archiving change 'strategy-consensus-panel-enhance'. Update Pur
 
 ### Requirement: Consensus matrix view toggle
 
-The multi-strategy consensus panel SHALL offer a "列表 / 矩陣" toggle implemented as links setting the URL search parameter `cview` to `list` or `matrix`, preserving `cmin` and `cwin`. The default SHALL be `list`; any missing or unrecognized value SHALL be treated as `list`. The toggle SHALL apply in both latest mode and history mode.
+The multi-strategy consensus panel SHALL offer a "列表 / 矩陣 / 圖表" toggle implemented as links setting the URL search parameter `cview` to `list`, `matrix` or `chart`, preserving `cmin` and `cwin`. The default SHALL be `list`; any missing or unrecognized value SHALL be treated as `list`. The toggle SHALL apply in both latest mode and history mode.
 
 #### Scenario: Switching to matrix
 
 - **WHEN** the user clicks "矩陣" on `/investment/strategy?cmin=3`
 - **THEN** the URL becomes `/investment/strategy?cmin=3&cview=matrix` and the matrix replaces the chip list
+
+#### Scenario: Switching to chart
+
+- **WHEN** the user clicks "圖表" on `/investment/strategy?cmin=3&cwin=14`
+- **THEN** the URL becomes `/investment/strategy?cmin=3&cview=chart&cwin=14` and the bare-K chart viewer replaces the chip list
+
+#### Scenario: Unrecognized view value
+
+- **WHEN** the user opens `/investment/strategy?cview=grid`
+- **THEN** the panel renders the list view and the "列表" option is highlighted
+
+
+<!-- @trace
+source: strategy-consensus-chart-view
+updated: 2026-10-31
+code:
+  - src/lib/investment/strategyConsensusUtils.ts
+  - ETF/pipeline/steps/strategy_signal_step.py
+  - src/lib/investment/strategyTradeUtils.ts
+  - supabase/migrations/20261031120000_add_strategy_trades.sql
+  - src/app/actions/getStrategyTradePerformance.ts
+  - src/components/features/strategy/MultiStrategyConsensusPanel.tsx
+  - ETF/processors/strategy_trades.py
+  - ETF/pipeline/orchestrator.py
+  - src/components/features/strategy/TradeRecentExits.tsx
+  - ETF/database/sql_storage.py
+  - ETF/pipeline/steps/strategy_trade_step.py
+  - src/components/features/strategy/TradeReturnColumns.tsx
+  - src/components/features/strategy/TradeSummary.tsx
+  - src/components/features/strategy/StrategyTag.tsx
+  - src/app/investment/strategy/page.tsx
+  - src/components/features/strategy/ConsensusChartViewer.tsx
+  - src/components/features/strategy/StrategyTradePerformancePanel.tsx
+  - ETF/pipeline/context.py
+  - src/components/features/strategy/ConsensusControls.tsx
+  - src/components/features/strategy/TradeIndustryTable.tsx
+tests:
+  - ETF/tests/test_strategy_trade_step.py
+  - src/components/features/strategy/__tests__/StrategyTradePerformancePanel.test.tsx
+  - src/__tests__/lib/buildMultiConsensusStocks.test.ts
+  - src/__tests__/components/MultiStrategyConsensusPanel.test.tsx
+  - src/app/actions/__tests__/getStrategyTradePerformance.test.ts
+  - ETF/tests/test_strategy_trades.py
+  - src/components/features/strategy/__tests__/ConsensusChartViewer.test.tsx
+  - src/lib/investment/__tests__/strategyTradeUtils.test.ts
+-->
 
 ---
 ### Requirement: Stock by strategy matrix rendering

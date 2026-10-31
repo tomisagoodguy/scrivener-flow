@@ -22,7 +22,7 @@ export interface MultiConsensusEntry {
 }
 
 export type ConsensusMinCount = 2 | 3 | 4;
-export type ConsensusView = 'list' | 'matrix';
+export type ConsensusView = 'list' | 'matrix' | 'chart';
 export type ConsensusWindow = 'latest' | 7 | 14 | 30;
 
 export interface ConsensusParams {
@@ -37,9 +37,21 @@ export const CONSENSUS_WINDOW_DAYS: readonly Exclude<ConsensusWindow, 'latest'>[
 /** 解析 cmin / cview / cwin search params，非法值回退預設（2 / list / latest）。 */
 export function parseConsensusParams(sp: { cmin?: string; cview?: string; cwin?: string }): ConsensusParams {
     const minCount = CONSENSUS_MIN_COUNTS.find((n) => String(n) === sp.cmin) ?? 2;
-    const view: ConsensusView = sp.cview === 'matrix' ? 'matrix' : 'list';
+    const view: ConsensusView = sp.cview === 'matrix' || sp.cview === 'chart' ? sp.cview : 'list';
     const window = CONSENSUS_WINDOW_DAYS.find((n) => String(n) === sp.cwin) ?? 'latest';
     return { minCount, view, window };
+}
+
+const CONSENSUS_BASE_PATH = '/investment/strategy';
+
+/** 組策略頁 URL：省略預設值，參數順序固定為 cmin → cview → cwin */
+export function buildConsensusHref(params: ConsensusParams): string {
+    const qs = new URLSearchParams();
+    if (params.minCount !== 2) qs.set('cmin', String(params.minCount));
+    if (params.view !== 'list') qs.set('cview', params.view);
+    if (params.window !== 'latest') qs.set('cwin', String(params.window));
+    const query = qs.toString();
+    return query ? `${CONSENSUS_BASE_PATH}?${query}` : CONSENSUS_BASE_PATH;
 }
 
 function toStrategyRefs(ids: Iterable<string>): ConsensusStrategyRef[] {

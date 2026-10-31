@@ -1,6 +1,7 @@
 import ConsensusControls from './ConsensusControls';
 import ConsensusStockChip from './ConsensusStockChip';
 import ConsensusMatrix from './ConsensusMatrix';
+import ConsensusChartViewer from './ConsensusChartViewer';
 import { formatMonthDay, shortStrategyLabel } from '@/lib/investment/strategyConsensusUtils';
 import type { ConsensusParams, MultiConsensusEntry } from '@/lib/investment/strategyConsensusUtils';
 export type { MultiConsensusEntry } from '@/lib/investment/strategyConsensusUtils';
@@ -41,7 +42,9 @@ export default function MultiStrategyConsensusPanel({ stocks, strategies, latest
     const isLatest = params.window === 'latest';
     const strategyDates = isLatest ? Object.fromEntries(strategies.map((s) => [s.id, s.date])) : undefined;
 
-    return (
+    const isChart = params.view === 'chart';
+
+    const card = (
         <div className="glass-card rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
@@ -59,7 +62,7 @@ export default function MultiStrategyConsensusPanel({ stocks, strategies, latest
                 </p>
             )}
 
-            {params.view === 'matrix' ? (
+            {isChart ? null : params.view === 'matrix' ? (
                 <ConsensusMatrix stocks={stocks} strategyDates={strategyDates} />
             ) : stocks.length === 0 ? (
                 <p className="text-xs text-gray-400">目前條件下無共選股</p>
@@ -70,6 +73,16 @@ export default function MultiStrategyConsensusPanel({ stocks, strategies, latest
                     ))}
                 </div>
             )}
+        </div>
+    );
+
+    if (!isChart) return card;
+
+    // 圖表放在卡片外：連續捲動檢視器自帶 sticky 子導覽列與各段 glass-card
+    return (
+        <div>
+            {card}
+            <ConsensusChartViewer stocks={stocks} params={params} />
         </div>
     );
 }

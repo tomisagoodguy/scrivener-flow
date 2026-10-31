@@ -1,18 +1,6 @@
 import Link from 'next/link';
-import { CONSENSUS_MIN_COUNTS, CONSENSUS_WINDOW_DAYS } from '@/lib/investment/strategyConsensusUtils';
+import { buildConsensusHref, CONSENSUS_MIN_COUNTS, CONSENSUS_WINDOW_DAYS } from '@/lib/investment/strategyConsensusUtils';
 import type { ConsensusParams } from '@/lib/investment/strategyConsensusUtils';
-
-const BASE_PATH = '/investment/strategy';
-
-/** 組 URL：省略預設值，參數順序固定為 cmin → cview → cwin */
-function buildHref(params: ConsensusParams): string {
-    const qs = new URLSearchParams();
-    if (params.minCount !== 2) qs.set('cmin', String(params.minCount));
-    if (params.view !== 'list') qs.set('cview', params.view);
-    if (params.window !== 'latest') qs.set('cwin', String(params.window));
-    const query = qs.toString();
-    return query ? `${BASE_PATH}?${query}` : BASE_PATH;
-}
 
 function optionClass(active: boolean): string {
     return `text-xs px-2 py-1 rounded-md transition-all ${
@@ -34,7 +22,7 @@ function OptionGroup({ options, params }: { options: Option[]; params: Consensus
             {options.map((o) => (
                 <Link
                     key={o.label}
-                    href={buildHref({ ...params, ...o.patch })}
+                    href={buildConsensusHref({ ...params, ...o.patch })}
                     scroll={false}
                     className={optionClass(o.active)}
                 >
@@ -55,6 +43,7 @@ export default function ConsensusControls({ params }: { params: ConsensusParams 
     const viewOptions: Option[] = [
         { label: '列表', patch: { view: 'list' }, active: params.view === 'list' },
         { label: '矩陣', patch: { view: 'matrix' }, active: params.view === 'matrix' },
+        { label: '圖表', patch: { view: 'chart' }, active: params.view === 'chart' },
     ];
 
     const windowOptions: Option[] = [

@@ -91,16 +91,18 @@ export default async function StrategyPage({
     const isMonitor = view === 'monitor';
     const isChart = view === 'chart';
     const consensusParams = parseConsensusParams({ cmin, cview, cwin });
+    const isConsensusChart = consensusParams.view === 'chart';
     // 近 N 天模式才額外查詢；最新模式由 getStrategySignals 結果直接推導
     const consensusWindow = consensusParams.window;
     const needsHistory = !isMonitor && !isChart && consensusWindow !== 'latest';
+    // 策略卡片（因子 IC）只在策略視角、非共選圖表模式顯示
+    const showsStrategyDetail = !isMonitor && !isChart && !isConsensusChart;
 
     const [result, allIC, analytics, rawConsensus, consensusHistory] = await Promise.all([
         getStrategySignals(),
-        getFactorIC(
-            [...new Set(Object.values(STRATEGY_FACTORS).flat())],
-            12,
-        ),
+        showsStrategyDetail
+            ? getFactorIC([...new Set(Object.values(STRATEGY_FACTORS).flat())], 12)
+            : Promise.resolve<FactorICRow[]>([]),
         getStrategyAnalytics(),
         getConsensusSignals().catch(() => ({ signals: [], date: null })),
         needsHistory
@@ -232,9 +234,9 @@ export default async function StrategyPage({
                     </>
                 )
             ) : (
-                /* Strategy view: original cards */
+                /* Strategy view: original cards（共選圖表模式只留共選面板，避免長捲動圖表後再接卡片） */
                 <>
-                    {analytics.stocks.length > 0 && (
+                    {!isConsensusChart && analytics.stocks.length > 0 && (
                         <StrategyAnalyticsPanel data={analytics} />
                     )}
 
@@ -245,7 +247,7 @@ export default async function StrategyPage({
                         params={consensusParams}
                     />
 
-                    {!result || result.strategies.length === 0 ? (
+                    {isConsensusChart ? null : !result || result.strategies.length === 0 ? (
                         <p className="text-gray-400 text-sm">本日無任何策略訊號。</p>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">

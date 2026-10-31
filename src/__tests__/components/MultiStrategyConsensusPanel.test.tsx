@@ -19,6 +19,14 @@ jest.mock('next/link', () => {
     return MockLink;
 });
 
+jest.mock('@/components/features/strategy/ConsensusChartViewer', () => {
+    const MockViewer = ({ stocks }: { stocks: { stock_id: string }[] }) => (
+        <div data-testid="consensus-chart">{stocks.map((s) => s.stock_id).join(',')}</div>
+    );
+    MockViewer.displayName = 'MockConsensusChartViewer';
+    return MockViewer;
+});
+
 const refs = [
     { id: 'capital_layer', label: 'Capital Layer 多層籌碼選股' },
     { id: 'trend_template', label: '趨勢樣板選股' },
@@ -102,5 +110,25 @@ describe('MultiStrategyConsensusPanel', () => {
         renderPanel();
         const links = screen.getAllByRole('link');
         expect(links.some((l) => l.getAttribute('href') === '/investment/stock/3055')).toBe(true);
+    });
+    it('offers 列表 / 矩陣 / 圖表 toggle preserving cmin and cwin', () => {
+        renderPanel({ params: { minCount: 3, view: 'list', window: 14 } });
+        const chart = screen.getByText('圖表').closest('a');
+        expect(chart).toHaveAttribute('href', '/investment/strategy?cmin=3&cview=chart&cwin=14');
+        expect(screen.getByText('矩陣').closest('a')).toHaveAttribute('href', '/investment/strategy?cmin=3&cview=matrix&cwin=14');
+        expect(screen.getByText('列表').closest('a')).toHaveAttribute('href', '/investment/strategy?cmin=3&cwin=14');
+    });
+    it('chart view renders the chart viewer below the controls instead of chips', () => {
+        renderPanel({ params: { minCount: 2, view: 'chart', window: 'latest' } });
+        expect(screen.getByTestId('consensus-chart')).toHaveTextContent('3055,2464');
+        expect(screen.getByText('多策略共選')).toBeInTheDocument();
+        expect(screen.getByText('圖表').closest('a')).toHaveAttribute('href', '/investment/strategy?cview=chart');
+        expect(screen.queryByText('3 策略')).not.toBeInTheDocument();
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    });
+
+    it('list view does not render the chart viewer', () => {
+        renderPanel();
+        expect(screen.queryByTestId('consensus-chart')).not.toBeInTheDocument();
     });
 });
