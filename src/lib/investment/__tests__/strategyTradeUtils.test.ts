@@ -5,6 +5,8 @@
 import {
     groupByIndustry,
     holdingDays,
+    holdingMarksFromTrades,
+    rankWinnerStocks,
     recentExits,
     splitByReturn,
     summarizeTrades,
@@ -131,5 +133,59 @@ describe('holdingDays', () => {
     it('進場日到最新資料日的日曆天數；缺日期回 null', () => {
         expect(holdingDays(trade({ entryDate: '2026-10-02', latestDate: '2026-10-30' }))).toBe(28);
         expect(holdingDays(trade({ entryDate: null }))).toBeNull();
+    });
+});
+
+describe('rankWinnerStocks（change: strategy-trade-winners-chart）', () => {
+    it('Example ordering：2330 0.12、2317 0.30、2454 0.12、2330 0.05 → 2317, 2330, 2454', () => {
+        const trades = [
+            trade({ stockId: '2330', holdingReturn: 0.12, strategyId: 'trend_template' }),
+            trade({ stockId: '2317', holdingReturn: 0.3 }),
+            trade({ stockId: '2454', holdingReturn: 0.12 }),
+            trade({ stockId: '2330', holdingReturn: 0.05, strategyId: 'capital_layer' }),
+        ];
+        const ranked = rankWinnerStocks(trades);
+        expect(ranked.map((w) => w.stockId)).toEqual(['2317', '2330', '2454']);
+        const tsmc = ranked[1];
+        expect(tsmc.best.holdingReturn).toBe(0.12);
+        expect(tsmc.strategyIds).toEqual(['trend_template', 'capital_layer']);
+    });
+
+    it('排除報酬 0、待進場、已出場、報酬 null', () => {
+        const trades = [
+            trade({ stockId: 'ZERO', holdingReturn: 0 }),
+            trade({ stockId: 'PEND', entryDate: null, holdingReturn: 0.1 }),
+            trade({ stockId: 'EXIT', exitDate: '2026-10-20', holdingReturn: 0.2 }),
+            trade({ stockId: 'NULL', holdingReturn: null }),
+            trade({ stockId: 'NEG', holdingReturn: -0.1 }),
+        ];
+        expect(rankWinnerStocks(trades)).toEqual([]);
+    });
+
+    it('同股同策略重複只列一次策略', () => {
+        const trades = [
+            trade({ stockId: 'A', holdingReturn: 0.2, entrySignalDate: '2026-09-01' }),
+            trade({ stockId: 'A', holdingReturn: 0.1, entrySignalDate: '2026-10-01' }),
+        ];
+        expect(rankWinnerStocks(trades)[0].strategyIds).toEqual(['trend_template']);
+    });
+});
+
+describe('holdingMarksFromTrades（change: strategy-trade-winners-chart）', () => {
+    it('持有中 trade 產生買進日與開放區間；待進場略過；已出場含賣出日', () => {
+        const marks = holdingMarksFromTrades([
+            trade({ stockId: '2330', entryDate: '2026-10-01' }),
+            trade({ stockId: '2330', entryDate: '2026-08-01', exitDate: '2026-09-01' }),
+            trade({ stockId: 'PEND', entryDate: null }),
+        ]);
+        expect(marks['2330']).toEqual({
+            entryDates: ['2026-08-01', '2026-10-01'],
+            exitDates: ['2026-09-01'],
+            periods: [
+                { start: '2026-08-01', end: '2026-09-01' },
+                { start: '2026-10-01', end: null },
+            ],
+        });
+        expect(marks.PEND).toBeUndefined();
     });
 });

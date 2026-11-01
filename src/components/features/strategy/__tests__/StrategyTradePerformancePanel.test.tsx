@@ -6,6 +6,19 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import StrategyTradePerformancePanel from '../StrategyTradePerformancePanel';
 import type { StrategyTrade } from '@/lib/investment/strategyTradeUtils';
 
+const mockViewer = jest.fn();
+jest.mock('../TradeWinnersChartViewer', () => ({
+    __esModule: true,
+    default: (props: { trades: StrategyTrade[]; resetKey: string; strategyShortLabels?: Record<string, string>; onBack: () => void }) => {
+        mockViewer(props);
+        return (
+            <button type="button" data-testid="winners-chart" onClick={props.onBack}>
+                {props.resetKey}
+            </button>
+        );
+    },
+}));
+
 function trade(overrides: Partial<StrategyTrade>): StrategyTrade {
     return {
         strategyId: 'trend_template',
@@ -111,5 +124,47 @@ describe('StrategyTradePerformancePanel', () => {
         expect(within(screen.getByTestId('trade-pending')).getByText('趨勢樣板選股')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: '趨勢樣板選股' }));
         expect(within(screen.getByTestId('trade-exits')).queryByText('趨勢樣板選股')).not.toBeInTheDocument();
+    });
+
+    describe('列表／圖表切換（change: strategy-trade-winners-chart）', () => {
+        it('預設列表模式，顯示正負報酬欄、不渲染圖表', () => {
+            renderPanel();
+            expect(screen.getByRole('button', { name: '列表' })).toHaveAttribute('aria-pressed', 'true');
+            expect(screen.getByTestId('trade-positive')).toBeInTheDocument();
+            expect(screen.queryByTestId('winners-chart')).not.toBeInTheDocument();
+        });
+
+        it('切到圖表：保留摘要與附註，正負欄、產業表、近期換出不渲染', () => {
+            renderPanel();
+            const before = window.location.href;
+            fireEvent.click(screen.getByRole('button', { name: '圖表' }));
+            expect(window.location.href).toBe(before);
+            expect(screen.getByTestId('winners-chart')).toBeInTheDocument();
+            expect(screen.getByTestId('trade-summary')).toBeInTheDocument();
+            expect(screen.getByText(/自換股訊號隔日開盤起算/)).toBeInTheDocument();
+            for (const id of ['trade-positive', 'trade-negative', 'trade-industry', 'trade-exits']) {
+                expect(screen.queryByTestId(id)).not.toBeInTheDocument();
+            }
+        });
+
+        it('切換策略時保留圖表模式，傳入該策略 trades 與 resetKey、不帶策略簡稱', () => {
+            renderPanel();
+            fireEvent.click(screen.getByRole('button', { name: '圖表' }));
+            expect(mockViewer).toHaveBeenLastCalledWith(
+                expect.objectContaining({ resetKey: 'all', strategyShortLabels: expect.any(Object) }),
+            );
+            fireEvent.click(screen.getByRole('button', { name: 'Capital …' }));
+            const props = mockViewer.mock.calls.at(-1)?.[0];
+            expect(props.resetKey).toBe('capital_layer');
+            expect(props.strategyShortLabels).toBeUndefined();
+            expect(props.trades.map((t: StrategyTrade) => t.stockId)).toEqual(['2603']);
+        });
+
+        it('圖表返回鍵切回列表', () => {
+            renderPanel();
+            fireEvent.click(screen.getByRole('button', { name: '圖表' }));
+            fireEvent.click(screen.getByTestId('winners-chart'));
+            expect(screen.getByTestId('trade-positive')).toBeInTheDocument();
+        });
     });
 });

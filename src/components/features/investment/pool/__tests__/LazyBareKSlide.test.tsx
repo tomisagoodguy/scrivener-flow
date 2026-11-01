@@ -7,8 +7,16 @@ jest.mock('@/app/actions/getStrategySnapshots', () => ({
 }));
 
 jest.mock('@/components/features/investment/BareKChart', () => ({
-    BareKChart: ({ stockName, strategies }: { stockName: string; strategies: string[] }) => (
-        <div data-testid="bare-k-chart">
+    BareKChart: ({
+        stockName,
+        strategies,
+        holdingMarks,
+    }: {
+        stockName: string;
+        strategies: string[];
+        holdingMarks?: { entryDates: string[] };
+    }) => (
+        <div data-testid="bare-k-chart" data-entry-dates={holdingMarks?.entryDates.join(',') ?? ''}>
             {stockName}|{strategies.join(',')}
         </div>
     ),
@@ -115,6 +123,15 @@ describe('LazyBareKSlide', () => {
         advance(300);
         expect(await screen.findByTestId('bare-k-chart')).toHaveTextContent('台積電|00981A,00980A');
         expect(screen.queryByTestId('lazy-bare-k-loading')).not.toBeInTheDocument();
+    });
+
+    it('holdingMarks 原樣轉傳給圖表；未傳時為空（change: strategy-trade-winners-chart）', async () => {
+        mockGet.mockResolvedValue(new Map([['2330', SNAPSHOT]]));
+        const marks = { entryDates: ['2026-10-01'], exitDates: [], periods: [{ start: '2026-10-01', end: null }] };
+        render(<LazyBareKSlide code="2330" name="台積電" strategies={[]} holdingMarks={marks} />);
+        setInView(true);
+        advance(300);
+        expect(await screen.findByTestId('bare-k-chart')).toHaveAttribute('data-entry-dates', '2026-10-01');
     });
 
     it('無快照時顯示尚未同步文案', async () => {

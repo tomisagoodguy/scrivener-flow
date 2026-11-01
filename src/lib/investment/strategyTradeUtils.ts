@@ -93,6 +93,45 @@ export function splitByReturn(trades: StrategyTrade[]): { positive: StrategyTrad
     };
 }
 
+/** 正報酬持有股（圖表用）：同股多策略只出現一次 */
+export interface WinnerStock {
+    stockId: string;
+    name: string | null;
+    /** 該股正報酬 trades 中最高者 */
+    best: StrategyTrade & { holdingReturn: number };
+    /** 正報酬持有此股的策略 id，依報酬遞減、去重 */
+    strategyIds: string[];
+}
+
+/** 持有中、已進場、報酬 > 0 的個股，同股去重，依最高報酬遞減；同報酬依 stockId 升冪 */
+export function rankWinnerStocks(trades: StrategyTrade[]): WinnerStock[] {
+    const byStock = new Map<string, WinnerStock>();
+    // 先依報酬遞減，第一次遇到的就是該股最高報酬，策略順序也自然遞減
+    for (const t of splitByReturn(trades).positive as (StrategyTrade & { holdingReturn: number })[]) {
+        const w = byStock.get(t.stockId);
+        if (!w) {
+            byStock.set(t.stockId, { stockId: t.stockId, name: t.name, best: t, strategyIds: [t.strategyId] });
+        } else if (!w.strategyIds.includes(t.strategyId)) {
+            w.strategyIds.push(t.strategyId);
+        }
+    }
+    return [...byStock.values()].sort(
+        (a, b) => b.best.holdingReturn - a.best.holdingReturn || a.stockId.localeCompare(b.stockId),
+    );
+}
+
+/** StrategyTrade → 每股 K 線持有標記（待進場略過，由 buildHoldingMarks 處理） */
+export function holdingMarksFromTrades(trades: StrategyTrade[]): Record<string, StrategyHoldingMarks> {
+    return buildHoldingMarks(
+        trades.map((t) => ({
+            stock_id: t.stockId,
+            entry_signal_date: t.entrySignalDate,
+            entry_date: t.entryDate,
+            exit_date: t.exitDate,
+        })),
+    );
+}
+
 /** 持有中個股依產業彙總，依平均報酬遞減 */
 export function groupByIndustry(trades: StrategyTrade[]): IndustryGroup[] {
     const buckets = new Map<string, number[]>();

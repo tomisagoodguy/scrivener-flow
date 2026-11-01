@@ -5,6 +5,7 @@ import TradeSummary from './TradeSummary';
 import TradeReturnColumns from './TradeReturnColumns';
 import TradeIndustryTable from './TradeIndustryTable';
 import TradeRecentExits from './TradeRecentExits';
+import TradeWinnersChartViewer from './TradeWinnersChartViewer';
 import { shortStrategyLabel } from '@/lib/investment/strategyConsensusUtils';
 import { summarizeTrades } from '@/lib/investment/strategyTradeUtils';
 import type { StrategyTrade } from '@/lib/investment/strategyTradeUtils';
@@ -19,6 +20,12 @@ interface Props {
 
 const ALL = 'all';
 
+type Mode = 'list' | 'chart';
+const MODES: { id: Mode; label: string }[] = [
+    { id: 'list', label: '列表' },
+    { id: 'chart', label: '圖表' },
+];
+
 function optionClass(active: boolean): string {
     return `text-xs px-2 py-1 rounded-md transition-all ${
         active
@@ -27,9 +34,10 @@ function optionClass(active: boolean): string {
     }`;
 }
 
-/** 策略頁「換股後表現」：持有中正負報酬、產業彙總、近期換出；策略切換為 client state（不進 URL）。 */
+/** 策略頁「換股後表現」：持有中正負報酬、產業彙總、近期換出，或正報酬股裸K圖；策略與模式切換皆為 client state（不進 URL）。 */
 export default function StrategyTradePerformancePanel({ trades, asOf, strategyLabels }: Props) {
     const [selected, setSelected] = useState<string>(ALL);
+    const [mode, setMode] = useState<Mode>('list');
 
     const shortLabels = useMemo(() => {
         const ids = [...new Set(trades.map((t) => t.strategyId))];
@@ -46,18 +54,33 @@ export default function StrategyTradePerformancePanel({ trades, asOf, strategyLa
             <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">換股後表現</h2>
                 {trades.length > 0 && (
-                    <div className="flex flex-wrap gap-0.5 bg-gray-100/70 dark:bg-gray-800/50 rounded-lg p-0.5">
-                        {[ALL, ...Object.keys(shortLabels)].map((id) => (
-                            <button
-                                key={id}
-                                type="button"
-                                title={id === ALL ? undefined : strategyLabels[id] ?? id}
-                                onClick={() => setSelected(id)}
-                                className={optionClass(selected === id)}
-                            >
-                                {id === ALL ? '全部' : shortLabels[id]}
-                            </button>
-                        ))}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex gap-0.5 bg-gray-100/70 dark:bg-gray-800/50 rounded-lg p-0.5">
+                            {MODES.map((m) => (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    aria-pressed={mode === m.id}
+                                    onClick={() => setMode(m.id)}
+                                    className={optionClass(mode === m.id)}
+                                >
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex flex-wrap gap-0.5 bg-gray-100/70 dark:bg-gray-800/50 rounded-lg p-0.5">
+                            {[ALL, ...Object.keys(shortLabels)].map((id) => (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    title={id === ALL ? undefined : (strategyLabels[id] ?? id)}
+                                    onClick={() => setSelected(id)}
+                                    className={optionClass(selected === id)}
+                                >
+                                    {id === ALL ? '全部' : shortLabels[id]}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -67,11 +90,22 @@ export default function StrategyTradePerformancePanel({ trades, asOf, strategyLa
             ) : (
                 <>
                     <TradeSummary summary={summary} strategyShortLabels={tagLabels} />
-                    <TradeReturnColumns trades={scoped} strategyShortLabels={tagLabels} />
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        <TradeIndustryTable trades={scoped} />
-                        <TradeRecentExits trades={scoped} asOf={asOf} strategyShortLabels={tagLabels} />
-                    </div>
+                    {mode === 'chart' ? (
+                        <TradeWinnersChartViewer
+                            trades={scoped}
+                            strategyShortLabels={tagLabels}
+                            resetKey={selected}
+                            onBack={() => setMode('list')}
+                        />
+                    ) : (
+                        <>
+                            <TradeReturnColumns trades={scoped} strategyShortLabels={tagLabels} />
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                <TradeIndustryTable trades={scoped} />
+                                <TradeRecentExits trades={scoped} asOf={asOf} strategyShortLabels={tagLabels} />
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 

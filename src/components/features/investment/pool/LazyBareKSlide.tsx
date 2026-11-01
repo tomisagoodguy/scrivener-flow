@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { BareKSlideContent } from '@/components/features/investment/BareKSlideContent';
 import { getStrategySnapshots } from '@/app/actions/getStrategySnapshots';
 import type { BareKSnapshot } from '@/app/api/investment/bare-k/[code]/route';
+import type { StrategyHoldingMarks } from '@/lib/investment/strategyTradeUtils';
 
 interface Props {
     code: string;
     name: string;
     /** 持有此股的 ETF 代號，當作圖表標籤 */
     strategies: string[];
+    /** K 線上的買賣日與持有區間；未傳不畫 */
+    holdingMarks?: StrategyHoldingMarks;
 }
 
 type LoadState =
@@ -25,7 +28,7 @@ export const DWELL_MS = 300;
  * 選股池上百檔，伺服器端一次嵌入全部快照 payload 過大；
  * 而 Server Action 在瀏覽器端排隊執行，跳轉時沿路段落若都請求，目的地會排在最後。
  */
-export function LazyBareKSlide({ code, name, strategies }: Props) {
+export function LazyBareKSlide({ code, name, strategies, holdingMarks }: Props) {
     const [state, setState] = useState<LoadState>({ status: 'loading' });
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -68,10 +71,16 @@ export function LazyBareKSlide({ code, name, strategies }: Props) {
         };
     }, [code]);
 
-    return <div ref={containerRef}>{renderState(state, code, name, strategies)}</div>;
+    return <div ref={containerRef}>{renderState(state, code, name, strategies, holdingMarks)}</div>;
 }
 
-function renderState(state: LoadState, code: string, name: string, strategies: string[]) {
+function renderState(
+    state: LoadState,
+    code: string,
+    name: string,
+    strategies: string[],
+    holdingMarks: StrategyHoldingMarks | undefined,
+) {
     if (state.status === 'loading') {
         return (
             <div
@@ -97,6 +106,7 @@ function renderState(state: LoadState, code: string, name: string, strategies: s
             strategies={strategies}
             snapshot={state.snapshot}
             noSnapshotMessage="此股票尚未同步裸K資料，將於下次 Pipeline 執行後更新"
+            holdingMarks={holdingMarks}
         />
     );
 }
