@@ -50,4 +50,5 @@ Playwright 定位 `/investment/*` 連結**別用名稱子字串**：全域導覽
 - **`spectra task start` / `spectra scope` 報 `traverses a directory symlink`**（因 `.claude/skills/finlab` 是資料夾捷徑）：無法建立基準快照，不是 change 本身有錯。改在完成時明確歸屬檔案：`spectra task done --change <name> <id> --file <path> --file <path>`；verify/review 改用 `git status` 界定範圍。
 - **`/spectra-verify`、`/spectra-review` 是 fork 執行，看不到主對話的實測**（Playwright、DB 查詢、人工核對），會一律報「本次未執行」。實測後把結果（指令＋數字）寫進 `tasks.md` 該任務或 change 目錄的檔案，fork 才讀得到。
 - **兩個 change 改到同一檔要分 commit**：產生只含 A 部分的檔案版本（工作區不動），`git update-index --cacheinfo 100644,$(git hash-object -w <A版檔>),<path>` 暫存後 commit A，再 `git add` 原檔 commit B；用 `git diff --cached --numstat <path>` 確認行數（避免換行符號造成整檔差異）。
+- **proposal 的 Impact 每行只寫一個專案相對檔案路徑**（說明放括號）：`spectra instructions apply` 的 preflight 把每個條目整行當路徑，頓號串多個路徑或寫資料夾 → `missingFiles` 判 Critical（2026-11-01 strategy-trade-winners-chart 踩過）。
 - `spectra analyze` 的 COV/CON 警告是**逐字比對**：`tasks.md` 每條 task 要引用 spec 的 `Requirement: <名稱>` 與 design 的決策標題原文（例：`（需求：Chart list selection；決策 1：…）`），否則每條都報 Warning。
