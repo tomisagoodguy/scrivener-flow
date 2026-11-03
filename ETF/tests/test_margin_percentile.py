@@ -153,26 +153,7 @@ class TestOhlcvServiceMarginPctRank:
         assert df["margin_pct_rank"].isna().all()
 
 
-class TestSaveStockPricesMarginPctRank:
-    @pytest.fixture
-    def captured(self, monkeypatch) -> list:
-        from ETF.database import storage
-
-        monkeypatch.setenv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co")
-        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
-        payloads: list = []
-
-        class _Resp:
-            def raise_for_status(self) -> None:
-                return None
-
-        def fake_post(url, headers=None, json=None, **_kwargs):
-            payloads.extend(json)
-            return _Resp()
-
-        monkeypatch.setattr(storage.requests, "post", fake_post)
-        return payloads
-
+class TestPriceRecordsMarginPctRank:
     @staticmethod
     def _prices(with_rank: bool) -> pd.DataFrame:
         df = pd.DataFrame(
@@ -193,17 +174,15 @@ class TestSaveStockPricesMarginPctRank:
             df["margin_pct_rank"] = [2.0, np.nan]
         return df
 
-    def test_writes_float_and_null(self, captured):
-        from ETF.database.storage import ETFStorage
+    def test_writes_float_and_null(self):
+        from ETF.database.sql_storage import build_price_records
 
-        ETFStorage().save_stock_prices(self._prices(with_rank=True))
-        by_code = {r["stock_code"]: r for r in captured}
+        by_code = {r["stock_code"]: r for r in build_price_records(self._prices(with_rank=True))}
         assert by_code["5000"]["margin_pct_rank"] == pytest.approx(2.0)
         assert isinstance(by_code["5000"]["margin_pct_rank"], float)
         assert by_code["2002"]["margin_pct_rank"] is None
 
-    def test_missing_column_writes_null(self, captured):
-        from ETF.database.storage import ETFStorage
+    def test_missing_column_writes_null(self):
+        from ETF.database.sql_storage import build_price_records
 
-        ETFStorage().save_stock_prices(self._prices(with_rank=False))
-        assert all(r["margin_pct_rank"] is None for r in captured)
+        assert all(r["margin_pct_rank"] is None for r in build_price_records(self._prices(with_rank=False)))

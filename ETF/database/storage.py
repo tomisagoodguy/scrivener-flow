@@ -191,50 +191,6 @@ class ETFStorage:
             logger.error(f"Failed to save snapshot via REST: {e}")
             raise
 
-    def save_stock_prices(self, df_prices: pd.DataFrame):
-        """
-        Save OHLCV data using Upsert (POST with Prefer: resolution=merge).
-        df_prices columns: [stock_id, date, open, high, low, close, volume]
-        """
-        if df_prices.empty:
-            return
-
-        url = f"{self.supabase_url}/rest/v1/stock_prices_daily"
-        headers = self.headers.copy()
-        headers["Prefer"] = "resolution=merge-duplicates"
-
-        records = []
-        for _, row in df_prices.iterrows():
-            records.append({
-                "stock_code": str(row['stock_id']),
-                "data_date": row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else str(row['date']),
-                "open": float(row['open']) if pd.notnull(row['open']) else None,
-                "high": float(row['high']) if pd.notnull(row['high']) else None,
-                "low": float(row['low']) if pd.notnull(row['low']) else None,
-                "close": float(row['close']) if pd.notnull(row['close']) else None,
-                "volume": int(row['volume']) if pd.notnull(row['volume']) else 0,
-                "amount": float(row['amount']) if 'amount' in row and pd.notnull(row['amount']) else None,
-                "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in row and pd.notnull(row['margin_ratio']) else 0,
-                # 全市場融資使用率百分位；不合格為 NULL，不補 0
-                "margin_pct_rank": float(row['margin_pct_rank']) if 'margin_pct_rank' in row and pd.notnull(row['margin_pct_rank']) else None,
-                "it_buy": int(row['it_buy']) if 'it_buy' in row and pd.notnull(row['it_buy']) else 0
-            })
-
-        # Batch insert to avoid URL length issues
-        batch_size = 500
-        for i in range(0, len(records), batch_size):
-            batch = records[i:i+batch_size]
-            try:
-                resp = requests.post(url, headers=headers, json=batch)
-                resp.raise_for_status()
-            except Exception as e:
-                logger.error(f"Failed to save price batch: {e}")
-                resp_obj = getattr(e, 'response', None)
-                if resp_obj is not None:
-                    logger.error(f"Response: {resp_obj.text}")
-        
-        logger.info(f"Successfully synced {len(records)} price records.")
-
     def save_diff_logs(self, diffs: List[Dict[str, Any]]):
         """
         Save diff events via REST API.

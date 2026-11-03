@@ -1,12 +1,62 @@
 
-import os
 import logging
+import math
+import os
+
+import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 
 logger = logging.getLogger(__name__)
+
+
+PRICE_COLUMNS = [
+    "stock_code", "data_date", "open", "high", "low", "close", "volume",
+    "amount", "margin_ratio", "margin_pct_rank", "it_buy", "currency",
+]
+
+
+def _finite_or_none(value) -> float | None:
+    """NaN / ±inf / 缺值 → None（inf 寫入 JSON/SQL 會失敗）。"""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def build_price_records(df: pd.DataFrame) -> list[dict]:
+    """OHLCV long-format → stock_prices_daily 列；close 缺值的列不輸出。
+
+    無價（價格表尚未更新、無成交、下市）的列若寫入，會產生或覆蓋出 close 為 NULL 的列。
+    volume / margin_ratio / it_buy 缺值為 0；margin_pct_rank 缺值或缺欄為 None（不合格不補 0）。
+    """
+    records: list[dict] = []
+    has_rank = "margin_pct_rank" in df.columns
+    for row in df.to_dict("records"):
+        close = _finite_or_none(row.get("close"))
+        if close is None:
+            continue
+        day = row["date"]
+        records.append({
+            "stock_code": str(row["stock_id"]),
+            "data_date": day.strftime("%Y-%m-%d") if hasattr(day, "strftime") else str(day),
+            "open": _finite_or_none(row.get("open")),
+            "high": _finite_or_none(row.get("high")),
+            "low": _finite_or_none(row.get("low")),
+            "close": close,
+            "volume": int(_finite_or_none(row.get("volume")) or 0),
+            "amount": _finite_or_none(row.get("amount")),
+            "margin_ratio": _finite_or_none(row.get("margin_ratio")) or 0,
+            "margin_pct_rank": _finite_or_none(row.get("margin_pct_rank")) if has_rank else None,
+            "it_buy": int(_finite_or_none(row.get("it_buy")) or 0),
+            "currency": "TWD",
+        })
+    return records
 
 
 def _dedupe_by_keys(records: list[dict], key_columns: list[str]) -> list[dict]:
@@ -89,6 +139,22 @@ class SQLStorage:
             raise
         finally:
             raw.close()
+
+    def upsert_stock_prices(self, df: pd.DataFrame) -> int:
+        """OHLCV 寫入 stock_prices_daily（單一交易；只寫有收盤價的列）。回傳寫入列數。
+
+        失敗整批 rollback 並 raise，呼叫端（SyncOHLCVStep）負責記錄。
+        """
+        records = build_price_records(df)
+        if not records:
+            return 0
+        updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in PRICE_COLUMNS[2:])
+        sql = (
+            f"INSERT INTO stock_prices_daily ({', '.join(PRICE_COLUMNS)}) VALUES %s "
+            f"ON CONFLICT (stock_code, data_date) DO UPDATE SET {updates}"
+        )
+        self._bulk_upsert(sql, PRICE_COLUMNS, ["stock_code", "data_date"], records)
+        return len(records)
 
     def get_target_stocks(self, etf_code: str) -> list:
         """從 etf_holdings_snapshot 取得目標股票清單"""

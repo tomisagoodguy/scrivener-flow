@@ -43,10 +43,17 @@ class SyncOHLCVStep(BaseStep):
 
         ohlcv_df = services.finlab_srv.get_ohlcv(all_codes, days=days)
         
-        if not ohlcv_df.empty:
-            services.storage.save_stock_prices(ohlcv_df)
-            self.logger.info(f"OHLCV sync completed. {len(ohlcv_df)} records.")
-        else:
+        if ohlcv_df.empty:
             self.logger.warning("No OHLCV data returned from Finlab.")
+            return ctx
+
+        # 輔助步驟：寫入失敗整批 rollback，只記錄不中斷 pipeline
+        try:
+            written = services.sql_storage.upsert_stock_prices(ohlcv_df)
+            self.logger.info(
+                f"OHLCV sync completed. {written} priced rows written ({len(ohlcv_df)} fetched)."
+            )
+        except Exception as e:
+            self.logger.error(f"OHLCV upsert failed: {e}", exc_info=True)
         
         return ctx

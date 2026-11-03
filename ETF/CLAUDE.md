@@ -380,9 +380,9 @@ else:              signal = "持平"
 - **判定**（前端 `src/lib/investment/buyingPatternStats.ts` 的 `classifyExcess`）：超額報酬區間下界 > 0＝較好、上界 < 0＝較差、跨零＝分不出高低、NULL＝樣本不足
 - 比率與報酬皆存小數；每日約 60 列、重算約 7 秒（2026-11-01 實測）
 
-**解讀注意**：只看「相對同期平常日」的超額與區間，不要看勝率絕對值（多頭期間所有模式勝率都偏高）。2026-11 首兩次計算（期間至 10-30、11-02）`window_break` 20 日超額報酬皆顯著**較差**（約 -3 ～ -1 pp）——舊版「window_break 最可信」的結論是沒有對照組造成的錯覺。其他模式的判定在區間邊緣會隨資料更新翻轉，以頁面當日結果為準，不要寫死在文件。
+**解讀注意**：只看「相對同期平常日」的超額與區間，不要看勝率絕對值（多頭期間所有模式勝率都偏高）。2026-11 計算（含股價修復後，期間至 11-02）`window_break` 20 日超額報酬一直顯著**較差**（修復後 [-3.9, -1.9] pp），沒有任何模式顯著較好——舊版「window_break 最可信」的結論是沒有對照組造成的錯覺。其他模式的判定在區間邊緣會隨資料更新翻轉，以頁面當日結果為準，不要寫死在文件。
 
-**資料缺口**：`stock_prices_daily` 自 2026-05 起約 20% 列的 `close` 為 NULL（上游同步缺陷，待另案修正），對應天期報酬與基準樣本會缺漏；回補後在「目標日有收盤價」的事件中 20 日覆蓋率 100%。
+**資料完整性**：2026-11-03 修復 `stock_prices_daily` 的 NULL close 後，20 日報酬覆蓋率 99.89%（見常見錯誤表「`stock_prices_daily` 寫入沒有收盤價的列」）。
 
 **程式碼定義位置**：`ETF/pipeline/steps/buying_pattern_step.py`（分類 + 補值 + `_refresh_stats`）
 **前端顯示**：`/investment/buying-patterns`（折線圖 / 熱力圖 / 勝率圖 + 與平常日比較表），資料由 `getBuyingPatternStats()` 讀 `etf_buying_pattern_stats`
@@ -557,4 +557,5 @@ unmatched 基金（白名單外）是**正常現象**（元大/台新等大投�
 | 大量寫入用 `conn.execute(text(...), list_of_dicts)` | 那是 psycopg2 executemany，**每列一次網路來回**（CI ~140ms/列）；2026-10-22 券商 45k 筆寫 105 分鐘撞 110 分 timeout。chunk_size 無關，一律用 `SQLStorage._bulk_upsert`（`VALUES %s` + execute_values） |
 | `etf_equity_daily.yml` 呼叫 `sync_equity_distribution.py` 不加 `--daily-topup` | TDCC 集保每週更新，本週資料未到位時若無此旗標，daily job 會**每天**拋 staleness RuntimeError（誤觸 🚨 LINE 通知）；staleness 監控應只留給 `equity_weekly.yml`（帶 `--retry-run`） |
 | 查詢 `etf_diff_logs` 用 `weight_after` | 此欄不存在；正確欄位是 `curr_weight`（當日持倉比重） |
+| `stock_prices_daily` 寫入沒有收盤價的列（或用 REST 分批寫入、失敗只記 log） | 2026-04～07 曾因 `get_ohlcv` 以 concat 合併融資表，價格表尚未更新／無成交時產生「只有融資、close 為 NULL」的列，6～7 月約 47% 無價且未自癒。寫入一律走 `SQLStorage.upsert_stock_prices`（`build_price_records` 排除 close 缺值、inf 轉 NULL，單一交易失敗必 log）；歷史缺值用 `uv run python ETF/scripts/repair_stock_prices.py --since YYYY-MM-DD [--dry-run]` 修復 |
 | SQLAlchemy 讀回 `NUMERIC` 欄位直接做 `/` 運算 | PostgreSQL `NUMERIC` 對應 Python `decimal.Decimal`，不能直接和 `float` 相除；必須先 `float()` 轉型，例如 `float(diff_shares) * float(price) / 1e8` |
