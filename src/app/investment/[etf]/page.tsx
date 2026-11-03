@@ -4,6 +4,8 @@ import { ClockIcon } from 'lucide-react';
 import { HoldingsTable } from '@/components/features/investment/HoldingsTable';
 import { DiffLedger } from '@/components/features/investment/DiffLedger';
 import { HoldingsOverview } from '@/components/features/investment/HoldingsOverview';
+import { MarginExposureSummary } from '@/components/features/investment/MarginExposureSummary';
+import { summarizeMarginExposure } from '@/lib/investment/marginRisk';
 import { ChangeImpactChart } from '@/components/features/investment/ChangeImpactChart';
 import { DrilldownTabs } from '@/components/features/investment/DrilldownTabs';
 import { AIAnalysisPromptButton } from '@/components/features/investment/AIAnalysisPromptButton';
@@ -88,7 +90,7 @@ export default async function InvestmentEtfDrilldownPage({
             <Holdings5DayTrend data={trendData} />
             <React.Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                 <DrilldownTabs
-                    holdingsContent={<div className="w-full space-y-6"><HoldingsOverview data={holdingsWithFilters} /><EtfHoldingsPieChart holdings={holdingsWithFilters.map(h => ({ code: h.stock_code, name: h.stock_name ?? '', weight_pct: h.weight ?? 0 }))} /><HoldingsTable initialData={holdingsWithFilters} /></div>}
+                    holdingsContent={<div className="w-full space-y-6"><MarginExposureSummary summary={summarizeMarginExposure(holdingsWithFilters)} showWeight /><HoldingsOverview data={holdingsWithFilters} /><EtfHoldingsPieChart holdings={holdingsWithFilters.map(h => ({ code: h.stock_code, name: h.stock_name ?? '', weight_pct: h.weight ?? 0 }))} /><HoldingsTable initialData={holdingsWithFilters} /></div>}
                     historyData={rankingHistory}
                     ledgerContent={<div className="w-full space-y-8"><ChangeImpactChart logs={logs} /><div><div className="flex items-center gap-2 mb-4"><ClockIcon className="w-5 h-5 text-indigo-500" /><h3 className="text-xl font-bold text-slate-900 dark:text-white">近期異動紀錄</h3></div><DiffLedger logs={logs} /></div></div>}
                     stockTradeContent={<EtfStockTradeView etfCode={etfCode} holdings={stockTradeHoldings} />}

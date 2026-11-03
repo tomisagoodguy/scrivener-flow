@@ -92,7 +92,7 @@ export function StockPoolMetrics({ etfWeightHistory, quantMetrics, priceData }: 
                     <MetricChip label="成交量" value={`${(amount / 1e8).toFixed(1)}億`} />
                 )}
                 {marginRatio !== null && marginRatio > 0 && (
-                    <MetricChip label="資券%" value={`${marginRatio.toFixed(1)}%`} />
+                    <MetricChip label="融資使用率" value={`${marginRatio.toFixed(1)}%`} />
                 )}
             </div>
 

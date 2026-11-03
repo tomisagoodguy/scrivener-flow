@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { WatchListManager } from '@/components/features/investment/WatchListManager';
+import { MarginExposureSummary } from '@/components/features/investment/MarginExposureSummary';
+import { fetchMarginPctRanks, summarizeMarginExposure } from '@/lib/investment/marginRisk';
 
 export default async function WatchListPage() {
     const supabase = await createClient();
@@ -50,6 +52,20 @@ export default async function WatchListPage() {
         });
     }
 
+    // 高融資曝險：自選股不在 stock_prices_daily（非 ETF 成分股）時計為無資料
+    const watchCodes = (watchList ?? []).map((w) => w.stock_id);
+    let marginPctRanks: Record<string, number | null> = {};
+    if (watchCodes.length > 0) {
+        try {
+            marginPctRanks = await fetchMarginPctRanks(supabase, watchCodes);
+        } catch (error: unknown) {
+            console.error('[WatchListPage] margin_pct_rank lookup failed:', error instanceof Error ? error.message : error);
+        }
+    }
+    const marginSummary = summarizeMarginExposure(
+        watchCodes.map((code) => ({ margin_pct_rank: marginPctRanks[code] ?? null }))
+    );
+
     return (
         <div className="min-h-screen p-6 animate-fade-in">
             <div className="max-w-3xl mx-auto">
@@ -59,6 +75,11 @@ export default async function WatchListPage() {
                         新增您想追蹤的股票，每日台灣時間 22:00 自動更新裸K快照
                     </p>
                 </div>
+                {watchCodes.length > 0 && (
+                    <div className="mb-4">
+                        <MarginExposureSummary summary={marginSummary} showWeight={false} />
+                    </div>
+                )}
                 <WatchListManager initialList={watchList ?? []} />
             </div>
         </div>

@@ -14,20 +14,22 @@ jest.mock('next/cache', () => ({
     unstable_cache: (fn: () => unknown) => fn,
 }));
 
-function makeChainBuilder(data: unknown[]) {
+function makeChainBuilder(data: unknown[] | null, error: { message: string } | null = null) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const builder: any = {};
     ['select', 'eq', 'in', 'order', 'limit', 'gte', 'lte'].forEach((m) => {
         builder[m] = jest.fn(() => builder);
     });
     builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
-        Promise.resolve({ data, error: null }).then(onFulfilled, onRejected);
+        Promise.resolve({ data, error }).then(onFulfilled, onRejected);
     return builder;
 }
 
 function makeServiceClient(opts: {
     dateCandidates: { data_date: string; updated_at: string }[];
     holdingsByDate: Record<string, { stock_code: string; price: number | null }[]>;
+    priceRows?: { stock_code: string; data_date: string; margin_pct_rank: string | null }[];
+    priceError?: { message: string };
 }) {
     return {
         from: (table: string) => {
@@ -54,6 +56,9 @@ function makeServiceClient(opts: {
                         };
                     },
                 };
+            }
+            if (table === 'stock_prices_daily') {
+                return makeChainBuilder(opts.priceError ? null : opts.priceRows ?? [], opts.priceError ?? null);
             }
             return makeChainBuilder([]);
         },
@@ -125,5 +130,45 @@ describe('getHoldings (etfPageData) — isFallback propagation', () => {
         expect(result.dataDate).toBeNull();
         expect(result.isFallback).toBe(false);
         expect(result.meta).toBeNull();
+    });
+});
+
+describe('getHoldings (etfPageData) — margin_pct_rank', () => {
+    const base = {
+        dateCandidates: [{ data_date: '2026-10-30', updated_at: '2026-10-30T01:00:00Z' }],
+        holdingsByDate: {
+            '2026-10-30': [{ stock_code: '2330', price: 1000 }, { stock_code: '1101', price: 40 }],
+        },
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('attaches the latest stock_prices_daily percentile to every holding', async () => {
+        (getServiceClient as jest.Mock).mockReturnValue(
+            makeServiceClient({
+                ...base,
+                priceRows: [
+                    { stock_code: '2330', data_date: '2026-10-30', margin_pct_rank: '91.2' },
+                    { stock_code: '2330', data_date: '2026-10-29', margin_pct_rank: '40.0' },
+                ],
+            })
+        );
+
+        const { holdings } = await getHoldings('00981A');
+        const byCode = Object.fromEntries(holdings.map(h => [h.stock_code, h.margin_pct_rank]));
+        expect(byCode).toEqual({ '2330': 91.2, '1101': null });
+    });
+
+    it('still returns holdings with null percentile when the percentile query fails', async () => {
+        const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        (getServiceClient as jest.Mock).mockReturnValue(
+            makeServiceClient({ ...base, priceError: { message: 'boom' } })
+        );
+
+        const { holdings } = await getHoldings('00981A');
+        expect(holdings.map(h => h.stock_code)).toEqual(['2330', '1101']);
+        expect(holdings.every(h => h.margin_pct_rank === null)).toBe(true);
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
     });
 });

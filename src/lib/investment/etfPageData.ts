@@ -6,6 +6,7 @@ import type { Holding, DiffLog } from '@/types/investment';
 import { getEtfMeta } from '@/lib/investment/etfRegistry';
 import { attachTopicsToHoldings, filterHoldingsByTopic, type TopicChip } from '@/lib/investment/topicUtils';
 import { selectDateWithFallback } from '@/lib/investment/holdingsUtils';
+import { fetchMarginPctRanks } from '@/lib/investment/marginRisk';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
 export type { QuantFilter } from '@/lib/investment/quantFilters';
 
@@ -72,7 +73,12 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
     const codes = (data || []).map(h => h.stock_code);
     const publicClient = getPublicClient();
 
-    const [{ data: industryData }, { data: revData }, { data: topicAssignmentsRaw }] = await Promise.all([
+    const marginPctRanksPromise = fetchMarginPctRanks(supabase, codes).catch((error: unknown) => {
+        console.error('[getHoldings] margin_pct_rank lookup failed:', error instanceof Error ? error.message : error);
+        return {} as Record<string, number | null>;
+    });
+
+    const [{ data: industryData }, { data: revData }, { data: topicAssignmentsRaw }, marginPctRanks] = await Promise.all([
         supabase.from('stock_basic_info').select('stock_code, industry').in('stock_code', codes),
         supabase.from('stock_revenue_monthly')
             .select('stock_code, data_date, revenue_yoy, revenue_mom')
@@ -81,6 +87,7 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
         publicClient.from('stock_topic_assignments')
             .select('stock_code, topic_id, stock_topics(short_name, color)')
             .in('stock_code', codes),
+        marginPctRanksPromise,
     ]);
     const topicAssignments = topicAssignmentsRaw as {
         stock_code: string;
@@ -154,6 +161,7 @@ async function _getHoldings(etfCode: string, topic?: string | null): Promise<{
             change_percent: h.change_percent ?? pi?.change_percent ?? null,
             amount: h.amount ?? pi?.amount ?? null,
             margin_ratio: h.margin_ratio ?? pi?.margin_ratio ?? null,
+            margin_pct_rank: marginPctRanks[h.stock_code] ?? null,
             industry: industryMap[h.stock_code] || '未知',
             revenue_month: rev?.date || null,
             revenue_yoy: rev?.yoy ?? null,
@@ -183,7 +191,7 @@ export async function getHoldings(etfCode: string, topic?: string | null) {
     }
     const cached = unstable_cache(
         () => _getHoldings(etfCode),
-        ['etf-holdings', etfCode],
+        ['etf-holdings-v2', etfCode],
         { revalidate: 3600 },
     );
     return cached();

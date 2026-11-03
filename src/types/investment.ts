@@ -68,6 +68,8 @@ export interface Holding {
     amount: number | null;
     currency: string | null;
     margin_ratio?: number;
+    /** 當日全市場融資使用率百分位 0–100（stock_prices_daily.margin_pct_rank），不合格或無資料為 null */
+    margin_pct_rank?: number | null;
     volatility?: number;
     market_cap?: number;
     is_high_5d?: boolean;

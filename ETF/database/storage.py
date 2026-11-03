@@ -215,6 +215,8 @@ class ETFStorage:
                 "volume": int(row['volume']) if pd.notnull(row['volume']) else 0,
                 "amount": float(row['amount']) if 'amount' in row and pd.notnull(row['amount']) else None,
                 "margin_ratio": float(row['margin_ratio']) if 'margin_ratio' in row and pd.notnull(row['margin_ratio']) else 0,
+                # 全市場融資使用率百分位；不合格為 NULL，不補 0
+                "margin_pct_rank": float(row['margin_pct_rank']) if 'margin_pct_rank' in row and pd.notnull(row['margin_pct_rank']) else None,
                 "it_buy": int(row['it_buy']) if 'it_buy' in row and pd.notnull(row['it_buy']) else 0
             })
 

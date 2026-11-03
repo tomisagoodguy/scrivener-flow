@@ -53,7 +53,7 @@ export function StockPickerTable({
                             成交額 <SortIcon field="amount" currentSortField={sortField} currentSortOrder={sortOrder} />
                         </th>
                         <th className={thBase} onClick={() => onSort('margin_ratio')}>
-                            資券% <SortIcon field="margin_ratio" currentSortField={sortField} currentSortOrder={sortOrder} />
+                            資使用 <SortIcon field="margin_ratio" currentSortField={sortField} currentSortOrder={sortOrder} />
                         </th>
                         <th className={thBase} onClick={() => onSort('fund_consec_days')}>
                             投信連買 <SortIcon field="fund_consec_days" currentSortField={sortField} currentSortOrder={sortOrder} />

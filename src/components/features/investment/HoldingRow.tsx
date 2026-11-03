@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Holding } from '@/types/investment';
+import { isHighMargin } from '@/lib/investment/marginRisk';
 
 interface HoldingRowProps {
     item: Holding;
@@ -185,13 +186,16 @@ export function HoldingRow({ item, maxAmount, onClick }: HoldingRowProps) {
             </td>
 
             {/* Margin Usage - Leverage Appetite */}
-            <td className="px-2 py-3 text-right">
-                    <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${
-                        (item.margin_ratio || 0) > 40 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200' :
-                        (item.margin_ratio || 0) > 20 ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
-                        (item.margin_ratio || 0) > 10 ? 'text-blue-600 dark:text-blue-400' :
-                        'text-slate-400'
-                    }`}>
+            <td className="px-2 py-3 text-right whitespace-nowrap">
+                {isHighMargin(item.margin_pct_rank) && (
+                    <span
+                        className="mr-1 px-1 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                        title={`當日全市場融資使用率百分位 P${item.margin_pct_rank}`}
+                    >
+                        前20%
+                    </span>
+                )}
+                <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
                     {item.margin_ratio ? `${item.margin_ratio.toFixed(1)}%` : '-'}
                 </span>
             </td>

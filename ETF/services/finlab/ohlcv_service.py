@@ -9,6 +9,7 @@ import pandas as pd
 from typing import List, Optional
 
 from ETF.services.finlab.client import FinlabClient
+from ETF.processors.margin_percentile import compute_margin_pct_rank
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +76,13 @@ class OHLCVService:
             else:
                 m_ratio = pd.Series(0, index=o.index)
 
+            pct_rank = self._margin_pct_rank(all_close, m_raw, valid_list, days, o.index)
+
             df = pd.concat([o, h, l, c, v, amt, m_ratio, it_stacked], axis=1)
             df.columns = ['open', 'high', 'low', 'close', 'volume', 'amount', 'margin_ratio', 'it_buy']
             df.index.names = ['date', 'stock_id']
+            # 百分位 NaN 代表不合格，保留為 NULL，不補 0
+            df['margin_pct_rank'] = pct_rank.reindex(df.index)
             
             df['margin_ratio'] = df['margin_ratio'].fillna(0)
             df['it_buy'] = df['it_buy'].fillna(0)
@@ -88,3 +93,23 @@ class OHLCVService:
         except Exception as e:
             logger.error(f"Error fetching OHLCV from Finlab: {e}")
             return pd.DataFrame()
+
+    def _margin_pct_rank(
+        self,
+        all_close: pd.DataFrame,
+        margin_raw: pd.DataFrame,
+        valid_list: List[str],
+        days: int,
+        fallback_index: pd.Index,
+    ) -> pd.Series:
+        """以全市場寬表計算融資使用率百分位，再切出 valid_list 並轉 long-format。
+
+        失敗時記錄錯誤並回傳全 NaN，不影響 OHLCV 其餘欄位。
+        """
+        try:
+            amount = pd.DataFrame(self.client.get_data('amount'))
+            ranks = compute_margin_pct_rank(pd.DataFrame(all_close), amount, pd.DataFrame(margin_raw))
+            return ranks[valid_list].tail(days).stack()
+        except Exception as e:
+            logger.error(f"Error computing margin_pct_rank: {e}")
+            return pd.Series(float('nan'), index=fallback_index)
