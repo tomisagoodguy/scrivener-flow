@@ -65,7 +65,7 @@ Pipeline 步驟分兩級，錯誤處理策略不同：
 | `price_attach_step.py` | 附加當日股價（`stock_prices_daily`） |
 | `weight_history_step.py` | 持股比重歷史同步（`etf_weight_history`） |
 | `flow_compute_step.py` | 資金流向計算 |
-| `buying_pattern_step.py` | 7 種買進模式分類 + 前瞻報酬補齊 → `etf_buying_patterns` |
+| `buying_pattern_step.py` | 買進模式分類 + 前瞻報酬補齊 → `etf_buying_patterns`；重算平常日比較 → `etf_buying_pattern_stats` |
 | `frontrunning_step.py` | 持股公告前後成交量異常偵測 → `etf_frontrunning_events` |
 | `overlap_compute_step.py` | ETF 持股重疊矩陣計算 |
 
@@ -219,7 +219,7 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 | `ETF/services/finlab/facade.py` | FinLab 股價 / OHLCV / 公司資料統一入口 |
 | `ETF/database/sql_storage.py` | SQLAlchemy 直接操作 Supabase（繞過 RLS） |
 | `ETF/daily_ai_report.py` | Gemini AI 報告產生 + LINE 發送 |
-| `ETF/pipeline/steps/buying_pattern_step.py` | 7 種買進模式分類 + 前 30 天前瞻報酬增量補齊 → `etf_buying_patterns` |
+| `ETF/pipeline/steps/buying_pattern_step.py` | 買進模式分類 + 前 35 天前瞻報酬增量補齊 + 平常日比較統計（口徑見 ETF/CLAUDE.md「買進模式 vs 平常日統計」） |
 
 ## 買進模式（BuyingPatternStep）陷阱
 
@@ -235,7 +235,7 @@ uv run python ETF/sync_equity_distribution.py --backfill-names
 
 **前瞻報酬單位**：`future_returns` jsonb 的 key 是天期字串（`"1"/"5"/...`），value 是小數報酬率（0.07 = 7%）。  
 **增量 merge**：UPDATE 用 `future_returns = COALESCE(future_returns, '{}') || :new_data`，不可整欄覆蓋。  
-**前端聚合**：`src/app/actions/getBuyingPatternStats.ts`（Server Action）在 Server 端 reduce，不回傳原始事件給瀏覽器。
+**前端讀取**：`src/app/actions/getBuyingPatternStats.ts` 只讀預算的 `etf_buying_pattern_stats`（約 60 列），**禁止**改回聚合 `etf_buying_patterns` 原始事件（PostgREST 單次上限 1000 列會靜默截斷，2026-11 前頁面只算了 4,998 筆中的 1,000 筆）。
 
 ## equity_distribution_stats 查詢規則
 

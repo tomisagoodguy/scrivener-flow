@@ -1,82 +1,99 @@
-"""Tests for backfill_future_returns.py"""
+"""Tests for backfill_future_returns.py：全歷史分頁回補與冪等。"""
 
-import json
 from datetime import date
-from unittest.mock import MagicMock, patch, call
+
 import pytest
 
-from ETF.pipeline.steps.backfill_future_returns import (
-    compute_missing_returns,
-    filter_incomplete_events,
-)
+from ETF.pipeline.steps import backfill_future_returns as mod
+
+TODAY = date(2026, 7, 31)
 
 
-def test_compute_missing_returns_fills_null_horizon():
-    """Returns only horizons where price data exists and key is absent."""
-    event = {
-        "id": 1,
-        "stock_code": "2330",
-        "event_date": date(2026, 5, 1),
-        "future_returns": {"5": 0.03},  # 1, 10, 20 are missing
+@pytest.fixture
+def fake_db(monkeypatch):
+    """2,500 筆 2026-07-01 事件皆缺 "20"，股價齊；merge 寫回記憶體以模擬重跑。"""
+    events = {
+        i: {"id": i, "stock_code": f"S{i % 50}", "event_date": date(2026, 7, 1),
+            "future_returns": {"1": 0.0}}
+        for i in range(1, 2501)
     }
-    price_lookup = {
-        ("2330", "2026-05-01"): 100.0,
-        ("2330", "2026-05-02"): 103.0,  # +1 day
-        ("2330", "2026-05-06"): 107.0,  # +5 day (already present, skip)
-        ("2330", "2026-05-11"): 110.0,  # +10 day
-    }
-    today = date(2026, 5, 13)
-    new_data = compute_missing_returns(event, price_lookup, today)
+    lookup = {}
+    for s in range(50):
+        lookup[(f"S{s}", "2026-07-01")] = 100.0
+        lookup[(f"S{s}", "2026-07-21")] = 105.0
+    pages: list[int] = []
 
-    assert "1" in new_data
-    assert round(new_data["1"], 6) == round((103.0 - 100.0) / 100.0, 6)
-    assert "5" not in new_data  # already populated
-    assert "10" in new_data
-    assert "20" not in new_data  # future date beyond today
+    def fetch_page(conn, last_id, page_size):
+        ids = sorted(i for i in events if i > last_id)[:page_size]
+        pages.append(len(ids))
+        return [dict(events[i], future_returns=dict(events[i]["future_returns"])) for i in ids]
 
+    def merge(engine, updates):
+        for event_id, new_data in updates:
+            events[event_id]["future_returns"].update(new_data)
 
-def test_compute_missing_returns_skips_when_no_base_price():
-    """Returns empty dict when event-date close price is missing."""
-    event = {
-        "id": 1,
-        "stock_code": "2330",
-        "event_date": date(2026, 5, 1),
-        "future_returns": {},
-    }
-    price_lookup = {}  # no prices at all
-    today = date(2026, 5, 13)
-    result = compute_missing_returns(event, price_lookup, today)
-    assert result == {}
+    monkeypatch.setattr(mod, "_fetch_page", fetch_page)
+    monkeypatch.setattr(mod, "_fetch_price_lookup", lambda engine, page, today: lookup)
+    monkeypatch.setattr(mod, "bulk_merge_future_returns", merge)
+    return events, pages
 
 
-def test_compute_missing_returns_preserves_existing():
-    """Existing non-null values must not be overwritten."""
-    event = {
-        "id": 1,
-        "stock_code": "2330",
-        "event_date": date(2026, 5, 1),
-        "future_returns": {"1": 0.02},  # already has 1-day return
-    }
-    price_lookup = {
-        ("2330", "2026-05-01"): 100.0,
-        ("2330", "2026-05-02"): 105.0,  # different price would give 0.05 if computed
-    }
-    today = date(2026, 5, 13)
-    new_data = compute_missing_returns(event, price_lookup, today)
-    # "1" already populated → must not appear in new_data
-    assert "1" not in new_data
+class _Engine:
+    def connect(self):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
 
 
-def test_filter_incomplete_events_returns_only_incomplete():
-    """Only events with at least one null horizon should be returned."""
-    events = [
-        {"id": 1, "future_returns": {"1": 0.01, "5": 0.02, "10": 0.03, "20": 0.04}},
-        {"id": 2, "future_returns": {"1": 0.01, "5": None, "10": 0.03, "20": None}},
-        {"id": 3, "future_returns": {}},
-    ]
-    from ETF.pipeline.steps.backfill_future_returns import STANDARD_HORIZONS
-    incomplete = filter_incomplete_events(events, STANDARD_HORIZONS)
-    ids = [e["id"] for e in incomplete]
-    assert 1 not in ids  # fully populated
-    assert 2 in ids
-    assert 3 in ids
+def test_run_backfill_updates_every_page(fake_db):
+    events, pages = fake_db
+    updated = mod.run_backfill(_Engine(), today=TODAY)
+
+    assert updated == 2500
+    assert pages[:3] == [1000, 1000, 500]
+    assert all(e["future_returns"]["20"] == 0.05 for e in events.values())
+    assert all(e["future_returns"]["1"] == 0.0 for e in events.values())  # 既有值不覆蓋
+
+
+def test_run_backfill_is_idempotent(fake_db):
+    mod.run_backfill(_Engine(), today=TODAY)
+    assert mod.run_backfill(_Engine(), today=TODAY) == 0
+
+
+def test_main_prints_no_records_when_nothing_updated(monkeypatch, capsys):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://fake")
+    monkeypatch.setattr("sqlalchemy.create_engine", lambda url: _Engine())
+    monkeypatch.setattr(mod, "run_backfill", lambda engine, today=None: 0)
+
+    assert mod.main() == 0
+    assert "No records need backfill" in capsys.readouterr().out
+
+
+def test_main_prints_updated_count(monkeypatch, capsys):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://fake")
+    monkeypatch.setattr("sqlalchemy.create_engine", lambda url: _Engine())
+    monkeypatch.setattr(mod, "run_backfill", lambda engine, today=None: 2500)
+
+    assert mod.main() == 0
+    assert "Updated future_returns for 2500 records" in capsys.readouterr().out
+
+
+def test_import_does_not_touch_global_logging_or_sys_path():
+    import importlib
+    import logging
+    import sys
+
+    root = logging.getLogger()
+    saved = list(root.handlers)
+    root.handlers.clear()  # pytest 已掛 handler 時 basicConfig 不生效，先清空才測得到
+    path_before = list(sys.path)
+    try:
+        importlib.reload(mod)
+        assert root.handlers == []
+        assert sys.path == path_before
+    finally:
+        root.handlers[:] = saved

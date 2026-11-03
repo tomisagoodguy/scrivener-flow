@@ -56,7 +56,7 @@ ETF/
 │       ├── overlap_compute_step.py # 聚合跨 ETF 共識持股 → etf_stock_overlap
 │       ├── flow_compute_step.py   # [輔助] 跨 ETF 每日資金流向 → etf_flow_daily
 │       ├── signal_detect_step.py  # [輔助] 偵測進階訊號 → etf_signals
-│       ├── buying_pattern_step.py # [輔助] 分類 7 種買進模式 + 補前瞻報酬 → etf_buying_patterns
+│       ├── buying_pattern_step.py # [輔助] 分類買進模式 + 補前瞻報酬 + 重算平常日比較 → etf_buying_patterns / etf_buying_pattern_stats
 │       ├── position_summary_step.py # [輔助] 現金流法持倉損益 → etf_position_summary + etf_pnl_series
 │       ├── sync_bare_k_step.py    # 同步裸K快照（自選→策略→同步加碼→籌碼排行→選股池，MAX_STOCKS=400）
 │       ├── news_context_step.py   # 直接呼叫 MOPS API，取重大公告 → ctx.news_context
@@ -196,10 +196,11 @@ ScrapeStep
   → OverlapComputeStep      ← 聚合跨 ETF 共識持股 → etf_stock_overlap
   → FlowComputeStep         ← [輔助] 跨 ETF 資金流，|Δshares/prev|≥3% 且 weight≥0.3pp → etf_flow_daily
   → SignalDetectStep        ← [輔助] 3 種訊號偵測（multi_fund/overweight/cross_product） → etf_signals
-  → BuyingPatternStep       ← [輔助] 分類 7 種買進模式 + 補前 30 天前瞻報酬 → etf_buying_patterns
+  → BuyingPatternStep       ← [輔助] 分類買進模式 + 補前 35 天前瞻報酬 + 重算平常日比較 → etf_buying_patterns / etf_buying_pattern_stats
   → PositionSummaryStep     ← [輔助] 現金流法：CFt=−Δshares×close → etf_position_summary + etf_pnl_series
   → SyncBareKStep           ← 同步裸K快照（自選→策略→同步加碼→籌碼排行→選股池台股成分股，上限 400）
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
+  → SyncAdlStep             ← [輔助] 全市場騰落指標 → market_breadth_daily
   → DividendSyncStep        ← [輔助] 全 ETF 配息記錄冪等 upsert → etf_dividend_records
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
@@ -331,7 +332,8 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 - `etf_aum_series` — 前端 AUM 規模儀表板 + 深潛頁市場機制 Tab（`AumSyncStep` 維護，含 close/premium_pct/inflow/market_pnl）
 - `etf_dividend_records` — 前端配息時間軸（`DividendSyncStep` 維護；深潛頁市場機制 Tab）
 - `etf_signals` — 前端訊號標記（`SignalDetectStep` + `FlowComputeStep` 維護）
-- `etf_buying_patterns` — 買進模式 + 前瞻報酬（`BuyingPatternStep` 維護）；前端 `/investment/buying-patterns` 頁面讀取
+- `etf_buying_patterns` — 買進模式 + 前瞻報酬（`BuyingPatternStep` 維護）
+- `etf_buying_pattern_stats` — 模式 vs 平常日統計與 95% 區間（`BuyingPatternStep` 每日重算）；前端 `/investment/buying-patterns` 頁面讀取
 - `etf_flow_daily` — 前端每日資金流向儀表板（`FlowComputeStep` 維護）
 - `etf_position_summary` — 前端個股進出場損益（`PositionSummaryStep` 維護）
 - `etf_pnl_series` — 前端 ETF 損益走勢圖（`PositionSummaryStep` 維護）
@@ -366,29 +368,22 @@ else:              signal = "持平"
 
 ---
 
-## 買進模式回測統計
+## 買進模式 vs 平常日統計
 
-`etf_buying_patterns` 資料回測結果（2026-02-03 ～ 2026-04-22，29 個交易日，171 支股票，711 筆已結算事件）。
+`BuyingPatternStep` 補完前瞻報酬後，每日重算 `etf_buying_pattern_stats`（每（模式, 天期）一列，交易內 DELETE + INSERT，失敗保留前次結果；純函式在 `ETF/analysis/buying_pattern_stats.py`）：
 
-| 模式 | 樣本數 | 5日勝率 | 5日均報酬 | 10日勝率 | 10日均報酬 | 20日勝率 | 20日均報酬 | 20日樣本 |
-|------|--------|---------|----------|---------|-----------|---------|-----------|---------|
-| `new_position`（新倉建立） | 394 | 54.9% | +2.72% | 67.2% | +7.87% | 72.9% | **+16.77%** | 48 |
-| `window_break`（長期突破） | 941 | 59.6% | +3.16% | 71.2% | +7.46% | **78.7%** | **+15.72%** | **343** |
-| `chase_high`（強勢追漲） | 538 | 59.5% | +2.87% | 61.4% | +5.22% | 73.3% | +14.17% | 172 |
-| `dip_buy`（拉回買進） | 348 | 50.3% | +1.21% | 66.4% | +5.85% | 67.3% | +12.23% | 101 |
-| `volume_spike`（爆量異常） | 241 | 57.9% | +1.71% | 67.8% | +5.19% | 66.7% | +10.60% | 36 |
-| `sustained_buy`（持續買進） | 108 | 62.9% | +2.87% | 66.3% | +5.85% | 72.7% | +6.03% | 11 |
-| ~~`single_lot`~~（已移除） | — | — | — | — | — | 27.7% | — | — |
+- **前瞻報酬口徑**：事件日收盤 → 事件日 + h **日曆天**收盤，目標日無價往後最多找 2 天；h = 1/2/3/5/7/10/15/20/25/30。步驟與 `backfill_future_returns.py` 共用同一函式，`"3"` 與 `"5"` 常相同屬正常
+- **平常日基準**：同一批股票在 [最早事件日, 最晚事件日] 每個有收盤價的交易日，用同一口徑算報酬（不排除事件日）
+- **信賴區間**：以 ISO 週為區塊、模式與基準同組抽樣重抽 5,000 次（種子固定 `20261101`），取超額勝率／超額平均報酬的 2.5／97.5 百分位；事件 < 30 筆或 < 8 週時區間為 NULL
+- **判定**（前端 `src/lib/investment/buyingPatternStats.ts` 的 `classifyExcess`）：超額報酬區間下界 > 0＝較好、上界 < 0＝較差、跨零＝分不出高低、NULL＝樣本不足
+- 比率與報酬皆存小數；每日約 60 列、重算約 7 秒（2026-11-01 實測）
 
-**使用注意事項：**
-- `window_break` 樣本最大（n=343），是最可信的訊號；20 日勝率 78.7% + 均報酬 +15.72%
-- `new_position` 均報酬最高（+16.77%）但 20 日樣本僅 48 筆，區間恰逢多頭，數字有高估風險
-- `sustained_buy` 20 日樣本僅 11 筆，尚無統計意義，不建議單獨作為決策依據
-- 所有數字均受 2026 上半年台股多頭影響，**勝率絕對值偏高**，關注模式間的**相對排序**更有意義
-- `single_lot` 已移除：20 日勝率僅 27.7%（低於任何 baseline），無超額報酬
+**解讀注意**：只看「相對同期平常日」的超額與區間，不要看勝率絕對值（多頭期間所有模式勝率都偏高）。2026-11 首兩次計算（期間至 10-30、11-02）`window_break` 20 日超額報酬皆顯著**較差**（約 -3 ～ -1 pp）——舊版「window_break 最可信」的結論是沒有對照組造成的錯覺。其他模式的判定在區間邊緣會隨資料更新翻轉，以頁面當日結果為準，不要寫死在文件。
 
-**程式碼定義位置**：`ETF/pipeline/steps/buying_pattern_step.py`
-**前端顯示**：`/investment/buying-patterns`（折線圖 / 熱力圖 / 勝率圖）
+**資料缺口**：`stock_prices_daily` 自 2026-05 起約 20% 列的 `close` 為 NULL（上游同步缺陷，待另案修正），對應天期報酬與基準樣本會缺漏；回補後在「目標日有收盤價」的事件中 20 日覆蓋率 100%。
+
+**程式碼定義位置**：`ETF/pipeline/steps/buying_pattern_step.py`（分類 + 補值 + `_refresh_stats`）
+**前端顯示**：`/investment/buying-patterns`（折線圖 / 熱力圖 / 勝率圖 + 與平常日比較表），資料由 `getBuyingPatternStats()` 讀 `etf_buying_pattern_stats`
 
 ---
 

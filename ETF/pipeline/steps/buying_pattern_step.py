@@ -1,7 +1,7 @@
 """
 Buying Pattern Step
 
-每日分類 BUY/IN 事件為 6 種買進模式，並補齊前 30 天事件的前瞻報酬。
+每日分類 BUY/IN 事件為 6 種買進模式，並補齊前 35 天事件的前瞻報酬。
 屬於輔助步驟，失敗時只 log，不中斷 pipeline。
 
 6 種模式：
@@ -16,14 +16,22 @@ Buying Pattern Step
   single_lot     — 回測顯示無超額報酬（勝率 27.7%，低於 baseline）
 """
 
-import json
 import logging
+import time
 from datetime import date, timedelta
 from typing import Any, TYPE_CHECKING
 
+from psycopg2.extras import execute_values
 from sqlalchemy import text
 
+from ETF.analysis.buying_pattern_stats import (
+    NEXT_TRADING_SCAN_DAYS,
+    build_stats_rows,
+    due_missing_horizons,
+    plan_return_updates,
+)
 from ETF.pipeline.context import PipelineContext
+from ETF.pipeline.steps.backfill_future_returns import bulk_merge_future_returns
 from ETF.pipeline.steps.base import BaseStep
 
 if TYPE_CHECKING:
@@ -31,9 +39,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-HORIZONS = [1, 2, 3, 5, 7, 10, 15, 20, 25, 30]
-FILL_WINDOW_DAYS = 30
-FILL_BATCH_SIZE = 500
+FILL_WINDOW_DAYS = 35  # 最長天期 30 + 往後找 2 天 + 容忍 pipeline 漏跑 3 天
 
 VOLUME_SPIKE_WINDOW = 20
 VOLUME_SPIKE_MULTIPLIER = 5.5
@@ -66,6 +72,7 @@ class BuyingPatternStep(BaseStep):
             self._fill_forward_returns(ctx, services)
         except Exception as e:
             self.logger.error("BuyingPatternStep failed: %s", e, exc_info=True)
+        self._refresh_stats(services)
         return ctx
 
     # ------------------------------------------------------------------ classify
@@ -224,37 +231,36 @@ class BuyingPatternStep(BaseStep):
     # ------------------------------------------------------------------ forward returns
 
     def _fill_forward_returns(self, ctx: PipelineContext, services: "PipelineServices") -> None:
-        """補齊最近 30 天事件的前瞻報酬（增量更新，批次 ≤ 500）"""
+        """補齊窗口內所有到期且缺值的天期（先篩後補、不截斷，批次寫入）"""
         today = date.fromisoformat(ctx.date_str) if ctx.date_str else date.today()
         cutoff = (today - timedelta(days=FILL_WINDOW_DAYS)).isoformat()
 
         with services.sql_storage.engine.connect() as conn:
-            events = self._fetch_incomplete_events(conn, cutoff)
+            events = self._fetch_window_events(conn, cutoff)
+            events = [
+                e for e in events
+                if due_missing_horizons(e["future_returns"], e["event_date"], today)
+            ]
             if not events:
                 return
-
-            events = events[:FILL_BATCH_SIZE]
             stock_codes = {e["stock_code"] for e in events}
             price_lookup = self._fetch_price_lookup(conn, stock_codes, cutoff, today.isoformat())
 
-        updated = 0
-        for event in events:
-            new_data = self._compute_missing_returns(event, price_lookup, today)
-            if new_data:
-                self._merge_returns(services, event["id"], new_data)
-                updated += 1
-
-        self.logger.info("Filled forward returns for %d events", updated)
+        updates = plan_return_updates(events, price_lookup, today)
+        if updates:
+            bulk_merge_future_returns(services.sql_storage.engine, updates)
+        self.logger.info(
+            "Filled forward returns for %d / %d due events", len(updates), len(events)
+        )
 
     @staticmethod
-    def _fetch_incomplete_events(conn, cutoff: str) -> list[dict]:
-        """取 future_returns 還沒齊所有天期的事件"""
+    def _fetch_window_events(conn, cutoff: str) -> list[dict]:
+        """取窗口內全部事件（是否需補由 due_missing_horizons 判斷）"""
         rows = conn.execute(text("""
             SELECT id, stock_code, event_date,
                    COALESCE(future_returns, '{}'::jsonb) AS future_returns
             FROM etf_buying_patterns
             WHERE event_date >= CAST(:cutoff AS date)
-            ORDER BY event_date DESC
         """), {"cutoff": cutoff})
         return [dict(r._mapping) for r in rows]
 
@@ -275,52 +281,80 @@ class BuyingPatternStep(BaseStep):
         """), {"codes": codes_arr, "cutoff": cutoff, "today": today})
         return {(r.stock_code, str(r.data_date)): float(r.close) for r in rows if r.close is not None}
 
-    def _compute_missing_returns(
-        self,
-        event: dict,
-        price_lookup: dict[tuple[str, str], float],
-        today: date,
-    ) -> dict[str, float]:
-        existing = event["future_returns"] if isinstance(event["future_returns"], dict) else {}
-        if isinstance(existing, str):
-            existing = json.loads(existing)
+    # ------------------------------------------------------------------ baseline stats
 
-        event_date = event["event_date"]
-        if isinstance(event_date, str):
-            event_date = date.fromisoformat(event_date)
+    _STATS_COLUMNS = (
+        "pattern_type", "horizon", "n", "n_weeks", "win_rate", "avg_return",
+        "baseline_n", "baseline_win_rate", "baseline_avg_return",
+        "excess_win_lo", "excess_win_hi", "excess_ret_lo", "excess_ret_hi",
+        "period_start", "period_end",
+    )
 
-        close_t = price_lookup.get((event["stock_code"], event_date.isoformat()))
-        if not close_t or close_t == 0:
-            return {}
-
-        new_data: dict[str, float] = {}
-        for d in HORIZONS:
-            key = str(d)
-            if key in existing:
-                continue
-            target_day = event_date + timedelta(days=d)
-            if target_day > today:
-                continue
-            # 掃最多 +2 天找最近的交易日（處理週末/假日）
-            close_td = None
-            for offset in range(3):
-                close_td = price_lookup.get((event["stock_code"], (target_day + timedelta(days=offset)).isoformat()))
-                if close_td is not None:
-                    break
-            if close_td is None:
-                continue
-            new_data[key] = round((close_td - close_t) / close_t, 6)
-
-        return new_data
+    def _refresh_stats(self, services: "PipelineServices") -> None:
+        """重算模式 vs 平常日基準統計並整表替換；失敗只 log，保留前次結果。"""
+        started = time.monotonic()
+        try:
+            events, price_lookup = self._fetch_stats_inputs(services.sql_storage.engine)
+            rows = build_stats_rows(events, price_lookup)
+            if not rows:
+                self.logger.info("No buying pattern stats to write")
+                return
+            self._replace_stats(services.sql_storage.engine, rows)
+            self.logger.info(
+                "Buying pattern stats: %d rows, baseline_n(h=20)=%s, %.1fs",
+                len(rows),
+                next((r["baseline_n"] for r in rows if r["horizon"] == 20), None),
+                time.monotonic() - started,
+            )
+        except Exception as e:
+            self.logger.error("Buying pattern stats refresh failed: %s", e, exc_info=True)
 
     @staticmethod
-    def _merge_returns(services: "PipelineServices", event_id: int, new_data: dict[str, float]) -> None:
-        """jsonb merge（|| 運算子）：只補新天期，不覆蓋舊值"""
-        sql = text("""
-            UPDATE etf_buying_patterns
-            SET future_returns = COALESCE(future_returns, '{}'::jsonb) || CAST(:new_data AS jsonb)
-            WHERE id = :id
-        """)
-        with services.sql_storage.engine.connect() as conn:
-            conn.execute(sql, {"id": event_id, "new_data": json.dumps(new_data)})
-            conn.commit()
+    def _fetch_stats_inputs(engine) -> tuple[list[dict], dict[tuple[str, str], float]]:
+        """全部事件 + 事件股票在 [最早事件日, 最晚事件日 + 32 天] 的非 NULL 收盤價"""
+        with engine.connect() as conn:
+            events = [dict(r._mapping) for r in conn.execute(text("""
+                SELECT pattern_type, stock_code, event_date,
+                       COALESCE(future_returns, '{}'::jsonb) AS future_returns
+                FROM etf_buying_patterns
+            """))]
+            if not events:
+                return [], {}
+            start = min(e["event_date"] for e in events)
+            end = max(e["event_date"] for e in events) + timedelta(days=30 + NEXT_TRADING_SCAN_DAYS)
+            rows = conn.execute(text("""
+                SELECT stock_code, data_date, close
+                FROM stock_prices_daily
+                WHERE stock_code = ANY(CAST(:codes AS text[]))
+                  AND data_date >= CAST(:start AS date)
+                  AND data_date <= CAST(:end AS date)
+                  AND close IS NOT NULL
+            """), {
+                "codes": "{" + ",".join({e["stock_code"] for e in events}) + "}",
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+            })
+            lookup = {(r.stock_code, str(r.data_date)): float(r.close) for r in rows}
+        return events, lookup
+
+    @classmethod
+    def _replace_stats(cls, engine, rows: list[dict]) -> None:
+        """單一交易內 DELETE 全表後 INSERT；任一步失敗 rollback，舊資料保留"""
+        columns = cls._STATS_COLUMNS
+        template = "(" + ", ".join(f"%({c})s" for c in columns) + ")"
+        raw = engine.raw_connection()
+        try:
+            with raw.cursor() as cur:
+                cur.execute("DELETE FROM etf_buying_pattern_stats")
+                execute_values(
+                    cur,
+                    f"INSERT INTO etf_buying_pattern_stats ({', '.join(columns)}) VALUES %s",
+                    rows,
+                    template=template,
+                )
+            raw.commit()
+        except Exception:
+            raw.rollback()
+            raise
+        finally:
+            raw.close()

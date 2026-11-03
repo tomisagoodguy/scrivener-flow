@@ -21,7 +21,7 @@ paths:
 | `/investment/bare-k` | 裸K看盤清單（自選股管理，支援公開唯讀瀏覽） |
 | `/investment/bare-k/[code]` | 個股裸K動態路由（單股深度看盤） |
 | `/investment/watch-list` | 觀察清單（多標的追蹤） |
-| `/investment/buying-patterns` | ETF 買進模式前瞻報酬分析（折線圖 / 熱力圖 / 勝率圖） |
+| `/investment/buying-patterns` | ETF 買進模式前瞻報酬分析（折線圖 / 熱力圖 / 勝率圖 + 與平常日比較表） |
 | `/investment/strategy` | 策略選股中心（`strategy_signals` 資料表，5 種量化策略訊號） |
 | `/investment/frontrunning` | ETF 持股公告前後成交量異常偵測 |
 | `/investment/sectors` | 族群強弱分析（全市場資金流向，含成分股展開、品質指標） |
