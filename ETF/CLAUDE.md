@@ -201,12 +201,13 @@ ScrapeStep
   → SyncBareKStep           ← 同步裸K快照（自選→策略→同步加碼→籌碼排行→選股池台股成分股，上限 400）
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
   → SyncAdlStep             ← [輔助] 全市場騰落指標 → market_breadth_daily
+  → TaiexMa60RegimeStep     ← [輔助] 緊接 SyncAdlStep；加權指數季線狀態、三類跌破分類與歷史統計 → taiex_ma60_regime_daily
   → DividendSyncStep        ← [輔助] 全 ETF 配息記錄冪等 upsert → etf_dividend_records
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
 ```
 
-> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`BuyingPatternStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
+> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`BuyingPatternStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`、`TaiexMa60RegimeStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
 
 ---
 
@@ -337,6 +338,7 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 - `etf_flow_daily` — 前端每日資金流向儀表板（`FlowComputeStep` 維護）
 - `etf_position_summary` — 前端個股進出場損益（`PositionSummaryStep` 維護）
 - `etf_pnl_series` — 前端 ETF 損益走勢圖（`PositionSummaryStep` 維護）
+- `taiex_ma60_regime_daily` — 前端 `/investment/breadth` 大盤季線狀態卡（`TaiexMa60RegimeStep` 維護，每日一列，stats jsonb 每日全歷史重算）
 
 > 修改 DB Schema 時需同步通知前端開發者（`src/app/investment/`）。
 

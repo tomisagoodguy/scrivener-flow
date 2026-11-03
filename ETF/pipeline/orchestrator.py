@@ -51,6 +51,7 @@ from ETF.pipeline.steps.strategy_signal_step import StrategySignalStep
 from ETF.pipeline.steps.strategy_trade_step import StrategyTradeStep
 from ETF.pipeline.steps.sector_strength_step import SectorStrengthStep
 from ETF.pipeline.steps.sector_rrg_step import SectorRrgStep
+from ETF.pipeline.steps.taiex_ma60_regime_step import TaiexMa60RegimeStep
 from ETF.pipeline.steps.data_validation_step import DataValidationStep
 
 
@@ -100,6 +101,7 @@ class PipelineOrchestrator:
         FundMomentumStep,       # [輔助] 投信買超多維度指標 → strategy_signals (fund_momentum)
         SyncTreemapStep,        # [輔助] 全市場個股快照 → market_treemap_daily
         SyncAdlStep,            # [輔助] 大盤騰落指標 → market_breadth_daily
+        TaiexMa60RegimeStep,    # [輔助] 加權指數季線狀態與跌破分類 → taiex_ma60_regime_daily
         RetailSentimentStep,    # [輔助] 週頻集保散戶指標 → market_breadth_daily
         MarketChipsStep,        # [輔助] 期貨籌碼/融資融券/個股法人/訊號 → 市場籌碼四表
         DividendSyncStep,       # [輔助] 同步 ETF 配息記錄（TWSE etfDiv）→ etf_dividend_records

@@ -2,7 +2,9 @@ export const revalidate = 3600;
 
 import { getAdlData } from '@/app/actions/getAdlData';
 import { getRetailSentiment } from '@/app/actions/getRetailSentiment';
+import { getTaiexRegime } from '@/app/actions/getTaiexRegime';
 import AdlChart from './components/AdlChart';
+import TaiexRegimeCard from './components/TaiexRegimeCard';
 import RetailSentimentCard from '@/components/features/RetailSentimentCard';
 
 export const metadata = { title: '大盤廣度 | 投資監控' };
@@ -13,9 +15,10 @@ const CROSS_BADGE: Record<string, { label: string; cls: string }> = {
 };
 
 export default async function BreadthPage() {
-    const [adlData, sentiment] = await Promise.all([
+    const [adlData, sentiment, regime] = await Promise.all([
         getAdlData(),
         getRetailSentiment(),
+        getTaiexRegime(),
     ]);
 
     const badge = CROSS_BADGE[adlData.crossStatus];
@@ -49,8 +52,13 @@ export default async function BreadthPage() {
                 <AdlChart records={adlData.records} />
             )}
 
-            <div className="mt-4 max-w-sm">
-                <RetailSentimentCard data={sentiment} />
+            <div className="mt-4 flex flex-wrap items-start gap-4">
+                <div className="w-full max-w-xl">
+                    <TaiexRegimeCard data={regime} />
+                </div>
+                <div className="w-full max-w-sm">
+                    <RetailSentimentCard data={sentiment} />
+                </div>
             </div>
         </div>
     );
