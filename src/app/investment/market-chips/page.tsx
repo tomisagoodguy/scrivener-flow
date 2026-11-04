@@ -1,9 +1,11 @@
 export const revalidate = 3600;
 
 import { getMarketChips } from '@/app/actions/getMarketChips';
+import { getMarginRegime } from '@/app/actions/getMarginRegime';
 import { FuturesPositionChart } from '@/components/features/investment/market-chips/FuturesPositionChart';
 import { RetailRatioChart } from '@/components/features/investment/market-chips/RetailRatioChart';
 import { MarginBalanceChart } from '@/components/features/investment/market-chips/MarginBalanceChart';
+import { MarginRegimeCard } from '@/components/features/investment/market-chips/MarginRegimeCard';
 import { SignalTabs } from '@/components/features/investment/market-chips/SignalTabs';
 
 export const metadata = { title: '市場籌碼 | 投資監控' };
@@ -14,7 +16,10 @@ function latestDate(dates: string[]): string {
 }
 
 export default async function MarketChipsPage() {
-    const { futuresPositions, retailRatios, marginBalances, signals } = await getMarketChips();
+    const [{ futuresPositions, retailRatios, marginBalances, signals }, marginRegime] = await Promise.all([
+        getMarketChips(),
+        getMarginRegime(),
+    ]);
 
     const futuresDate = latestDate(futuresPositions.map((p) => p.data_date));
     const retailDate = latestDate(retailRatios.map((p) => p.data_date));
@@ -52,6 +57,7 @@ export default async function MarketChipsPage() {
                     <span className="text-xs text-slate-400">資料日期：{marginDate}</span>
                 </div>
                 <MarginBalanceChart data={marginBalances} />
+                <MarginRegimeCard data={marginRegime} />
             </div>
 
             <div className="glass-card rounded-2xl p-6">

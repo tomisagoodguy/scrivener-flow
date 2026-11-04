@@ -150,7 +150,11 @@ def bootstrap_excess(
     n_boot: int = BOOTSTRAP_N,
     seed: int = BOOTSTRAP_SEED,
 ) -> ExcessCI | None:
-    """週區塊配對重抽：模式與基準用同一組抽樣週。事件 < MIN_EVENTS 或 < MIN_WEEKS 週回 None。"""
+    """區塊配對重抽：模式與基準用同一組抽樣區塊。事件 < MIN_EVENTS 或 < MIN_WEEKS 個區塊回 None。
+
+    區塊鍵可為任意可排序值：買進模式用 ISO 週 (年, 週)，融資說明卡用 (年, 月)。
+    值為 0/1 時「超額報酬」即比例差。
+    """
     if len(event_samples) < MIN_EVENTS or len({w for w, _ in event_samples}) < MIN_WEEKS:
         return None
     # 只從有基準樣本的週抽；沒有基準的週其事件無從比較，不納入

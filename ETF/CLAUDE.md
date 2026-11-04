@@ -202,12 +202,13 @@ ScrapeStep
   → NewsContextStep         ← [輔助] 直打 MOPS API 取重大公告 → ctx.news_context
   → SyncAdlStep             ← [輔助] 全市場騰落指標 → market_breadth_daily
   → TaiexMa60RegimeStep     ← [輔助] 緊接 SyncAdlStep；加權指數季線狀態、三類跌破分類與歷史統計 → taiex_ma60_regime_daily
+  → MarginRegimeStep        ← [輔助] 緊接 TaiexMa60RegimeStep；融資創一年新高狀態與跌一成歷史統計 → market_margin_regime_daily
   → DividendSyncStep        ← [輔助] 全 ETF 配息記錄冪等 upsert → etf_dividend_records
   → NotifyStep              ← LINE Carousel，BUY/IN 股若大戶積累顯示 💎
   → CleanupStep
 ```
 
-> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`BuyingPatternStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`、`TaiexMa60RegimeStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
+> **輔助步驟**（`AumSyncStep`、`FlowComputeStep`、`SignalDetectStep`、`BuyingPatternStep`、`PositionSummaryStep`、`ShareholderSignalStep`、`NewsContextStep`、`TaiexMa60RegimeStep`、`MarginRegimeStep`）：`execute()` 內部 `try/except` 不 `raise`，失敗時靜默跳過，不中斷主流程。
 
 ---
 
@@ -339,6 +340,7 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 - `etf_position_summary` — 前端個股進出場損益（`PositionSummaryStep` 維護）
 - `etf_pnl_series` — 前端 ETF 損益走勢圖（`PositionSummaryStep` 維護）
 - `taiex_ma60_regime_daily` — 前端 `/investment/breadth` 大盤季線狀態卡（`TaiexMa60RegimeStep` 維護，每日一列，stats jsonb 每日全歷史重算）
+- `market_margin_regime_daily` — 前端 `/investment/market-chips` 融資創高說明卡（`MarginRegimeStep` 維護，每日一列，stats jsonb 每日全歷史重算）
 
 > 修改 DB Schema 時需同步通知前端開發者（`src/app/investment/`）。
 
@@ -401,6 +403,11 @@ else:              signal = "持平"
 | 融資融券 | TWSE `rwd/zh/marginTrading/MI_MARGN?selectType=MS`（市場合計） | `market_margin_daily` | 長存 |
 | 個股法人 | TWSE `rwd/zh/fund/T86`（上市）＋ TPEx `insti/dailyTrade`（上櫃，民國年日期） | `institutional_stock_daily` | **90 天滾動**（cleanup_step） |
 | 訊號 | 由 `institutional_stock_daily` 計算 + JOIN 當日 `etf_diff_logs` BUY/IN 設 `etf_cross` | `institutional_signals` | 長存不清理 |
+| 融資創高說明 | FinLab `margin_balance:融資券總餘額`（上市＋上櫃融資金額）＋ `taiex_total_index` 收盤／最低 | `market_margin_regime_daily` | 長存（`MarginRegimeStep`，緊接 `TaiexMa60RegimeStep`；每日一列 + 全歷史 stats jsonb） |
+
+### 融資創高說明卡（margin-regime-card）
+
+`ETF/analysis/margin_regime.py`：融資創一年新高（≥ 含當日 250 日最大）、指數近一年高點（≥ 250 日最高 × 0.97）、之後 60 個交易日盤中最低 ≤ 收盤 × 0.9 為「跌一成」。統計 2008 起、只納入一年新高可判定且有完整 60 日前瞻的日子；差距區間共用 `bootstrap_excess`（月份區塊）。2026-11-03 結果：融資創高 588 天 13.8% vs 平常 20.1%，區間跨零（分不出高低）。前端 `/investment/market-chips` 融資圖下方 `MarginRegimeCard`，只用中性灰（不是訊號）。GA 條件池的 `margin_position` 驗證不顯著（排除 2009 前無個股融資資料的日子後四種參數皆跨零），不上頁面。
 
 ### 散戶多空比（只算 MXF/TMF，大台無意義）
 
