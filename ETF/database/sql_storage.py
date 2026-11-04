@@ -439,6 +439,10 @@ class SQLStorage:
                 # 13. 裸K快照（每檔只留最新一列）
                 res_bare_k = conn.execute(text(BARE_K_RETENTION_SQL))
 
+                # 14. 股東分散統計（週資料，保留 2 年；讀取端只用最近幾期）
+                sql_equity = text("DELETE FROM equity_distribution_stats WHERE snapshot_date < CURRENT_DATE - INTERVAL '730 days'")
+                res_equity = conn.execute(sql_equity)
+
                 conn.commit()
                 logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
@@ -455,6 +459,7 @@ class SQLStorage:
                 logger.info(f"   - ETF 共識持股已清理: {res_overlap.rowcount} 筆")
                 logger.info(f"   - 個股法人日淨額已清理: {res_inst_stock.rowcount} 筆")
                 logger.info(f"   - 裸K快照已清理: {res_bare_k.rowcount} 筆")
+                logger.info(f"   - 股東分散統計已清理: {res_equity.rowcount} 筆")
 
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")

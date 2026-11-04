@@ -36,6 +36,15 @@ def test_institutional_stock_daily_deleted_after_90_days():
     assert matched[0].strip().upper().startswith("DELETE FROM")
 
 
+def test_equity_distribution_stats_deleted_after_730_days():
+    statements = _run_cleanup_and_capture_sql()
+    matched = [s for s in statements if "equity_distribution_stats" in s]
+    assert len(matched) == 1
+    assert "snapshot_date" in matched[0]
+    assert "730 days" in matched[0]
+    assert matched[0].strip().upper().startswith("DELETE FROM")
+
+
 def test_institutional_signals_never_cleaned():
     statements = _run_cleanup_and_capture_sql()
     assert not any("institutional_signals" in s for s in statements)
