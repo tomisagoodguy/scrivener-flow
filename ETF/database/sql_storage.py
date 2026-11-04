@@ -17,6 +17,16 @@ PRICE_COLUMNS = [
     "amount", "margin_ratio", "margin_pct_rank", "it_buy", "currency",
 ]
 
+# 每列已含約 240 日資料，舊列全為重複；以「存在更新列」為條件，退出同步名單的股票仍留最後一列。
+BARE_K_RETENTION_SQL = """
+    DELETE FROM bare_k_snapshots
+    WHERE EXISTS (
+        SELECT 1 FROM bare_k_snapshots AS newer
+        WHERE newer.stock_id = bare_k_snapshots.stock_id
+          AND newer.date > bare_k_snapshots.date
+    )
+"""
+
 
 def _finite_or_none(value) -> float | None:
     """NaN / ±inf / 缺值 → None（inf 寫入 JSON/SQL 會失敗）。"""
@@ -426,6 +436,13 @@ class SQLStorage:
                 sql_inst_stock = text("DELETE FROM institutional_stock_daily WHERE data_date < CURRENT_DATE - INTERVAL '90 days'")
                 res_inst_stock = conn.execute(sql_inst_stock)
 
+                # 13. 裸K快照（每檔只留最新一列）
+                res_bare_k = conn.execute(text(BARE_K_RETENTION_SQL))
+
+                # 14. 股東分散統計（週資料，保留 2 年；讀取端只用最近幾期）
+                sql_equity = text("DELETE FROM equity_distribution_stats WHERE snapshot_date < CURRENT_DATE - INTERVAL '730 days'")
+                res_equity = conn.execute(sql_equity)
+
                 conn.commit()
                 logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
@@ -441,6 +458,8 @@ class SQLStorage:
                 logger.info(f"   - ETF 買進模式已清理: {res_buying.rowcount} 筆")
                 logger.info(f"   - ETF 共識持股已清理: {res_overlap.rowcount} 筆")
                 logger.info(f"   - 個股法人日淨額已清理: {res_inst_stock.rowcount} 筆")
+                logger.info(f"   - 裸K快照已清理: {res_bare_k.rowcount} 筆")
+                logger.info(f"   - 股東分散統計已清理: {res_equity.rowcount} 筆")
 
         except Exception as e:
             logger.error(f"自動優化失敗: {e}")

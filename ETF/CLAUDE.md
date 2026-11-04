@@ -327,6 +327,8 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 
 ### 前端資料依賴
 
+- `bare_k_snapshots` — 前端裸K圖表（`SyncBareKStep` 維護）；每列已含約 240 日資料，`cleanup_old_data` 每檔只留最新一列，**不可依賴歷史快照**
+- `equity_distribution_stats` — 前端籌碼排行（`sync_equity_distribution.py` 維護）；`cleanup_old_data` 只留 2 年，手動 `--force-backfill`／`--backfill-history` 補回的舊期會在下次清理刪除
 - `etf_holdings_snapshot` — 前端持股明細頁的主要資料來源
 - `stock_prices_daily` — 前端顯示個股現價（`SyncOHLCVStep` 維護）
 - `etf_stock_overlap` — 前端跨 ETF 共識持股頁（`OverlapComputeStep` 維護）
