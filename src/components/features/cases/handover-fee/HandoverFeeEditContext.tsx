@@ -1,12 +1,12 @@
 'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { HandoverFeeWithNames } from '@/domain/handover-fee/types';
+import type { LedgerEntry } from '@/domain/handover-fee/types';
 
 interface HandoverFeeEditValue {
     /** 目前正在編輯的紀錄；null 表示表單為新增模式 */
-    editing: HandoverFeeWithNames | null;
-    startEdit: (fee: HandoverFeeWithNames) => void;
+    editing: LedgerEntry | null;
+    startEdit: (fee: LedgerEntry) => void;
     cancelEdit: () => void;
 }
 
@@ -14,9 +14,9 @@ const HandoverFeeEditContext = createContext<HandoverFeeEditValue | null>(null);
 
 /** 串接清單的「編輯」按鈕與頁面上方的表單 */
 export function HandoverFeeEditProvider({ children }: { children: ReactNode }) {
-    const [editing, setEditing] = useState<HandoverFeeWithNames | null>(null);
+    const [editing, setEditing] = useState<LedgerEntry | null>(null);
 
-    const startEdit = (fee: HandoverFeeWithNames) => {
+    const startEdit = (fee: LedgerEntry) => {
         setEditing(fee);
         document.getElementById(HANDOVER_FEE_FORM_ID)?.scrollIntoView?.({ block: 'start', behavior: 'instant' });
     };

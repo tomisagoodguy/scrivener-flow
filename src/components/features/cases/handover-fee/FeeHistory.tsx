@@ -3,15 +3,17 @@
 import { useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { isNavigableMonth } from '@/domain/handover-fee/historyParams';
-import type { HandoverFeeWithNames, Scrivener } from '@/domain/handover-fee/types';
+import type { LedgerEntry, Scrivener } from '@/domain/handover-fee/types';
+import { FeeHistorySummary } from './FeeHistorySummary';
 import { useHandoverFeeEdit } from './HandoverFeeEditContext';
 import { ScrivenerRoster } from './ScrivenerRoster';
+import { SoloFeeRow } from './SoloFeeRow';
 import { formatAmount, useFeeRowActions } from './useFeeRowActions';
 
 const INPUT_CLASS = 'bg-white/50 backdrop-blur-sm border border-gray-200 focus:bg-white rounded-xl px-3 py-1.5 text-sm';
 
 interface FeeHistoryProps {
-    fees: HandoverFeeWithNames[];
+    fees: LedgerEntry[];
     /** 完整名單（含已隱藏），篩選選項只列使用中的 */
     scriveners: Scrivener[];
     month: string;
@@ -58,6 +60,8 @@ export function FeeHistory({ fees, scriveners, month, scrivenerId }: FeeHistoryP
                 </select>
             </div>
 
+            <FeeHistorySummary entries={fees} />
+
             {error && (
                 <p role="alert" className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
             )}
@@ -66,7 +70,15 @@ export function FeeHistory({ fees, scriveners, month, scrivenerId }: FeeHistoryP
                 <p className="text-sm text-slate-400 py-6 text-center">這個月沒有紀錄</p>
             ) : (
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {fees.map((fee) => (
+                    {fees.map((fee) => fee.entry_type === 'solo' ? (
+                        <SoloFeeRow
+                            key={fee.id}
+                            fee={fee}
+                            isPending={isPending}
+                            onEdit={() => startEdit(fee)}
+                            onRemove={() => remove(fee.id, fee.object_number ?? fee.fee_date)}
+                        />
+                    ) : (
                         <li key={fee.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-20">{fee.fee_date}</span>
                             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{fee.object_number ?? '—'}</span>

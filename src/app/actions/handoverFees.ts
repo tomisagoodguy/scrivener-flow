@@ -4,11 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import {
     createHandoverFeeSchema,
+    createSoloFeeSchema,
     scrivenerNameSchema,
     type CreateHandoverFeeInput,
+    type CreateSoloFeeInput,
     type HandoverFee,
     type HandoverFeeWithNames,
+    type LedgerEntry,
     type Scrivener,
+    type SoloHandoverFee,
 } from '@/domain/handover-fee/types';
 import { MONTH_PATTERN, UUID_PATTERN } from '@/domain/handover-fee/historyParams';
 
@@ -20,13 +24,14 @@ const NOT_FOUND = { success: false, error: '找不到紀錄，請重新整理' }
 const UNIQUE_VIOLATION = '23505';
 
 const FEE_SELECT = `
-    id, fee_date, object_number, payer_scrivener_id, payee_scrivener_id, amount, paid_at, note,
+    id, entry_type, case_count, fee_date, object_number, payer_scrivener_id, payee_scrivener_id, amount, paid_at, note,
     payer:scriveners!handover_fees_payer_fk(name),
     payee:scriveners!handover_fees_payee_fk(name)
 `;
 
 type NameJoin = { name: string } | { name: string }[] | null;
 type FeeRow = HandoverFee & { payer: NameJoin; payee: NameJoin };
+type LedgerRow = FeeRow | SoloHandoverFee;
 
 async function getAuthedClient() {
     const supabase = await createClient();
@@ -42,8 +47,33 @@ function joinedName(join: NameJoin): string {
     return row?.name ?? '';
 }
 
-function toFeeWithNames({ payer, payee, ...fee }: FeeRow): HandoverFeeWithNames {
-    return { ...fee, payer_name: joinedName(payer), payee_name: joinedName(payee) };
+function toFeeWithNames(row: FeeRow): HandoverFeeWithNames {
+    return {
+        id: row.id,
+        entry_type: 'exchange',
+        fee_date: row.fee_date,
+        object_number: row.object_number,
+        payer_scrivener_id: row.payer_scrivener_id,
+        payee_scrivener_id: row.payee_scrivener_id,
+        amount: row.amount,
+        paid_at: row.paid_at,
+        note: row.note,
+        payer_name: joinedName(row.payer),
+        payee_name: joinedName(row.payee),
+    };
+}
+
+function toLedgerEntry(row: LedgerRow): LedgerEntry {
+    if (row.entry_type !== 'solo') return toFeeWithNames(row);
+    return {
+        id: row.id,
+        entry_type: 'solo',
+        fee_date: row.fee_date,
+        object_number: row.object_number,
+        case_count: row.case_count,
+        amount: row.amount,
+        note: row.note,
+    };
 }
 
 /** `YYYY-MM` 的下個月第一天 */
@@ -53,7 +83,7 @@ function nextMonthStart(month: string): string {
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-type FeeContent = Omit<HandoverFee, 'id' | 'paid_at'>;
+type FeeContent = Omit<HandoverFee, 'id' | 'entry_type' | 'paid_at'>;
 
 /** 新增與編輯共用：Zod 驗證 + 付款人/收款人必須是本人名單中使用中的地政士 */
 async function validateFeeContent(
@@ -110,6 +140,7 @@ export async function updateHandoverFee(id: string, input: CreateHandoverFeeInpu
         .update(content.data)
         .eq('id', id)
         .eq('user_id', user.id)
+        .eq('entry_type', 'exchange')
         .is('deleted_at', null)
         .select('id');
     if (error) return { success: false, error: error.message };
@@ -119,6 +150,57 @@ export async function updateHandoverFee(id: string, input: CreateHandoverFeeInpu
     return { success: true };
 }
 
+type SoloContent = Omit<SoloHandoverFee, 'id' | 'entry_type'>;
+
+function parseSoloContent(input: CreateSoloFeeInput): { success: true; data: SoloContent } | { success: false; error: string } {
+    const parsed = createSoloFeeSchema.safeParse(input);
+    if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? '輸入資料錯誤' };
+
+    const { note, ...rest } = parsed.data;
+    return { success: true, data: { ...rest, note: note || null } };
+}
+
+/** 自己遞牌：沒有付款人/收款人，不查名單 */
+export async function createSoloFee(input: CreateSoloFeeInput): Promise<ActionResult> {
+    const { supabase, user } = await getAuthedClient();
+    if (!user) return UNAUTHORIZED;
+
+    const content = parseSoloContent(input);
+    if (!content.success) return content;
+
+    const { error } = await supabase
+        .from('handover_fees')
+        .insert({ user_id: user.id, entry_type: 'solo', ...content.data });
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/cases');
+    return { success: true };
+}
+
+/** 編輯自己遞牌；紀錄類型不可切換，目標不是 solo 時視為找不到 */
+export async function updateSoloFee(id: string, input: CreateSoloFeeInput): Promise<ActionResult> {
+    const { supabase, user } = await getAuthedClient();
+    if (!user) return UNAUTHORIZED;
+
+    const content = parseSoloContent(input);
+    if (!content.success) return content;
+
+    const { data, error } = await supabase
+        .from('handover_fees')
+        .update(content.data)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .eq('entry_type', 'solo')
+        .is('deleted_at', null)
+        .select('id');
+    if (error) return { success: false, error: error.message };
+    if (!data?.length) return NOT_FOUND;
+
+    revalidatePath('/cases');
+    return { success: true };
+}
+
+/** 只有互遞有收款狀態；目標是自己遞牌時視為找不到 */
 export async function setHandoverFeePaid(id: string, paid: boolean): Promise<ActionResult> {
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;
@@ -128,6 +210,7 @@ export async function setHandoverFeePaid(id: string, paid: boolean): Promise<Act
         .update({ paid_at: paid ? new Date().toISOString() : null })
         .eq('id', id)
         .eq('user_id', user.id)
+        .eq('entry_type', 'exchange')
         .is('deleted_at', null)
         .select('id');
     if (error) return { success: false, error: error.message };
@@ -238,7 +321,7 @@ export async function listScrivenersWithDefaults(): Promise<DataResult<Scrivener
     return { success: true, data: (data ?? []) as Scrivener[] };
 }
 
-/** 未收款：未收且未刪除，日期由舊到新 */
+/** 未收款：互遞中未收且未刪除，日期由舊到新；自己遞牌沒有收款狀態 */
 export async function listUnpaidFees(): Promise<DataResult<HandoverFeeWithNames[]>> {
     const { supabase, user } = await getAuthedClient();
     if (!user) return UNAUTHORIZED;
@@ -247,6 +330,7 @@ export async function listUnpaidFees(): Promise<DataResult<HandoverFeeWithNames[
         .from('handover_fees')
         .select(FEE_SELECT)
         .eq('user_id', user.id)
+        .eq('entry_type', 'exchange')
         .is('paid_at', null)
         .is('deleted_at', null)
         .order('fee_date', { ascending: true });
@@ -255,11 +339,11 @@ export async function listUnpaidFees(): Promise<DataResult<HandoverFeeWithNames[
     return { success: true, data: ((data ?? []) as unknown as FeeRow[]).map(toFeeWithNames) };
 }
 
-/** 歷史：指定月份、未刪除；有指定地政士時比對付款人或收款人；日期由新到舊 */
+/** 歷史：指定月份、未刪除；有指定地政士時比對付款人或收款人（自己遞牌兩欄皆 null，自然排除）；日期由新到舊 */
 export async function listFeeHistory(params: {
     month: string;
     scrivenerId?: string;
-}): Promise<DataResult<HandoverFeeWithNames[]>> {
+}): Promise<DataResult<LedgerEntry[]>> {
     const { month, scrivenerId } = params;
     if (!MONTH_PATTERN.test(month)) return { success: false, error: '月份格式錯誤' };
     if (scrivenerId && !UUID_PATTERN.test(scrivenerId)) return { success: false, error: '地政士參數錯誤' };
@@ -281,5 +365,5 @@ export async function listFeeHistory(params: {
     const { data, error } = await query.order('fee_date', { ascending: false });
     if (error) return { success: false, error: error.message };
 
-    return { success: true, data: ((data ?? []) as unknown as FeeRow[]).map(toFeeWithNames) };
+    return { success: true, data: ((data ?? []) as unknown as LedgerRow[]).map(toLedgerEntry) };
 }

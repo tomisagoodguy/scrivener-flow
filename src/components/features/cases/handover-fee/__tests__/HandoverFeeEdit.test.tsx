@@ -28,6 +28,7 @@ const scriveners: Scrivener[] = [
 ];
 const unpaid: HandoverFeeWithNames = {
     id: 'f1',
+    entry_type: 'exchange',
     fee_date: '2026-10-27',
     object_number: 'A123',
     payer_scrivener_id: A,

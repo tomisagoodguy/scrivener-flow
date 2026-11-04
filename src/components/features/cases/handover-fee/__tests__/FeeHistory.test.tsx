@@ -4,7 +4,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { FeeHistory } from '../FeeHistory';
-import type { HandoverFeeWithNames, Scrivener } from '@/domain/handover-fee/types';
+import type { HandoverFeeWithNames, LedgerEntry, Scrivener, SoloHandoverFee } from '@/domain/handover-fee/types';
 import { HandoverFeeEditProvider } from '../HandoverFeeEditContext';
 
 const renderWithEdit = (ui: React.ReactElement) => render(ui, { wrapper: HandoverFeeEditProvider });
@@ -29,9 +29,19 @@ const scriveners: Scrivener[] = [
     { id: A, name: '孔協', sort_order: 0, archived_at: null },
     { id: H, name: '來慶', sort_order: 5, archived_at: '2026-10-01T00:00:00Z' },
 ];
+const solo = (id: string, case_count: number, amount: number | null): SoloHandoverFee => ({
+    id,
+    entry_type: 'solo',
+    fee_date: '2026-10-20',
+    object_number: null,
+    case_count,
+    amount,
+    note: null,
+});
 const fees: HandoverFeeWithNames[] = [
     {
         id: 'f1',
+        entry_type: 'exchange',
         fee_date: '2026-10-12',
         object_number: 'B456',
         payer_scrivener_id: A,
@@ -100,5 +110,42 @@ describe('FeeHistory', () => {
     it('該月沒有紀錄時顯示空狀態', () => {
         renderWithEdit(<FeeHistory fees={[]} scriveners={scriveners} month="2026-10" scrivenerId="" />);
         expect(screen.getByText('這個月沒有紀錄')).toBeInTheDocument();
+        expect(screen.queryByTestId('history-summary')).toBeNull();
+    });
+
+    it('自己遞牌列顯示件數與 —，沒有已收狀態與標記已收', () => {
+        renderWithEdit(<FeeHistory fees={[solo('s1', 3, null)]} scriveners={scriveners} month="2026-10" scrivenerId="" />);
+        const row = screen.getByRole('listitem');
+        expect(row).toHaveTextContent('自己遞牌');
+        expect(row).toHaveTextContent('3 件');
+        expect(row).toHaveTextContent('—');
+        expect(row).not.toHaveTextContent('未收');
+        expect(row).not.toHaveTextContent('已收');
+        expect(screen.queryByRole('button', { name: '標記已收' })).toBeNull();
+        expect(screen.getByRole('button', { name: '編輯' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '刪除' })).toBeInTheDocument();
+    });
+
+    it('自己遞牌可刪除', async () => {
+        jest.spyOn(window, 'confirm').mockReturnValue(true);
+        mockDelete.mockResolvedValue({ success: true });
+        renderWithEdit(<FeeHistory fees={[solo('s1', 3, 9000)]} scriveners={scriveners} month="2026-10" scrivenerId="" />);
+        fireEvent.click(screen.getByRole('button', { name: '刪除' }));
+        await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('s1'));
+    });
+
+    it('統計列分開顯示自己遞牌與互遞，不相加', () => {
+        const mixed: LedgerEntry[] = [solo('s1', 3, 9000), solo('s2', 1, null), ...fees, { ...fees[0], id: 'f2', amount: 3000 }];
+        renderWithEdit(<FeeHistory fees={mixed} scriveners={scriveners} month="2026-10" scrivenerId="" />);
+        const summary = screen.getByTestId('history-summary');
+        expect(summary).toHaveTextContent('自己遞牌 4 件 · $9,000');
+        expect(summary).toHaveTextContent('互遞 2 筆 · $5,000');
+    });
+
+    it('統計列省略沒有紀錄的類型', () => {
+        renderWithEdit(<FeeHistory fees={fees} scriveners={scriveners} month="2026-10" scrivenerId={A} />);
+        const summary = screen.getByTestId('history-summary');
+        expect(summary).toHaveTextContent('互遞 1 筆 · $2,000');
+        expect(summary).not.toHaveTextContent('自己遞牌');
     });
 });

@@ -1,7 +1,7 @@
 /**
  * 遞牌費新增驗證（spec: Record a handover fee → Example: validation cases）
  */
-import { createHandoverFeeSchema } from '../types';
+import { createHandoverFeeSchema, createSoloFeeSchema } from '../types';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -52,5 +52,47 @@ describe('createHandoverFeeSchema', () => {
         ['金額超過上限', { amount: 100_000_000 }, '金額過大'],
     ])('%s → 拒絕', (_label, patch, message) => {
         expect(firstError({ ...valid, ...patch })).toBe(message);
+    });
+});
+
+/** spec: Record a solo handover entry → Example: solo validation cases */
+describe('createSoloFeeSchema', () => {
+    const solo = { fee_date: '2026-11-04', object_number: '', case_count: 1, amount: null, note: '' };
+
+    it.each([
+        ['件數 0', { case_count: 0 }, '件數必須是正整數'],
+        ['件數 -1', { case_count: -1 }, '件數必須是正整數'],
+        ['件數 1.5', { case_count: 1.5 }, '件數必須是正整數'],
+        ['件數空白', { case_count: Number.NaN }, '件數必須是正整數'],
+        ['件數 10000', { case_count: 10000 }, '件數必須是正整數'],
+        ['金額 0', { amount: 0 }, '金額必須是正整數'],
+        ['金額 1500.5', { amount: 1500.5 }, '金額必須是正整數'],
+        ['金額超過上限', { amount: 100_000_000 }, '金額過大'],
+        ['日期格式錯誤', { fee_date: '2026/11/04' }, '日期格式錯誤'],
+    ])('%s → 拒絕', (_label, patch, message) => {
+        const r = createSoloFeeSchema.safeParse({ ...solo, ...patch });
+        expect(r.success ? undefined : r.error.issues[0]?.message).toBe(message);
+    });
+
+    it('件數 1、金額空白 → 通過且金額為 null', () => {
+        const r = createSoloFeeSchema.safeParse(solo);
+        expect(r.success).toBe(true);
+        if (r.success) {
+            expect(r.data.amount).toBeNull();
+            expect(r.data.object_number).toBeNull();
+        }
+    });
+
+    it('件數 3、金額 9000 → 通過', () => {
+        const r = createSoloFeeSchema.safeParse({ ...solo, case_count: 3, amount: 9000 });
+        expect(r.success).toBe(true);
+        if (r.success) {
+            expect(r.data.case_count).toBe(3);
+            expect(r.data.amount).toBe(9000);
+        }
+    });
+
+    it('件數上限 9999 通過', () => {
+        expect(createSoloFeeSchema.safeParse({ ...solo, case_count: 9999 }).success).toBe(true);
     });
 });

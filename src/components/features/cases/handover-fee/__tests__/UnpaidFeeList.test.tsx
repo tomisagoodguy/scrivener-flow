@@ -19,6 +19,7 @@ jest.mock('@/app/actions/handoverFees', () => ({
 function fee(id: string, fee_date: string, amount: number): HandoverFeeWithNames {
     return {
         id,
+        entry_type: 'exchange',
         fee_date,
         object_number: `OBJ-${id}`,
         payer_scrivener_id: 'p',

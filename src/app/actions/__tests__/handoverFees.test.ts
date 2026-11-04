@@ -24,12 +24,14 @@ import {
     addScrivener,
     archiveScrivener,
     createHandoverFee,
+    createSoloFee,
     deleteHandoverFee,
     listFeeHistory,
     listScrivenersWithDefaults,
     listUnpaidFees,
     setHandoverFeePaid,
     updateHandoverFee,
+    updateSoloFee,
 } from '../handoverFees';
 
 type Call = [string, unknown[]];
@@ -176,6 +178,7 @@ describe('updateHandoverFee', () => {
         expect(update.calls).toContainEqual(['eq', ['id', 'f1']]);
         expect(update.calls).toContainEqual(['eq', ['user_id', 'u1']]);
         expect(update.calls).toContainEqual(['is', ['deleted_at', null]]);
+        expect(update.calls).toContainEqual(['eq', ['entry_type', 'exchange']]);
     });
 
     it('目標已刪除或不存在（影響 0 列）→ 找不到紀錄', async () => {
@@ -203,6 +206,7 @@ describe('setHandoverFeePaid / deleteHandoverFee', () => {
         expect(typeof payload.paid_at).toBe('string');
         expect(calls).toContainEqual(['eq', ['id', 'f1']]);
         expect(calls).toContainEqual(['is', ['deleted_at', null]]);
+        expect(calls).toContainEqual(['eq', ['entry_type', 'exchange']]);
     });
 
     it('改回未收寫入 null', async () => {
@@ -210,6 +214,7 @@ describe('setHandoverFeePaid / deleteHandoverFee', () => {
         mockFrom.mockReturnValue(builder);
         await setHandoverFeePaid('f1', false);
         expect(calls[0]).toEqual(['update', [{ paid_at: null }]]);
+        expect(calls).toContainEqual(['eq', ['entry_type', 'exchange']]);
     });
 
     it('刪除為軟刪除，寫入 deleted_at', async () => {
@@ -229,6 +234,71 @@ describe('setHandoverFeePaid / deleteHandoverFee', () => {
     ])('%s：影響 0 列時回「找不到紀錄」', async (_name, run) => {
         mockFrom.mockReturnValue(makeBuilder({ data: [] }).builder);
         expect(await run()).toEqual({ success: false, error: '找不到紀錄，請重新整理' });
+    });
+});
+
+describe('createSoloFee / updateSoloFee', () => {
+    const soloInput = { fee_date: '2026-11-04', object_number: '', case_count: 3, amount: null, note: '' };
+
+    it('未登入回 Unauthorized，不查 DB', async () => {
+        mockGetUser.mockResolvedValue({ data: { user: null } });
+        expect(await createSoloFee(soloInput)).toEqual({ success: false, error: 'Unauthorized' });
+        expect(await updateSoloFee('s1', soloInput)).toEqual({ success: false, error: 'Unauthorized' });
+        expect(mockFrom).not.toHaveBeenCalled();
+    });
+
+    it('驗證失敗不寫入', async () => {
+        expect(await createSoloFee({ ...soloInput, case_count: 0 })).toEqual({ success: false, error: '件數必須是正整數' });
+        expect(await updateSoloFee('s1', { ...soloInput, amount: 0 })).toEqual({ success: false, error: '金額必須是正整數' });
+        expect(mockFrom).not.toHaveBeenCalled();
+    });
+
+    it('新增不查名單，寫入 solo 類型與 null 金額', async () => {
+        const { builder, calls } = makeBuilder({});
+        mockFrom.mockReturnValueOnce(builder);
+
+        expect(await createSoloFee(soloInput)).toEqual({ success: true });
+        expect(mockFrom).toHaveBeenCalledTimes(1);
+        expect(mockFrom).toHaveBeenCalledWith('handover_fees');
+        expect(calls[0]).toEqual([
+            'insert',
+            [
+                {
+                    user_id: 'u1',
+                    entry_type: 'solo',
+                    fee_date: '2026-11-04',
+                    object_number: null,
+                    case_count: 3,
+                    amount: null,
+                    note: null,
+                },
+            ],
+        ]);
+    });
+
+    it('新增的 DB 錯誤回傳錯誤', async () => {
+        mockFrom.mockReturnValueOnce(makeBuilder({ error: { message: 'check violation' } }).builder);
+        expect(await createSoloFee(soloInput)).toEqual({ success: false, error: 'check violation' });
+    });
+
+    it('更新只作用於未刪除的本人 solo 紀錄', async () => {
+        const { builder, calls } = makeBuilder({ data: [{ id: 's1' }] });
+        mockFrom.mockReturnValueOnce(builder);
+
+        expect(await updateSoloFee('s1', { ...soloInput, case_count: 4, amount: 12000 })).toEqual({ success: true });
+        expect(calls[0]).toEqual([
+            'update',
+            [{ fee_date: '2026-11-04', object_number: null, case_count: 4, amount: 12000, note: null }],
+        ]);
+        expect(calls).toContainEqual(['eq', ['id', 's1']]);
+        expect(calls).toContainEqual(['eq', ['user_id', 'u1']]);
+        expect(calls).toContainEqual(['eq', ['entry_type', 'solo']]);
+        expect(calls).toContainEqual(['is', ['deleted_at', null]]);
+    });
+
+    it('目標不是 solo 或已刪除（影響 0 列）→ 找不到紀錄', async () => {
+        mockFrom.mockReturnValueOnce(makeBuilder({ data: [] }).builder);
+        expect(await updateSoloFee('f1', soloInput)).toEqual({ success: false, error: '找不到紀錄，請重新整理' });
     });
 });
 
@@ -318,6 +388,8 @@ describe('listScrivenersWithDefaults', () => {
 describe('listUnpaidFees / listFeeHistory', () => {
     const joined = {
         id: 'f1',
+        entry_type: 'exchange',
+        case_count: 1,
         fee_date: '2026-10-12',
         object_number: 'B456',
         payer_scrivener_id: B,
@@ -335,6 +407,7 @@ describe('listUnpaidFees / listFeeHistory', () => {
 
         const result = await listUnpaidFees();
         expect(calls).toContainEqual(['is', ['paid_at', null]]);
+        expect(calls).toContainEqual(['eq', ['entry_type', 'exchange']]);
         expect(calls).toContainEqual(['is', ['deleted_at', null]]);
         expect(calls).toContainEqual(['order', ['fee_date', { ascending: true }]]);
         expect(result).toEqual({
@@ -342,6 +415,7 @@ describe('listUnpaidFees / listFeeHistory', () => {
             data: [
                 {
                     id: 'f1',
+                    entry_type: 'exchange',
                     fee_date: '2026-10-12',
                     object_number: 'B456',
                     payer_scrivener_id: B,
@@ -366,6 +440,52 @@ describe('listUnpaidFees / listFeeHistory', () => {
         expect(calls).toContainEqual(['is', ['deleted_at', null]]);
         expect(calls).toContainEqual(['order', ['fee_date', { ascending: false }]]);
         expect(calls).toContainEqual(['or', [`payer_scrivener_id.eq.${A},payee_scrivener_id.eq.${A}`]]);
+    });
+
+    it('歷史：solo 保留件數與 null 金額，互遞保留姓名', async () => {
+        const soloRow = {
+            id: 's1',
+            entry_type: 'solo',
+            case_count: 3,
+            fee_date: '2026-10-20',
+            object_number: null,
+            payer_scrivener_id: null,
+            payee_scrivener_id: null,
+            amount: null,
+            paid_at: null,
+            note: '自己遞',
+            payer: null,
+            payee: null,
+        };
+        mockFrom.mockReturnValue(makeBuilder({ data: [soloRow, joined] }).builder);
+
+        expect(await listFeeHistory({ month: '2026-10' })).toEqual({
+            success: true,
+            data: [
+                {
+                    id: 's1',
+                    entry_type: 'solo',
+                    fee_date: '2026-10-20',
+                    object_number: null,
+                    case_count: 3,
+                    amount: null,
+                    note: '自己遞',
+                },
+                {
+                    id: 'f1',
+                    entry_type: 'exchange',
+                    fee_date: '2026-10-12',
+                    object_number: 'B456',
+                    payer_scrivener_id: B,
+                    payee_scrivener_id: A,
+                    amount: 2000,
+                    paid_at: null,
+                    note: null,
+                    payer_name: '定康',
+                    payee_name: '孔協',
+                },
+            ],
+        });
     });
 
     it('歷史：12 月跨年', async () => {

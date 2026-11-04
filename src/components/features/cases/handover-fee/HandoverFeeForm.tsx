@@ -1,9 +1,11 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { HandoverFee, Scrivener } from '@/domain/handover-fee/types';
+import { EntryTypeSwitch, type EntryType } from './EntryTypeSwitch';
 import { HANDOVER_FEE_FORM_ID, useHandoverFeeEdit } from './HandoverFeeEditContext';
 import { ScrivenerSelect } from './ScrivenerSelect';
+import { SoloFeeForm } from './SoloFeeForm';
 import { useHandoverFeeForm } from './useHandoverFeeForm';
 
 const INPUT_CLASS = 'bg-white/50 backdrop-blur-sm border border-gray-200 focus:bg-white rounded-xl px-3 py-2 text-sm';
@@ -19,7 +21,31 @@ interface HandoverFeeFormProps {
 /** 以編輯中的紀錄 id 作為 key：切換編輯對象或回到新增模式時重新掛載，欄位初值隨之重設 */
 export function HandoverFeeForm(props: HandoverFeeFormProps) {
     const { editing, cancelEdit } = useHandoverFeeEdit();
-    return <FeeFormBody key={editing?.id ?? 'new'} {...props} editing={editing} onExitEdit={cancelEdit} />;
+    const [entryType, setEntryType] = useState<EntryType>('exchange');
+    // 編輯時類型由紀錄決定，不提供切換
+    const typeSwitch = editing ? undefined : <EntryTypeSwitch value={entryType} onChange={setEntryType} />;
+    const key = editing?.id ?? 'new';
+
+    if (editing ? editing.entry_type === 'solo' : entryType === 'solo') {
+        return (
+            <SoloFeeForm
+                key={key}
+                defaultDate={props.defaultDate}
+                editing={editing?.entry_type === 'solo' ? editing : null}
+                onExitEdit={cancelEdit}
+                typeSwitch={typeSwitch}
+            />
+        );
+    }
+    return (
+        <FeeFormBody
+            key={key}
+            {...props}
+            editing={editing?.entry_type === 'exchange' ? editing : null}
+            onExitEdit={cancelEdit}
+            typeSwitch={typeSwitch}
+        />
+    );
 }
 
 function FeeFormBody({
@@ -27,7 +53,8 @@ function FeeFormBody({
     defaultDate,
     editing,
     onExitEdit,
-}: HandoverFeeFormProps & { editing: HandoverFee | null; onExitEdit: () => void }) {
+    typeSwitch,
+}: HandoverFeeFormProps & { editing: HandoverFee | null; onExitEdit: () => void; typeSwitch?: ReactNode }) {
     const { fields, setters, swap, submit, error, isPending } = useHandoverFeeForm({
         activeIds: scriveners.map((s) => s.id),
         defaultDate,
@@ -46,6 +73,7 @@ function FeeFormBody({
             }}
         >
             <h2 className="text-sm font-black text-slate-700 dark:text-slate-200">{editing ? '編輯遞牌費' : '新增遞牌費'}</h2>
+            {typeSwitch}
             {scriveners.length === 0 && (
                 <p className="text-xs font-bold text-orange-600 dark:text-orange-400">名單是空的，請先新增地政士</p>
             )}
