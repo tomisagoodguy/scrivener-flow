@@ -21,4 +21,8 @@
 
 ## 5. 驗收
 
-- [ ] 5.1 全面驗證所有需求（Record a solo handover entry、Edit a solo handover entry、Solo entries have no receipt tracking、Monthly history summary、Handover fee history with filters）。[after: 1.1, 4.3] 驗證：`yarn tsc --noEmit`、`yarn eslint` 對改動檔無新錯誤、`yarn test --testPathPatterns handover` 全數通過；使用者執行 migration 後登入實跑 `/cases?status=HandoverFee`：新增「3 件、無金額」與「2 件、6000」兩筆，確認未收清單沒有這兩筆、歷史統計為 5 件 6000、既有互遞紀錄仍可標記已收，並把結果寫回本任務。
+- [x] 5.1 全面驗證所有需求（Record a solo handover entry、Edit a solo handover entry、Solo entries have no receipt tracking、Monthly history summary、Handover fee history with filters）。[after: 1.1, 4.3] 驗證：`yarn tsc --noEmit`、`yarn eslint` 對改動檔無新錯誤、`yarn test --testPathPatterns handover` 全數通過；使用者執行 migration 後登入實跑 `/cases?status=HandoverFee`：新增「3 件、無金額」與「2 件、6000」兩筆，確認未收清單沒有這兩筆、歷史統計為 5 件 6000、既有互遞紀錄仍可標記已收，並把結果寫回本任務。
+
+  > 驗收結果（2026-11-04）：`yarn test --testPathPatterns handover` 10 suites、138 tests 全過；`yarn tsc --noEmit` 與改動檔 `yarn eslint` 無錯誤。migration 由使用者在 SQL Editor 執行後，以 SQL 查得三欄 `is_nullable = YES`、三條新約束與 distinct_parties、amount_positive、兩條外鍵皆在，既有 1 筆為 `exchange`、`case_count = 1`。commit 661e5a3a 部署後，使用者登入 production 實跑 `/cases?status=HandoverFee` 回報全部正常：新增「3 件、無金額」與「2 件、6000」，兩筆不在未收清單，歷史統計為自己遞牌 5 件 $6,000，地政士篩選時兩筆消失，既有互遞紀錄可標記已收。
+
+  > 審查後修正（2026-11-04）：verify 與 review 指出金額欄 `type="number"` 遇到無法解析的內容會讀成空字串，選填欄位因而被當成未填。改為文字輸入後由 schema 拒絕，補上無法解析金額、一件一筆、編輯載入全部欄位的測試。修正前 4 個新測試失敗，修正後 `yarn test --testPathPatterns handover` 10 suites、143 tests 全過，`yarn tsc --noEmit` 與 `yarn eslint` 無錯誤。此修正未在瀏覽器重新實測。

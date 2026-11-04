@@ -71,8 +71,8 @@ migration 只對 `payer_scrivener_id`、`payee_scrivener_id`、`amount` 執行 `
 **驗證（`createSoloFeeSchema`）**
 
 - `case_count`：正整數，上限 9999，錯誤訊息 `件數必須是正整數`。上限是防手誤的設計值，非實測數據。
-- `amount`：`null` 或正整數，上限與互遞相同，錯誤訊息 `金額必須是正整數`。
-- 表單金額空白時送出 `null`。
+- `amount`：`null` 或正整數，錯誤訊息 `金額必須是正整數`；上限與互遞相同，超過時顯示 `金額過大`。
+- 表單金額空白時送出 `null`；金額欄用文字輸入（`inputMode="numeric"`），無法解析的內容由 schema 拒絕，不當成未填。
 
 **查詢**
 

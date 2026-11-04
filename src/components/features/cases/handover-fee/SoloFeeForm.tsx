@@ -58,12 +58,11 @@ export function SoloFeeForm({ defaultDate, editing, onExitEdit, typeSwitch }: So
                 </div>
                 <div className="flex flex-col gap-1">
                     <label htmlFor={ids.amount} className={LABEL_CLASS}>金額（選填）</label>
+                    {/* 不用 type="number"：無法解析的內容會讀成空字串，選填欄位就被當成沒填 */}
                     <input
                         id={ids.amount}
-                        type="number"
+                        type="text"
                         inputMode="numeric"
-                        min={1}
-                        step={1}
                         value={fields.amount}
                         onChange={(e) => setters.setAmount(e.target.value)}
                         className={INPUT_CLASS}

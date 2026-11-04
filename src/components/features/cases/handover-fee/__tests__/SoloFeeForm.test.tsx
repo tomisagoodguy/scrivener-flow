@@ -133,6 +133,28 @@ describe('新增自己遞牌', () => {
         expect(mockCreateSolo).not.toHaveBeenCalled();
     });
 
+    it.each(['6000元', '6,000', '-'])('金額「%s」無法解析 → 不送出並顯示錯誤，不當成沒填', async (amount) => {
+        renderForm();
+        switchToSolo();
+        setValue('金額（選填）', amount);
+        fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent('金額必須是正整數');
+        expect(mockCreateSolo).not.toHaveBeenCalled();
+    });
+
+    it('同一天一件一筆：連送兩次各為 1 件', async () => {
+        renderForm();
+        switchToSolo();
+        fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
+        await waitFor(() => expect(mockCreateSolo).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(screen.getByRole('button', { name: '新增紀錄' })).toBeEnabled());
+        fireEvent.click(screen.getByRole('button', { name: '新增紀錄' }));
+        await waitFor(() => expect(mockCreateSolo).toHaveBeenCalledTimes(2));
+        for (const [input] of mockCreateSolo.mock.calls) {
+            expect(input).toEqual(expect.objectContaining({ fee_date: '2026-11-04', case_count: 1 }));
+        }
+    });
+
     it('伺服器失敗時顯示錯誤且保留輸入', async () => {
         mockCreateSolo.mockResolvedValue({ success: false, error: 'db boom' });
         renderForm();
@@ -165,6 +187,20 @@ describe('編輯自己遞牌', () => {
         );
         expect(mockCreateSolo).not.toHaveBeenCalled();
         expect(await screen.findByRole('button', { name: '新增紀錄' })).toBeInTheDocument();
+    });
+
+    it('載入全部欄位；金額改成無法解析的內容時不清掉原金額', async () => {
+        const filled: SoloHandoverFee = { ...soloEntry, object_number: 'A123', amount: 6000, note: '備註' };
+        renderForm(scriveners, filled);
+        fireEvent.click(screen.getByRole('button', { name: '開始編輯' }));
+        expect(value('物件編號')).toBe('A123');
+        expect(value('金額（選填）')).toBe('6000');
+        expect(value('備註')).toBe('備註');
+
+        setValue('金額（選填）', '6e');
+        fireEvent.click(screen.getByRole('button', { name: '儲存修改' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent('金額必須是正整數');
+        expect(mockUpdateSolo).not.toHaveBeenCalled();
     });
 
     it('取消編輯 → 不寫入、回到新增模式', () => {
