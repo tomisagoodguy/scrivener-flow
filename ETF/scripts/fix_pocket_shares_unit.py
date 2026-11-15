@@ -8,7 +8,7 @@
 受影響資料表：
   - etf_holdings_snapshot  (shares)
   - etf_diff_logs          (diff_shares, curr_shares, prev_shares)
-  - etf_weight_history     (shares)
+  - etf_weight_history 為 snapshot 推導的 view，不需另外修正
 
 執行方式：
   uv run python ETF/scripts/fix_pocket_shares_unit.py
@@ -85,17 +85,7 @@ def fix(engine, codes: list[str], dry_run: bool) -> None:
                 {"c": code},
             )
             logger.info("[%s] etf_diff_logs updated: %d rows", code, r2.rowcount)
-
-            # ── 3. etf_weight_history ─────────────────────────────────────
-            r3 = conn.execute(
-                text(
-                    "UPDATE etf_weight_history "
-                    "SET shares = shares * 1000 "
-                    "WHERE etf_code = :c"
-                ),
-                {"c": code},
-            )
-            logger.info("[%s] etf_weight_history updated: %d rows", code, r3.rowcount)
+            # etf_weight_history 已改為由 etf_holdings_snapshot 推導的 view，隨步驟 1 自動修正
 
         if dry_run:
             logger.info("Dry-run：回滾所有變更")

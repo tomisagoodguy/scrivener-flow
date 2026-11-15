@@ -63,7 +63,6 @@ Pipeline 步驟分兩級，錯誤處理策略不同：
 |---------|------|
 | `multi_etf_step.py` | 多支 ETF 爬取，單支失敗不影響其他 |
 | `price_attach_step.py` | 附加當日股價（`stock_prices_daily`） |
-| `weight_history_step.py` | 持股比重歷史同步（`etf_weight_history`） |
 | `flow_compute_step.py` | 資金流向計算 |
 | `buying_pattern_step.py` | 買進模式分類 + 前瞻報酬補齊 → `etf_buying_patterns`；重算平常日比較 → `etf_buying_pattern_stats` |
 | `frontrunning_step.py` | 持股公告前後成交量異常偵測 → `etf_frontrunning_events` |
@@ -163,6 +162,9 @@ const [{ data: basicData }, { data: etfData }, { data: bareKData }] = await Prom
     supabase.from('bare_k_snapshots').select('stock_id, summary').in('stock_id', codes).order('date', { ascending: false }),
 ]);
 ```
+
+**`etf_holdings_snapshot` 保留政策**：永久保留（ETF 持股只能抓當日，刪了無法回補），`cleanup_old_data` 禁止 DELETE 此表；每支 ETF 最新 2 個 `data_date` 以外的個股屬性欄位會被清成 NULL（前端 `selectDateWithFallback` 只讀最新 2 日），讀歷史只能依賴 `weight`/`shares`/`stock_name`。
+`etf_weight_history` 是由 snapshot 推導的**唯讀 view**（2026-11 起），pipeline 禁止寫入；持股寫入只走 snapshot。
 
 **`etf_holdings_snapshot` 日期欄位**：日期欄位名稱是 `data_date`，**不是** `snapshot_date`。  
 SQL 排序取最新一筆寫法：`ORDER BY stock_code, data_date DESC`。

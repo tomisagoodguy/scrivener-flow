@@ -139,7 +139,6 @@ class MultiEtfStep(BaseStep):
                 self.logger.warning(f"FinLab price attach failed for {etf_code}: {e}")
 
             services.storage.save_snapshot(df, etf_code, snapshot_date)
-            self._save_weight_history(services, etf_code, df, snapshot_date)
 
             # 補齊交易日空白：Pocket.tw 可能數天才更新一次，來源日期舊於今日
             # 時仍寫入今日快照，確保時序無斷點。
@@ -269,7 +268,7 @@ class MultiEtfStep(BaseStep):
         df: pd.DataFrame,
         source_date: str,
     ) -> None:
-        """來源未更新時，補寫今日交易日快照，確保 etf_holdings_snapshot / etf_weight_history 無空白。
+        """來源未更新時，補寫今日交易日快照，確保 etf_holdings_snapshot 無空白。
 
         Pocket.tw 的 data_date 反映 ETF 公告日，可能數天才更新一次（正常行為）。
         若不補齊，前端時序圖會出現缺口，buyingPattern / weightHistory 也會斷裂。
@@ -293,7 +292,6 @@ class MultiEtfStep(BaseStep):
                 return
 
             services.storage.save_snapshot(df, etf_code, today_str)
-            self._save_weight_history(services, etf_code, df, today_str)
             self.logger.info(
                 f"[GAP-FILL] {etf_code}: 來源未更新（{source_date}），"
                 f"記錄 {today_str} 快照（持股同 {source_date}）"
@@ -301,53 +299,6 @@ class MultiEtfStep(BaseStep):
         except Exception as e:
             # gap-fill 是輔助行為，失敗不應中斷主流程
             self.logger.warning(f"[GAP-FILL] {etf_code}: 補齊失敗 — {e}")
-
-    def _save_weight_history(
-        self,
-        services: "PipelineServices",
-        etf_code: str,
-        df: pd.DataFrame,
-        snapshot_date: str,
-    ) -> None:
-        from sqlalchemy import text
-
-        sorted_df = df.sort_values("weight", ascending=False).reset_index(drop=True)
-        records = [
-            {
-                "etf_code": etf_code,
-                "stock_code": row["code"],
-                "stock_name": row["name"],
-                "data_date": snapshot_date,
-                "weight": float(row["weight"]),
-                "shares": int(row.get("shares", 0)),
-                "rank": idx + 1,
-            }
-            for idx, (_, row) in enumerate(sorted_df.iterrows())
-        ]
-
-        if not records:
-            return
-
-        upsert_sql = text("""
-            INSERT INTO etf_weight_history
-                (etf_code, stock_code, stock_name, data_date, weight, shares, rank)
-            VALUES
-                (:etf_code, :stock_code, :stock_name, :data_date, :weight, :shares, :rank)
-            ON CONFLICT (etf_code, stock_code, data_date)
-            DO UPDATE SET
-                stock_name = EXCLUDED.stock_name,
-                weight     = EXCLUDED.weight,
-                shares     = EXCLUDED.shares,
-                rank       = EXCLUDED.rank
-        """)
-
-        try:
-            with services.sql_storage.engine.connect() as conn:
-                conn.execute(upsert_sql, records)
-                conn.commit()
-            self.logger.info(f"Saved weight history for {etf_code}")
-        except Exception as e:
-            self.logger.warning(f"Weight history save failed for {etf_code}: {e}")
 
     def _compute_diff(
         self,

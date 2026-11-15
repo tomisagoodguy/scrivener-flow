@@ -20,7 +20,6 @@ from ETF.pipeline.steps import (
     DisposalDetectStep,
     SyncCompanyStep,
     SyncOHLCVStep,
-    WeightHistoryStep,
     MultiEtfStep,
     AumSyncStep,
     DividendSyncStep,
@@ -76,7 +75,6 @@ class PipelineOrchestrator:
         SaveSnapshotStep,
         DisposalDetectStep,     # [輔助] 偵測分時交易處置股，更新 is_disposal 欄位
         ShareholderSignalStep,  # 讀 stock-data-main JSON，計算大戶積累訊號
-        WeightHistoryStep,      # 快照存完後聚合排名→走勢表
         MultiEtfStep,           # 爬取 00980A / 00991A 持股、AUM、產業
         AumSyncStep,            # 同步各 ETF AUM 時序 → etf_aum_series（輔助）
         SyncCompanyStep,

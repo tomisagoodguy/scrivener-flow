@@ -47,7 +47,6 @@ ETF/
 │       ├── diff_compute_step.py   # 計算持股 IN/OUT/BUY/SELL
 │       ├── save_snapshot_step.py  # 存入 etf_holdings_snapshot
 │       ├── shareholder_signal_step.py  # 讀 stock-data-main JSON，計算大戶積累訊號 → ctx.shareholder_signals
-│       ├── weight_history_step.py # 聚合持股比重走勢
 │       ├── multi_etf_step.py      # 處理所有 official_api/pocket 來源 ETF
 │       ├── aum_sync_step.py       # [輔助] AUM 時序 + 折溢價/成長拆解 → etf_aum_series
 │       ├── dividend_sync_step.py  # [輔助] 同步配息記錄（TWSE etfDiv）→ etf_dividend_records
@@ -188,7 +187,6 @@ ScrapeStep
   → DiffComputeStep
   → SaveSnapshotStep
   → ShareholderSignalStep   ← [輔助] 讀 stock-data-main JSON，計算大戶積累 → ctx.shareholder_signals
-  → WeightHistoryStep
   → MultiEtfStep            ← 動態讀取 etf_registry，處理所有非 finlab 來源 ETF
   → AumSyncStep             ← [輔助] 計算 NAV × units = AUM，日差 = inflow → etf_aum_series
   → SyncCompanyStep
@@ -329,10 +327,10 @@ Headers: Referer: https://www.capitalfund.com.tw/etf/product/detail/399/portfoli
 
 - `bare_k_snapshots` — 前端裸K圖表（`SyncBareKStep` 維護）；每列已含約 240 日資料，`cleanup_old_data` 每檔只留最新一列，**不可依賴歷史快照**
 - `equity_distribution_stats` — 前端籌碼排行（`sync_equity_distribution.py` 維護）；`cleanup_old_data` 只留 2 年，手動 `--force-backfill`／`--backfill-history` 補回的舊期會在下次清理刪除
-- `etf_holdings_snapshot` — 前端持股明細頁的主要資料來源
+- `etf_holdings_snapshot` — 前端持股明細頁的主要資料來源；**永久保留**（持股歷史無法重抓，`cleanup_old_data` 禁止刪除），但每支 ETF 最新 2 個 `data_date` 以外的個股屬性欄位（price、營收等）會被清成 NULL，`weight`/`shares` 不動
 - `stock_prices_daily` — 前端顯示個股現價（`SyncOHLCVStep` 維護）
 - `etf_stock_overlap` — 前端跨 ETF 共識持股頁（`OverlapComputeStep` 維護）
-- `etf_weight_history` — 前端持股比重走勢圖
+- `etf_weight_history` — 前端持股比重走勢圖；**唯讀 view**，由 `etf_holdings_snapshot` 推導（`rank` = 同 ETF 同日依 weight 降序、同分依 stock_code），pipeline 不寫入
 - `etf_aum_series` — 前端 AUM 規模儀表板 + 深潛頁市場機制 Tab（`AumSyncStep` 維護，含 close/premium_pct/inflow/market_pnl）
 - `etf_dividend_records` — 前端配息時間軸（`DividendSyncStep` 維護；深潛頁市場機制 Tab）
 - `etf_signals` — 前端訊號標記（`SignalDetectStep` + `FlowComputeStep` 維護）

@@ -13,7 +13,6 @@ from ETF.pipeline.steps.sync_company_step import SyncCompanyStep
 from ETF.pipeline.steps.sync_ohlcv_step import SyncOHLCVStep
 from ETF.pipeline.steps.notify_step import NotifyStep
 from ETF.pipeline.steps.cleanup_step import CleanupStep
-from ETF.pipeline.steps.weight_history_step import WeightHistoryStep
 from ETF.pipeline.steps.multi_etf_step import MultiEtfStep
 from ETF.pipeline.steps.overlap_compute_step import OverlapComputeStep
 from ETF.pipeline.steps.sync_bare_k_step import SyncBareKStep
@@ -49,7 +48,6 @@ __all__ = [
     "SaveSnapshotStep",
     "SyncCompanyStep",
     "SyncOHLCVStep",
-    "WeightHistoryStep",
     "MultiEtfStep",
     "OverlapComputeStep",
     "SyncBareKStep",

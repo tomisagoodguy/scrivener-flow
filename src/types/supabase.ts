@@ -1245,42 +1245,6 @@ export type Database = {
         }
         Relationships: []
       }
-      etf_weight_history: {
-        Row: {
-          created_at: string | null
-          data_date: string
-          etf_code: string
-          id: number
-          rank: number | null
-          shares: number | null
-          stock_code: string
-          stock_name: string | null
-          weight: number
-        }
-        Insert: {
-          created_at?: string | null
-          data_date: string
-          etf_code: string
-          id?: number
-          rank?: number | null
-          shares?: number | null
-          stock_code: string
-          stock_name?: string | null
-          weight: number
-        }
-        Update: {
-          created_at?: string | null
-          data_date?: string
-          etf_code?: string
-          id?: number
-          rank?: number | null
-          shares?: number | null
-          stock_code?: string
-          stock_name?: string | null
-          weight?: number
-        }
-        Relationships: []
-      }
       factor_ic_stats: {
         Row: {
           computed_at: string
@@ -2266,7 +2230,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      etf_weight_history: {
+        Row: {
+          data_date: string | null
+          etf_code: string | null
+          rank: number | null
+          shares: number | null
+          stock_code: string | null
+          stock_name: string | null
+          weight: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_old_encryption_keys: { Args: never; Returns: undefined }
