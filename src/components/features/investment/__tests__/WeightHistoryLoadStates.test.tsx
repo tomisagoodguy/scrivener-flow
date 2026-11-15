@@ -11,10 +11,21 @@ jest.mock('recharts', () => {
         CartesianGrid: Stub, Tooltip: Stub, Legend: Stub,
     };
 });
+/** 股價查詢的呼叫紀錄與回應（jest.mock 工廠只能引用 mock 前綴變數） */
+const mockPriceCalls: Array<[string, unknown]> = [];
+const mockPrice: { response: { data: unknown[] | null; error: { message: string } | null } } = {
+    response: { data: [], error: null },
+};
 jest.mock('@/lib/supabase/client', () => ({
     createClient: () => ({
-        from: () => {
-            const b = { select: () => b, eq: () => b, gte: () => b, order: async () => ({ data: [], error: null }) };
+        from: (table: string) => {
+            mockPriceCalls.push(['from', table]);
+            const b = {
+                select: (cols: string) => (mockPriceCalls.push(['select', cols]), b),
+                eq: (col: string) => (mockPriceCalls.push(['eq', col]), b),
+                gte: (col: string) => (mockPriceCalls.push(['gte', col]), b),
+                order: async (col: string) => (mockPriceCalls.push(['order', col]), mockPrice.response),
+            };
             return b;
         },
     }),
@@ -30,6 +41,49 @@ import type { EtfRegistryEntry } from '@/lib/investment/etfRegistry';
 const registry = [{ code: '00981A', shortCode: '00981', name: 'n', manager: 'm', issuer: 'i', color: '#8b5cf6' }] as EtfRegistryEntry[];
 
 describe('HoldingsPriceOverlayChart', () => {
+    beforeEach(() => {
+        mockPriceCalls.length = 0;
+        mockPrice.response = { data: [], error: null };
+    });
+
+    it('reads stock_prices_daily by data_date and draws one price point per row (spec Example)', async () => {
+        (fetchWeightHistory as jest.Mock).mockResolvedValue([
+            { etf_code: '00981A', data_date: '2026-11-12', weight: 9.1 },
+            { etf_code: '00981A', data_date: '2026-11-13', weight: 9.5 },
+        ]);
+        mockPrice.response = {
+            data: [
+                { data_date: '2026-11-12', close: 1450 },
+                { data_date: '2026-11-13', close: 1465 },
+            ],
+            error: null,
+        };
+        const { container } = render(<HoldingsPriceOverlayChart stockCode="2330" etfCodes={['00981A']} etfColors={{}} />);
+
+        // 價格線：兩個日期 → x 0 與 600；1450 為最低（y=120）、1465 為最高（y=0）
+        await waitFor(() =>
+            expect(container.querySelector('path[stroke-dasharray="4 2"]')?.getAttribute('d')).toBe('M 0 120 L 600 0'),
+        );
+        expect(mockPriceCalls).toContainEqual(['from', 'stock_prices_daily']);
+        const select = mockPriceCalls.find(c => c[0] === 'select')?.[1] as string;
+        expect(select.split(',').map(s => s.trim())).toEqual(['data_date', 'close']);
+        expect(mockPriceCalls).toContainEqual(['gte', 'data_date']);
+        expect(mockPriceCalls).toContainEqual(['order', 'data_date']);
+    });
+
+    it('shows the price query error instead of a chart without the price line', async () => {
+        (fetchWeightHistory as jest.Mock).mockResolvedValue([
+            { etf_code: '00981A', data_date: '2026-11-13', weight: 9.5 },
+        ]);
+        mockPrice.response = { data: null, error: { message: 'column stock_prices_daily.date does not exist' } };
+        const { container } = render(<HoldingsPriceOverlayChart stockCode="2330" etfCodes={['00981A']} etfColors={{}} />);
+
+        await waitFor(() =>
+            expect(screen.getByText(/column stock_prices_daily\.date does not exist/)).toBeInTheDocument(),
+        );
+        expect(container.querySelector('svg')).toBeNull();
+    });
+
     it('shows the error message when the weight history read fails', async () => {
         (fetchWeightHistory as jest.Mock).mockRejectedValue(new Error('etf_weight_history: timeout'));
         render(<HoldingsPriceOverlayChart stockCode="2330" etfCodes={['00981A']} etfColors={{}} />);

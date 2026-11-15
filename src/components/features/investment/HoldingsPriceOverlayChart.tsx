@@ -125,22 +125,26 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
         const fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 
         Promise.all([
-            fetchWeightHistory<WeightDbRow>(supabase, { etfCodes, stockCode, fromDate }, 'etf_code, data_date, weight'),
+            fetchWeightHistory<WeightDbRow>(supabase, { etfCodes, stockCode, fromDate }, 'etf_code, data_date, weight')
+                .catch((err: unknown) => {
+                    throw new Error(`比重歷史載入失敗：${err instanceof Error ? err.message : String(err)}`);
+                }),
             supabase
                 .from('stock_prices_daily')
-                .select('date, close')
+                .select('data_date, close')
                 .eq('stock_code', stockCode)
-                .gte('date', fromDate)
-                .order('date'),
-        ]).then(([wRows, { data: pRows }]) => {
+                .gte('data_date', fromDate)
+                .order('data_date'),
+        ]).then(([wRows, { data: pRows, error: pError }]) => {
             if (cancelled) return;
+            if (pError) throw new Error(`股價載入失敗：${pError.message}`);
             const grouped = new Map<string, WeightPoint[]>();
             for (const r of wRows) {
                 if (!grouped.has(r.etf_code)) grouped.set(r.etf_code, []);
                 grouped.get(r.etf_code)!.push({ date: r.data_date, weight: Number(r.weight), etf_code: r.etf_code });
             }
             setWeightSeries([...grouped.values()]);
-            setPriceSeries((pRows ?? []).map(r => ({ date: r.date, close: Number(r.close) })));
+            setPriceSeries((pRows ?? []).map(r => ({ date: r.data_date, close: Number(r.close) })));
             setLoading(false);
         }).catch((err: unknown) => {
             if (cancelled) return;
@@ -184,7 +188,7 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
             {loading ? (
                 <div className="h-32 animate-pulse bg-slate-100 dark:bg-slate-800 rounded" />
             ) : error ? (
-                <p className="text-xs text-red-600 dark:text-red-400 text-center py-4">比重歷史載入失敗：{error}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 text-center py-4">{error}</p>
             ) : (
                 <MiniChart weightSeries={weightSeries} priceSeries={priceSeries} etfColors={etfColors} />
             )}
