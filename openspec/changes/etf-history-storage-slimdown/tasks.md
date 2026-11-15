@@ -28,4 +28,6 @@
 
 - [x] 5.1 [after: 4.1] `src/types/supabase.ts` 把 `etf_weight_history` 從 `Tables` 移到 `Views`，只保留 `Row`，欄位為 view 的 7 欄且皆 nullable；讀取端程式不需改動（需求：Weight history is derived from the snapshot）。驗證：`yarn tsc --noEmit` 通過；`yarn eslint src/types/supabase.ts` 無新錯誤。
   - 實測（2026-11-15）：`yarn tsc --noEmit` 無錯誤；`yarn eslint src/types/supabase.ts` 0 errors，唯一 warning（第 9 行 consistent-type-definitions）原檔即有。型別須與 4.1 migration 一起上線。
-- [ ] 5.2 [after: 4.1, 4.2, 4.3] 上線後實測：`/investment/history` 頁與個股頁的比重走勢圖顯示資料，`EXPLAIN ANALYZE` 以 `etf_code` + `stock_code` 查 view 低於 200 ms（需求：Weight history is derived from the snapshot；需求：Snapshot lookups by stock code use an index）。驗證：Playwright 腳本截圖確認圖表有線條，查詢耗時寫到本任務下方。
+- [x] 5.2 [after: 4.1, 4.2, 4.3] 上線後實測：`/investment/history` 頁與個股頁的比重走勢圖顯示資料，`EXPLAIN ANALYZE` 以 `etf_code` + `stock_code` 查 view 低於 200 ms（需求：Weight history is derived from the snapshot；需求：Snapshot lookups by stock code use an index）。驗證：Playwright 腳本截圖確認圖表有線條，查詢耗時寫到本任務下方。
+  - 實測（2026-11-15，Playwright headless，dev server port 3000）：`/investment/history` 有資料（26 個 ETF 分頁、排名表含 2330/2454/2383 等、無 console error、無 4xx/5xx）；`/investment/stock/2330` 的 `GET /api/investment/etf-weight-history?code=2330` 回 200、26 支 ETF 有資料點、無 console error。截圖：`.playwright-mcp/history-check.png`、`.playwright-mcp/stock-2330-check.png`。view 查詢 53.0 ms（見 4.1）。`HoldingsPriceOverlayChart` 在 2330 頁未掛載，未直接驗證（同一 view、同欄位）。
+  - 發現既有問題（不屬本 change，另案 bug fix）：兩個讀取點未分頁、依 data_date 升冪，受 PostgREST 1000 列上限截斷——個股 2330 只顯示到 2026-07-02（實際至 2026-11-13；舊表時代同樣截在 2026-07-03），`/investment/history` 近 90 天 65 個交易日只顯示 1 天。
