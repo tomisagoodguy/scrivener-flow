@@ -21,20 +21,27 @@ export function RejectShareButton({ caseId, isOwnedByCurrentUser }: Props) {
     const router = useRouter();
     const [confirming, setConfirming] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     if (isOwnedByCurrentUser || !user) return null;
 
     const handleReject = async () => {
         setSubmitting(true);
-        const supabase = createClient();
-        await rejectShare(supabase, caseId, user.id);
-        router.push('/cases');
+        setError(null);
+        try {
+            await rejectShare(createClient(), caseId, user.id);
+            router.push('/cases');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : '駁回分享失敗');
+            setSubmitting(false);
+        }
     };
 
     if (confirming) {
         return (
             <div className="flex items-center gap-2 text-xs">
                 <span className="text-slate-500 dark:text-slate-400">確定要駁回這個案件的分享嗎？</span>
+                {error && <span className="text-red-600 dark:text-red-400">{error}</span>}
                 <button
                     onClick={handleReject}
                     disabled={submitting}
