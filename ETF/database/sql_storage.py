@@ -27,6 +27,40 @@ BARE_K_RETENTION_SQL = """
     )
 """
 
+# etf_holdings_snapshot 的個股屬性欄位：前端與 pipeline 只讀每支 ETF 最新 2 個 data_date
+# （selectDateWithFallback 會退到次新日），更舊日期清成 NULL 以節省空間；weight/shares 永久保留
+SNAPSHOT_ATTRIBUTE_COLUMNS: tuple[str, ...] = (
+    "price",
+    "currency",
+    "amount",
+    "margin_ratio",
+    "change_percent",
+    "volatility",
+    "market_cap",
+    "is_high_5d",
+    "is_high_20d",
+    "is_high_200d",
+    "monthly_revenue",
+    "revenue_yoy",
+    "revenue_mom",
+    "revenue_momentum_rank",
+    # is_disposal 不列入：DB 為 NOT NULL DEFAULT false（2026-11-15 UPDATE 實測違反約束），boolean 僅 1 byte
+)
+
+SNAPSHOT_ATTRIBUTE_RETENTION_SQL = f"""
+    UPDATE etf_holdings_snapshot
+    SET {", ".join(f"{c} = NULL" for c in SNAPSHOT_ATTRIBUTE_COLUMNS)}
+    WHERE (etf_code, data_date) IN (
+        SELECT etf_code, data_date FROM (
+            SELECT etf_code, data_date,
+                   DENSE_RANK() OVER (PARTITION BY etf_code ORDER BY data_date DESC) AS date_rank
+            FROM (SELECT DISTINCT etf_code, data_date FROM etf_holdings_snapshot) AS d
+        ) AS ranked
+        WHERE date_rank > 2
+    )
+      AND ({" OR ".join(f"{c} IS NOT NULL" for c in SNAPSHOT_ATTRIBUTE_COLUMNS)})
+"""
+
 
 def _finite_or_none(value) -> float | None:
     """NaN / ±inf / 缺值 → None（inf 寫入 JSON/SQL 會失敗）。"""
@@ -390,6 +424,8 @@ class SQLStorage:
                 res_prices = conn.execute(sql_prices)
 
                 # 2. 持股快照（etf_holdings_snapshot）永久保留：ETF 持股歷史只能抓當日、無法回補，禁止刪除
+                #    只清空每支 ETF 最新 2 個日期以外的個股屬性欄位
+                res_snapshot_attrs = conn.execute(text(SNAPSHOT_ATTRIBUTE_RETENTION_SQL))
 
                 # 3. 券商分點
                 sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
@@ -444,6 +480,7 @@ class SQLStorage:
                 conn.commit()
                 logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
+                logger.info(f"   - 持股快照舊日期屬性已清空: {res_snapshot_attrs.rowcount} 筆")
                 logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
                 logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
                 logger.info(f"   - 營收數據已清理: {res_revenue.rowcount} 筆")

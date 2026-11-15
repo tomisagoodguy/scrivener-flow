@@ -3,9 +3,10 @@
 --
 -- 執行方式（Supabase SQL Editor）：
 --   1. 在 pipeline 非執行時段執行（VACUUM FULL 會鎖表，執行期間該表無法讀寫）
---   2. 步驟 A、B 可一起執行
---   3. 步驟 C 的每一行 VACUUM FULL「各自單獨選取後執行」：VACUUM 不能在 transaction 內，
---      和其他語句一起送出可能報 "VACUUM cannot run inside a transaction block"
+--   2. 不要整份檔案一起執行：SQL Editor 會把整份包成一個 transaction，VACUUM 會報
+--      "VACUUM cannot run inside a transaction block"，連同步驟 B 的 UPDATE 一起回滾
+--      （2026-11-15 實際發生）。每條語句各自選取後單獨執行
+--   3. 2026-11-15 已逐條執行完成：497 MB → 406 MB
 --   4. 最後執行步驟 D，把數字回報
 
 -- 步驟 A：執行前大小

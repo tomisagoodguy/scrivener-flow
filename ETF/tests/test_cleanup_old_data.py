@@ -120,3 +120,83 @@ def test_cleanup_failure_is_logged_and_not_raised(caplog: pytest.LogCaptureFixtu
 
     conn.commit.assert_not_called()
     assert "db down" in caplog.text
+
+
+# ── etf_holdings_snapshot 屬性欄位保留（每支 ETF 只留最新 2 個日期） ──
+
+_SNAPSHOT_ROWS = [
+    # (etf_code, stock_code, data_date, weight, shares, price, is_disposal)
+    ("00981A", "2330", "2026-11-13", 9.12, 1000, 1050.0, 0),
+    ("00981A", "2330", "2026-11-12", 9.10, 1000, 1040.0, 0),
+    ("00981A", "2330", "2026-11-11", 9.05, 990, 1035.0, 1),
+    ("00980A", "2330", "2026-11-07", 7.00, 500, 1000.0, 0),
+    ("00980A", "2330", "2026-11-06", 6.90, 500, 990.0, 0),
+    ("00980A", "2330", "2026-11-05", 6.80, 480, 980.0, 0),
+]
+
+
+def _snapshot_db() -> sqlite3.Connection:
+    """欄位限制比照正式 DB：is_disposal 為 NOT NULL DEFAULT false（2026-11-15 實測）。"""
+    db = sqlite3.connect(":memory:")
+    attr_cols = ", ".join(f"{c} NUMERIC" for c in sql_storage.SNAPSHOT_ATTRIBUTE_COLUMNS)
+    db.execute(
+        "CREATE TABLE etf_holdings_snapshot (etf_code TEXT, stock_code TEXT, stock_name TEXT, "
+        f"data_date TEXT, weight NUMERIC, shares INTEGER, updated_at TEXT, {attr_cols}, "
+        "is_disposal INTEGER NOT NULL DEFAULT 0, "
+        "PRIMARY KEY (etf_code, stock_code, data_date))"
+    )
+    for etf, code, d, w, s, price, disposal in _SNAPSHOT_ROWS:
+        values = {c: 1 for c in sql_storage.SNAPSHOT_ATTRIBUTE_COLUMNS}
+        values.update(price=price, is_disposal=disposal)
+        cols = ", ".join(values)
+        marks = ", ".join("?" for _ in values)
+        db.execute(
+            f"INSERT INTO etf_holdings_snapshot (etf_code, stock_code, stock_name, data_date, weight, shares, "
+            f"updated_at, {cols}) VALUES (?, ?, '台積電', ?, ?, ?, 'ts', {marks})",
+            (etf, code, d, w, s, *values.values()),
+        )
+    return db
+
+
+def _row(db: sqlite3.Connection, etf: str, d: str) -> dict:
+    cur = db.execute("SELECT * FROM etf_holdings_snapshot WHERE etf_code = ? AND data_date = ?", (etf, d))
+    names = [c[0] for c in cur.description]
+    return dict(zip(names, cur.fetchone()))
+
+
+def test_snapshot_attributes_cleared_only_beyond_latest_two_dates():
+    db = _snapshot_db()
+    db.execute(sql_storage.SNAPSHOT_ATTRIBUTE_RETENTION_SQL)
+
+    assert _row(db, "00981A", "2026-11-13")["price"] == 1050.0
+    assert _row(db, "00981A", "2026-11-12")["price"] == 1040.0
+    old = _row(db, "00981A", "2026-11-11")
+    assert all(old[c] is None for c in sql_storage.SNAPSHOT_ATTRIBUTE_COLUMNS)
+    assert (old["weight"], old["shares"], old["stock_name"], old["updated_at"]) == (9.05, 990, "台積電", "ts")
+    assert old["is_disposal"] == 1  # NOT NULL 欄位不清空，保留原值
+
+
+def test_snapshot_attribute_columns_exclude_not_null_is_disposal():
+    assert "is_disposal" not in sql_storage.SNAPSHOT_ATTRIBUTE_COLUMNS
+
+
+def test_snapshot_attribute_retention_is_per_etf():
+    db = _snapshot_db()
+    db.execute(sql_storage.SNAPSHOT_ATTRIBUTE_RETENTION_SQL)
+
+    assert _row(db, "00980A", "2026-11-07")["price"] == 1000.0
+    assert _row(db, "00980A", "2026-11-06")["price"] == 990.0
+    assert _row(db, "00980A", "2026-11-05")["price"] is None
+
+
+def test_snapshot_attribute_retention_second_run_updates_nothing():
+    db = _snapshot_db()
+    first = db.execute(sql_storage.SNAPSHOT_ATTRIBUTE_RETENTION_SQL).rowcount
+    second = db.execute(sql_storage.SNAPSHOT_ATTRIBUTE_RETENTION_SQL).rowcount
+    assert first == 2
+    assert second == 0
+
+
+def test_cleanup_runs_snapshot_attribute_retention():
+    statements = _run_cleanup_and_capture_sql()
+    assert sql_storage.SNAPSHOT_ATTRIBUTE_RETENTION_SQL in statements
