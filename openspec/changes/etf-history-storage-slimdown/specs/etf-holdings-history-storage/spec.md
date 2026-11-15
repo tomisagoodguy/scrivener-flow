@@ -26,7 +26,7 @@ The scheduled cleanup (`SQLStorage.cleanup_old_data`) SHALL NOT delete any row f
 
 ### Requirement: Stock attribute columns are cleared outside the latest two dates per ETF
 
-The scheduled cleanup SHALL set the stock attribute columns of `etf_holdings_snapshot` (`price`, `currency`, `amount`, `margin_ratio`, `change_percent`, `volatility`, `market_cap`, `is_high_5d`, `is_high_20d`, `is_high_200d`, `monthly_revenue`, `revenue_yoy`, `revenue_mom`, `revenue_momentum_rank`, `is_disposal`) to NULL for every row whose `data_date` is not among the two most recent distinct `data_date` values of the same `etf_code`. The columns `etf_code`, `stock_code`, `stock_name`, `data_date`, `weight`, `shares`, and `updated_at` SHALL NOT be modified. Rows whose attribute columns are already all NULL SHALL NOT be updated again.
+The scheduled cleanup SHALL set the stock attribute columns of `etf_holdings_snapshot` (`price`, `currency`, `amount`, `margin_ratio`, `change_percent`, `volatility`, `market_cap`, `is_high_5d`, `is_high_20d`, `is_high_200d`, `monthly_revenue`, `revenue_yoy`, `revenue_mom`, `revenue_momentum_rank`) to NULL for every row whose `data_date` is not among the two most recent distinct `data_date` values of the same `etf_code`. The columns `etf_code`, `stock_code`, `stock_name`, `data_date`, `weight`, `shares`, `updated_at`, and `is_disposal` (declared `NOT NULL DEFAULT false` in the database) SHALL NOT be modified. Rows whose attribute columns are already all NULL SHALL NOT be updated again.
 
 #### Scenario: Attributes cleared on older dates only
 

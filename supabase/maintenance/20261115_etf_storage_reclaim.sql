@@ -16,8 +16,8 @@ SELECT pg_size_pretty(pg_database_size(current_database())) AS before_size;
 UPDATE etf_holdings_snapshot
 SET price = NULL, currency = NULL, amount = NULL, margin_ratio = NULL, change_percent = NULL,
     volatility = NULL, market_cap = NULL, is_high_5d = NULL, is_high_20d = NULL, is_high_200d = NULL,
-    monthly_revenue = NULL, revenue_yoy = NULL, revenue_mom = NULL, revenue_momentum_rank = NULL,
-    is_disposal = NULL
+    monthly_revenue = NULL, revenue_yoy = NULL, revenue_mom = NULL, revenue_momentum_rank = NULL
+    -- is_disposal 為 NOT NULL DEFAULT false，不清空
 WHERE (etf_code, data_date) IN (
     SELECT etf_code, data_date FROM (
         SELECT etf_code, data_date,
@@ -30,7 +30,7 @@ WHERE (etf_code, data_date) IN (
        OR change_percent IS NOT NULL OR volatility IS NOT NULL OR market_cap IS NOT NULL
        OR is_high_5d IS NOT NULL OR is_high_20d IS NOT NULL OR is_high_200d IS NOT NULL
        OR monthly_revenue IS NOT NULL OR revenue_yoy IS NOT NULL OR revenue_mom IS NOT NULL
-       OR revenue_momentum_rank IS NOT NULL OR is_disposal IS NOT NULL);
+       OR revenue_momentum_rank IS NOT NULL);
 
 -- 步驟 C：重寫表與索引、把空間還給磁碟（每行單獨執行）
 VACUUM FULL ANALYZE public.etf_holdings_snapshot;

@@ -40,11 +40,11 @@
 
 ### 屬性欄位以每支 ETF 最新 2 日為界清空
 
-例行清理執行一條 UPDATE：以 `DENSE_RANK() OVER (PARTITION BY etf_code ORDER BY data_date DESC)` 找出每支 ETF 的第 3 個以後日期，將 15 個屬性欄位設 NULL，WHERE 條件加上「任一屬性欄位 IS NOT NULL」避免重複寫入同一列。
+例行清理執行一條 UPDATE：以 `DENSE_RANK() OVER (PARTITION BY etf_code ORDER BY data_date DESC)` 找出每支 ETF 的第 3 個以後日期，將 14 個屬性欄位設 NULL（`is_disposal` 除外），WHERE 條件加上「任一屬性欄位 IS NOT NULL」避免重複寫入同一列。
 
 - 為何是 2 日：`selectDateWithFallback` 會在最新日 price 覆蓋率不足時改讀次新日。
 - 為何逐 ETF：各 ETF 公告日不同（Pocket.tw 來源可能數天才更新），用全域日期會誤清尚未更新之 ETF 的最新資料。
-- 個股頁 `stock/[code]` 以 `stock_code` 取最新一列的 `is_disposal`：若該股已被所有 ETF 出清，最新列屬舊日期，`is_disposal` 會變 NULL（顯示為非處置）。舊日期的處置狀態本就過期，接受此行為。
+- `is_disposal` 不清空：資料庫定義為 `NOT NULL DEFAULT false`（2026-11-15 回收 SQL 實際執行時違反約束而整條回滾），且 boolean 只占 1 byte，保留原值，個股頁行為不變。
 - 空間效益：屬性欄位約占 snapshot 每列一半寬度（估算，依欄位型別推估）；預估回收約 10–15 MB，以 `VACUUM FULL` 後的 `pg_total_relation_size('etf_holdings_snapshot')` 實測確認。
 
 ### 停用 snapshot 的 260 天刪除
@@ -65,7 +65,7 @@
 
 **行為**
 
-- `cleanup_old_data` 執行後，snapshot 不會少任何一列；每支 ETF 最新 2 個日期以外的列，15 個屬性欄位為 NULL，`weight`、`shares`、`stock_name`、`updated_at` 不變。
+- `cleanup_old_data` 執行後，snapshot 不會少任何一列；每支 ETF 最新 2 個日期以外的列，14 個屬性欄位為 NULL，`weight`、`shares`、`stock_name`、`updated_at` 不變。
 - 例行清理其他表的保留天數（260／365／400／5／30／180／90 天、`equity_distribution_stats` 730 天、裸K 每檔留最新一列）不變。
 - pipeline 不再註冊 `WeightHistoryStep`，也不再有任何程式寫入 `etf_weight_history`。
 - `etf_weight_history` 在資料庫中是 view，欄位為 `etf_code, stock_code, stock_name, data_date, weight, shares, rank`。
@@ -102,5 +102,4 @@
 - [rank 同分時排序可能與舊表不同] → 舊表同分排序本就取決於 DataFrame 排序穩定性；新規則固定為 `stock_code`，比對時容許同分列 rank 互換。
 - [VACUUM FULL 鎖表] → 在 pipeline 非執行時段執行；snapshot 約 40 MB，預估數秒到數十秒（估算）。
 - [snapshot 永久保留後持續成長] → 屬性清空後估每月 2–3 MB；一個月後實測成長量，再評估是否需要壓縮舊資料。
-- [個股頁對已出清股票顯示 is_disposal 為 NULL] → 舊日期處置狀態本就過期，接受。
 - [刪表不可逆] → migration 前先確認 snapshot 涵蓋全部舊表列（重跑 2026-11-15 的比對查詢，matched 必須等於舊表列數）才執行 DROP。
