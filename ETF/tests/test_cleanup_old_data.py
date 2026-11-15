@@ -45,6 +45,28 @@ def test_equity_distribution_stats_deleted_after_730_days():
     assert matched[0].strip().upper().startswith("DELETE FROM")
 
 
+def test_etf_holdings_snapshot_never_deleted():
+    """ETF 持股歷史無法重抓，必須永久保留（etf-history-storage-slimdown）。"""
+    statements = _run_cleanup_and_capture_sql()
+    assert not any(
+        s.strip().upper().startswith("DELETE") and "etf_holdings_snapshot" in s for s in statements
+    )
+
+
+def test_successful_cleanup_logs_no_failure(caplog: pytest.LogCaptureFixture):
+    """清理語句全部成功時，不可因後段 log 引用錯誤而被外層 except 吞成失敗。"""
+    _run_cleanup_and_capture_sql()
+    assert "自動優化失敗" not in caplog.text
+
+
+def test_other_260_day_retention_unchanged():
+    statements = _run_cleanup_and_capture_sql()
+    for table in ("stock_prices_daily", "stock_broker_transactions"):
+        matched = [s for s in statements if f"DELETE FROM {table}" in s]
+        assert len(matched) == 1
+        assert "260 days" in matched[0]
+
+
 def test_institutional_signals_never_cleaned():
     statements = _run_cleanup_and_capture_sql()
     assert not any("institutional_signals" in s for s in statements)

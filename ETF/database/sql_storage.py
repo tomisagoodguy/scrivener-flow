@@ -389,9 +389,7 @@ class SQLStorage:
                 sql_prices = text("DELETE FROM stock_prices_daily WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
                 res_prices = conn.execute(sql_prices)
 
-                # 2. 持股快照
-                sql_snapshot = text("DELETE FROM etf_holdings_snapshot WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
-                res_snapshot = conn.execute(sql_snapshot)
+                # 2. 持股快照（etf_holdings_snapshot）永久保留：ETF 持股歷史只能抓當日、無法回補，禁止刪除
 
                 # 3. 券商分點
                 sql_broker = text("DELETE FROM stock_broker_transactions WHERE data_date < CURRENT_DATE - INTERVAL '260 days'")
@@ -446,7 +444,6 @@ class SQLStorage:
                 conn.commit()
                 logger.info("✅ 自動優化完成！")
                 logger.info(f"   - 每日股價已清理: {res_prices.rowcount} 筆")
-                logger.info(f"   - 持股快照已清理: {res_snapshot.rowcount} 筆")
                 logger.info(f"   - 券商交易已清理: {res_broker.rowcount} 筆")
                 logger.info(f"   - 集保數據已清理: {res_chips.rowcount} 筆")
                 logger.info(f"   - 營收數據已清理: {res_revenue.rowcount} 筆")
