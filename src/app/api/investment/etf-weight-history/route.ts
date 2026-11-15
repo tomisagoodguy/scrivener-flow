@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ETF_CODES } from '@/lib/investment/etfRegistry';
+import { fetchWeightHistory } from '@/lib/investment/weightHistoryData';
 
 interface WeightHistoryEntry {
     date: string;
     weight: number;
     rank: number;
+}
+
+interface WeightHistoryDbRow {
+    etf_code: string;
+    data_date: string;
+    weight: number | null;
+    rank: number | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -21,72 +29,24 @@ export async function GET(request: NextRequest) {
         ETF_CODES.map(c => [c, []])
     );
 
-    // 優先從 etf_weight_history 查詢
-    const { data: weightHistory, error: weightError } = await supabase
-        .from('etf_weight_history')
-        .select('etf_code, data_date, weight, rank')
-        .in('etf_code', ETF_CODES)
-        .eq('stock_code', code)
-        .order('data_date', { ascending: true });
-
-    if (!weightError && weightHistory && weightHistory.length > 0) {
-        // 檢查是否有足夠多的日期（避免只有一天的水平線）
-        const byEtf: Record<string, WeightHistoryEntry[]> = {};
-        for (const row of weightHistory) {
-            if (!byEtf[row.etf_code]) byEtf[row.etf_code] = [];
-            byEtf[row.etf_code].push({
-                date: row.data_date as string,
-                weight: row.weight ?? 0,
-                rank: row.rank ?? 0,
-            });
-        }
-
-        // 若各 ETF 都有多於 1 個日期，直接使用
-        const hasMultipleDates = Object.values(byEtf).some(arr => arr.length > 1);
-        if (hasMultipleDates) {
-            for (const [etfCode, entries] of Object.entries(byEtf)) {
-                if (etfCode in result) {
-                    result[etfCode as keyof typeof result] = entries;
-                }
-            }
-            return NextResponse.json(result);
-        }
+    let rows: WeightHistoryDbRow[];
+    try {
+        rows = await fetchWeightHistory<WeightHistoryDbRow>(
+            supabase,
+            { etfCodes: [...ETF_CODES], stockCode: code },
+            'etf_code, data_date, weight, rank',
+        );
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    // Fallback：從 etf_holdings_snapshot 聚合，補算 rank
-    for (const etfCode of ETF_CODES as string[]) {
-        const { data: snapshots } = await supabase
-            .from('etf_holdings_snapshot')
-            .select('data_date, weight')
-            .eq('etf_code', etfCode)
-            .eq('stock_code', code)
-            .order('data_date', { ascending: true });
-
-        if (!snapshots || snapshots.length === 0) continue;
-
-        // 取各日期的所有持股計算 rank
-        const dates = [...new Set(snapshots.map(s => s.data_date as string))];
-
-        const { data: allHoldings } = await supabase
-            .from('etf_holdings_snapshot')
-            .select('data_date, stock_code, weight')
-            .eq('etf_code', etfCode)
-            .in('data_date', dates);
-
-        const dateRankMap: Record<string, number> = {};
-        for (const date of dates) {
-            const dayHoldings = (allHoldings ?? [])
-                .filter(h => h.data_date === date)
-                .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-            const rankIdx = dayHoldings.findIndex(h => h.stock_code === code);
-            dateRankMap[date] = rankIdx >= 0 ? rankIdx + 1 : 0;
-        }
-
-        result[etfCode] = snapshots.map(s => ({
-            date: s.data_date as string,
-            weight: s.weight ?? 0,
-            rank: dateRankMap[s.data_date as string] ?? 0,
-        }));
+    for (const row of rows) {
+        result[row.etf_code]?.push({
+            date: row.data_date,
+            weight: row.weight ?? 0,
+            rank: row.rank ?? 0,
+        });
     }
 
     return NextResponse.json(result);

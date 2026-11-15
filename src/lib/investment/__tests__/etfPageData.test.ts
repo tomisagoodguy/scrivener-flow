@@ -72,9 +72,44 @@ jest.mock('@/lib/supabase/service', () => ({
     getPublicClient: jest.fn(() => mockPublicClient),
 }));
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }));
+jest.mock('@/lib/investment/weightHistoryData', () => ({ fetchWeightHistory: jest.fn() }));
 
 import { getServiceClient } from '@/lib/supabase/service';
-import { getHoldings } from '@/lib/investment/etfPageData';
+import { createClient } from '@/lib/supabase/server';
+import { fetchWeightHistory } from '@/lib/investment/weightHistoryData';
+import { getHoldings, getRankingHistory } from '@/lib/investment/etfPageData';
+
+describe('getRankingHistory (etfPageData)', () => {
+    const serverClient = { from: jest.fn() };
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (createClient as jest.Mock).mockResolvedValue(serverClient);
+    });
+
+    it('reads the full history via fetchWeightHistory with etfCodes=[etfCode] and normalizes nulls', async () => {
+        (fetchWeightHistory as jest.Mock).mockResolvedValue([
+            { data_date: '2026-11-12', stock_code: '2330', stock_name: null, weight: null, rank: 1 },
+            { data_date: '2026-11-13', stock_code: '2330', stock_name: '台積電', weight: 9.5, rank: 1 },
+        ]);
+        const rows = await getRankingHistory('00981A');
+        expect(fetchWeightHistory).toHaveBeenCalledWith(
+            serverClient,
+            { etfCodes: ['00981A'] },
+            'data_date, stock_code, stock_name, weight, rank',
+        );
+        expect(rows).toEqual([
+            { data_date: '2026-11-12', stock_code: '2330', stock_name: '', weight: 0, rank: 1 },
+            { data_date: '2026-11-13', stock_code: '2330', stock_name: '台積電', weight: 9.5, rank: 1 },
+        ]);
+        // 不再做 count 預查或 snapshot fallback
+        expect(serverClient.from).not.toHaveBeenCalled();
+    });
+
+    it('throws instead of returning an empty array when the read fails', async () => {
+        (fetchWeightHistory as jest.Mock).mockRejectedValue(new Error('etf_weight_history: timeout'));
+        await expect(getRankingHistory('00981A')).rejects.toThrow('etf_weight_history: timeout');
+    });
+});
 
 describe('getHoldings (etfPageData) — isFallback propagation', () => {
     beforeEach(() => jest.clearAllMocks());

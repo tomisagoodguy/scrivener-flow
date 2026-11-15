@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { fetchWeightHistory } from '@/lib/investment/weightHistoryData';
 
 type Period = '30' | '60' | '90';
+
+interface WeightDbRow {
+    etf_code: string;
+    data_date: string;
+    weight: number | null;
+}
 
 interface WeightPoint {
     date: string;
@@ -106,38 +113,41 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
     const [weightSeries, setWeightSeries] = useState<WeightPoint[][]>([]);
     const [priceSeries, setPriceSeries] = useState<PricePoint[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!stockCode || !etfCodes.length) return;
         setLoading(true);
+        setError(null);
+        let cancelled = false;
         const supabase = createClient();
         const days = Number(period);
         const fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 
         Promise.all([
-            supabase
-                .from('etf_weight_history')
-                .select('etf_code, data_date, weight')
-                .eq('stock_code', stockCode)
-                .in('etf_code', etfCodes)
-                .gte('data_date', fromDate)
-                .order('data_date'),
+            fetchWeightHistory<WeightDbRow>(supabase, { etfCodes, stockCode, fromDate }, 'etf_code, data_date, weight'),
             supabase
                 .from('stock_prices_daily')
                 .select('date, close')
                 .eq('stock_code', stockCode)
                 .gte('date', fromDate)
                 .order('date'),
-        ]).then(([{ data: wRows }, { data: pRows }]) => {
+        ]).then(([wRows, { data: pRows }]) => {
+            if (cancelled) return;
             const grouped = new Map<string, WeightPoint[]>();
-            for (const r of wRows ?? []) {
+            for (const r of wRows) {
                 if (!grouped.has(r.etf_code)) grouped.set(r.etf_code, []);
                 grouped.get(r.etf_code)!.push({ date: r.data_date, weight: Number(r.weight), etf_code: r.etf_code });
             }
             setWeightSeries([...grouped.values()]);
             setPriceSeries((pRows ?? []).map(r => ({ date: r.date, close: Number(r.close) })));
             setLoading(false);
+        }).catch((err: unknown) => {
+            if (cancelled) return;
+            setError(err instanceof Error ? err.message : String(err));
+            setLoading(false);
         });
+        return () => { cancelled = true; };
     }, [stockCode, etfCodes, period]);
 
     // 按最新比重排序，決定圖例分組
@@ -173,12 +183,14 @@ export function HoldingsPriceOverlayChart({ stockCode, etfCodes, etfColors }: Pr
             {/* 圖表 */}
             {loading ? (
                 <div className="h-32 animate-pulse bg-slate-100 dark:bg-slate-800 rounded" />
+            ) : error ? (
+                <p className="text-xs text-red-600 dark:text-red-400 text-center py-4">比重歷史載入失敗：{error}</p>
             ) : (
                 <MiniChart weightSeries={weightSeries} priceSeries={priceSeries} etfColors={etfColors} />
             )}
 
             {/* 圖例：顯示圖上的 ETF + 最新比重 */}
-            {!loading && shown.length > 0 && (
+            {!loading && !error && shown.length > 0 && (
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                     {shown.map(s => {
                         const etf = s[0].etf_code;

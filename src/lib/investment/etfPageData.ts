@@ -7,6 +7,7 @@ import { getEtfMeta } from '@/lib/investment/etfRegistry';
 import { attachTopicsToHoldings, filterHoldingsByTopic, type TopicChip } from '@/lib/investment/topicUtils';
 import { selectDateWithFallback } from '@/lib/investment/holdingsUtils';
 import { fetchMarginPctRanks } from '@/lib/investment/marginRisk';
+import { fetchWeightHistory } from '@/lib/investment/weightHistoryData';
 export { fetchQuantFilters } from '@/lib/investment/quantFilters';
 export type { QuantFilter } from '@/lib/investment/quantFilters';
 
@@ -197,46 +198,23 @@ export async function getHoldings(etfCode: string, topic?: string | null) {
     return cached();
 }
 
+interface RankingHistoryDbRow {
+    data_date: string;
+    stock_code: string;
+    stock_name: string | null;
+    weight: number | null;
+    rank: number;
+}
+
+/** 單一 ETF 的完整排名歷史（分頁讀完）；查詢失敗拋錯交給頁面錯誤邊界。 */
 export async function getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {
     const supabase = await createClient();
-
-    const { count } = await supabase
-        .from('etf_weight_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('etf_code', etfCode);
-
-    if (count && count > 0) {
-        const { data: historyData } = await supabase
-            .from('etf_weight_history')
-            .select('data_date, stock_code, stock_name, weight, rank')
-            .eq('etf_code', etfCode)
-            .order('data_date', { ascending: true });
-
-        const distinctDates = new Set((historyData ?? []).map(r => r.data_date)).size;
-        if (distinctDates > 1) return (historyData ?? []).map(r => ({ ...r, stock_name: r.stock_name ?? '', weight: r.weight ?? 0 })) as RankingHistoryRow[];
-    }
-
-    const { data } = await supabase
-        .from('etf_holdings_snapshot')
-        .select('data_date, stock_code, stock_name, weight')
-        .eq('etf_code', etfCode)
-        .order('data_date', { ascending: true });
-
-    if (!data || data.length === 0) return [];
-
-    const byDate: Record<string, typeof data> = {};
-    for (const row of data) {
-        const d = row.data_date as string;
-        if (!byDate[d]) byDate[d] = [];
-        byDate[d].push(row);
-    }
-
-    const withRank: RankingHistoryRow[] = [];
-    for (const rows of Object.values(byDate)) {
-        const sorted = [...rows].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
-        sorted.forEach((row, i) => withRank.push({ ...row, stock_name: row.stock_name ?? '', weight: row.weight ?? 0, rank: i + 1 }));
-    }
-    return withRank;
+    const rows = await fetchWeightHistory<RankingHistoryDbRow>(
+        supabase,
+        { etfCodes: [etfCode] },
+        'data_date, stock_code, stock_name, weight, rank',
+    );
+    return rows.map(r => ({ ...r, stock_name: r.stock_name ?? '', weight: r.weight ?? 0 }));
 }
 
 export async function getEtfNews(etfCode: string): Promise<EtfNewsRow[]> {

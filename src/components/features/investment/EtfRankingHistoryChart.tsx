@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer,
@@ -9,8 +9,12 @@ import type { WeightHistoryRow } from '@/app/investment/history/page';
 import type { EtfRegistryEntry } from '@/lib/investment/etfRegistry';
 
 interface EtfRankingHistoryChartProps {
+    /** 目前選擇 ETF 的 90 天歷史（由父層按需載入） */
     weightHistory: WeightHistoryRow[];
     etfRegistry: EtfRegistryEntry[];
+    onSelectionChange: (etfCode: string) => void;
+    loading: boolean;
+    error: string | null;
 }
 
 const TOP_N_OPTIONS = [5, 10, 15] as const;
@@ -21,8 +25,9 @@ const STOCK_COLORS = [
     '#a855f7', '#84cc16', '#ef4444', '#0ea5e9', '#d97706',
 ];
 
-export function EtfRankingHistoryChart({ weightHistory, etfRegistry }: EtfRankingHistoryChartProps) {
+export function EtfRankingHistoryChart({ weightHistory, etfRegistry, onSelectionChange, loading, error }: EtfRankingHistoryChartProps) {
     const [selectedEtf, setSelectedEtf] = useState<string>(etfRegistry[0]?.code ?? '');
+    useEffect(() => onSelectionChange(selectedEtf), [selectedEtf, onSelectionChange]);
     const [topN, setTopN] = useState<5 | 10 | 15>(10);
     const [viewMode, setViewMode] = useState<'rank' | 'weight'>('rank');
 
@@ -120,7 +125,15 @@ export function EtfRankingHistoryChart({ weightHistory, etfRegistry }: EtfRankin
                 ))}
             </div>
 
-            {chartData.length === 0 ? (
+            {loading ? (
+                <div className="h-64 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-sm">
+                    載入 {selectedEtf} 歷史中…
+                </div>
+            ) : error ? (
+                <div className="h-64 flex items-center justify-center text-red-600 dark:text-red-400 text-sm">
+                    {selectedEtf} 歷史載入失敗：{error}
+                </div>
+            ) : chartData.length === 0 ? (
                 <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
                     {selectedEtf} 尚無歷史資料
                 </div>

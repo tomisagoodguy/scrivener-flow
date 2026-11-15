@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend,
@@ -9,15 +9,20 @@ import type { WeightHistoryRow } from '@/app/investment/history/page';
 import type { EtfRegistryEntry } from '@/lib/investment/etfRegistry';
 
 interface StockWeightCrossEtfChartProps {
+    /** 目前選擇股票的 90 天歷史（由父層按需載入） */
     weightHistory: WeightHistoryRow[];
     stockList: { code: string; name: string }[];
     etfRegistry: EtfRegistryEntry[];
+    onSelectionChange: (stockCode: string) => void;
+    loading: boolean;
+    error: string | null;
 }
 
 type ViewMode = 'weight' | 'rank';
 
-export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry }: StockWeightCrossEtfChartProps) {
+export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry, onSelectionChange, loading, error }: StockWeightCrossEtfChartProps) {
     const [selectedStock, setSelectedStock] = useState<string>(stockList[0]?.code ?? '');
+    useEffect(() => onSelectionChange(selectedStock), [selectedStock, onSelectionChange]);
     const [viewMode, setViewMode] = useState<ViewMode>('weight');
     const [search, setSearch] = useState('');
 
@@ -132,7 +137,15 @@ export function StockWeightCrossEtfChart({ weightHistory, stockList, etfRegistry
 
                 {/* 圖表 */}
                 <div className="lg:col-span-3">
-                    {chartData.length === 0 ? (
+                    {loading ? (
+                        <div className="h-[360px] animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-sm">
+                            載入 {selectedStock} 歷史中…
+                        </div>
+                    ) : error ? (
+                        <div className="h-[360px] flex items-center justify-center text-red-600 dark:text-red-400 text-sm">
+                            {selectedStock} 歷史載入失敗：{error}
+                        </div>
+                    ) : chartData.length === 0 ? (
                         <div className="h-[360px] flex items-center justify-center text-slate-400 text-sm">
                             {selectedStock ? `${selectedStock} 無歷史資料` : '請選擇股票'}
                         </div>
