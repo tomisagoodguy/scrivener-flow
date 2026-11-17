@@ -23,4 +23,5 @@
   - 2026-11-17 實跑：`yarn tsc --noEmit` → Done，0 錯誤；`yarn test --testPathPatterns "clauseTopics|exportClausesToHTML|ClauseItem|ClauseEditModal"` → Test Suites 4 passed、Tests 44 passed；`yarn eslint src/lib/constants/clauseTopics.ts src/lib/constants/clauseTopics.test.ts src/components/features/clauses/ src/app/clauses/page.tsx` → 0 問題。
   - TDD 證據：clauseTopics 分組（6 failed→12 passed）、篩選與備註（12 failed→29 passed）、parseTopicGroupKey（2 failed→34 passed）；ClauseEditModal 4 測試先因找不到主題欄位失敗後通過，移除 `required` 的突變使 2 測試失敗；ClauseItem 3 測試以兩個突變（複製含備註、永遠顯示備註）各使 1 測試失敗。
   - 範圍說明：任務 3.1 驗證寫「全專案不再出現 `tagsByCategory`」，但 `exportClausesToHTML.ts`（本 change 不改的匯出）有同名區域變數；實際以 `useClauses.ts`、`page.tsx` 不再出現為準（已確認）。
-- [ ] 4.2 使用者確認任務 1.1 的 migration 已在正式資料庫執行後，登入 `/clauses` 手動檢查：主題分段順序與條數、側欄選「租賃」只剩租賃段、搜尋「二胎」跨主題、新增條文未選主題無法儲存、有備註的卡片顯示備註且複製不含備註；逐項結果記錄於本任務下方。[after: 1.1, 4.1]
+- [x] 4.2 使用者確認任務 1.1 的 migration 已在正式資料庫執行後，登入 `/clauses` 手動檢查：主題分段順序與條數、側欄選「租賃」只剩租賃段、搜尋「二胎」跨主題、新增條文未選主題無法儲存、有備註的卡片顯示備註且複製不含備註；逐項結果記錄於本任務下方。[after: 1.1, 4.1]
+  - 2026-11-17：commit `c754a2a9` 推上 master，Vercel 部署後使用者登入 case-master.com/clauses 逐項檢查，回報五項全部正常：(1) 依 12 主題順序分段並顯示條數 (2) 側欄選「租賃」只剩租賃 13 條 (3) 搜尋「二胎」跨主題列出 (4) 新增條文未選主題按儲存被擋下 (5) 填備註後卡片顯示 💡 備註，複製不含備註。
