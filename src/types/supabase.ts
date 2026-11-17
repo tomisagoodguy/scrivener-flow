@@ -907,6 +907,7 @@ export type Database = {
           market_cap: number | null
           monthly_revenue: number | null
           price: number | null
+          rank: number | null
           revenue_mom: number | null
           revenue_momentum_rank: number | null
           revenue_yoy: number | null
@@ -932,6 +933,7 @@ export type Database = {
           market_cap?: number | null
           monthly_revenue?: number | null
           price?: number | null
+          rank?: number | null
           revenue_mom?: number | null
           revenue_momentum_rank?: number | null
           revenue_yoy?: number | null
@@ -957,6 +959,7 @@ export type Database = {
           market_cap?: number | null
           monthly_revenue?: number | null
           price?: number | null
+          rank?: number | null
           revenue_mom?: number | null
           revenue_momentum_rank?: number | null
           revenue_yoy?: number | null

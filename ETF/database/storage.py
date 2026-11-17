@@ -8,6 +8,23 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+
+def _rank_by_weight(df: pd.DataFrame) -> Dict[str, int]:
+    """依 weight 降序、代碼升冪為每檔持股給 1..n 的名次。
+
+    Args:
+        df: 單一 ETF 單日的完整持股，需有 ``code`` 與 ``weight`` 欄位。
+
+    Returns:
+        ``{代碼: 名次}``。
+    """
+    ordered = sorted(
+        ((str(code), float(weight)) for code, weight in zip(df['code'], df['weight'])),
+        key=lambda item: (-item[1], item[0]),
+    )
+    return {code: index + 1 for index, (code, _) in enumerate(ordered)}
+
+
 class ETFStorage:
     def __init__(self):
         # Load env
@@ -159,6 +176,10 @@ class ETFStorage:
             headers = self.headers.copy()
             headers["Prefer"] = "resolution=merge-duplicates"
             
+            # rank：同 ETF 同日依 weight 降序、同分依代碼升冪，1 起算
+            # （與 etf_weight_history 原 view 的 row_number() 規則一致，見 change store-weight-history-rank）
+            rank_by_code = _rank_by_weight(df)
+
             # 2. Insert/Upsert new
             records = []
             for _, row in df.iterrows():
@@ -168,6 +189,7 @@ class ETFStorage:
                     "stock_name": row['name'],
                     "shares": int(row['shares']),
                     "weight": float(row['weight']),
+                    "rank": rank_by_code[str(row['code'])],
                     "data_date": data_date,
                     "price": float(row['price']) if 'price' in df.columns and pd.notnull(row['price']) else None,
                     "amount": float(row['amount']) if 'amount' in df.columns and pd.notnull(row['amount']) else None,
