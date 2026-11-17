@@ -11,7 +11,7 @@
 
 jest.mock('server-only', () => ({}), { virtual: true });
 jest.mock('next/cache', () => ({
-    unstable_cache: (fn: () => unknown) => fn,
+    unstable_cache: jest.fn((fn: () => unknown) => fn),
 }));
 
 function makeChainBuilder(data: unknown[] | null, error: { message: string } | null = null) {
@@ -74,26 +74,23 @@ jest.mock('@/lib/supabase/service', () => ({
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }));
 jest.mock('@/lib/investment/weightHistoryData', () => ({ fetchWeightHistory: jest.fn() }));
 
+import { unstable_cache } from 'next/cache';
 import { getServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@/lib/supabase/server';
 import { fetchWeightHistory } from '@/lib/investment/weightHistoryData';
 import { getHoldings, getRankingHistory } from '@/lib/investment/etfPageData';
 
 describe('getRankingHistory (etfPageData)', () => {
-    const serverClient = { from: jest.fn() };
-    beforeEach(() => {
-        jest.clearAllMocks();
-        (createClient as jest.Mock).mockResolvedValue(serverClient);
-    });
+    beforeEach(() => jest.clearAllMocks());
 
-    it('reads the full history via fetchWeightHistory with etfCodes=[etfCode] and normalizes nulls', async () => {
+    it('reads the full history via fetchWeightHistory with the public client and normalizes nulls', async () => {
         (fetchWeightHistory as jest.Mock).mockResolvedValue([
             { data_date: '2026-11-12', stock_code: '2330', stock_name: null, weight: null, rank: 1 },
             { data_date: '2026-11-13', stock_code: '2330', stock_name: '台積電', weight: 9.5, rank: 1 },
         ]);
         const rows = await getRankingHistory('00981A');
         expect(fetchWeightHistory).toHaveBeenCalledWith(
-            serverClient,
+            mockPublicClient,
             { etfCodes: ['00981A'] },
             'data_date, stock_code, stock_name, weight, rank',
         );
@@ -101,8 +98,18 @@ describe('getRankingHistory (etfPageData)', () => {
             { data_date: '2026-11-12', stock_code: '2330', stock_name: '', weight: 0, rank: 1 },
             { data_date: '2026-11-13', stock_code: '2330', stock_name: '台積電', weight: 9.5, rank: 1 },
         ]);
-        // 不再做 count 預查或 snapshot fallback
-        expect(serverClient.from).not.toHaveBeenCalled();
+        // unstable_cache 內不可讀 cookies，所以不用 server client
+        expect(createClient).not.toHaveBeenCalled();
+    });
+
+    it('reads through a one-hour cache keyed by the ETF code', async () => {
+        (fetchWeightHistory as jest.Mock).mockResolvedValue([]);
+        await getRankingHistory('00981A');
+        expect(unstable_cache).toHaveBeenCalledWith(
+            expect.any(Function),
+            ['ranking-history-v1', '00981A'],
+            { revalidate: 3600 },
+        );
     });
 
     it('throws instead of returning an empty array when the read fails', async () => {

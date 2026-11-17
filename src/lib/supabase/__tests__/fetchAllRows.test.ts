@@ -28,6 +28,52 @@ describe('fetchAllRows', () => {
         }
     });
 
+    describe('with concurrency 4', () => {
+        const batch = (start: number) => [0, 1, 2, 3].map(i => [start + i * 1000, start + i * 1000 + 999]);
+
+        it.each([
+            [0, batch(0), 0],
+            [2905, batch(0), 2905],
+            [4000, [...batch(0), ...batch(4000)], 4000],
+            [8808, [...batch(0), ...batch(4000), ...batch(8000)], 8808],
+        ])('matching %i rows → requests %j and returns %i rows in range order', async (matching, expectedRanges, expectedCount) => {
+            const { ranges, fetchPage } = fakeSource(matching);
+            const rows = await fetchAllRows<{ id: number }>('t', fetchPage, { concurrency: 4 });
+            expect([...ranges].sort((a, b) => a[0] - b[0])).toEqual(expectedRanges);
+            expect(rows).toHaveLength(expectedCount);
+            rows.forEach((r, i) => expect(r.id).toBe(i));
+        });
+
+        it('requests a whole batch before any page resolves', async () => {
+            const started: number[] = [];
+            const fetchPage = (from: number) => {
+                started.push(from);
+                return new Promise<{ data: unknown[]; error: null }>(resolve =>
+                    setTimeout(() => resolve({ data: [], error: null }), 0),
+                );
+            };
+            const pending = fetchAllRows('t', fetchPage, { concurrency: 4 });
+            expect(started).toEqual([0, 1000, 2000, 3000]);
+            await pending;
+        });
+
+        it('throws with label and message when the second page of a batch fails', async () => {
+            const fetchPage = async (from: number) =>
+                from === 1000
+                    ? { data: null, error: { message: 'timeout' } }
+                    : { data: Array.from({ length: 1000 }, (_, i) => ({ id: from + i })), error: null };
+            await expect(fetchAllRows('etf_weight_history', fetchPage, { concurrency: 4 })).rejects.toThrow(
+                /etf_weight_history.*timeout/,
+            );
+        });
+
+        it.each([0, -2])('treats concurrency %i as 1', async concurrency => {
+            const { ranges, fetchPage } = fakeSource(1000);
+            await fetchAllRows('t', fetchPage, { concurrency });
+            expect(ranges).toEqual([[0, 999], [1000, 1999]]);
+        });
+    });
+
     it('treats null data as an empty final page', async () => {
         const rows = await fetchAllRows('t', async () => ({ data: null, error: null }));
         expect(rows).toEqual([]);

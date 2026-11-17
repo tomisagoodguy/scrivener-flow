@@ -8,7 +8,7 @@ Defines how the application reads ETF weight history so that every screen receiv
 
 ### Requirement: Paginated reads return every matching row
 
-The shared paginated reader (`fetchAllRows`) SHALL request consecutive ranges of at most 1000 rows until a page returns fewer rows than the page size, and SHALL return the concatenation of all pages in request order. If any page returns an error, the reader SHALL throw an `Error` whose message contains the caller-supplied table label and the error message, and SHALL NOT return partial results.
+The shared paginated reader (`fetchAllRows`) SHALL request ranges of at most 1000 rows, in batches of `concurrency` consecutive ranges (default 1), until a page in range order returns fewer rows than the page size, and SHALL return the concatenation of all pages up to and including that page in range order. Pages after the first short page SHALL be discarded. If any requested page returns an error, the reader SHALL throw an `Error` whose message contains the caller-supplied table label and the error message, and SHALL NOT return partial results.
 
 #### Scenario: Multiple pages are merged
 
@@ -23,6 +23,20 @@ The shared paginated reader (`fetchAllRows`) SHALL request consecutive ranges of
 | 1000 | 0–999, 1000–1999 | 1000 |
 | 2905 | 0–999, 1000–1999, 2000–2999 | 2905 |
 
+#### Scenario: Pages are requested in concurrent batches
+
+- **WHEN** the reader is called with `concurrency` 4
+- **THEN** it requests 4 consecutive ranges at a time, requests the next batch only when all 4 pages are full, and returns the rows in range order
+
+##### Example: concurrent batch boundaries
+
+| Matching rows | Concurrency | Ranges requested | Rows returned |
+| ------------- | ----------- | ---------------- | ------------- |
+| 0 | 4 | 0–999, 1000–1999, 2000–2999, 3000–3999 | 0 |
+| 2905 | 4 | 0–999, 1000–1999, 2000–2999, 3000–3999 | 2905 |
+| 4000 | 4 | 0–999 … 3000–3999, then 4000–4999 … 7000–7999 | 4000 |
+| 8808 | 4 | 0–999 … 7000–7999, then 8000–8999 … 11000–11999 | 8808 |
+
 #### Scenario: Page error is surfaced
 
 - **WHEN** the second page returns an error with message "timeout" for label `etf_weight_history`
@@ -30,29 +44,16 @@ The shared paginated reader (`fetchAllRows`) SHALL request consecutive ranges of
 
 
 <!-- @trace
-source: fix-weight-history-row-cap
-updated: 2026-11-15
+source: parallel-weight-history-pages
+updated: 2026-11-17
 code:
-  - src/lib/investment/etfPageData.ts
-  - src/components/features/investment/HoldingsPriceOverlayChart.tsx
-  - src/app/actions/getFanBreakoutSignals.ts
   - src/lib/supabase/fetchAllRows.ts
-  - src/app/investment/history/page.tsx
-  - src/app/actions/getWeightHistory.ts
-  - src/components/features/investment/StockWeightCrossEtfChart.tsx
-  - src/components/features/investment/EtfRankingHistoryChart.tsx
-  - src/hooks/investment/useOnDemandWeightHistory.ts
-  - src/components/features/investment/HistoryTabs.tsx
+  - src/lib/investment/etfPageData.ts
   - src/lib/investment/weightHistoryData.ts
-  - src/app/api/investment/etf-weight-history/route.ts
 tests:
-  - src/app/api/investment/etf-weight-history/__tests__/route.test.ts
-  - src/lib/supabase/__tests__/fetchAllRows.test.ts
   - src/lib/investment/__tests__/etfPageData.test.ts
+  - src/lib/supabase/__tests__/fetchAllRows.test.ts
   - src/lib/investment/__tests__/weightHistoryData.test.ts
-  - src/hooks/investment/__tests__/useOnDemandWeightHistory.test.ts
-  - src/components/features/investment/__tests__/WeightHistoryLoadStates.test.tsx
-  - src/app/actions/__tests__/getWeightHistory.test.ts
 -->
 
 ---
@@ -289,4 +290,27 @@ tests:
   - src/hooks/investment/__tests__/useOnDemandWeightHistory.test.ts
   - src/components/features/investment/__tests__/WeightHistoryLoadStates.test.tsx
   - src/app/actions/__tests__/getWeightHistory.test.ts
+-->
+
+---
+### Requirement: ETF ranking history is cached
+
+`getRankingHistory(etfCode)` SHALL read through a cache keyed by the ETF code with a one-hour lifetime, using the public read client, so that repeated loads of the same ETF page within that hour do not query the database. A failed read SHALL throw and SHALL NOT store a result in the cache.
+
+#### Scenario: Repeated load within the hour
+
+- **WHEN** `getRankingHistory('00981A')` is called twice within one hour
+- **THEN** the second call returns the same rows without issuing database requests
+
+<!-- @trace
+source: parallel-weight-history-pages
+updated: 2026-11-17
+code:
+  - src/lib/supabase/fetchAllRows.ts
+  - src/lib/investment/etfPageData.ts
+  - src/lib/investment/weightHistoryData.ts
+tests:
+  - src/lib/investment/__tests__/etfPageData.test.ts
+  - src/lib/supabase/__tests__/fetchAllRows.test.ts
+  - src/lib/investment/__tests__/weightHistoryData.test.ts
 -->

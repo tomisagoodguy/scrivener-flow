@@ -206,15 +206,23 @@ interface RankingHistoryDbRow {
     rank: number;
 }
 
-/** 單一 ETF 的完整排名歷史（分頁讀完）；查詢失敗拋錯交給頁面錯誤邊界。 */
-export async function getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {
-    const supabase = await createClient();
+async function _getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {
     const rows = await fetchWeightHistory<RankingHistoryDbRow>(
-        supabase,
+        getPublicClient(),
         { etfCodes: [etfCode] },
         'data_date, stock_code, stock_name, weight, rank',
     );
     return rows.map(r => ({ ...r, stock_name: r.stock_name ?? '', weight: r.weight ?? 0 }));
+}
+
+/**
+ * 單一 ETF 的完整排名歷史（分頁讀完），快取 1 小時。
+ * 公開資料，用 public client（unstable_cache 內不可讀 cookies）；查詢失敗拋錯交給頁面錯誤邊界，不快取失敗。
+ */
+export async function getRankingHistory(etfCode: string): Promise<RankingHistoryRow[]> {
+    return unstable_cache(() => _getRankingHistory(etfCode), ['ranking-history-v1', etfCode], {
+        revalidate: 3600,
+    })();
 }
 
 export async function getEtfNews(etfCode: string): Promise<EtfNewsRow[]> {

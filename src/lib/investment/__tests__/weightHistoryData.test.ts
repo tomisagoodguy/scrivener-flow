@@ -65,10 +65,11 @@ describe('fetchWeightHistory', () => {
         expect(fake.calls.some(c => c[0] === 'in')).toBe(false);
     });
 
-    it('paginates through the third page', async () => {
+    it('paginates in concurrent batches of 4 pages', async () => {
         const fake = fakeClient(2905);
         const rows = await fetchWeightHistory<{ n: number }>(fake.client, { stockCode: '2330' }, 'data_date');
-        expect(fake.ranges).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+        expect([...fake.ranges].sort((a, b) => a[0] - b[0])).toEqual([[0, 999], [1000, 1999], [2000, 2999], [3000, 3999]]);
         expect(rows).toHaveLength(2905);
+        rows.forEach((r, i) => expect(r.n).toBe(i));
     });
 });

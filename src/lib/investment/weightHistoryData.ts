@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/fetchAllRows';
 
+/** 每批並行頁數（估算：17,281 列從 18 次依序往返降為 5 批；以 00981A 實測確認） */
+const PAGE_CONCURRENCY = 4;
+
 export interface WeightHistoryFilter {
     etfCodes?: string[];
     stockCode?: string;
@@ -33,5 +36,5 @@ export function fetchWeightHistory<T>(
             .order('etf_code', { ascending: true })
             .order('stock_code', { ascending: true })
             .range(from, to);
-    });
+    }, { concurrency: PAGE_CONCURRENCY });
 }
