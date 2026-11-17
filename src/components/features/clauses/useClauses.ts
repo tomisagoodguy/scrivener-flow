@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/client';
 import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
 import { useCrudDelete } from '@/hooks/useCrudDelete';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import {
+    type ClauseTopic,
+    type ClauseTopicGroupKey,
+    filterClauses,
+    groupClausesByTopic,
+    normalizeClauseNote,
+} from '@/lib/constants/clauseTopics';
+
 export interface Clause {
     id: string;
     title: string;
@@ -10,6 +18,8 @@ export interface Clause {
     category: string;
     tags: string[];
     usage_count: number;
+    topic: ClauseTopic | null;
+    note: string | null;
 }
 
 export function useClauses() {
@@ -20,7 +30,7 @@ export function useClauses() {
     });
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedTopic, setSelectedTopic] = useState<ClauseTopicGroupKey | null>(null);
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
     const { requireUser } = useAuthUser();
@@ -50,6 +60,7 @@ export function useClauses() {
 
             const payload = {
                 ...clause,
+                note: normalizeClauseNote(clause.note),
                 last_updated_by: user.id,
                 updated_at: new Date().toISOString(),
             };
@@ -68,33 +79,10 @@ export function useClauses() {
         }
     };
 
-    // Derived State
-    const allTags = Array.from(new Set(clauses.flatMap((c) => c.tags || []))).sort();
-
-    const categories = Array.from(new Set(clauses.map((c) => c.category).filter(Boolean))).sort();
-    const tagsByCategory = Object.fromEntries(
-        categories.map((cat) => {
-            const catClauses = clauses.filter((c) => c.category === cat);
-            const tagCount: Record<string, number> = {};
-            catClauses.forEach((c) => (c.tags ?? []).forEach((t) => { tagCount[t] = (tagCount[t] ?? 0) + 1; }));
-            return [cat, Object.keys(tagCount).sort((a, b) => tagCount[b] - tagCount[a])];
-        })
-    );
-
-    const filteredClauses = clauses.filter((clause) => {
-        const term = searchTerm.toLowerCase();
-        const matchesSearch = clause.title.toLowerCase().includes(term) || clause.content.toLowerCase().includes(term);
-        if (!matchesSearch) return false;
-
-        if (searchTerm) return true; // 搜尋時跨所有分類
-
-        if (!selectedCategory) return true;
-        if (selectedCategory.includes('::')) {
-            const [cat, tag] = selectedCategory.split('::');
-            return clause.category === cat && (clause.tags?.includes(tag) ?? false);
-        }
-        return clause.category === selectedCategory;
-    });
+    // Derived State：側欄用全部條文的主題分組（含條數），列表用篩選後的分組
+    const allTopicGroups = groupClausesByTopic(clauses);
+    const filteredClauses = filterClauses(clauses, searchTerm, selectedTopic);
+    const groupedClauses = groupClausesByTopic(filteredClauses);
 
     const suggestions = clauses
         .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)
@@ -103,15 +91,14 @@ export function useClauses() {
     return {
         clauses,
         filteredClauses,
+        groupedClauses,
+        allTopicGroups,
         loading,
         searchTerm,
         setSearchTerm,
-        selectedCategory,
-        setSelectedCategory,
+        selectedTopic,
+        setSelectedTopic,
         copyFeedback,
-        allTags,
-        categories,
-        tagsByCategory,
         suggestions,
         fetchClauses,
         handleDelete,

@@ -21,9 +21,9 @@ describe('exportClausesToHTML', () => {
     });
 
     const clauses: Clause[] = [
-        { id: '1', category: '基本特約', title: '基本A', content: '基本條文一', tags: ['t1'], usage_count: 0 },
-        { id: '2', category: '基本特約', title: '基本B "引號"', content: '含 <b> & "雙引號" 的條文', tags: ["it's"], usage_count: 0 },
-        { id: '3', category: '增補特約', title: '增補A', content: '增補條文一\n第二行', tags: ['t1'], usage_count: 0 },
+        { id: '1', category: '基本特約', title: '基本A', content: '基本條文一', tags: ['t1'], usage_count: 0, topic: null, note: null },
+        { id: '2', category: '基本特約', title: '基本B "引號"', content: '含 <b> & "雙引號" 的條文', tags: ["it's"], usage_count: 0, topic: null, note: null },
+        { id: '3', category: '增補特約', title: '增補A', content: '增補條文一\n第二行', tags: ['t1'], usage_count: 0, topic: null, note: null },
     ];
 
     const render = (): Document => {

@@ -17,9 +17,14 @@ export function ClauseItem({ clause, copyFeedback, onCopy, onEdit, onDelete }: C
                 : 'bg-white ring-1 ring-slate-100 hover:shadow-blue-500/5 dark:bg-slate-800 dark:ring-slate-700'
         }`}>
             {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-4 select-none">
-                <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+            <div className="px-6 py-4 select-none space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-bold text-slate-800 leading-tight">{clause.title}</h3>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${clause.category === '基本特約'
+                        ? 'text-blue-700 border-blue-200 dark:text-blue-300 dark:border-blue-700'
+                        : 'text-slate-500 border-slate-200 dark:text-slate-400 dark:border-slate-600'}`}>
+                        {clause.category}
+                    </span>
                     {(clause.tags || []).map(t => (
                         <span key={t} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                             #{t}
@@ -31,6 +36,9 @@ export function ClauseItem({ clause, copyFeedback, onCopy, onEdit, onDelete }: C
                         </span>
                     )}
                 </div>
+                {clause.note && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300 whitespace-pre-wrap">💡 {clause.note}</p>
+                )}
             </div>
 
             {/* Body */}

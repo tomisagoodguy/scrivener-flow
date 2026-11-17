@@ -1,26 +1,26 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Plus, Tag, FileCode } from 'lucide-react';
+import { Search, Plus, FolderOpen, FileCode } from 'lucide-react';
 import { PageSidebar, SidebarGroup } from '@/components/shared/PageSidebar';
 import GenericExportExcelButton from '@/components/features/cases/GenericExportExcelButton';
 import { useClauses, Clause } from '@/components/features/clauses/useClauses';
 import { ClauseEditModal } from '@/components/features/clauses/ClauseEditModal';
-import { ClauseItem } from '@/components/features/clauses/ClauseItem';
+import { ClauseTopicList } from '@/components/features/clauses/ClauseTopicList';
 import { exportClausesToHTML } from '@/components/features/clauses/exportClausesToHTML';
+import { parseTopicGroupKey } from '@/lib/constants/clauseTopics';
 
 export default function ClausesPage() {
     const {
-        clauses,
         filteredClauses,
+        groupedClauses,
+        allTopicGroups,
         loading,
         searchTerm,
         setSearchTerm,
-        selectedCategory,
-        setSelectedCategory,
+        selectedTopic,
+        setSelectedTopic,
         copyFeedback,
-        categories,
-        tagsByCategory,
         suggestions,
         handleDelete,
         handleCopy,
@@ -31,8 +31,6 @@ export default function ClausesPage() {
     const [currentClause, setCurrentClause] = useState<Partial<Clause>>({ tags: [] });
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const basicClauses = filteredClauses.filter(c => c.category === '基本特約');
-    const supplementClauses = filteredClauses.filter(c => c.category !== '基本特約');
     const handleEditClause = (c: Clause) => { setCurrentClause(c); setIsEditing(true); };
 
     const clauseColumns = [
@@ -40,27 +38,24 @@ export default function ClausesPage() {
         { header: '條文內容', key: 'content', width: 80 },
     ];
 
-    const sidebarGroups = useMemo<SidebarGroup[]>(() => categories.map((cat) => ({
-        title: cat,
-        items: (tagsByCategory[cat] ?? []).map((tag: string) => {
-            const matched = clauses.filter((c) => c.category === cat && c.tags?.includes(tag));
-            return {
-                id: `${cat}::${tag}`,
-                label: tag,
-                count: matched.length,
-                icon: <Tag className="w-4 h-4 text-emerald-400" />,
-                subLabels: matched.map((c) => c.title),
-            };
-        }),
-    })), [categories, tagsByCategory, clauses]);
+    const sidebarGroups = useMemo<SidebarGroup[]>(() => [{
+        title: '主題',
+        items: allTopicGroups.map((g) => ({
+            id: g.topic,
+            label: g.topic,
+            count: g.clauses.length,
+            icon: <FolderOpen className="w-4 h-4 text-blue-400" />,
+            subLabels: g.clauses.map((c) => c.title),
+        })),
+    }], [allTopicGroups]);
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
             <PageSidebar
                 title="常用條文庫"
                 groups={sidebarGroups}
-                selectedId={selectedCategory}
-                onSelect={setSelectedCategory}
+                selectedId={selectedTopic}
+                onSelect={(id) => setSelectedTopic(parseTopicGroupKey(id))}
                 searchable
                 hotThreshold={2}
                 className="hidden md:block shadow-sm z-10 sticky top-0 h-screen"
@@ -162,10 +157,10 @@ export default function ClausesPage() {
                     </div>
 
                     {/* Active Filter Mobile */}
-                    {selectedCategory && (
+                    {selectedTopic && (
                         <div className="md:hidden flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold">
-                            <span>已選分類: {selectedCategory}</span>
-                            <button onClick={() => setSelectedCategory(null)} className="ml-auto text-blue-400 hover:text-blue-700">清除</button>
+                            <span>已選主題: {selectedTopic}</span>
+                            <button onClick={() => setSelectedTopic(null)} className="ml-auto text-blue-400 hover:text-blue-700">清除</button>
                         </div>
                     )}
 
@@ -184,34 +179,8 @@ export default function ClausesPage() {
                             <p className="text-slate-500 mt-2">請調整搜尋條件或新增資料</p>
                         </div>
                     ) : (
-                        <div className="space-y-8">
-                            {basicClauses.length > 0 && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">基本特約</span>
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{basicClauses.length}</span>
-                                        <div className="flex-1 h-px bg-slate-200" />
-                                    </div>
-                                    {basicClauses.map((clause) => (
-                                        <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback}
-                                            onCopy={handleCopy} onEdit={handleEditClause} onDelete={handleDelete} />
-                                    ))}
-                                </div>
-                            )}
-                            {supplementClauses.length > 0 && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">增補特約</span>
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{supplementClauses.length}</span>
-                                        <div className="flex-1 h-px bg-slate-200" />
-                                    </div>
-                                    {supplementClauses.map((clause) => (
-                                        <ClauseItem key={clause.id} clause={clause} copyFeedback={copyFeedback}
-                                            onCopy={handleCopy} onEdit={handleEditClause} onDelete={handleDelete} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <ClauseTopicList groups={groupedClauses} copyFeedback={copyFeedback}
+                            onCopy={handleCopy} onEdit={handleEditClause} onDelete={handleDelete} />
                     )}
                 </div>
             </main>
