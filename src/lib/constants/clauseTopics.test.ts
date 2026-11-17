@@ -1,6 +1,8 @@
 import {
     CLAUSE_TOPICS,
     UNCATEGORIZED,
+    buildClauseSections,
+    sectionTopicFor,
     filterClauses,
     groupClausesByTopic,
     isClauseTopic,
@@ -168,5 +170,64 @@ describe('parseTopicGroupKey', () => {
         ['基本特約::標籤', null],
     ])('%p → %p', (input, expected) => {
         expect(parseTopicGroupKey(input)).toBe(expected);
+    });
+});
+
+describe('buildClauseSections', () => {
+    const keys = (sections: { key: string }[]) => sections.map((s) => s.key);
+
+    it('Basic clauses pinned at the top of the full view：基本特約段置頂，稅費段不出現', () => {
+        const sections = buildClauseSections([
+            clause('basic', '立約日－以用印日為立約日', '稅費', '基本特約'),
+            clause('pay', '付款日期－協議變更', '價金付款'),
+        ], null);
+        expect(keys(sections)).toEqual(['基本特約', '價金付款']);
+        expect(sections[0].clauses.map((c) => c.id)).toEqual(['basic']);
+    });
+
+    it('Grouping order with an untopiced clause：全部顯示且無基本特約時不輸出基本特約段', () => {
+        const sections = buildClauseSections([
+            clause('a', '稅費條文', '稅費'),
+            clause('b', '價金條文', '價金付款'),
+            clause('c', '無主題條文', null),
+        ], null);
+        expect(keys(sections)).toEqual(['價金付款', '稅費', '未分類']);
+    });
+
+    it('基本特約段依標題 zh-TW 排序，且無主題的基本特約也進基本特約段而非未分類', () => {
+        const sections = buildClauseSections([
+            clause('t', '騰空－代償塗銷後交屋', '交屋騰空', '基本特約'),
+            clause('l', '立約日－以用印日為立約日', '稅費', '基本特約'),
+            clause('n', '無主題基本', null, '基本特約'),
+        ], null);
+        expect(keys(sections)).toEqual(['基本特約']);
+        expect(sections[0].clauses.map((c) => c.title)).toEqual([
+            // zh-TW 依筆畫：立(5) < 無(12) < 騰(20)
+            '立約日－以用印日為立約日', '無主題基本', '騰空－代償塗銷後交屋',
+        ]);
+    });
+
+    it('Ordering inside a selected topic section：選了車位時基本特約留在車位段內最前', () => {
+        const sections = buildClauseSections([
+            clause('use', '車位－使用權車位', '車位'),
+            clause('fixed', '車位分管－固定位置，依現況承受', '車位'),
+            clause('none', '車位－不含車位', '車位', '基本特約'),
+        ], '車位');
+        expect(keys(sections)).toEqual(['車位']);
+        expect(sections[0].clauses.map((c) => c.title)).toEqual([
+            '車位－不含車位', '車位－使用權車位', '車位分管－固定位置，依現況承受',
+        ]);
+    });
+});
+
+describe('sectionTopicFor', () => {
+    it.each([
+        ['', '租賃', '租賃'],
+        ['  ', '租賃', '租賃'],
+        ['二胎', '租賃', null],
+        ['', null, null],
+        ['二胎', null, null],
+    ])('搜尋 %p、選取 %p → 分段依 %p（搜尋中視同全部顯示）', (term, topic, expected) => {
+        expect(sectionTopicFor(term, topic as '租賃' | null)).toBe(expected);
     });
 });

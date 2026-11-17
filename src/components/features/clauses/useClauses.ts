@@ -6,9 +6,11 @@ import { useAuthUser } from '@/hooks/useAuthUser';
 import {
     type ClauseTopic,
     type ClauseTopicGroupKey,
+    buildClauseSections,
     filterClauses,
     groupClausesByTopic,
     normalizeClauseNote,
+    sectionTopicFor,
 } from '@/lib/constants/clauseTopics';
 
 export interface Clause {
@@ -82,7 +84,7 @@ export function useClauses() {
     // Derived State：側欄用全部條文的主題分組（含條數），列表用篩選後的分組
     const allTopicGroups = groupClausesByTopic(clauses);
     const filteredClauses = filterClauses(clauses, searchTerm, selectedTopic);
-    const groupedClauses = groupClausesByTopic(filteredClauses);
+    const groupedClauses = buildClauseSections(filteredClauses, sectionTopicFor(searchTerm, selectedTopic));
 
     const suggestions = clauses
         .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()) && searchTerm.length > 0)

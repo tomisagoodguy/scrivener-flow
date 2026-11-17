@@ -20,16 +20,23 @@ Each clause SHALL carry a topic that is either null or exactly one of these 12 v
 
 ### Requirement: Clauses grouped by topic
 
-The clause list SHALL render one section per topic in the canonical topic order, followed by a final section labelled 「未分類」 for clauses whose topic is null. Sections with no matching clauses MUST NOT be rendered. Each section header SHALL show the topic name and the number of clauses in it. Within a section, clauses whose category is 基本特約 SHALL come first, then the rest; within each of those two groups clauses SHALL be ordered by title using zh-TW collation. Each clause card SHALL still show whether it is 基本特約 or 增補特約.
+The clause list SHALL render one section per topic in the canonical topic order, followed by a final section labelled 「未分類」 for clauses whose topic is null. Sections with no matching clauses MUST NOT be rendered. Each section header SHALL show the section name and the number of clauses in it. Each clause card SHALL still show whether it is 基本特約 or 增補特約.
+
+When no topic is selected (the full view, with or without a search term), the list SHALL first render a section labelled 「基本特約」 that contains every visible clause whose category is 基本特約, whatever its topic, ordered by title using zh-TW collation; the topic sections and 「未分類」 that follow SHALL contain only the remaining visible clauses. When a topic is selected, the list SHALL render only that topic's section, in which clauses whose category is 基本特約 SHALL come first, then the rest, each group ordered by title using zh-TW collation.
 
 #### Scenario: Grouping order with an untopiced clause
 
-- **WHEN** the visible clauses have topics 稅費, 價金付款 and null
+- **WHEN** no topic is selected and the visible clauses are 增補特約 clauses with topics 稅費, 價金付款 and null
 - **THEN** the sections appear in the order 價金付款, 稅費, 未分類
 
-##### Example: Ordering inside a topic section
+#### Scenario: Basic clauses pinned at the top of the full view
 
-| Clause title | Category | Topic | Position in 車位 section |
+- **WHEN** no topic is selected and the visible clauses are a 基本特約 clause with topic 稅費 and a 增補特約 clause with topic 價金付款
+- **THEN** the sections appear in the order 基本特約, 價金付款, and no 稅費 section is rendered
+
+##### Example: Ordering inside a selected topic section
+
+| Clause title | Category | Topic | Position in 車位 section when 車位 is selected |
 | ------------ | -------- | ----- | ------------------------ |
 | 車位－使用權車位 | 增補特約 | 車位 | 2 |
 | 車位分管－固定位置，依現況承受 | 增補特約 | 車位 | 3 |
@@ -89,3 +96,22 @@ When a clause has a non-null note, its card SHALL display the note beneath the t
 
 - **WHEN** the user copies a clause that has a note
 - **THEN** the clipboard contains exactly the clause content
+
+### Requirement: Offline HTML export mirrors the full view
+
+The offline HTML export SHALL contain the clauses passed to it laid out exactly as the full view: a 「基本特約」 section first (when any 基本特約 clause is present), then one section per topic in canonical order containing only 增補特約 clauses, then 「未分類」; empty sections MUST NOT be emitted, and each section header SHALL show the section name and clause count. The export sidebar SHALL list the same sections in the same order with their counts; selecting one SHALL show only that section and 「顯示全部」 SHALL show every section again. The export search SHALL match title, content, note and tags case-insensitively across all sections. A clause card SHALL show its note when the note is non-null. The copy button of each card SHALL copy exactly that clause's content, element ids SHALL be unique across sections, and every inserted value SHALL be HTML-escaped.
+
+#### Scenario: Export section order
+
+- **WHEN** exporting a 基本特約 clause with topic 稅費, a 增補特約 clause with topic 車位 and a 增補特約 clause with null topic
+- **THEN** the exported sections appear in the order 基本特約, 車位, 未分類 and the sidebar lists the same three entries in that order
+
+#### Scenario: Export note is shown and searchable
+
+- **WHEN** exporting a clause whose note is 「先確認分管協議」
+- **THEN** its card displays 「先確認分管協議」 and the card's searchable text contains 「先確認分管協議」
+
+#### Scenario: Export copy stays exact
+
+- **WHEN** the export contains clauses in several sections
+- **THEN** each card's copy source holds exactly that card's clause content and no element id is repeated

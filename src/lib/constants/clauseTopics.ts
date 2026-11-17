@@ -109,3 +109,36 @@ export function parseTopicGroupKey(value: string | null): ClauseTopicGroupKey | 
     if (value === UNCATEGORIZED || isClauseTopic(value)) return value;
     return null;
 }
+
+/** 全部顯示時置頂的基本特約段 */
+export const BASIC_SECTION = BASIC_CATEGORY;
+export type ClauseSectionKey = ClauseTopicGroupKey | typeof BASIC_SECTION;
+
+export interface ClauseSection<T> {
+    key: ClauseSectionKey;
+    clauses: T[];
+}
+
+/**
+ * 頁面與匯出共用的段落：未選主題（全部顯示）時，基本特約不論主題集中成置頂段，
+ * 其餘條文依主題分段；選了主題時只依主題分段（段內基本特約在前）。
+ */
+export function buildClauseSections<T extends GroupableClause>(
+    clauses: T[],
+    selectedTopic: ClauseTopicGroupKey | null,
+): ClauseSection<T>[] {
+    const toSections = (list: T[]): ClauseSection<T>[] =>
+        groupClausesByTopic(list).map((g) => ({ key: g.topic, clauses: g.clauses }));
+    if (selectedTopic) return toSections(clauses);
+
+    const basic = clauses
+        .filter((c) => c.category === BASIC_CATEGORY)
+        .sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
+    const rest = toSections(clauses.filter((c) => c.category !== BASIC_CATEGORY));
+    return basic.length > 0 ? [{ key: BASIC_SECTION, clauses: basic }, ...rest] : rest;
+}
+
+/** 搜尋時跨所有主題，分段版面視同「全部顯示」（基本特約置頂） */
+export function sectionTopicFor(searchTerm: string, selectedTopic: ClauseTopicGroupKey | null): ClauseTopicGroupKey | null {
+    return searchTerm.trim() ? null : selectedTopic;
+}

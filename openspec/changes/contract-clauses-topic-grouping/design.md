@@ -17,7 +17,7 @@
 
 **Non-Goals:**
 
-- 不改離線 HTML 匯出（`exportClausesToHTML`）與 Excel 匯出的分組方式；兩者仍依 category，後續另開 change。
+- 不改 Excel 匯出（`GenericExportExcelButton` 欄位維持標題、內容）。（原本也排除離線 HTML 匯出，2026-11-17 使用者追加需求後改為納入，見決策 8。）
 - 不自動把現有「被當備註用」的標籤搬到 note；note 由使用者日後手動填。
 - 不處理對照表中「合併（待確認）」5 條與「疑似系統範例」29 條的去留。
 - 不改 RLS、不改 usage_count 與複製流程。
@@ -49,11 +49,21 @@ migration 內以 `UPDATE contract_clauses c SET topic = v.topic FROM (VALUES (id
 
 新增 `ClauseTopicList.tsx`（接收分組結果，渲染各主題段落與 `ClauseItem`），取代 `page.tsx` 內兩段重複的渲染；自 `ClauseEditModal.tsx` 抽出標籤輸入區為 `ClauseTagField.tsx`，騰出空間放主題下拉與備註欄。改完後 `page.tsx`、`ClauseEditModal.tsx` 行數不得多於改動前（230、184）。
 
+### 決策 7：全部顯示時基本特約獨立成置頂段
+
+使用者每次簽約都會用到基本特約（2026-11-17 實查資料庫：16 條、分散在 6 個主題），上線後回報「全部顯示」時要集中在最上方。新增純函式 `buildClauseSections(clauses, selectedTopic)`：`selectedTopic` 為 null 時先輸出 `{ key: '基本特約', clauses: 全部基本特約依標題排序 }`，再以 `groupClausesByTopic` 對其餘條文分段；選了主題時直接回傳 `groupClausesByTopic(clauses)`（該主題段內基本特約在前，沿用決策 4）。替代方案「基本特約在各主題段內置頂」就是上線版本，使用者明確否決；「側欄加一個基本特約篩選」需要點一下才看得到，不如預設置頂。段落鍵型別擴充為 `ClauseSectionKey = ClauseTopicGroupKey | '基本特約'`。
+
+### 決策 8：離線 HTML 匯出共用分段函式
+
+`exportClausesToHTML(clauses)` 改呼叫 `buildClauseSections(clauses, null)` 產生段落，讓匯出檔與頁面「全部顯示」版面一致；側欄改為段落清單（`data-section` 篩選），取代原本「分類→標籤」兩層。卡片加上備註、`data-search` 納入備註。保留既有保護：全域流水號 id、所有插入值經 `escapeHtml`、事件參數走 `data-*`／`this`、複製原文由各卡片自己的 `<textarea>` 提供（`.claude/rules/components.md`「離線 HTML 匯出」）。匯出內容仍為呼叫端傳入的條文（頁面傳 `filteredClauses`）。
+
 ## Implementation Contract
 
 **行為**：
 
-- 開啟 `/clauses`：條文依 價金付款→貸款代償→交屋騰空→租賃→車位→屋況瑕疵→增建違建→土地產權→稅費→當事人特殊→預售屋都更→解約違約→未分類 分段；空段不顯示；段標題含條數；段內基本特約在前，其餘依標題 zh-TW 排序；卡片保留基本／增補標記。
+- 開啟 `/clauses`：條文依 價金付款→貸款代償→交屋騰空→租賃→車位→屋況瑕疵→增建違建→土地產權→稅費→當事人特殊→預售屋都更→解約違約→未分類 分段；空段不顯示；段標題含條數；卡片保留基本／增補標記。
+- 未選主題（全部顯示，含搜尋中）：最上方「基本特約」段收全部可見基本特約（依標題 zh-TW 排序），其下主題段只含增補特約。選了主題：只顯示該主題段，段內基本特約在前，其餘依標題排序。
+- 匯出 HTML：段落與頁面全部顯示相同；側欄列段落與條數，點選只顯示該段、「顯示全部」還原；搜尋比對標題、內容、備註、標籤；卡片有備註時顯示；複製按鈕複製該卡片條文原文。
 - 側欄點主題只看該主題；搜尋框有字時跨所有主題搜尋 title、content、note、tags（不分大小寫）。
 - 新增／編輯：主題 `<select required>`，選項為 12 主題；備註 `<textarea>` 選填，空白字串存 null。
 - 卡片有備註時於標題下顯示（次要文字樣式，支援深色模式）；複製只複製 content。
@@ -75,7 +85,9 @@ migration 內以 `UPDATE contract_clauses c SET topic = v.topic FROM (VALUES (id
 - 使用者在 SQL Editor 執行 migration 後，以 `select count(*) filter (where topic is null) from contract_clauses` 查得 0，且 `select topic, count(*) ... group by topic` 的各主題條數等於對照表中「處理」不是「刪除（重複）」的列依主題計數。
 - 使用者登入後手動確認 `/clauses` 分段、側欄篩選、新增必選主題（`/clauses` 需登入，無法無頭自動測）。
 
-**範圍**：包含 migration、常數與分組函式、`useClauses` 篩選、頁面與四個 clauses 元件。不含匯出、標籤搬遷、資料去留、RLS。
+- 追加驗收：`yarn test --testPathPatterns "clauseTopics|exportClausesToHTML"` 涵蓋「Basic clauses pinned at the top of the full view」「Export section order」「Export note is shown and searchable」「Export copy stays exact」；使用者在正式站確認全部顯示時基本特約置頂，並開啟匯出檔確認段落、側欄篩選與複製。
+
+**範圍**：包含 migration、常數與分組／分段函式、`useClauses` 篩選、頁面與四個 clauses 元件、離線 HTML 匯出。不含 Excel 匯出、標籤搬遷、資料去留、RLS。
 
 ## Risks / Trade-offs
 

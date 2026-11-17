@@ -25,3 +25,15 @@
   - 範圍說明：任務 3.1 驗證寫「全專案不再出現 `tagsByCategory`」，但 `exportClausesToHTML.ts`（本 change 不改的匯出）有同名區域變數；實際以 `useClauses.ts`、`page.tsx` 不再出現為準（已確認）。
 - [x] 4.2 使用者確認任務 1.1 的 migration 已在正式資料庫執行後，登入 `/clauses` 手動檢查：主題分段順序與條數、側欄選「租賃」只剩租賃段、搜尋「二胎」跨主題、新增條文未選主題無法儲存、有備註的卡片顯示備註且複製不含備註；逐項結果記錄於本任務下方。[after: 1.1, 4.1]
   - 2026-11-17：commit `c754a2a9` 推上 master，Vercel 部署後使用者登入 case-master.com/clauses 逐項檢查，回報五項全部正常：(1) 依 12 主題順序分段並顯示條數 (2) 側欄選「租賃」只剩租賃 13 條 (3) 搜尋「二胎」跨主題列出 (4) 新增條文未選主題按儲存被擋下 (5) 填備註後卡片顯示 💡 備註，複製不含備註。
+
+## 5. 追加需求：全部顯示時基本特約置頂、離線 HTML 匯出改主題版面
+
+> 2026-11-17 上線後使用者追加（ingest）。任務 4.1 範圍說明中「本 change 不改的匯出」已不再成立：匯出改由任務 5.3 納入範圍。
+
+- [x] 5.1 在 `src/lib/constants/clauseTopics.ts` 新增 `buildClauseSections(clauses, selectedTopic)` 與 `ClauseSectionKey` 型別：`selectedTopic` 為 null 時先輸出「基本特約」段（全部基本特約依標題 zh-TW 排序，沒有則不輸出），其餘條文以 `groupClausesByTopic` 分段；選了主題時回傳 `groupClausesByTopic(clauses)`（需求：Clauses grouped by topic；決策 7：全部顯示時基本特約獨立成置頂段）。驗證：先在 `clauseTopics.test.ts` 寫規格「Basic clauses pinned at the top of the full view」「Grouping order with an untopiced clause」與「Ordering inside a selected topic section」的測試並確認實作前失敗，實作後 `yarn test --testPathPatterns clauseTopics` 通過。
+- [x] 5.2 `useClauses` 以 `buildClauseSections(filteredClauses, selectedTopic)` 產生 `groupedClauses`，`ClauseTopicList` 改收段落鍵 `ClauseSectionKey`，頁面全部顯示時最上方出現「基本特約」段（需求：Clauses grouped by topic；決策 7：全部顯示時基本特約獨立成置頂段）。驗證：`yarn tsc --noEmit` 通過；使用者在正式站確認全部顯示時基本特約 16 條置頂、選主題時版面不變，結果記於任務 5.4。[after: 5.1]
+- [x] 5.3 `exportClausesToHTML` 改用 `buildClauseSections(clauses, null)` 輸出段落，側欄改為段落清單（`data-section` 篩選、「顯示全部」還原），卡片顯示備註、`data-search` 納入備註，並保留全域流水號 id、`escapeHtml`、各卡片自有複製原文（需求：Offline HTML export mirrors the full view；決策 8：離線 HTML 匯出共用分段函式）。驗證：先在 `exportClausesToHTML.test.ts` 新增「Export section order」「Export note is shown and searchable」「Export copy stays exact」測試並確認實作前失敗，實作後 `yarn test --testPathPatterns exportClausesToHTML` 通過且既有 3 個測試仍通過。[after: 5.1]
+- [ ] 5.4 執行 `yarn tsc --noEmit`、`yarn test --testPathPatterns "clauseTopics|exportClausesToHTML|ClauseItem|ClauseEditModal"`、`yarn eslint` 改動檔，全部無錯誤；部署後使用者在正式站確認全部顯示時基本特約置頂，並開啟匯出檔確認段落順序、側欄點段落篩選與「顯示全部」、搜尋備註、複製內容正確；結果記錄於本任務下方。[after: 5.2, 5.3]
+  - 2026-11-17 自動檢查：`yarn tsc --noEmit` 0 錯誤；`yarn test --testPathPatterns "clauseTopics|exportClausesToHTML|ClauseItem|ClauseEditModal"` → 4 suites、56 tests passed；`yarn eslint`（clauseTopics 兩檔、`src/components/features/clauses/`、`page.tsx`）0 問題。
+  - TDD 證據：`buildClauseSections` 4 測試先失敗（stub）後通過；`sectionTopicFor`（搜尋中視同全部顯示）1 測試先失敗後通過；匯出新增 3 測試中 2 個先失敗後通過，「Export copy stays exact」為既有保護，以突變 `seq++`→`items.indexOf(c)` 使 3 測試失敗、還原後通過。既有匯出測試中「側欄 tag-link 含 it's」改為驗卡片 `data-tags`（側欄已不列標籤）。
+  - 匯出檔瀏覽器實測（Playwright + Chrome，6 筆樣本資料）：段落順序 基本特約→貸款代償→租賃→屋況瑕疵→未分類、側欄同序含條數、基本特約段依標題排序、點「租賃」只剩租賃段、「顯示全部」還原、搜尋「壓在一起」以備註命中、選租賃時搜尋「二胎」跨段命中、複製剪貼簿為「二胎條文內容」、備註顯示於卡片。
