@@ -4,6 +4,7 @@
   - 2026-11-17：產生腳本斷言 VALUES 224 列、主題皆屬 12 值、id 不重複。使用者於 SQL Editor 執行（首次因手誤多打字元語法錯誤、整段未執行；以乾淨檔重跑成功）。
   - 執行後查詢 `select coalesce(topic,'(null)'), count(*) from contract_clauses group by 1`：價金付款 13、貸款代償 26、交屋騰空 30、租賃 13、車位 17、屋況瑕疵 37、增建違建 9、土地產權 27、稅費 30、當事人特殊 12、預售屋都更 6、解約違約 4，共 224，無 null，與 CSV 計數完全一致。
   - `pg_get_constraintdef` 確認 `contract_clauses_topic_check` 為 `CHECK (topic IS NULL OR topic = ANY (ARRAY[12 個主題]))`。
+  - 2026-11-17（封存後補證）：使用者於 SQL Editor 執行 `update contract_clauses set topic='其他' where id=...`，得到 `ERROR: 23514 ... violates check constraint "contract_clauses_topic_check"`；隨後查詢該筆（3049627b）topic 仍為「貸款代償」、updated_at 未變，證實規格情境「Database rejects an unknown topic」。
 
 ## 2. 主題常數與純函式
 
