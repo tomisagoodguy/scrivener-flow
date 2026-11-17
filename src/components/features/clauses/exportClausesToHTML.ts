@@ -17,7 +17,7 @@ export function exportClausesToHTML(clauses: Clause[]): void {
     let seq = 0;
     const renderClauses = (items: Clause[]) => items.map((c) => {
         const i = seq++;
-        const searchText = [c.title, c.content, c.note ?? '', ...(c.tags ?? [])].join(' ').toLowerCase();
+        const searchText = [c.title, c.content, c.note ?? '', c.topic ?? '', ...(c.tags ?? [])].join(' ').toLowerCase();
         return `
         <div class="clause" id="c${i}"
              data-category="${escapeHtml(c.category)}"
@@ -126,7 +126,7 @@ section[data-section="基本特約"] .clause{border-color:#93c5fd;background:#ef
       <h1>⚖️ 代書常用條文</h1>
       <p>匯出：${exportDate}・共 ${clauses.length} 筆</p>
     </div>
-    <input type="text" id="search" placeholder="搜尋標題、內容、備註或標籤…" oninput="filterClauses(this.value)">
+    <input type="text" id="search" placeholder="搜尋標題、內容、備註、主題或標籤（空白分隔多詞）…" oninput="filterClauses(this.value)">
     <button class="print-btn" onclick="window.print()">🖨️ 列印 / PDF</button>
   </div>
 
@@ -171,7 +171,7 @@ function filterClauses(q) {
 function applyFilter() {
   let visible = 0;
   document.querySelectorAll('.clause').forEach(el => {
-    const kwMatch = !searchKw || el.dataset.search.includes(searchKw);
+    const kwMatch = !searchKw || searchKw.split(/\\s+/).every(w => el.dataset.search.includes(w));
     const sectionMatch = searchKw || !activeSection || el.closest('section').dataset.section === activeSection;
     const show = sectionMatch && kwMatch;
     el.classList.toggle('hidden', !show);

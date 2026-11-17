@@ -122,6 +122,16 @@ describe('filterClauses', () => {
         expect(ids(filterClauses(pool, term, null))).toEqual([...expected].sort());
     });
 
+    it('主題名稱也納入比對：搜尋「屋況」找出主題為屋況瑕疵的條文', () => {
+        expect(ids(filterClauses(pool, '屋況', null))).toEqual(['note']);
+    });
+
+    it('空白分隔多詞須全部命中，可跨欄位（半形/全形空白皆可）', () => {
+        expect(ids(filterClauses(pool, '租賃 二胎', null))).toEqual(['rent2']);
+        expect(ids(filterClauses(pool, '貸款代償　承諾書', null))).toEqual(['content']);
+        expect(ids(filterClauses(pool, '租賃 不存在字串', null))).toEqual([]);
+    });
+
     it('搜尋不分大小寫', () => {
         expect(ids(filterClauses(pool, 'abc', null))).toEqual(['latin']);
     });

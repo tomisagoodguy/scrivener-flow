@@ -79,12 +79,15 @@ interface FilterableClause {
 }
 
 function matchesSearch(c: FilterableClause, term: string): boolean {
-    const fields = [c.title, c.content, c.note ?? '', ...(c.tags ?? [])];
-    return fields.some((f) => f.toLowerCase().includes(term));
+    const haystack = [c.title, c.content, c.note ?? '', c.topic ?? '', ...(c.tags ?? [])]
+        .join('\n')
+        .toLowerCase();
+    return term.split(/\s+/).every((word) => haystack.includes(word));
 }
 
 /**
- * 搜尋（不分大小寫）比對標題、內容、備註、標籤；搜尋字非空時跨所有主題，
+ * 搜尋（不分大小寫）比對標題、內容、備註、主題、標籤；以空白分隔多個詞時須全部命中（可分散在不同欄位）。
+ * 搜尋字非空時跨所有主題，
  * 否則依 selectedTopic（含「未分類」）篩選，null 表示全部。
  */
 export function filterClauses<T extends FilterableClause>(
