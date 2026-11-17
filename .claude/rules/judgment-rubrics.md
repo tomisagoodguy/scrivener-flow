@@ -30,6 +30,7 @@
 **正例**：「改完 `getHoldings` 補價邏輯 → `yarn test --testPathPatterns useHoldings` 綠燈 + 派 agent 實跑頁面確認數字」→ 可宣告完成。
 **反例**：「我改好了，應該可以了」——沒有任何證據 → 不可宣告完成。詳細清單見 skill `verification-before-completion`。
 **本輪最後一次改碼後必重跑相關測試**（即使只是審查後的小修補）：Stop hook 驗證 gate 會擋下「本輪改了碼卻沒跑測試」的結束。
+**fail-then-pass 證據**：注入 bug 只做**單行精準替換**（如 `seq++` → `items.indexOf(c)`），跑完還原。`Tests: 0 total` 代表檔案被改到編譯失敗，**不算**失敗證據，要重做。
 
 ---
 
@@ -90,6 +91,7 @@
 - **選 shell**：不確定就用 **Bash**（POSIX，跨平台穩）。只有真的要 PowerShell cmdlet/物件管線才用 PowerShell。
 - **路徑**：Bash 用 `/c/Users/...`、`/dev/null`、`$VAR`；PowerShell 用 `C:\Users\...`、`$null`、`$env:VAR`。**別在 Bash 裡寫 PowerShell 語法，反之亦然**。
 - **Bash 裡呼叫的 Windows Python 不認 `/c/...`**（`open('/c/Users/...')` → `FileNotFoundError`）：傳給 Python 的路徑改用 `C:/Users/...` 或 `$(cygpath -w <path>)`。
+- **repo 原始碼多為 CRLF**：node/sed 腳本以含 `\n` 的字串比對會**靜默不命中**（不報錯）；多行替換改用 Edit 工具，或比對後檢查是否真的有改到。
 - **檔案操作**：優先用 Read/Edit/Write/Glob/Grep 專用工具，不要用 `cat`/`sed`/`find`/`Get-Content`/`Select-String`。
 
 **正例**：`export PYTHONUTF8=1; python3 -c "import json; json.load(open('.claude/settings.json',encoding='utf-8'))"`。

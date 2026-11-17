@@ -109,6 +109,13 @@ Input 使用 Glass Input Style：`bg-white/50 backdrop-blur-sm border-gray-200 f
 
 `ScrollChartViewer` 的 sticky 子導覽列自帶 `-mt-4 md:-mt-6`，外層容器要用 `pt-6` 抵銷，否則會壓到上方的篩選/導覽列。`space-y-6` 只在檢視器前面還有兄弟元素時才有效（策略頁有篩選列才成立；籌碼排行圖表視角曾因此重疊）。
 
+## 離線 HTML 匯出（`export*ToHTML.ts`）
+
+範本：`src/components/features/banks/exportBanksToHTML.ts`、`src/components/features/clauses/exportClausesToHTML.ts`（皆有 Jest 測試）。
+- 所有插入值（標題、內容、標籤、分類，含屬性與 `<textarea>`）一律經 `esc`/`escapeHtml` 跳脫。
+- 元素 id 用**全域流水號**：分段渲染用區域 index 會跨段撞號，`getElementById` 只抓第一個（曾讓增補特約複製到基本特約條文）。
+- 事件參數放 `data-*` 屬性、handler 收 `this`，不要拼進 `onclick` 字串（含 `'` 會壞）。
+
 ## 案件列表排序（`/cases` 頁面）——**禁止改動預設排序行為**
 
 `src/app/cases/page.tsx` 預設以里程碑優先順序排序：**印（seal_date）→ 稅（tax_payment_date）→ 過（transfer_date）→ 交（handover_date）**。
