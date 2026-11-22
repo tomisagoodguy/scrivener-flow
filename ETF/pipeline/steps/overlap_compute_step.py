@@ -19,8 +19,20 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ETF.pipeline.services import PipelineServices
 from ETF.processors.diff_engine import CONSENSUS_WEIGHT_THRESHOLD
+from ETF.database.upsert_sql import conflict_update_clause
 
 logger = logging.getLogger(__name__)
+
+# 內容相同的列不改寫，updated_at 只在內容變更時刷新（共識計數另由 _update_consensus_counts 更新）
+OVERLAP_UPSERT_SQL = text(f"""
+    INSERT INTO etf_stock_overlap
+        (stock_code, data_date, etf_count, total_weight, etf_list)
+    VALUES
+        (:stock_code, :data_date, :etf_count, :total_weight, CAST(:etf_list AS jsonb))
+    ON CONFLICT (stock_code, data_date) {conflict_update_clause(
+        "etf_stock_overlap", ["etf_count", "total_weight", "etf_list"], touch=["updated_at"],
+    )}
+""")
 
 
 class OverlapComputeStep(BaseStep):
@@ -78,25 +90,16 @@ class OverlapComputeStep(BaseStep):
                 "data_date": target_date,
                 "etf_count": len(data["etf_list"]),
                 "total_weight": round(data["total_weight"], 4),
-                "etf_list": json.dumps(data["etf_list"], ensure_ascii=False),
+                # 依 etf_code 排序：jsonb 陣列比較看順序，順序不定會讓守門失效、每日重寫
+                "etf_list": json.dumps(
+                    sorted(data["etf_list"], key=lambda e: e["etf_code"]), ensure_ascii=False
+                ),
             }
             for stock_code, data in stock_data.items()
         ]
 
-        upsert_sql = text("""
-            INSERT INTO etf_stock_overlap
-                (stock_code, data_date, etf_count, total_weight, etf_list)
-            VALUES
-                (:stock_code, :data_date, :etf_count, :total_weight, CAST(:etf_list AS jsonb))
-            ON CONFLICT (stock_code, data_date) DO UPDATE SET
-                etf_count    = EXCLUDED.etf_count,
-                total_weight = EXCLUDED.total_weight,
-                etf_list     = EXCLUDED.etf_list,
-                updated_at   = NOW()
-        """)
-
         with services.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, records)
+            conn.execute(OVERLAP_UPSERT_SQL, records)
             conn.commit()
 
         etf_count = len({row[0] for row in rows})
@@ -143,6 +146,9 @@ class OverlapComputeStep(BaseStep):
             FROM consensus c
             WHERE o.stock_code = c.stock_code
               AND o.data_date = CAST(:target_date AS date)
+              -- 計數不變的列不改寫，updated_at 只在內容變更時刷新
+              AND (o.consensus_buy_count, o.consensus_sell_count)
+                  IS DISTINCT FROM (c.buy_count, c.sell_count)
         """)
 
         with services.sql_storage.engine.connect() as conn:
@@ -154,5 +160,5 @@ class OverlapComputeStep(BaseStep):
 
         self.logger.info(
             f"Consensus counts updated for {target_date}: "
-            f"{result.rowcount} rows affected (threshold={CONSENSUS_WEIGHT_THRESHOLD}pp, window=7d)"
+            f"{result.rowcount} rows changed (threshold={CONSENSUS_WEIGHT_THRESHOLD}pp, window=7d)"
         )

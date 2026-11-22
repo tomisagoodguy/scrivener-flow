@@ -19,6 +19,8 @@ import sqlalchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
 
+from ETF.database.upsert_sql import conflict_update_clause
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(name)s — %(message)s",
@@ -37,13 +39,12 @@ def get_engine() -> sqlalchemy.Engine:
 def upsert_signals(engine: sqlalchemy.Engine, records: list[dict]) -> None:
     if not records:
         return
-    sql = text("""
+    update_clause = conflict_update_clause("strategy_signals", ["score", "is_selected"])
+    sql = text(f"""
         INSERT INTO strategy_signals (strategy_id, date, stock_id, score, is_selected)
         VALUES (:strategy_id, :date, :stock_id, :score, :is_selected)
         ON CONFLICT (strategy_id, date, stock_id)
-        DO UPDATE SET
-            score       = EXCLUDED.score,
-            is_selected = EXCLUDED.is_selected
+        {update_clause}
     """)
     chunk_size = 500
     with engine.connect() as conn:

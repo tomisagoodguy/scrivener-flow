@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import text
 
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep, StepDomain
 
@@ -39,6 +40,46 @@ _CONSECUTIVE_MIN_DAYS = 3
 _CONSECUTIVE_LOOKBACK_DAYS = 10
 
 _CHUNK_SIZE = 3000
+
+# 四段 upsert：內容相同的列不改寫，created_at 只在內容變更時刷新
+FUTURES_UPSERT_SQL = text(f"""
+    INSERT INTO futures_institutional_daily
+    (data_date, contract, institution, long_oi, short_oi, net_oi, market_oi, retail_ls_ratio)
+    VALUES (:data_date, :contract, :institution, :long_oi, :short_oi, :net_oi, :market_oi, :retail_ls_ratio)
+    ON CONFLICT (data_date, contract, institution) {conflict_update_clause(
+        "futures_institutional_daily",
+        ["long_oi", "short_oi", "net_oi", "market_oi", "retail_ls_ratio"],
+        touch=["created_at"],
+    )}
+""")
+MARGIN_UPSERT_SQL = text(f"""
+    INSERT INTO market_margin_daily
+    (data_date, margin_balance, margin_change, short_balance, short_change)
+    VALUES (:data_date, :margin_balance, :margin_change, :short_balance, :short_change)
+    ON CONFLICT (data_date) {conflict_update_clause(
+        "market_margin_daily",
+        ["margin_balance", "margin_change", "short_balance", "short_change"],
+        touch=["created_at"],
+    )}
+""")
+INSTITUTIONAL_UPSERT_SQL = text(f"""
+    INSERT INTO institutional_stock_daily
+    (data_date, stock_code, foreign_net, trust_net, dealer_net)
+    VALUES (:data_date, :stock_code, :foreign_net, :trust_net, :dealer_net)
+    ON CONFLICT (data_date, stock_code) {conflict_update_clause(
+        "institutional_stock_daily",
+        ["foreign_net", "trust_net", "dealer_net"],
+        touch=["created_at"],
+    )}
+""")
+INSTITUTIONAL_SIGNALS_UPSERT_SQL = text(f"""
+    INSERT INTO institutional_signals
+    (data_date, signal_type, stock_code, metadata, etf_cross)
+    VALUES (:data_date, :signal_type, :stock_code, CAST(:metadata AS jsonb), :etf_cross)
+    ON CONFLICT (data_date, signal_type, stock_code) {conflict_update_clause(
+        "institutional_signals", ["metadata", "etf_cross"], touch=["created_at"],
+    )}
+""")
 
 
 def compute_retail_rows(
@@ -216,22 +257,9 @@ class MarketChipsStep(BaseStep):
         rows = [dict(p, market_oi=None, retail_ls_ratio=None) for p in positions]
         rows.extend(compute_retail_rows(positions, market_oi))
 
-        upsert_sql = text("""
-            INSERT INTO futures_institutional_daily
-            (data_date, contract, institution, long_oi, short_oi, net_oi, market_oi, retail_ls_ratio)
-            VALUES (:data_date, :contract, :institution, :long_oi, :short_oi, :net_oi, :market_oi, :retail_ls_ratio)
-            ON CONFLICT (data_date, contract, institution)
-            DO UPDATE SET
-                long_oi = EXCLUDED.long_oi,
-                short_oi = EXCLUDED.short_oi,
-                net_oi = EXCLUDED.net_oi,
-                market_oi = EXCLUDED.market_oi,
-                retail_ls_ratio = EXCLUDED.retail_ls_ratio,
-                created_at = NOW()
-        """)
         params = [dict(r, data_date=date_str) for r in rows]
         with services.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, params)
+            conn.execute(FUTURES_UPSERT_SQL, params)
             conn.commit()
         logger.info(f"Futures segment saved {len(params)} rows for {date_str}.")
 
@@ -244,20 +272,8 @@ class MarketChipsStep(BaseStep):
         if margin is None:
             logger.info(f"No MI_MARGN data for {date_str}, segment skipped.")
             return
-        upsert_sql = text("""
-            INSERT INTO market_margin_daily
-            (data_date, margin_balance, margin_change, short_balance, short_change)
-            VALUES (:data_date, :margin_balance, :margin_change, :short_balance, :short_change)
-            ON CONFLICT (data_date)
-            DO UPDATE SET
-                margin_balance = EXCLUDED.margin_balance,
-                margin_change = EXCLUDED.margin_change,
-                short_balance = EXCLUDED.short_balance,
-                short_change = EXCLUDED.short_change,
-                created_at = NOW()
-        """)
         with services.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, margin)
+            conn.execute(MARGIN_UPSERT_SQL, margin)
             conn.commit()
         logger.info(f"Margin segment saved 1 row for {date_str}.")
 
@@ -270,21 +286,10 @@ class MarketChipsStep(BaseStep):
         if not records:
             logger.info(f"No institutional stock data for {date_str}, segment skipped.")
             return
-        upsert_sql = text("""
-            INSERT INTO institutional_stock_daily
-            (data_date, stock_code, foreign_net, trust_net, dealer_net)
-            VALUES (:data_date, :stock_code, :foreign_net, :trust_net, :dealer_net)
-            ON CONFLICT (data_date, stock_code)
-            DO UPDATE SET
-                foreign_net = EXCLUDED.foreign_net,
-                trust_net = EXCLUDED.trust_net,
-                dealer_net = EXCLUDED.dealer_net,
-                created_at = NOW()
-        """)
         params = [dict(r, data_date=date_str) for r in records]
         with services.sql_storage.engine.connect() as conn:
             for i in range(0, len(params), _CHUNK_SIZE):
-                conn.execute(upsert_sql, params[i : i + _CHUNK_SIZE])
+                conn.execute(INSTITUTIONAL_UPSERT_SQL, params[i : i + _CHUNK_SIZE])
             conn.commit()
         logger.info(f"Institutional segment saved {len(params)} rows for {date_str}.")
 
@@ -307,16 +312,6 @@ class MarketChipsStep(BaseStep):
             return
 
         etf_cross_map = self._load_etf_cross(date_str, services)
-        upsert_sql = text("""
-            INSERT INTO institutional_signals
-            (data_date, signal_type, stock_code, metadata, etf_cross)
-            VALUES (:data_date, :signal_type, :stock_code, CAST(:metadata AS jsonb), :etf_cross)
-            ON CONFLICT (data_date, signal_type, stock_code)
-            DO UPDATE SET
-                metadata = EXCLUDED.metadata,
-                etf_cross = EXCLUDED.etf_cross,
-                created_at = NOW()
-        """)
         params = []
         for s in signals:
             etf_codes = etf_cross_map.get(s["stock_code"], [])
@@ -331,7 +326,7 @@ class MarketChipsStep(BaseStep):
                 }
             )
         with services.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, params)
+            conn.execute(INSTITUTIONAL_SIGNALS_UPSERT_SQL, params)
             conn.commit()
         counts = {
             t: sum(1 for p in params if p["signal_type"] == t)

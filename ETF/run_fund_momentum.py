@@ -18,6 +18,10 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from sqlalchemy import text  # noqa: E402
+
+from ETF.database.upsert_sql import conflict_update_clause  # noqa: E402
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(name)s — %(message)s",
@@ -27,6 +31,16 @@ logger = logging.getLogger("run_fund_momentum")
 STRATEGY_ID = "fund_momentum"
 CONSEC_THRESHOLD = 3
 SCORE_THRESHOLD = 90
+
+# 內容相同的訊號列不改寫（每日回補 30 個交易日，多數列不變）
+FUND_MOMENTUM_UPSERT_SQL = text(f"""
+    INSERT INTO strategy_signals
+        (strategy_id, date, stock_id, score, is_selected, conditions)
+    VALUES
+        (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
+    ON CONFLICT (strategy_id, date, stock_id)
+    {conflict_update_clause("strategy_signals", ["score", "is_selected", "conditions"])}
+""")
 
 
 def _compute_consec_days(series: pd.Series) -> int:
@@ -51,7 +65,6 @@ def run(days: int = 30) -> None:
     from finlab import data as fl_data
 
     import sqlalchemy
-    from sqlalchemy import text
 
     db_url = os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
     if not db_url:
@@ -127,17 +140,7 @@ def run(days: int = 30) -> None:
 
     logger.info(f"準備寫入 {len(all_rows)} 筆（{days} 個交易日 × {len(common_stocks)} 支股票）")
 
-    sql = text("""
-        INSERT INTO strategy_signals
-            (strategy_id, date, stock_id, score, is_selected, conditions)
-        VALUES
-            (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb))
-        ON CONFLICT (strategy_id, date, stock_id)
-        DO UPDATE SET
-            score = EXCLUDED.score,
-            is_selected = EXCLUDED.is_selected,
-            conditions = EXCLUDED.conditions
-    """)
+    sql = FUND_MOMENTUM_UPSERT_SQL
 
     # 每個 chunk 獨立 commit：避免單一大型交易累積，
     # ON CONFLICT 索引檢查隨未提交筆數增加而變慢 → 觸發 statement timeout

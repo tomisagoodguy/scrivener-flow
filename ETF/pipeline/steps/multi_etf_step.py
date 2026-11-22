@@ -15,6 +15,7 @@ from typing import Any, TYPE_CHECKING
 import pandas as pd
 
 from ETF.config.etf_registry import ETF_META, get_secondary_etf_codes
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.steps.base import BaseStep, StepDomain
 from ETF.pipeline.context import PipelineContext
 from ETF.processors.diff_engine import compute_diff
@@ -343,7 +344,11 @@ class MultiEtfStep(BaseStep):
         if not diff_logs:
             return
 
-        upsert_sql = text("""
+        update_clause = conflict_update_clause("etf_diff_logs", [
+            "change_type", "stock_name", "prev_shares", "curr_shares", "diff_shares",
+            "prev_weight", "curr_weight", "diff_weight", "is_significant", "description",
+        ])
+        upsert_sql = text(f"""
             INSERT INTO etf_diff_logs
                 (etf_code, stock_code, stock_name, data_date, change_type,
                  prev_shares, curr_shares, diff_shares,
@@ -355,17 +360,7 @@ class MultiEtfStep(BaseStep):
                  :prev_weight, :curr_weight, :diff_weight,
                  :is_significant, :description)
             ON CONFLICT (etf_code, stock_code, data_date)
-            DO UPDATE SET
-                change_type    = EXCLUDED.change_type,
-                stock_name     = EXCLUDED.stock_name,
-                prev_shares    = EXCLUDED.prev_shares,
-                curr_shares    = EXCLUDED.curr_shares,
-                diff_shares    = EXCLUDED.diff_shares,
-                prev_weight    = EXCLUDED.prev_weight,
-                curr_weight    = EXCLUDED.curr_weight,
-                diff_weight    = EXCLUDED.diff_weight,
-                is_significant = EXCLUDED.is_significant,
-                description    = EXCLUDED.description
+            {update_clause}
         """)
 
         try:

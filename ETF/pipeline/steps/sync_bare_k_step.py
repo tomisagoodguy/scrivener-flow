@@ -13,6 +13,7 @@ from datetime import date
 
 from sqlalchemy import text
 
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -318,21 +319,19 @@ class SyncBareKStep(BaseStep):
 
     def _upsert_snapshots(self, ctx: PipelineContext, snapshots: list[dict], services: "PipelineServices") -> None:
         """批次 upsert snapshots 至 bare_k_snapshots"""
-        upsert_sql = text("""
+        # 內容相同的快照不改寫大型 jsonb 列；created_at 只在內容變更時刷新
+        update_clause = conflict_update_clause(
+            "bare_k_snapshots",
+            ["ohlcv", "mas", "signals", "margin", "revenue", "inv_chips", "summary"],
+            touch=["created_at"],
+        )
+        upsert_sql = text(f"""
             INSERT INTO bare_k_snapshots
                 (stock_id, date, ohlcv, mas, signals, margin, revenue, inv_chips, summary)
             VALUES
                 (:stock_id, :date, CAST(:ohlcv AS jsonb), CAST(:mas AS jsonb), CAST(:signals AS jsonb),
                  CAST(:margin AS jsonb), CAST(:revenue AS jsonb), CAST(:inv_chips AS jsonb), CAST(:summary AS jsonb))
-            ON CONFLICT (stock_id, date) DO UPDATE SET
-                ohlcv      = EXCLUDED.ohlcv,
-                mas        = EXCLUDED.mas,
-                signals    = EXCLUDED.signals,
-                margin     = EXCLUDED.margin,
-                revenue    = EXCLUDED.revenue,
-                inv_chips  = EXCLUDED.inv_chips,
-                summary    = EXCLUDED.summary,
-                created_at = now()
+            ON CONFLICT (stock_id, date) {update_clause}
         """)
 
         try:

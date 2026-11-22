@@ -21,6 +21,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -281,17 +282,15 @@ class SignalDetectStep(BaseStep):
 
     @staticmethod
     def _upsert(services: "PipelineServices", signals: list[dict]) -> None:
-        sql = text("""
+        update_clause = conflict_update_clause("etf_signals", ["strength", "etf_codes", "metadata"])
+        sql = text(f"""
             INSERT INTO etf_signals
                 (signal_type, stock_code, data_date, strength, etf_codes, metadata)
             VALUES
                 (:signal_type, :stock_code, :data_date, :strength,
                  CAST(:etf_codes AS text[]),
                  CAST(:metadata AS jsonb))
-            ON CONFLICT (signal_type, stock_code, data_date) DO UPDATE SET
-                strength   = EXCLUDED.strength,
-                etf_codes  = EXCLUDED.etf_codes,
-                metadata   = EXCLUDED.metadata
+            ON CONFLICT (signal_type, stock_code, data_date) {update_clause}
         """)
 
         params = [

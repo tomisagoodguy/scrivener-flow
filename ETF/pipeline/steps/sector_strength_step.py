@@ -16,6 +16,7 @@ import numpy as np
 
 from sqlalchemy import text
 
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
 
@@ -25,6 +26,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 MIN_STOCK_COUNT = 5  # 族群內至少需要幾支股票才計算
+
+# 策略命中股補集保籌碼（_backfill_missing_chips）；內容相同的列不改寫，updated_at 只在內容變更時刷新
+EQUITY_DISTRIBUTION_UPSERT_SQL = text(f"""
+    INSERT INTO equity_distribution_stats
+        (stock_code, snapshot_date, total_shareholders, big_holder_pct,
+         shareholders_change_rate, big_holder_pct_change,
+         mid_holder_pct, mid_holder_pct_change,
+         whale_holder_pct, whale_holder_pct_change, updated_at)
+    VALUES
+        (:stock_code, :snapshot_date, :total_shareholders, :big_holder_pct,
+         :shareholders_change_rate, :big_holder_pct_change,
+         :mid_holder_pct, :mid_holder_pct_change,
+         :whale_holder_pct, :whale_holder_pct_change, NOW())
+    ON CONFLICT (stock_code, snapshot_date) {conflict_update_clause(
+        "equity_distribution_stats",
+        ["total_shareholders", "big_holder_pct", "shareholders_change_rate",
+         "big_holder_pct_change", "mid_holder_pct", "mid_holder_pct_change",
+         "whale_holder_pct", "whale_holder_pct_change"],
+        touch=["updated_at"],
+    )}
+""")
 
 
 def _safe_eval_list(s: str) -> list:
@@ -303,21 +325,18 @@ class SectorStrengthStep(BaseStep):
         return int(f) if f is not None else None
 
     def _upsert_sectors(self, conn, sector_df, target_date: str) -> None:
-        upsert_sql = text("""
+        update_clause = conflict_update_clause(
+            "sector_strength",
+            ["ret_1d", "ret_5d", "ret_20d", "stock_count", "total_amount",
+             "breadth", "avg_amount_5d", "strength_score"],
+            touch=["created_at"],
+        )
+        upsert_sql = text(f"""
             INSERT INTO sector_strength (date, category, ret_1d, ret_5d, ret_20d, stock_count, total_amount,
                                          breadth, avg_amount_5d, strength_score)
             VALUES (:date, :category, :ret_1d, :ret_5d, :ret_20d, :stock_count, :total_amount,
                     :breadth, :avg_amount_5d, :strength_score)
-            ON CONFLICT (date, category) DO UPDATE SET
-                ret_1d         = EXCLUDED.ret_1d,
-                ret_5d         = EXCLUDED.ret_5d,
-                ret_20d        = EXCLUDED.ret_20d,
-                stock_count    = EXCLUDED.stock_count,
-                total_amount   = EXCLUDED.total_amount,
-                breadth        = EXCLUDED.breadth,
-                avg_amount_5d  = EXCLUDED.avg_amount_5d,
-                strength_score = EXCLUDED.strength_score,
-                created_at     = now()
+            ON CONFLICT (date, category) {update_clause}
         """)
 
         params = []
@@ -339,22 +358,20 @@ class SectorStrengthStep(BaseStep):
         conn.execute(upsert_sql, params)
 
     def _upsert_stocks(self, conn, df, target_date: str) -> None:
-        upsert_sql = text("""
+        update_clause = conflict_update_clause(
+            "sector_strength_stocks",
+            ["stock_name", "ret_1d", "ret_5d", "ret_20d", "is_strategy_hit",
+             "momentum_score", "amount"],
+            touch=["created_at"],
+        )
+        upsert_sql = text(f"""
             INSERT INTO sector_strength_stocks
                 (date, category, stock_id, stock_name, ret_1d, ret_5d, ret_20d,
                  is_strategy_hit, momentum_score, amount)
             VALUES
                 (:date, :category, :stock_id, :stock_name, :ret_1d, :ret_5d, :ret_20d,
                  :is_strategy_hit, :momentum_score, :amount)
-            ON CONFLICT (date, category, stock_id) DO UPDATE SET
-                stock_name      = EXCLUDED.stock_name,
-                ret_1d          = EXCLUDED.ret_1d,
-                ret_5d          = EXCLUDED.ret_5d,
-                ret_20d         = EXCLUDED.ret_20d,
-                is_strategy_hit = EXCLUDED.is_strategy_hit,
-                momentum_score  = EXCLUDED.momentum_score,
-                amount          = EXCLUDED.amount,
-                created_at      = now()
+            ON CONFLICT (date, category, stock_id) {update_clause}
         """)
 
         name_col = "name" if "name" in df.columns else None
@@ -528,31 +545,8 @@ class SectorStrengthStep(BaseStep):
         if not records:
             return
 
-        upsert_sql = text("""
-            INSERT INTO equity_distribution_stats
-                (stock_code, snapshot_date, total_shareholders, big_holder_pct,
-                 shareholders_change_rate, big_holder_pct_change,
-                 mid_holder_pct, mid_holder_pct_change,
-                 whale_holder_pct, whale_holder_pct_change, updated_at)
-            VALUES
-                (:stock_code, :snapshot_date, :total_shareholders, :big_holder_pct,
-                 :shareholders_change_rate, :big_holder_pct_change,
-                 :mid_holder_pct, :mid_holder_pct_change,
-                 :whale_holder_pct, :whale_holder_pct_change, NOW())
-            ON CONFLICT (stock_code, snapshot_date) DO UPDATE SET
-                total_shareholders       = EXCLUDED.total_shareholders,
-                big_holder_pct           = EXCLUDED.big_holder_pct,
-                shareholders_change_rate = EXCLUDED.shareholders_change_rate,
-                big_holder_pct_change    = EXCLUDED.big_holder_pct_change,
-                mid_holder_pct           = EXCLUDED.mid_holder_pct,
-                mid_holder_pct_change    = EXCLUDED.mid_holder_pct_change,
-                whale_holder_pct         = EXCLUDED.whale_holder_pct,
-                whale_holder_pct_change  = EXCLUDED.whale_holder_pct_change,
-                updated_at               = NOW()
-        """)
-
         with services.sql_storage.engine.connect() as conn:
-            conn.execute(upsert_sql, records)
+            conn.execute(EQUITY_DISTRIBUTION_UPSERT_SQL, records)
             conn.commit()
 
         self.logger.info(f"✅ 補充完成：{len(records)} 支策略命中股票的集保資料已寫入")

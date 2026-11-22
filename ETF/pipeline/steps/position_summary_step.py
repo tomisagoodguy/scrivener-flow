@@ -21,6 +21,7 @@ from typing import Optional
 from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -238,7 +239,11 @@ class PositionSummaryStep(BaseStep):
 
     @staticmethod
     def _upsert_positions(conn, rows: list[dict]) -> None:
-        sql = text("""
+        update_clause = conflict_update_clause("etf_position_summary", [
+            "cost_basis", "mv_now", "pnl", "pnl_pct", "delta_days", "curr_price",
+            "curr_shares", "is_active", "exit_date", "realized_pnl_pct",
+        ])
+        sql = text(f"""
             INSERT INTO etf_position_summary
                 (etf_code, stock_code, data_date, cost_basis, mv_now, pnl, pnl_pct,
                  delta_days, first_entry_date, entry_price, curr_price, curr_shares,
@@ -247,35 +252,22 @@ class PositionSummaryStep(BaseStep):
                 (:etf_code, :stock_code, :data_date, :cost_basis, :mv_now, :pnl, :pnl_pct,
                  :delta_days, :first_entry_date, :entry_price, :curr_price, :curr_shares,
                  :is_active, :exit_date, :realized_pnl_pct)
-            ON CONFLICT (etf_code, stock_code, data_date) DO UPDATE SET
-                cost_basis = EXCLUDED.cost_basis,
-                mv_now     = EXCLUDED.mv_now,
-                pnl        = EXCLUDED.pnl,
-                pnl_pct    = EXCLUDED.pnl_pct,
-                delta_days = EXCLUDED.delta_days,
-                curr_price = EXCLUDED.curr_price,
-                curr_shares = EXCLUDED.curr_shares,
-                is_active  = EXCLUDED.is_active,
-                exit_date  = EXCLUDED.exit_date,
-                realized_pnl_pct = EXCLUDED.realized_pnl_pct
+            ON CONFLICT (etf_code, stock_code, data_date) {update_clause}
         """)
         conn.execute(sql, rows)
 
     @staticmethod
     def _upsert_pnl_series(conn, rows: list[dict]) -> None:
-        sql = text("""
+        update_clause = conflict_update_clause("etf_pnl_series", [
+            "total_mv", "total_cost", "total_pnl", "total_pnl_pct", "total_shares", "active_count",
+        ])
+        sql = text(f"""
             INSERT INTO etf_pnl_series
                 (etf_code, data_date, total_mv, total_cost, total_pnl,
                  total_pnl_pct, total_shares, active_count)
             VALUES
                 (:etf_code, :data_date, :total_mv, :total_cost, :total_pnl,
                  :total_pnl_pct, :total_shares, :active_count)
-            ON CONFLICT (etf_code, data_date) DO UPDATE SET
-                total_mv     = EXCLUDED.total_mv,
-                total_cost   = EXCLUDED.total_cost,
-                total_pnl    = EXCLUDED.total_pnl,
-                total_pnl_pct = EXCLUDED.total_pnl_pct,
-                total_shares = EXCLUDED.total_shares,
-                active_count = EXCLUDED.active_count
+            ON CONFLICT (etf_code, data_date) {update_clause}
         """)
         conn.execute(sql, rows)

@@ -9,6 +9,8 @@ from sqlalchemy import text
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 
+from ETF.database.upsert_sql import conflict_update_clause
+
 logger = logging.getLogger(__name__)
 
 
@@ -192,10 +194,10 @@ class SQLStorage:
         records = build_price_records(df)
         if not records:
             return 0
-        updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in PRICE_COLUMNS[2:])
         sql = (
             f"INSERT INTO stock_prices_daily ({', '.join(PRICE_COLUMNS)}) VALUES %s "
-            f"ON CONFLICT (stock_code, data_date) DO UPDATE SET {updates}"
+            f"ON CONFLICT (stock_code, data_date) "
+            f"{conflict_update_clause('stock_prices_daily', PRICE_COLUMNS[2:])}"
         )
         self._bulk_upsert(sql, PRICE_COLUMNS, ["stock_code", "data_date"], records)
         return len(records)
@@ -241,7 +243,13 @@ class SQLStorage:
         if not diff_logs:
             return
 
-        upsert_sql = text("""
+        update_clause = conflict_update_clause("etf_diff_logs", [
+            "change_type", "change_category", "stock_name",
+            "prev_shares", "curr_shares", "diff_shares",
+            "prev_weight", "curr_weight", "diff_weight",
+            "is_significant", "description",
+        ])
+        upsert_sql = text(f"""
             INSERT INTO etf_diff_logs
                 (etf_code, stock_code, stock_name, data_date, change_type,
                  change_category,
@@ -255,18 +263,7 @@ class SQLStorage:
                  :prev_weight, :curr_weight, :diff_weight,
                  :is_significant, :description)
             ON CONFLICT (etf_code, stock_code, data_date)
-            DO UPDATE SET
-                change_type     = EXCLUDED.change_type,
-                change_category = EXCLUDED.change_category,
-                stock_name      = EXCLUDED.stock_name,
-                prev_shares     = EXCLUDED.prev_shares,
-                curr_shares     = EXCLUDED.curr_shares,
-                diff_shares     = EXCLUDED.diff_shares,
-                prev_weight     = EXCLUDED.prev_weight,
-                curr_weight     = EXCLUDED.curr_weight,
-                diff_weight     = EXCLUDED.diff_weight,
-                is_significant  = EXCLUDED.is_significant,
-                description     = EXCLUDED.description
+            {update_clause}
         """)
 
         with self.engine.connect() as conn:
@@ -280,15 +277,14 @@ class SQLStorage:
             return
             
         logger.info(f"準備寫入 {len(records)} 筆營收記錄...")
-        upsert_sql = """
+        update_clause = conflict_update_clause(
+            "stock_revenue_monthly", ["revenue", "revenue_yoy", "revenue_mom"], touch=["created_at"]
+        )
+        upsert_sql = f"""
             INSERT INTO stock_revenue_monthly (stock_code, data_date, revenue, revenue_yoy, revenue_mom)
             VALUES %s
             ON CONFLICT (stock_code, data_date)
-            DO UPDATE SET
-                revenue = EXCLUDED.revenue,
-                revenue_yoy = EXCLUDED.revenue_yoy,
-                revenue_mom = EXCLUDED.revenue_mom,
-                created_at = NOW()
+            {update_clause}
         """
         self._bulk_upsert(
             upsert_sql,
@@ -357,16 +353,17 @@ class SQLStorage:
 
         new_dates = sorted({r['data_date'] for r in new_records})
         logger.info(f"準備寫入 {len(new_records)} 筆集保記錄（涉及日期：{new_dates}）...")
-        upsert_sql = """
+        update_clause = conflict_update_clause(
+            "stock_shareholder_weekly",
+            ["holder_count", "shares_held", "custody_ratio"],
+            touch=["created_at"],
+        )
+        upsert_sql = f"""
             INSERT INTO stock_shareholder_weekly
             (stock_code, data_date, shareholder_tier, holder_count, shares_held, custody_ratio)
             VALUES %s
             ON CONFLICT (stock_code, data_date, shareholder_tier)
-            DO UPDATE SET
-                holder_count = EXCLUDED.holder_count,
-                shares_held = EXCLUDED.shares_held,
-                custody_ratio = EXCLUDED.custody_ratio,
-                created_at = NOW()
+            {update_clause}
         """
         self._bulk_upsert(
             upsert_sql,
@@ -389,17 +386,17 @@ class SQLStorage:
             return
 
         logger.info(f"準備寫入 {len(records)} 筆券商交易記錄...")
-        upsert_sql = """
+        update_clause = conflict_update_clause(
+            "stock_broker_transactions",
+            ["buy_amount", "sell_amount", "net_volume", "force_metric"],
+            touch=["created_at"],
+        )
+        upsert_sql = f"""
             INSERT INTO stock_broker_transactions
             (stock_code, data_date, buy_amount, sell_amount, net_volume, force_metric)
             VALUES %s
             ON CONFLICT (stock_code, data_date)
-            DO UPDATE SET
-                buy_amount = EXCLUDED.buy_amount,
-                sell_amount = EXCLUDED.sell_amount,
-                net_volume = EXCLUDED.net_volume,
-                force_metric = EXCLUDED.force_metric,
-                created_at = NOW()
+            {update_clause}
         """
         columns = ["stock_code", "data_date", "buy_amount", "sell_amount", "net_volume", "force_metric"]
         # 分片各自 commit：單片失敗不影響其他片（沿用原行為）
@@ -561,16 +558,14 @@ class SQLStorage:
         if not records:
             return
         logger.info(f"準備寫入 {len(records)} 筆策略持有期間...")
-        updates = ",\n                ".join(
-            f"{c} = EXCLUDED.{c}" for c in self._STRATEGY_TRADE_COLUMNS[3:]
+        update_clause = conflict_update_clause(
+            "strategy_trades", self._STRATEGY_TRADE_COLUMNS[3:], touch=["updated_at"]
         )
         upsert_sql = f"""
             INSERT INTO strategy_trades ({", ".join(self._STRATEGY_TRADE_COLUMNS)})
             VALUES %s
             ON CONFLICT (strategy_id, stock_id, entry_signal_date)
-            DO UPDATE SET
-                {updates},
-                updated_at = NOW()
+            {update_clause}
         """
         self._bulk_upsert(
             upsert_sql,
@@ -651,18 +646,17 @@ class SQLStorage:
             }
             for record in records
         ]
-        upsert_sql = text("""
+        update_clause = conflict_update_clause(
+            "strategy_signals",
+            ["score", "is_selected", "conditions", "avg_turnover", "liquidity_flag"],
+        )
+        upsert_sql = text(f"""
             INSERT INTO strategy_signals
                 (strategy_id, date, stock_id, score, is_selected, conditions, avg_turnover, liquidity_flag)
             VALUES
                 (:strategy_id, :date, :stock_id, :score, :is_selected, CAST(:conditions AS jsonb), :avg_turnover, :liquidity_flag)
             ON CONFLICT (strategy_id, date, stock_id)
-            DO UPDATE SET
-                score = EXCLUDED.score,
-                is_selected = EXCLUDED.is_selected,
-                conditions = EXCLUDED.conditions,
-                avg_turnover = EXCLUDED.avg_turnover,
-                liquidity_flag = EXCLUDED.liquidity_flag
+            {update_clause}
         """)
         with self.engine.connect() as conn:
             chunk_size = 3000

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import text
 
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from ETF.pipeline.steps.base import BaseStep
 
@@ -159,18 +160,15 @@ class SyncTreemapStep(BaseStep):
         self._delete_old(cutoff, services)
 
     def _upsert(self, rows: list[dict], services: "PipelineServices") -> None:
-        sql = text("""
+        update_clause = conflict_update_clause("market_treemap_daily", [
+            "stock_name", "industry", "market_cap", "close", "change_pct", "turnover",
+        ])
+        sql = text(f"""
             INSERT INTO market_treemap_daily
                 (date, stock_code, stock_name, industry, market_cap, close, change_pct, turnover)
             VALUES
                 (:date, :stock_code, :stock_name, :industry, :market_cap, :close, :change_pct, :turnover)
-            ON CONFLICT (date, stock_code) DO UPDATE SET
-                stock_name = EXCLUDED.stock_name,
-                industry   = EXCLUDED.industry,
-                market_cap = EXCLUDED.market_cap,
-                close      = EXCLUDED.close,
-                change_pct = EXCLUDED.change_pct,
-                turnover   = EXCLUDED.turnover
+            ON CONFLICT (date, stock_code) {update_clause}
         """)
         try:
             with services.sql_storage.engine.connect() as conn:

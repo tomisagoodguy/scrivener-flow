@@ -25,6 +25,7 @@ from finlab import data
 from sqlalchemy import text
 
 from ETF.database.sql_storage import SQLStorage
+from ETF.database.upsert_sql import conflict_update_clause  # noqa: E402
 from ETF.utils.tdcc_schedule import (
     expected_tdcc_friday,
     format_staleness_error,
@@ -256,7 +257,14 @@ def _upsert(records: list[dict], storage: SQLStorage) -> None:
     if not records:
         return
 
-    upsert_sql = text("""
+    update_clause = conflict_update_clause(
+        "equity_distribution_stats",
+        ["total_shareholders", "big_holder_pct", "shareholders_change_rate",
+         "big_holder_pct_change", "mid_holder_pct", "mid_holder_pct_change",
+         "whale_holder_pct", "whale_holder_pct_change", "stock_name"],
+        touch=["updated_at"],
+    )
+    upsert_sql = text(f"""
         INSERT INTO equity_distribution_stats
             (stock_code, snapshot_date, total_shareholders, big_holder_pct,
              shareholders_change_rate, big_holder_pct_change,
@@ -269,17 +277,7 @@ def _upsert(records: list[dict], storage: SQLStorage) -> None:
              :mid_holder_pct, :mid_holder_pct_change,
              :whale_holder_pct, :whale_holder_pct_change,
              :stock_name, NOW())
-        ON CONFLICT (stock_code, snapshot_date) DO UPDATE SET
-            total_shareholders       = EXCLUDED.total_shareholders,
-            big_holder_pct           = EXCLUDED.big_holder_pct,
-            shareholders_change_rate = EXCLUDED.shareholders_change_rate,
-            big_holder_pct_change    = EXCLUDED.big_holder_pct_change,
-            mid_holder_pct           = EXCLUDED.mid_holder_pct,
-            mid_holder_pct_change    = EXCLUDED.mid_holder_pct_change,
-            whale_holder_pct         = EXCLUDED.whale_holder_pct,
-            whale_holder_pct_change  = EXCLUDED.whale_holder_pct_change,
-            stock_name               = EXCLUDED.stock_name,
-            updated_at               = NOW()
+        ON CONFLICT (stock_code, snapshot_date) {update_clause}
     """)
 
     chunk_size = 500

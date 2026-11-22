@@ -19,6 +19,7 @@ from datetime import date
 from sqlalchemy import text
 
 from ETF.config.etf_registry import get_all_etf_codes
+from ETF.database.upsert_sql import conflict_update_clause
 from ETF.pipeline.context import PipelineContext
 from typing import TYPE_CHECKING
 
@@ -324,7 +325,10 @@ class FlowComputeStep(BaseStep):
         totals,
         by_sector,
     ) -> None:
-        sql = text("""
+        update_clause = conflict_update_clause("etf_flow_daily", [
+            "etfs_covered", "etfs_lagging", "inflow", "outflow", "by_etf", "totals", "by_sector",
+        ])
+        sql = text(f"""
             INSERT INTO etf_flow_daily
                 (data_date, etfs_covered, etfs_lagging, inflow, outflow, by_etf, totals, by_sector)
             VALUES
@@ -336,14 +340,7 @@ class FlowComputeStep(BaseStep):
                  CAST(:by_etf AS jsonb),
                  CAST(:totals AS jsonb),
                  CAST(:by_sector AS jsonb))
-            ON CONFLICT (data_date) DO UPDATE SET
-                etfs_covered = EXCLUDED.etfs_covered,
-                etfs_lagging = EXCLUDED.etfs_lagging,
-                inflow       = EXCLUDED.inflow,
-                outflow      = EXCLUDED.outflow,
-                by_etf       = EXCLUDED.by_etf,
-                totals       = EXCLUDED.totals,
-                by_sector    = EXCLUDED.by_sector
+            ON CONFLICT (data_date) {update_clause}
         """)
         conn.execute(
             sql,
@@ -366,17 +363,15 @@ class FlowComputeStep(BaseStep):
         if not candidates:
             return
 
-        sql = text("""
+        update_clause = conflict_update_clause("etf_signals", ["strength", "etf_codes", "metadata"])
+        sql = text(f"""
             INSERT INTO etf_signals
                 (signal_type, stock_code, data_date, strength, etf_codes, metadata)
             VALUES
                 ('cross_etf_same_day_buy', :stock_code, :data_date, :strength,
                  CAST(:etf_codes AS text[]),
                  CAST(:metadata AS jsonb))
-            ON CONFLICT (signal_type, stock_code, data_date) DO UPDATE SET
-                strength  = EXCLUDED.strength,
-                etf_codes = EXCLUDED.etf_codes,
-                metadata  = EXCLUDED.metadata
+            ON CONFLICT (signal_type, stock_code, data_date) {update_clause}
         """)
 
         for s in candidates:
